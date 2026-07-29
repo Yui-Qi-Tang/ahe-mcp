@@ -1,0 +1,2 @@
+Refunds must be completed within 7 days.
+This rule applies only to overseas orders.

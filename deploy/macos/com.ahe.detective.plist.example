@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.ahe.detective</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>__AHE_DETECTIVE_WRAPPER__</string>
+	</array>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>AHE_DETECTIVE_BINARY</key>
+		<string>__AHE_DETECTIVE_BINARY__</string>
+		<key>AHE_DETECTIVE_CONFIG</key>
+		<string>__AHE_DETECTIVE_CONFIG__</string>
+		<key>AHE_DATABASE_DNS_FILE</key>
+		<string>__AHE_DATABASE_DNS_FILE__</string>
+	</dict>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+	<key>ExitTimeOut</key>
+	<integer>30</integer>
+	<key>ProcessType</key>
+	<string>Background</string>
+	<key>Umask</key>
+	<integer>63</integer>
+	<key>SoftResourceLimits</key>
+	<dict>
+		<key>NumberOfFiles</key>
+		<integer>4096</integer>
+	</dict>
+	<key>HardResourceLimits</key>
+	<dict>
+		<key>NumberOfFiles</key>
+		<integer>4096</integer>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>__AHE_DETECTIVE_STDOUT_LOG__</string>
+	<key>StandardErrorPath</key>
+	<string>__AHE_DETECTIVE_STDERR_LOG__</string>
+</dict>
+</plist>

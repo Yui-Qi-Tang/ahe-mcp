@@ -1,0 +1,58 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestRunHelpDoesNotRequireConfigurationOrDatabase(t *testing.T) {
+	var stdout bytes.Buffer
+	err := run(context.Background(), []string{"--help"}, &stdout, &bytes.Buffer{}, func(string) string { return "" })
+	if err != nil {
+		t.Fatalf("run(--help) error = %v", err)
+	}
+	if !strings.Contains(stdout.String(), "Usage: ahe-detective") ||
+		!strings.Contains(stdout.String(), "ahe-detective-host-v1/v2/v3/v4") {
+		t.Fatalf("help output = %q", stdout.String())
+	}
+}
+
+func TestParseCommandArgsRejectsMissingAndUnknownArguments(t *testing.T) {
+	for _, args := range [][]string{{}, {"--config"}, {"--unknown"}} {
+		if _, err := parseCommandArgs(args); err == nil {
+			t.Fatalf("parseCommandArgs(%q) error = nil", args)
+		}
+	}
+}
+
+func TestRunRequiresDatabaseDNSAfterValidConfig(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "detective.json")
+	data := `{
+  "schema_version":"ahe-detective-host-v1",
+  "host_id":"host",
+  "registration_request_id":"register",
+  "workspace_id":"workspace:test",
+  "workspace_root":"/tmp/test",
+  "source_interval":"1s",
+  "max_steps":1,
+  "sources":[{"capability_name":"local-prd-text","capability_version":"v1","source_id":"prd","relative_path":"docs"}],
+  "repository_maintenance":{"enabled":false}
+}`
+	if err := os.WriteFile(configPath, []byte(data), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	err := run(
+		context.Background(),
+		[]string{"--config", configPath},
+		&bytes.Buffer{},
+		&bytes.Buffer{},
+		func(string) string { return "" },
+	)
+	if err == nil || err.Error() != "DATABASE_DNS is required" {
+		t.Fatalf("run() error = %v", err)
+	}
+}

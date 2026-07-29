@@ -1,0 +1,22 @@
+{
+  "schema_version": "ahe-detective-host-v1",
+  "host_id": "local-pilot",
+  "registration_request_id": "register-local-pilot-v1",
+  "workspace_id": "workspace:local-pilot-v1",
+  "workspace_root": "/absolute/path/to/git-workspace",
+  "sources": [
+    {
+      "capability_name": "git-go-repository",
+      "capability_version": "v1",
+      "source_id": "repository",
+      "relative_path": "."
+    }
+  ],
+  "source_interval": "30s",
+  "max_steps": 3,
+  "repository_maintenance": {
+    "enabled": true,
+    "interval": "30s",
+    "batch_limit": 25
+  }
+}

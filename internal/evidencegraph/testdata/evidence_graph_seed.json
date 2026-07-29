@@ -1,0 +1,1522 @@
+{
+  "schema_version": "evidence-graph/v2",
+  "nodes": [
+    {
+      "id": "policy:EPL-001-reasoning-escalation",
+      "source_type": "policy",
+      "title": "EPL-001 Reasoning Query Must Escalate",
+      "source": "Phase 8 Evidence Policy Layer",
+      "target_anchors": [
+        {
+          "kind": "policy",
+          "id": "policy:EPL-001-reasoning-escalation"
+        }
+      ]
+    },
+    {
+      "id": "policy:EPL-002-template-caveat",
+      "source_type": "policy",
+      "title": "EPL-002 Template Source Caveat",
+      "source": "Phase 8 Evidence Policy Layer",
+      "target_anchors": [
+        {
+          "kind": "policy",
+          "id": "policy:EPL-002-template-caveat"
+        }
+      ]
+    },
+    {
+      "id": "policy:EPL-003-missing-scope",
+      "source_type": "policy",
+      "title": "EPL-003 Missing Scope Clarification",
+      "source": "Phase 8 Evidence Policy Layer",
+      "target_anchors": [
+        {
+          "kind": "policy",
+          "id": "policy:EPL-003-missing-scope"
+        }
+      ]
+    },
+    {
+      "id": "policy:EPL-004-conflict-escalation",
+      "source_type": "policy",
+      "title": "EPL-004 Conflict Evidence Must Escalate",
+      "source": "Phase 8 Evidence Policy Layer",
+      "target_anchors": [
+        {
+          "kind": "policy",
+          "id": "policy:EPL-004-conflict-escalation"
+        }
+      ]
+    },
+    {
+      "id": "policy:EPL-005-reference-resolution",
+      "source_type": "policy",
+      "title": "EPL-005 Missing Reference Must Escalate",
+      "source": "Phase 8 Evidence Policy Layer",
+      "target_anchors": [
+        {
+          "kind": "policy",
+          "id": "policy:EPL-005-reference-resolution"
+        }
+      ]
+    },
+    {
+      "id": "policy:EPL-006-source-status-caveat",
+      "source_type": "policy",
+      "title": "EPL-006 Source Status Caveat",
+      "source": "Phase 8 Evidence Policy Layer",
+      "target_anchors": [
+        {
+          "kind": "policy",
+          "id": "policy:EPL-006-source-status-caveat"
+        }
+      ]
+    },
+    {
+      "id": "policy:EPL-007-condition-preservation",
+      "source_type": "policy",
+      "title": "EPL-007 Condition Preservation",
+      "source": "Phase 8 Evidence Policy Layer",
+      "target_anchors": [
+        {
+          "kind": "policy",
+          "id": "policy:EPL-007-condition-preservation"
+        }
+      ]
+    },
+    {
+      "id": "gitlab-expense-guidelines",
+      "source_type": "doc",
+      "title": "GitLab Expense Guidelines",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "gitlab-expense-guidelines"
+        }
+      ]
+    },
+    {
+      "id": "gitlab-expense-ways-to-spend-company-money",
+      "source_type": "doc",
+      "title": "GitLab Ways to Spend Company Money",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "gitlab-expense-policy-links"
+        },
+        {
+          "kind": "document_section",
+          "id": "gitlab-expense-ways-to-spend-company-money"
+        }
+      ]
+    },
+    {
+      "id": "gitlab-expense-policy-links",
+      "source_type": "doc",
+      "title": "GitLab Expense Policy Links",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "gitlab-expense-policy-links"
+        }
+      ]
+    },
+    {
+      "id": "gitlab-expense-approval-process-reference",
+      "source_type": "doc",
+      "title": "GitLab Approval Process Reference",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "gitlab-expense-approval-process-reference"
+        },
+        {
+          "kind": "document_section",
+          "id": "gitlab-expense-guidelines"
+        }
+      ]
+    },
+    {
+      "id": "gitlab-remote-the-remote-manifesto",
+      "source_type": "doc",
+      "title": "GitLab Remote Manifesto",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "gitlab-remote-the-remote-manifesto"
+        }
+      ]
+    },
+    {
+      "id": "gitlab-remote-security-neighbor",
+      "source_type": "doc",
+      "title": "GitLab Remote Security Neighbor",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "gitlab-remote-security-neighbor"
+        }
+      ]
+    },
+    {
+      "id": "gitlab-remote-why-gitlab-uses-the-term-all-remote-to-describe-its-100-remote-workforce",
+      "source_type": "doc",
+      "title": "GitLab All-Remote Definition",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "gitlab-remote-why-gitlab-uses-the-term-all-remote-to-describe-its-100-remote-workforce"
+        }
+      ]
+    },
+    {
+      "id": "workable-vacation-pto",
+      "source_type": "doc",
+      "title": "Workable Vacation PTO",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "workable-vacation-pto"
+        }
+      ]
+    },
+    {
+      "id": "workable-mode-of-work-hybrid-remote-work-from-office",
+      "source_type": "doc",
+      "title": "Workable Mode of Work",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "workable-mode-of-work-hybrid-remote-work-from-office"
+        }
+      ]
+    },
+    {
+      "id": "workable-work-from-abroad",
+      "source_type": "doc",
+      "title": "Workable Work From Abroad",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "workable-work-from-abroad"
+        }
+      ]
+    },
+    {
+      "id": "workable-working-from-home-or-the-office",
+      "source_type": "doc",
+      "title": "Workable Working From Home or Office",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "workable-working-from-home-or-the-office"
+        }
+      ]
+    },
+    {
+      "id": "cedar-rfc-rfc-life-cycle",
+      "source_type": "doc",
+      "title": "Cedar RFC Life Cycle",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "cedar-rfc-rfc-life-cycle"
+        }
+      ]
+    },
+    {
+      "id": "cedar-rfc-implementing-an-rfc",
+      "source_type": "doc",
+      "title": "Cedar Implementing an RFC",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "cedar-rfc-implementing-an-rfc"
+        }
+      ]
+    },
+    {
+      "id": "cedar-rfc-previous-process-note",
+      "source_type": "doc",
+      "title": "Cedar Previous Process Note",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "cedar-rfc-previous-process-note"
+        }
+      ]
+    },
+    {
+      "id": "cedar-rfc-conflicting-draft",
+      "source_type": "doc",
+      "title": "Cedar Conflicting Draft",
+      "source": "experiments/eval/dataset/real_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "cedar-rfc-conflicting-draft"
+        }
+      ]
+    },
+    {
+      "id": "annual-leave-reference",
+      "source_type": "doc",
+      "title": "Annual Leave Reference",
+      "source": "experiments/eval/dataset/reference_resolution_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "annual-leave-reference"
+        },
+        {
+          "kind": "document_section",
+          "id": "appendix-a-annual-leave"
+        }
+      ]
+    },
+    {
+      "id": "appendix-a-annual-leave",
+      "source_type": "doc",
+      "title": "Appendix A Annual Leave",
+      "source": "experiments/eval/dataset/reference_resolution_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "appendix-a-annual-leave"
+        }
+      ]
+    },
+    {
+      "id": "sick-leave-reference",
+      "source_type": "doc",
+      "title": "Sick Leave Reference",
+      "source": "experiments/eval/dataset/breaker_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "appendix-sick-leave"
+        },
+        {
+          "kind": "document_section",
+          "id": "sick-leave-reference"
+        }
+      ]
+    },
+    {
+      "id": "appendix-sick-leave",
+      "source_type": "doc",
+      "title": "Appendix Sick Leave",
+      "source": "experiments/eval/dataset/breaker_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "appendix-sick-leave"
+        }
+      ]
+    },
+    {
+      "id": "reimbursement-reference",
+      "source_type": "doc",
+      "title": "Reimbursement Reference",
+      "source": "experiments/eval/dataset/breaker_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "reimbursement-appendix"
+        },
+        {
+          "kind": "document_section",
+          "id": "reimbursement-reference"
+        }
+      ]
+    },
+    {
+      "id": "reimbursement-appendix",
+      "source_type": "doc",
+      "title": "Reimbursement Appendix",
+      "source": "experiments/eval/dataset/breaker_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "reimbursement-appendix"
+        }
+      ]
+    },
+    {
+      "id": "travel-reference",
+      "source_type": "doc",
+      "title": "Travel Reference",
+      "source": "experiments/eval/dataset/breaker_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "travel-appendix"
+        },
+        {
+          "kind": "document_section",
+          "id": "travel-reference"
+        }
+      ]
+    },
+    {
+      "id": "travel-policy-main",
+      "source_type": "doc",
+      "title": "Travel Policy Main",
+      "source": "experiments/eval/dataset/reference_resolution_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "travel-appendix"
+        },
+        {
+          "kind": "document_section",
+          "id": "travel-policy-main"
+        }
+      ]
+    },
+    {
+      "id": "travel-appendix",
+      "source_type": "doc",
+      "title": "Travel Appendix",
+      "source": "experiments/eval/dataset/reference_resolution_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "travel-appendix"
+        }
+      ]
+    },
+    {
+      "id": "remote-work-policy",
+      "source_type": "doc",
+      "title": "Remote Work Policy",
+      "source": "experiments/eval/dataset/reference_resolution_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "remote-section-4-2"
+        },
+        {
+          "kind": "document_section",
+          "id": "remote-work-policy"
+        }
+      ]
+    },
+    {
+      "id": "remote-section-4-2",
+      "source_type": "doc",
+      "title": "Remote Section 4.2",
+      "source": "experiments/eval/dataset/reference_resolution_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "remote-section-4-2"
+        }
+      ]
+    },
+    {
+      "id": "reimbursement-policy-main",
+      "source_type": "doc",
+      "title": "Reimbursement Policy Main",
+      "source": "experiments/eval/dataset/reference_resolution_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "reimbursement-limits-table"
+        },
+        {
+          "kind": "document_section",
+          "id": "reimbursement-policy-main"
+        }
+      ]
+    },
+    {
+      "id": "reimbursement-limits-table",
+      "source_type": "doc",
+      "title": "Reimbursement Limits Table",
+      "source": "experiments/eval/dataset/reference_resolution_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "reimbursement-limits-table"
+        }
+      ]
+    },
+    {
+      "id": "sick-leave-policy",
+      "source_type": "doc",
+      "title": "Sick Leave Policy",
+      "source": "experiments/eval/dataset/reference_resolution_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "sick-leave-policy"
+        }
+      ]
+    },
+    {
+      "id": "leave-policy-v2-current",
+      "source_type": "doc",
+      "title": "Leave Policy V2 Current",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "leave-policy-v2-current"
+        }
+      ]
+    },
+    {
+      "id": "leave-policy-v1-archived",
+      "source_type": "doc",
+      "title": "Leave Policy V1 Archived",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "leave-policy-v1-archived"
+        }
+      ]
+    },
+    {
+      "id": "leave-policy-draft",
+      "source_type": "doc",
+      "title": "Leave Policy Draft",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "leave-policy-draft"
+        }
+      ]
+    },
+    {
+      "id": "api-timeout-current",
+      "source_type": "doc",
+      "title": "API Timeout Current",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "api-timeout-current"
+        }
+      ]
+    },
+    {
+      "id": "api-timeout-active-conflict",
+      "source_type": "doc",
+      "title": "API Timeout Active Conflict",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "api-timeout-active-conflict"
+        }
+      ]
+    },
+    {
+      "id": "api-timeout-stale",
+      "source_type": "doc",
+      "title": "API Timeout Stale",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "api-timeout-stale"
+        }
+      ]
+    },
+    {
+      "id": "remote-work-current",
+      "source_type": "doc",
+      "title": "Remote Work Current",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "remote-work-current"
+        }
+      ]
+    },
+    {
+      "id": "remote-work-archived",
+      "source_type": "doc",
+      "title": "Remote Work Archived",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "remote-work-archived"
+        }
+      ]
+    },
+    {
+      "id": "reimbursement-current",
+      "source_type": "doc",
+      "title": "Reimbursement Current",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "reimbursement-current"
+        }
+      ]
+    },
+    {
+      "id": "reimbursement-archived",
+      "source_type": "doc",
+      "title": "Reimbursement Archived",
+      "source": "experiments/eval/dataset/dirty_pageindex_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "reimbursement-archived"
+        }
+      ]
+    },
+    {
+      "id": "annual-leave",
+      "source_type": "doc",
+      "title": "Annual Leave",
+      "source": "experiments/eval/dataset/breaker_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "annual-leave"
+        }
+      ]
+    },
+    {
+      "id": "special-region-leave",
+      "source_type": "doc",
+      "title": "Special Region Leave",
+      "source": "experiments/eval/dataset/breaker_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "special-region-leave"
+        }
+      ]
+    },
+    {
+      "id": "timeout-doc-a",
+      "source_type": "doc",
+      "title": "Timeout Document A",
+      "source": "experiments/eval/dataset/breaker_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "timeout-doc-a"
+        }
+      ]
+    },
+    {
+      "id": "timeout-doc-b",
+      "source_type": "doc",
+      "title": "Timeout Document B",
+      "source": "experiments/eval/dataset/breaker_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "timeout-doc-b"
+        }
+      ]
+    },
+    {
+      "id": "doc:membership-policy",
+      "source_type": "doc",
+      "title": "Membership Policy",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "doc:membership-policy"
+        },
+        {
+          "kind": "symbol",
+          "id": "sym:membership.EvaluateMemberLevel"
+        }
+      ]
+    },
+    {
+      "id": "sym:membership.EvaluateMemberLevel",
+      "source_type": "sym",
+      "title": "EvaluateMemberLevel",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:membership.EvaluateMemberLevel"
+        }
+      ]
+    },
+    {
+      "id": "doc:gdpr-delete-policy",
+      "source_type": "doc",
+      "title": "GDPR Delete Policy",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "doc:gdpr-delete-policy"
+        }
+      ]
+    },
+    {
+      "id": "doc:refund-policy",
+      "source_type": "doc",
+      "title": "Refund Policy",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "doc:refund-policy"
+        }
+      ]
+    },
+    {
+      "id": "route:POST /refunds",
+      "source_type": "route",
+      "title": "POST /refunds",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "route",
+          "id": "route:POST /refunds"
+        },
+        {
+          "kind": "symbol",
+          "id": "sym:refund.RefundService.Create"
+        }
+      ]
+    },
+    {
+      "id": "route:POST /orders/{id}/refund",
+      "source_type": "route",
+      "title": "POST /orders/{id}/refund",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "route",
+          "id": "route:POST /orders/{id}/refund"
+        },
+        {
+          "kind": "symbol",
+          "id": "sym:orders.OrderRefundService.Apply"
+        }
+      ]
+    },
+    {
+      "id": "sym:refund.RefundService.Create",
+      "source_type": "sym",
+      "title": "RefundService.Create",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:refund.RefundService.Create"
+        }
+      ]
+    },
+    {
+      "id": "sym:orders.OrderRefundService.Apply",
+      "source_type": "sym",
+      "title": "OrderRefundService.Apply",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:orders.OrderRefundService.Apply"
+        }
+      ]
+    },
+    {
+      "id": "doc:rfc-user-service",
+      "source_type": "doc",
+      "title": "RFC User Service",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "doc:rfc-user-service"
+        },
+        {
+          "kind": "symbol",
+          "id": "sym:user.UserService"
+        }
+      ]
+    },
+    {
+      "id": "sym:user.UserService",
+      "source_type": "sym",
+      "title": "UserService",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:user.UserService"
+        }
+      ]
+    },
+    {
+      "id": "doc:rfc-search-service",
+      "source_type": "doc",
+      "title": "RFC Search Service",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "doc:rfc-search-service"
+        }
+      ]
+    },
+    {
+      "id": "doc:membership-policy-conflict",
+      "source_type": "doc",
+      "title": "Membership Policy Conflict",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "doc:membership-policy-conflict"
+        }
+      ]
+    },
+    {
+      "id": "sym:membership.EvaluateMemberLevel.conflict",
+      "source_type": "sym",
+      "title": "EvaluateMemberLevel Conflict",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:membership.EvaluateMemberLevel.conflict"
+        }
+      ]
+    },
+    {
+      "id": "doc:ticket-checkout-timeout",
+      "source_type": "doc",
+      "title": "Checkout Timeout Ticket",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "doc:ticket-checkout-timeout"
+        },
+        {
+          "kind": "file",
+          "id": "file:checkout/service.go"
+        },
+        {
+          "kind": "file",
+          "id": "file:checkout/timeout.go"
+        },
+        {
+          "kind": "file",
+          "id": "file:config/timeout.go"
+        }
+      ]
+    },
+    {
+      "id": "file:checkout/service.go",
+      "source_type": "file",
+      "title": "checkout/service.go",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "file",
+          "id": "file:checkout/service.go"
+        }
+      ]
+    },
+    {
+      "id": "file:checkout/timeout.go",
+      "source_type": "file",
+      "title": "checkout/timeout.go",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "file",
+          "id": "file:checkout/timeout.go"
+        }
+      ]
+    },
+    {
+      "id": "file:config/timeout.go",
+      "source_type": "file",
+      "title": "config/timeout.go",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "file",
+          "id": "file:config/timeout.go"
+        }
+      ]
+    },
+    {
+      "id": "doc:ticket-timeout-ambiguous",
+      "source_type": "doc",
+      "title": "Ambiguous Timeout Ticket",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "document_section",
+          "id": "doc:ticket-timeout-ambiguous"
+        }
+      ]
+    },
+    {
+      "id": "file:payment/timeout.go",
+      "source_type": "file",
+      "title": "payment/timeout.go",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "file",
+          "id": "file:payment/timeout.go"
+        }
+      ]
+    },
+    {
+      "id": "file:notification/timeout.go",
+      "source_type": "file",
+      "title": "notification/timeout.go",
+      "source": "experiments/eval/dataset/combined_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "file",
+          "id": "file:notification/timeout.go"
+        }
+      ]
+    },
+    {
+      "id": "sym:audit.AuditLogService",
+      "source_type": "sym",
+      "title": "AuditLogService",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:audit.AuditLogService"
+        }
+      ]
+    },
+    {
+      "id": "sym:billing.BillingService",
+      "source_type": "sym",
+      "title": "BillingService",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:billing.BillingService"
+        }
+      ]
+    },
+    {
+      "id": "sym:admin.AdminService",
+      "source_type": "sym",
+      "title": "AdminService",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:admin.AdminService"
+        }
+      ]
+    },
+    {
+      "id": "route:GET /users",
+      "source_type": "route",
+      "title": "GET /users",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "route",
+          "id": "route:GET /users"
+        },
+        {
+          "kind": "symbol",
+          "id": "sym:http.UserHandler.List"
+        }
+      ]
+    },
+    {
+      "id": "sym:http.UserHandler.List",
+      "source_type": "sym",
+      "title": "UserHandler.List",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:http.UserHandler.List"
+        },
+        {
+          "kind": "symbol",
+          "id": "sym:user.UserService.List"
+        }
+      ]
+    },
+    {
+      "id": "sym:user.UserService.List",
+      "source_type": "sym",
+      "title": "UserService.List",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:user.UserService.List"
+        }
+      ]
+    },
+    {
+      "id": "cfg:API_TIMEOUT",
+      "source_type": "cfg",
+      "title": "API_TIMEOUT",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "configuration",
+          "id": "cfg:API_TIMEOUT"
+        }
+      ]
+    },
+    {
+      "id": "sym:http.Client",
+      "source_type": "sym",
+      "title": "http.Client",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:http.Client"
+        }
+      ]
+    },
+    {
+      "id": "sym:payment.PaymentProcessor",
+      "source_type": "sym",
+      "title": "PaymentProcessor",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:payment.MockPaymentProcessor"
+        },
+        {
+          "kind": "symbol",
+          "id": "sym:payment.PaymentProcessor"
+        },
+        {
+          "kind": "symbol",
+          "id": "sym:payment.StripePaymentProcessor"
+        }
+      ]
+    },
+    {
+      "id": "sym:payment.StripePaymentProcessor",
+      "source_type": "sym",
+      "title": "StripePaymentProcessor",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:payment.StripePaymentProcessor"
+        }
+      ]
+    },
+    {
+      "id": "sym:payment.MockPaymentProcessor",
+      "source_type": "sym",
+      "title": "MockPaymentProcessor",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:payment.MockPaymentProcessor"
+        }
+      ]
+    },
+    {
+      "id": "sym:user.UserService.Create",
+      "source_type": "sym",
+      "title": "UserService.Create",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:user.UserService.Create"
+        }
+      ]
+    },
+    {
+      "id": "sym:user.UserRepository.Create",
+      "source_type": "sym",
+      "title": "UserRepository.Create",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:user.UserRepository.Create"
+        }
+      ]
+    },
+    {
+      "id": "sym:tx.TxManager.WithTx",
+      "source_type": "sym",
+      "title": "TxManager.WithTx",
+      "source": "experiments/eval/dataset/codegraph_mcp_dataset.jsonl",
+      "target_anchors": [
+        {
+          "kind": "symbol",
+          "id": "sym:tx.TxManager.WithTx"
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "annual-leave-reference",
+      "to": "appendix-a-annual-leave",
+      "relation": "references",
+      "source": "EPL-005:REF1",
+      "confidence": 1
+    },
+    {
+      "from": "sick-leave-reference",
+      "to": "appendix-sick-leave",
+      "relation": "references",
+      "source": "EPL-005:M3",
+      "confidence": 1
+    },
+    {
+      "from": "reimbursement-reference",
+      "to": "reimbursement-appendix",
+      "relation": "references",
+      "source": "EPL-005:M4",
+      "confidence": 1
+    },
+    {
+      "from": "travel-reference",
+      "to": "travel-appendix",
+      "relation": "references",
+      "source": "EPL-005:M2",
+      "confidence": 1
+    },
+    {
+      "from": "travel-policy-main",
+      "to": "travel-appendix",
+      "relation": "references",
+      "source": "EPL-005:REF3",
+      "confidence": 1
+    },
+    {
+      "from": "remote-work-policy",
+      "to": "remote-section-4-2",
+      "relation": "references",
+      "source": "EPL-005:REF5",
+      "confidence": 1
+    },
+    {
+      "from": "reimbursement-policy-main",
+      "to": "reimbursement-limits-table",
+      "relation": "references",
+      "source": "EPL-005:REF6",
+      "confidence": 1
+    },
+    {
+      "from": "gitlab-expense-approval-process-reference",
+      "to": "gitlab-expense-guidelines",
+      "relation": "references",
+      "source": "EPL-005:RP7C-R04",
+      "confidence": 1
+    },
+    {
+      "from": "gitlab-expense-ways-to-spend-company-money",
+      "to": "gitlab-expense-policy-links",
+      "relation": "references",
+      "source": "EPL-005:RP7C-R01",
+      "confidence": 1
+    },
+    {
+      "from": "workable-vacation-pto",
+      "to": "policy:EPL-002-template-caveat",
+      "relation": "requires",
+      "source": "EPL-002:RP7C-T01",
+      "confidence": 1
+    },
+    {
+      "from": "workable-mode-of-work-hybrid-remote-work-from-office",
+      "to": "policy:EPL-002-template-caveat",
+      "relation": "requires",
+      "source": "EPL-002:RP7C-D08",
+      "confidence": 1
+    },
+    {
+      "from": "workable-work-from-abroad",
+      "to": "policy:EPL-002-template-caveat",
+      "relation": "requires",
+      "source": "EPL-002:RP7C-C03",
+      "confidence": 1
+    },
+    {
+      "from": "workable-working-from-home-or-the-office",
+      "to": "policy:EPL-002-template-caveat",
+      "relation": "requires",
+      "source": "EPL-002:RP7C-C02",
+      "confidence": 1
+    },
+    {
+      "from": "workable-work-from-abroad",
+      "to": "policy:EPL-007-condition-preservation",
+      "relation": "requires",
+      "source": "EPL-007:RP7C-C03",
+      "confidence": 1
+    },
+    {
+      "from": "gitlab-expense-guidelines",
+      "to": "policy:EPL-007-condition-preservation",
+      "relation": "requires",
+      "source": "EPL-007:RP7C-C01",
+      "confidence": 1
+    },
+    {
+      "from": "cedar-rfc-implementing-an-rfc",
+      "to": "policy:EPL-007-condition-preservation",
+      "relation": "requires",
+      "source": "EPL-007:RP7C-D06",
+      "confidence": 1
+    },
+    {
+      "from": "gitlab-expense-policy-links",
+      "to": "policy:EPL-005-reference-resolution",
+      "relation": "requires",
+      "source": "EPL-005:RP7C-R02",
+      "confidence": 1
+    },
+    {
+      "from": "travel-policy-main",
+      "to": "policy:EPL-005-reference-resolution",
+      "relation": "requires",
+      "source": "EPL-005:REF2",
+      "confidence": 1
+    },
+    {
+      "from": "cedar-rfc-implementing-an-rfc",
+      "to": "policy:EPL-005-reference-resolution",
+      "relation": "requires",
+      "source": "EPL-005:RP7C-R03",
+      "confidence": 1
+    },
+    {
+      "from": "gitlab-remote-the-remote-manifesto",
+      "to": "policy:EPL-003-missing-scope",
+      "relation": "requires",
+      "source": "EPL-003:RP7C-M02",
+      "confidence": 1
+    },
+    {
+      "from": "doc:gdpr-delete-policy",
+      "to": "policy:EPL-005-reference-resolution",
+      "relation": "requires",
+      "source": "MIX2:missing_implementation",
+      "confidence": 1
+    },
+    {
+      "from": "doc:membership-policy",
+      "to": "sym:membership.EvaluateMemberLevel",
+      "relation": "implements",
+      "source": "MIX1:implementation_link_found",
+      "confidence": 1
+    },
+    {
+      "from": "doc:rfc-user-service",
+      "to": "sym:user.UserService",
+      "relation": "implements",
+      "source": "MIX4:implementation_link_found",
+      "confidence": 1
+    },
+    {
+      "from": "doc:ticket-checkout-timeout",
+      "to": "file:checkout/service.go",
+      "relation": "implements",
+      "source": "MIX8:implementation_link_found",
+      "confidence": 1
+    },
+    {
+      "from": "doc:ticket-checkout-timeout",
+      "to": "file:checkout/timeout.go",
+      "relation": "implements",
+      "source": "MIX8:implementation_link_found",
+      "confidence": 1
+    },
+    {
+      "from": "doc:ticket-checkout-timeout",
+      "to": "file:config/timeout.go",
+      "relation": "implements",
+      "source": "MIX8:implementation_link_found",
+      "confidence": 1
+    },
+    {
+      "from": "sym:payment.PaymentProcessor",
+      "to": "sym:payment.StripePaymentProcessor",
+      "relation": "implements",
+      "source": "CG12:implements",
+      "confidence": 1
+    },
+    {
+      "from": "sym:payment.PaymentProcessor",
+      "to": "sym:payment.MockPaymentProcessor",
+      "relation": "implements",
+      "source": "CG11:implements",
+      "confidence": 1
+    },
+    {
+      "from": "route:GET /users",
+      "to": "sym:http.UserHandler.List",
+      "relation": "implements",
+      "source": "CG5:implementation_route_registration",
+      "confidence": 1
+    },
+    {
+      "from": "sym:http.UserHandler.List",
+      "to": "sym:user.UserService.List",
+      "relation": "implements",
+      "source": "CG6:implementation_route_chain",
+      "confidence": 1
+    },
+    {
+      "from": "route:POST /refunds",
+      "to": "sym:refund.RefundService.Create",
+      "relation": "implements",
+      "source": "MIX3:implementation_candidate",
+      "confidence": 0.9
+    },
+    {
+      "from": "route:POST /orders/{id}/refund",
+      "to": "sym:orders.OrderRefundService.Apply",
+      "relation": "implements",
+      "source": "MIX3:implementation_candidate",
+      "confidence": 0.9
+    },
+    {
+      "from": "gitlab-expense-policy-links",
+      "to": "gitlab-expense-guidelines",
+      "relation": "supports",
+      "source": "RP7C-D01:source-backed-support",
+      "confidence": 1
+    },
+    {
+      "from": "gitlab-expense-ways-to-spend-company-money",
+      "to": "gitlab-expense-guidelines",
+      "relation": "supports",
+      "source": "RP7C-M04:scope-support",
+      "confidence": 1
+    },
+    {
+      "from": "gitlab-remote-why-gitlab-uses-the-term-all-remote-to-describe-its-100-remote-workforce",
+      "to": "gitlab-remote-the-remote-manifesto",
+      "relation": "supports",
+      "source": "RP7C-C02:remote-support",
+      "confidence": 1
+    },
+    {
+      "from": "cedar-rfc-implementing-an-rfc",
+      "to": "cedar-rfc-rfc-life-cycle",
+      "relation": "supports",
+      "source": "RP7C-C04:condition-support",
+      "confidence": 1
+    },
+    {
+      "from": "reimbursement-limits-table",
+      "to": "reimbursement-policy-main",
+      "relation": "supports",
+      "source": "REF6:table-support",
+      "confidence": 1
+    },
+    {
+      "from": "remote-section-4-2",
+      "to": "remote-work-policy",
+      "relation": "supports",
+      "source": "REF5:section-support",
+      "confidence": 1
+    },
+    {
+      "from": "appendix-a-annual-leave",
+      "to": "annual-leave-reference",
+      "relation": "supports",
+      "source": "REF1:appendix-support",
+      "confidence": 1
+    },
+    {
+      "from": "travel-appendix",
+      "to": "travel-policy-main",
+      "relation": "supports",
+      "source": "REF4:appendix-support",
+      "confidence": 1
+    },
+    {
+      "from": "sym:user.UserService",
+      "to": "doc:rfc-user-service",
+      "relation": "supports",
+      "source": "MIX4:code-support",
+      "confidence": 1
+    },
+    {
+      "from": "sym:membership.EvaluateMemberLevel",
+      "to": "doc:membership-policy",
+      "relation": "supports",
+      "source": "MIX1:code-support",
+      "confidence": 1
+    },
+    {
+      "from": "file:checkout/service.go",
+      "to": "doc:ticket-checkout-timeout",
+      "relation": "supports",
+      "source": "MIX8:file-support",
+      "confidence": 1
+    },
+    {
+      "from": "cfg:API_TIMEOUT",
+      "to": "sym:http.Client",
+      "relation": "supports",
+      "source": "CG8:config-support",
+      "confidence": 1
+    },
+    {
+      "from": "sym:user.UserService",
+      "to": "sym:audit.AuditLogService",
+      "relation": "supports",
+      "source": "CG3:caller-support",
+      "confidence": 1
+    },
+    {
+      "from": "sym:billing.BillingService",
+      "to": "sym:audit.AuditLogService",
+      "relation": "supports",
+      "source": "CG3:caller-support",
+      "confidence": 1
+    },
+    {
+      "from": "sym:admin.AdminService",
+      "to": "sym:audit.AuditLogService",
+      "relation": "supports",
+      "source": "CG3:caller-support",
+      "confidence": 1
+    },
+    {
+      "from": "sym:user.UserService.Create",
+      "to": "sym:tx.TxManager.WithTx",
+      "relation": "supports",
+      "source": "CG10:transaction-support",
+      "confidence": 1
+    },
+    {
+      "from": "sym:user.UserService.Create",
+      "to": "sym:user.UserRepository.Create",
+      "relation": "supports",
+      "source": "CG10:repository-support",
+      "confidence": 1
+    },
+    {
+      "from": "cedar-rfc-rfc-life-cycle",
+      "to": "cedar-rfc-conflicting-draft",
+      "relation": "conflicts_with",
+      "source": "EPL-004:RP7C-T03:conflict",
+      "confidence": 1
+    },
+    {
+      "from": "api-timeout-current",
+      "to": "api-timeout-active-conflict",
+      "relation": "conflicts_with",
+      "source": "EPL-004:D18:conflict",
+      "confidence": 1
+    },
+    {
+      "from": "doc:membership-policy-conflict",
+      "to": "sym:membership.EvaluateMemberLevel.conflict",
+      "relation": "conflicts_with",
+      "source": "EPL-004:MIX7:conflict",
+      "confidence": 1
+    },
+    {
+      "from": "annual-leave",
+      "to": "special-region-leave",
+      "relation": "conflicts_with",
+      "source": "EPL-004:E1:conflict",
+      "confidence": 1
+    },
+    {
+      "from": "timeout-doc-a",
+      "to": "timeout-doc-b",
+      "relation": "conflicts_with",
+      "source": "EPL-004:X1:conflict",
+      "confidence": 1
+    },
+    {
+      "from": "leave-policy-v2-current",
+      "to": "leave-policy-v1-archived",
+      "relation": "supersedes",
+      "source": "EPL-006:D1:current-supersedes-stale",
+      "confidence": 1
+    },
+    {
+      "from": "remote-work-current",
+      "to": "remote-work-archived",
+      "relation": "supersedes",
+      "source": "EPL-006:D5:current-supersedes-stale",
+      "confidence": 1
+    },
+    {
+      "from": "reimbursement-current",
+      "to": "reimbursement-archived",
+      "relation": "supersedes",
+      "source": "EPL-006:D7:current-supersedes-stale",
+      "confidence": 1
+    },
+    {
+      "from": "api-timeout-current",
+      "to": "api-timeout-stale",
+      "relation": "supersedes",
+      "source": "EPL-006:D18:current-supersedes-stale",
+      "confidence": 1
+    },
+    {
+      "from": "cedar-rfc-rfc-life-cycle",
+      "to": "cedar-rfc-previous-process-note",
+      "relation": "supersedes",
+      "source": "EPL-006:RP7C-T02:current-supersedes-previous",
+      "confidence": 1
+    }
+  ],
+  "extensions": [
+    {
+      "namespace": "ahe-wrap/universal-graph-migration",
+      "version": "v1",
+      "data": {
+        "anchor_rules": [
+          "stable_node_identity",
+          "outgoing_references",
+          "outgoing_implements"
+        ],
+        "migration": "ahe-wrap/universal-graph-migration@v1"
+      }
+    }
+  ]
+}
