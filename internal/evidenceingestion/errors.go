@@ -50,6 +50,8 @@ const (
 	ErrorUnsupportedAdmission ErrorKind = "unsupported_admission"
 	// ErrorAdmissionStateConflict means a proposal is not in a legal state for the requested admission mutation.
 	ErrorAdmissionStateConflict ErrorKind = "admission_state_conflict"
+	// ErrorDerivationInvariant means a derived admission would violate canonical derivation invariants.
+	ErrorDerivationInvariant ErrorKind = "derivation_invariant"
 	// ErrorSourceGenerationConflict means a source generation or head transition violates lifecycle invariants.
 	ErrorSourceGenerationConflict ErrorKind = "source_generation_conflict"
 	// ErrorChangeObservationConflict means a persisted change token maps to inconsistent observation material.

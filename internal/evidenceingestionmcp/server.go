@@ -289,9 +289,18 @@ type RunGoplsExtractorRequest struct {
 
 // AdmitPendingProposalRequest admits one pending proposal occurrence.
 type AdmitPendingProposalRequest struct {
-	ProposalOccurrenceID string `json:"proposal_occurrence_id"`
-	DecisionBy           string `json:"decision_by,omitempty"`
-	DecisionReason       string `json:"decision_reason,omitempty"`
+	ProposalOccurrenceID string                      `json:"proposal_occurrence_id"`
+	DecisionBy           string                      `json:"decision_by,omitempty"`
+	DecisionReason       string                      `json:"decision_reason,omitempty"`
+	Derivation           *DerivationAdmissionRequest `json:"derivation,omitempty"`
+}
+
+// DerivationAdmissionRequest declares the complete AND-parent set for a new derived claim.
+type DerivationAdmissionRequest struct {
+	ParentNodeIDs []string `json:"parent_node_ids"`
+	Method        string   `json:"method"`
+	Producer      string   `json:"producer"`
+	TraceRef      string   `json:"trace_ref"`
 }
 
 // RecordPendingProposalDispositionRequest records one terminal non-canonical operator decision.
@@ -438,6 +447,8 @@ type AdmitPendingProposalResponse struct {
 	CanonicalRef         string   `json:"canonical_ref"`
 	RawEvidenceNodeIDs   []string `json:"raw_evidence_node_ids"`
 	CanonicalEdgeIDs     []string `json:"canonical_edge_ids"`
+	DerivationID         string   `json:"derivation_id,omitempty"`
+	ParentNodeIDs        []string `json:"parent_node_ids,omitempty"`
 	Replayed             bool     `json:"replayed"`
 }
 
@@ -675,7 +686,7 @@ func (s *Server) Tools() []ToolDefinition {
 		},
 		{
 			Name:        ToolAdmitPendingProposal,
-			Description: "Admit one pending proposal occurrence into the canonical evidence graph.",
+			Description: "Admit one pending proposal occurrence as source-backed evidence, or as a new derived claim with an explicit complete canonical parent set.",
 			Write:       true,
 		},
 		{
@@ -1565,10 +1576,20 @@ func (s *Server) RunLocalOllamaExtractor(ctx context.Context, req RunLocalOllama
 
 // AdmitPendingProposal admits one pending proposal through the bounded admission core.
 func (s *Server) AdmitPendingProposal(ctx context.Context, req AdmitPendingProposalRequest) (AdmitPendingProposalResponse, error) {
+	var derivation *evidenceingestion.DerivationAdmissionInput
+	if req.Derivation != nil {
+		derivation = &evidenceingestion.DerivationAdmissionInput{
+			ParentNodeIDs: append([]string(nil), req.Derivation.ParentNodeIDs...),
+			Method:        req.Derivation.Method,
+			Producer:      req.Derivation.Producer,
+			TraceRef:      req.Derivation.TraceRef,
+		}
+	}
 	result, err := s.core.AdmitPendingProposal(ctx, evidenceingestion.AdmissionInput{
 		ProposalOccurrenceID: req.ProposalOccurrenceID,
 		DecisionBy:           req.DecisionBy,
 		DecisionReason:       req.DecisionReason,
+		Derivation:           derivation,
 	})
 	if err != nil {
 		return AdmitPendingProposalResponse{}, mapToolError(err)
@@ -1580,6 +1601,8 @@ func (s *Server) AdmitPendingProposal(ctx context.Context, req AdmitPendingPropo
 		CanonicalRef:         result.CanonicalRef,
 		RawEvidenceNodeIDs:   append([]string(nil), result.RawEvidenceNodeIDs...),
 		CanonicalEdgeIDs:     append([]string(nil), result.CanonicalEdgeIDs...),
+		DerivationID:         result.DerivationID,
+		ParentNodeIDs:        append([]string(nil), result.ParentNodeIDs...),
 		Replayed:             result.Replayed,
 	}, nil
 }

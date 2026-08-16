@@ -70,6 +70,29 @@ func TestCanonicalArtifactRejectsUndeclaredDerivedEdge(t *testing.T) {
 	}
 }
 
+func TestTargetAnchorValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		anchor  TargetAnchor
+		wantErr string
+	}{
+		{name: "valid", anchor: TargetAnchor{Kind: "symbol", ID: "example.com/service.Handler"}},
+		{name: "missing kind", anchor: TargetAnchor{ID: "example.com/service.Handler"}, wantErr: "kind is required"},
+		{name: "missing identity", anchor: TargetAnchor{Kind: "symbol"}, wantErr: "id is required"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.anchor.Validate()
+			if test.wantErr == "" && err != nil {
+				t.Fatalf("Validate() error = %v", err)
+			}
+			if test.wantErr != "" && (err == nil || err.Error() != test.wantErr) {
+				t.Fatalf("Validate() error = %v, want %q", err, test.wantErr)
+			}
+		})
+	}
+}
+
 func canonicalTestArtifact(t *testing.T) CanonicalArtifact {
 	t.Helper()
 	payloads := []EvidencePayload{

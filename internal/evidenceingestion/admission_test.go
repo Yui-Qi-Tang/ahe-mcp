@@ -174,3 +174,82 @@ func TestCanonicalAdmissionMutationReusesCanonicalIdentityForExactDuplicate(t *t
 		t.Fatalf("counts = decisions %d nodes %d edges %d, want 2/2/1", len(db.admissionDecisions), len(db.canonicalGraphNodes), len(db.canonicalGraphEdges))
 	}
 }
+
+func TestMockSQLAdmitPendingProposalPersistsDerivation(t *testing.T) {
+	ctx := context.Background()
+	db := newMockSQLDB()
+	parent := admitCanonicalReadFixture(t, ctx, db, "mock-derived-parent")
+	proposal, err := ingestManualText(ctx, db, testManualInput("mock-derived-proposal"), testFixture())
+	if err != nil {
+		t.Fatalf("ingestManualText() error = %v", err)
+	}
+
+	input := AdmissionInput{
+		ProposalOccurrenceID: proposal.ProposalOccurrenceID,
+		Derivation: &DerivationAdmissionInput{
+			ParentNodeIDs: []string{parent.CanonicalRef},
+			Method:        "policy_summary",
+			Producer:      "unit-test",
+			TraceRef:      "trace:derived-admission",
+		},
+	}
+	result, err := admitPendingProposal(ctx, db, input)
+	if err != nil {
+		t.Fatalf("admitPendingProposal() error = %v", err)
+	}
+	if result.DerivationID == "" || result.CanonicalRef == "" {
+		t.Fatalf("derived admission IDs are empty: %+v", result)
+	}
+	if len(result.RawEvidenceNodeIDs) != 0 || len(result.ParentNodeIDs) != 1 || result.ParentNodeIDs[0] != parent.CanonicalRef {
+		t.Fatalf("derived admission result = %+v", result)
+	}
+	derived := db.canonicalGraphNodes[result.CanonicalRef]
+	if derived.Kind != evidencegraph.CanonicalDerivedClaim || derived.Payload.Claim != "Refunds must be completed within 7 days." {
+		t.Fatalf("derived node = %+v", derived)
+	}
+	derivation := db.canonicalDerivations[result.DerivationID]
+	if derivation.NodeID != result.CanonicalRef || len(derivation.Parents) != 1 || derivation.Parents[0] != parent.CanonicalRef {
+		t.Fatalf("persisted derivation = %+v", derivation)
+	}
+	edge := db.canonicalGraphEdges[result.CanonicalEdgeIDs[0]]
+	if edge.From != parent.CanonicalRef || edge.To != result.CanonicalRef || edge.Relation != evidencegraph.CanonicalDerivedFrom {
+		t.Fatalf("derived edge = %+v", edge)
+	}
+
+	replay, err := admitPendingProposal(ctx, db, AdmissionInput{ProposalOccurrenceID: proposal.ProposalOccurrenceID})
+	if err != nil {
+		t.Fatalf("replay admitPendingProposal() error = %v", err)
+	}
+	if !replay.Replayed || replay.DerivationID != result.DerivationID || len(replay.ParentNodeIDs) != 1 || replay.ParentNodeIDs[0] != parent.CanonicalRef {
+		t.Fatalf("derived replay = %+v, want %+v", replay, result)
+	}
+}
+
+func TestMockSQLDerivedAdmissionRejectsMissingParentWithoutMutation(t *testing.T) {
+	ctx := context.Background()
+	db := newMockSQLDB()
+	proposal, err := ingestManualText(ctx, db, testManualInput("mock-derived-missing-parent"), testFixture())
+	if err != nil {
+		t.Fatalf("ingestManualText() error = %v", err)
+	}
+
+	_, err = admitPendingProposal(ctx, db, AdmissionInput{
+		ProposalOccurrenceID: proposal.ProposalOccurrenceID,
+		Derivation: &DerivationAdmissionInput{
+			ParentNodeIDs: []string{"canon-node:missing"},
+			Method:        "policy_summary",
+			Producer:      "unit-test",
+			TraceRef:      "trace:missing-parent",
+		},
+	})
+	assertKind(t, err, ErrorDerivationInvariant)
+	if len(db.canonicalGraphNodes) != 0 || len(db.canonicalGraphEdges) != 0 || len(db.canonicalDerivations) != 0 || len(db.admissionDecisions) != 0 {
+		t.Fatalf(
+			"failed derived admission mutated authority: nodes %d edges %d derivations %d decisions %d",
+			len(db.canonicalGraphNodes),
+			len(db.canonicalGraphEdges),
+			len(db.canonicalDerivations),
+			len(db.admissionDecisions),
+		)
+	}
+}

@@ -37,11 +37,18 @@ const (
 	ToolGetRelationProvenance = "get_relation_provenance"
 	// ToolGetMCPReadSourceStates reads bounded immutable states for one MCP source binding.
 	ToolGetMCPReadSourceStates = "get_mcp_read_source_states"
+	// ToolOpenCanonicalReadView materializes one bounded immutable canonical graph view.
+	ToolOpenCanonicalReadView = "open_canonical_read_view"
+	// ToolFindCanonicalPath finds one relation-scoped path inside an opened canonical read view.
+	ToolFindCanonicalPath = "find_canonical_path"
+	// ToolGetCanonicalTopologyDiagnostics reads cycle and conflict-cluster diagnostics from an opened view.
+	ToolGetCanonicalTopologyDiagnostics = "get_canonical_topology_diagnostics"
 
 	toolErrorInvalidRequest  = "invalid_request"
 	toolErrorInvalidRecordID = "invalid_record_id"
 	toolErrorInvalidRelation = "invalid_relation"
 	toolErrorNotFound        = "not_found"
+	toolErrorReadViewMissing = "read_view_not_found"
 	toolErrorUnknownTool     = "unknown_tool"
 	toolErrorInternal        = "internal_error"
 
@@ -479,6 +486,7 @@ func (e *ToolError) Unwrap() error {
 }
 
 type queryCore interface {
+	ReadCanonicalGraphView(ctx context.Context, input evidenceingestion.CanonicalReadInput) (evidenceingestion.CanonicalReadView, error)
 	GetCanonicalRelationByID(ctx context.Context, canonicalEdgeID string) (evidenceingestion.CanonicalRelationQueryResult, error)
 	GetCanonicalEvidenceByID(ctx context.Context, canonicalID string) (evidenceingestion.CanonicalQueryResult, error)
 	ListCanonicalNeighbors(ctx context.Context, input evidenceingestion.CanonicalNeighborInput) ([]evidenceingestion.CanonicalNeighborResult, error)
@@ -492,7 +500,8 @@ type queryCore interface {
 
 // Server exposes bounded external read-only evidence queries.
 type Server struct {
-	core queryCore
+	core      queryCore
+	readViews *canonicalReadViewCache
 }
 
 // NewServer constructs the external read-only query server over PostgreSQL.
@@ -504,7 +513,10 @@ func NewServer(pool *pgxpool.Pool) (*Server, error) {
 }
 
 func newServer(core queryCore) *Server {
-	return &Server{core: core}
+	return &Server{
+		core:      core,
+		readViews: newCanonicalReadViewCache(canonicalReadViewCacheCapacity),
+	}
 }
 
 // Tools returns the read-only query tool surface. It intentionally contains no write tools.
@@ -543,6 +555,21 @@ func (s *Server) Tools() []ToolDefinition {
 		{
 			Name:        ToolGetMCPReadSourceStates,
 			Description: "Read latest-observed, exact-revision, history, or explicit compare metadata for one immutable MCP source stream without joining evidence across revisions.",
+			ReadOnly:    true,
+		},
+		{
+			Name:        ToolOpenCanonicalReadView,
+			Description: "Open and retain one bounded immutable PostgreSQL canonical graph view for repeated external reads under the returned handle.",
+			ReadOnly:    true,
+		},
+		{
+			Name:        ToolFindCanonicalPath,
+			Description: "Find one relation-scoped structural path witness inside an explicitly opened canonical graph view.",
+			ReadOnly:    true,
+		},
+		{
+			Name:        ToolGetCanonicalTopologyDiagnostics,
+			Description: "Read derived and supersedes cycle witnesses plus contradiction clusters inside an explicitly opened canonical graph view.",
 			ReadOnly:    true,
 		},
 	}
@@ -641,6 +668,48 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
 		}
 		resp, err := s.GetMCPReadSourceStates(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
+		}
+		return data, nil
+	case ToolOpenCanonicalReadView:
+		var req OpenCanonicalReadViewRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.OpenCanonicalReadView(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
+		}
+		return data, nil
+	case ToolFindCanonicalPath:
+		var req FindCanonicalPathRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.FindCanonicalPath(req)
+		if err != nil {
+			return nil, err
+		}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
+		}
+		return data, nil
+	case ToolGetCanonicalTopologyDiagnostics:
+		var req GetCanonicalTopologyDiagnosticsRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.GetCanonicalTopologyDiagnostics(req)
 		if err != nil {
 			return nil, err
 		}
@@ -950,6 +1019,10 @@ func (s *Server) ListEvidenceNeighbors(ctx context.Context, req ListEvidenceNeig
 
 type postgresCore struct {
 	pool *pgxpool.Pool
+}
+
+func (c postgresCore) ReadCanonicalGraphView(ctx context.Context, input evidenceingestion.CanonicalReadInput) (evidenceingestion.CanonicalReadView, error) {
+	return evidenceingestion.ReadCanonicalGraphView(ctx, c.pool, input)
 }
 
 func (c postgresCore) GetCanonicalRelationByID(ctx context.Context, canonicalEdgeID string) (evidenceingestion.CanonicalRelationQueryResult, error) {

@@ -448,6 +448,8 @@ type mockSQLDB struct {
 	proposalOccurrences   map[string]ProposalOccurrence
 	canonicalGraphNodes   map[string]CanonicalGraphNode
 	canonicalGraphEdges   map[string]CanonicalGraphEdge
+	canonicalDerivations  map[string]evidencegraph.DerivationRecord
+	derivationParentEdges map[string]map[string]string
 	admissionDecisions    map[string]mockAdmissionDecision
 	boundedViewPreflights int
 	sourceViewLoads       int
@@ -515,19 +517,21 @@ type mockAdmissionDecision struct {
 
 func newMockSQLDB() *mockSQLDB {
 	return &mockSQLDB{
-		sourceBlobs:          map[string][]byte{},
-		sourceSnapshots:      map[string]mockSourceSnapshot{},
-		extractionViews:      map[string]mockExtractionView{},
-		spanEntries:          map[string]SpanEntry{},
-		sourceIntakeRequests: map[string]mockSourceIntakeRequest{},
-		extractorDefinitions: map[string]mockExtractorDefinition{},
-		extractionRuns:       map[string]mockExtractionRun{},
-		extractionAttempts:   map[string]mockExtractionAttempt{},
-		proposalBatches:      map[string]mockProposalBatch{},
-		proposalOccurrences:  map[string]ProposalOccurrence{},
-		canonicalGraphNodes:  map[string]CanonicalGraphNode{},
-		canonicalGraphEdges:  map[string]CanonicalGraphEdge{},
-		admissionDecisions:   map[string]mockAdmissionDecision{},
+		sourceBlobs:           map[string][]byte{},
+		sourceSnapshots:       map[string]mockSourceSnapshot{},
+		extractionViews:       map[string]mockExtractionView{},
+		spanEntries:           map[string]SpanEntry{},
+		sourceIntakeRequests:  map[string]mockSourceIntakeRequest{},
+		extractorDefinitions:  map[string]mockExtractorDefinition{},
+		extractionRuns:        map[string]mockExtractionRun{},
+		extractionAttempts:    map[string]mockExtractionAttempt{},
+		proposalBatches:       map[string]mockProposalBatch{},
+		proposalOccurrences:   map[string]ProposalOccurrence{},
+		canonicalGraphNodes:   map[string]CanonicalGraphNode{},
+		canonicalGraphEdges:   map[string]CanonicalGraphEdge{},
+		canonicalDerivations:  map[string]evidencegraph.DerivationRecord{},
+		derivationParentEdges: map[string]map[string]string{},
+		admissionDecisions:    map[string]mockAdmissionDecision{},
 	}
 }
 
@@ -577,6 +581,8 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 	switch {
 	case strings.Contains(query, "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"):
 		return mockExecResult(0), nil
+	case strings.Contains(query, "pg_advisory_xact_lock"):
+		return mockExecResult(1), nil
 	case strings.Contains(query, "INSERT INTO source_blobs"):
 		hash := args[0].(string)
 		if _, ok := db.sourceBlobs[hash]; ok {
@@ -774,6 +780,37 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 			OriginProposalOccurrenceID: args[5].(string),
 		}
 		return mockExecResult(1), nil
+	case strings.Contains(query, "INSERT INTO canonical_derivation_parents"):
+		derivationID := args[0].(string)
+		parentID := args[1].(string)
+		edgeID := args[2].(string)
+		parents, ok := db.derivationParentEdges[derivationID]
+		if !ok {
+			parents = map[string]string{}
+			db.derivationParentEdges[derivationID] = parents
+		}
+		if _, exists := parents[parentID]; exists {
+			return nil, fmt.Errorf("duplicate derivation parent %s/%s", derivationID, parentID)
+		}
+		parents[parentID] = edgeID
+		derivation := db.canonicalDerivations[derivationID]
+		derivation.Parents = append(derivation.Parents, parentID)
+		db.canonicalDerivations[derivationID] = derivation
+		return mockExecResult(1), nil
+	case strings.Contains(query, "INSERT INTO canonical_derivations"):
+		derivationID := args[0].(string)
+		if _, exists := db.canonicalDerivations[derivationID]; exists {
+			return nil, fmt.Errorf("duplicate canonical derivation %s", derivationID)
+		}
+		db.canonicalDerivations[derivationID] = evidencegraph.DerivationRecord{
+			ID:            derivationID,
+			NodeID:        args[1].(string),
+			Method:        args[2].(string),
+			Producer:      args[3].(string),
+			TraceRef:      args[4].(string),
+			ProvenanceRef: args[5].(string),
+		}
+		return mockExecResult(1), nil
 	case strings.Contains(query, "INSERT INTO admission_decisions"):
 		id := args[0].(string)
 		if _, ok := db.admissionDecisions[id]; ok {
@@ -828,6 +865,153 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 
 func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sqlRows, error) {
 	switch {
+	case strings.Contains(query, "FROM canonical_derivations d"):
+		selectedValues := args[0].([]string)
+		selected := make(map[string]struct{}, len(selectedValues))
+		for _, nodeID := range selectedValues {
+			selected[nodeID] = struct{}{}
+		}
+		var derivations []evidencegraph.DerivationRecord
+		for _, derivation := range db.canonicalDerivations {
+			if _, exists := selected[derivation.NodeID]; exists {
+				derivations = append(derivations, derivation)
+			}
+		}
+		sort.Slice(derivations, func(i, j int) bool { return derivations[i].NodeID < derivations[j].NodeID })
+		var result []mockRow
+		for _, derivation := range derivations {
+			parents := append([]string(nil), derivation.Parents...)
+			sort.Strings(parents)
+			for _, parentID := range parents {
+				result = append(result, mockRow{values: []any{
+					derivation.ID,
+					derivation.NodeID,
+					derivation.Method,
+					derivation.Producer,
+					derivation.TraceRef,
+					derivation.ProvenanceRef,
+					parentID,
+					db.derivationParentEdges[derivation.ID][parentID],
+				}})
+			}
+		}
+		return &mockRows{rows: result, index: -1}, nil
+	case strings.Contains(query, "FROM canonical_derivation_parents"):
+		derivationID := args[0].(string)
+		derivation, exists := db.canonicalDerivations[derivationID]
+		if !exists {
+			return &mockRows{index: -1}, nil
+		}
+		parents := append([]string(nil), derivation.Parents...)
+		sort.Strings(parents)
+		rows := make([]mockRow, 0, len(parents))
+		for _, parentID := range parents {
+			rows = append(rows, mockRow{values: []any{parentID}})
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+	case strings.Contains(query, "FROM canonical_graph_edges") && strings.Contains(query, "ANY($1::text[])"):
+		frontierValues := args[0].([]string)
+		relationValues := args[1].([]string)
+		seenValues := args[2].([]string)
+		limit := args[3].(int)
+		frontier := make(map[string]struct{}, len(frontierValues))
+		for _, id := range frontierValues {
+			frontier[id] = struct{}{}
+		}
+		relations := make(map[string]struct{}, len(relationValues))
+		for _, relation := range relationValues {
+			relations[relation] = struct{}{}
+		}
+		seen := make(map[string]struct{}, len(seenValues))
+		for _, id := range seenValues {
+			seen[id] = struct{}{}
+		}
+		edges := make([]CanonicalGraphEdge, 0, len(db.canonicalGraphEdges))
+		for _, edge := range db.canonicalGraphEdges {
+			if _, fromSelected := frontier[edge.From]; !fromSelected {
+				if _, toSelected := frontier[edge.To]; !toSelected {
+					continue
+				}
+			}
+			if len(relations) > 0 {
+				if _, selected := relations[string(edge.Relation)]; !selected {
+					continue
+				}
+			}
+			if _, alreadySeen := seen[edge.ID]; alreadySeen {
+				continue
+			}
+			edges = append(edges, edge)
+		}
+		sort.Slice(edges, func(i, j int) bool { return edges[i].ID < edges[j].ID })
+		if limit < len(edges) {
+			edges = edges[:limit]
+		}
+		rows := make([]mockRow, 0, len(edges))
+		for _, edge := range edges {
+			provenance, err := jsonBytes(edge.Provenance)
+			if err != nil {
+				return nil, err
+			}
+			rows = append(rows, mockRow{values: []any{
+				edge.ID,
+				edge.From,
+				edge.To,
+				string(edge.Relation),
+				provenance,
+			}})
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+	case strings.Contains(query, "SELECT canonical_node_id") && !strings.Contains(query, "node_kind") && strings.Contains(query, "FROM canonical_graph_nodes") && strings.Contains(query, "ANY($1::text[])"):
+		selectedValues := args[0].([]string)
+		rows := make([]mockRow, 0, len(selectedValues))
+		for _, nodeID := range selectedValues {
+			if _, exists := db.canonicalGraphNodes[nodeID]; exists {
+				rows = append(rows, mockRow{values: []any{nodeID}})
+			}
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+	case strings.Contains(query, "FROM canonical_graph_nodes") && strings.Contains(query, "ANY($1::text[])"):
+		selectedValues := args[0].([]string)
+		selected := make(map[string]struct{}, len(selectedValues))
+		for _, id := range selectedValues {
+			selected[id] = struct{}{}
+		}
+		nodes := make([]CanonicalGraphNode, 0, len(selected))
+		for id, node := range db.canonicalGraphNodes {
+			if _, exists := selected[id]; exists {
+				nodes = append(nodes, node)
+			}
+		}
+		sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })
+		rows := make([]mockRow, 0, len(nodes))
+		for _, node := range nodes {
+			payload, err := jsonBytes(node.Payload)
+			if err != nil {
+				return nil, err
+			}
+			provenance, err := jsonBytes(node.Provenance)
+			if err != nil {
+				return nil, err
+			}
+			temporal, err := jsonBytes(node.Temporal)
+			if err != nil {
+				return nil, err
+			}
+			integrity, err := jsonBytes(node.Integrity)
+			if err != nil {
+				return nil, err
+			}
+			rows = append(rows, mockRow{values: []any{
+				node.ID,
+				string(node.Kind),
+				payload,
+				provenance,
+				temporal,
+				integrity,
+			}})
+		}
+		return &mockRows{rows: rows, index: -1}, nil
 	case strings.Contains(query, "FROM proposal_occurrences po") && strings.Contains(query, "LIMIT $8"):
 		sourceSnapshotID := args[0].(string)
 		repositorySnapshotID := args[1].(string)
@@ -887,6 +1071,16 @@ func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sql
 
 func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) sqlRow {
 	switch {
+	case strings.Contains(query, "WITH RECURSIVE descendants"):
+		return mockRow{err: pgx.ErrNoRows}
+	case strings.Contains(query, "SELECT derivation_id") && strings.Contains(query, "FROM canonical_derivations"):
+		nodeID := args[0].(string)
+		for _, derivation := range db.canonicalDerivations {
+			if derivation.NodeID == nodeID {
+				return mockRow{values: []any{derivation.ID}}
+			}
+		}
+		return mockRow{err: pgx.ErrNoRows}
 	case strings.Contains(query, "SELECT COALESCE(MAX(attempt_number), 0)"):
 		runID := args[0].(string)
 		maxAttempt := 0

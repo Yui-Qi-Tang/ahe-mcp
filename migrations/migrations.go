@@ -146,6 +146,10 @@ var requiredTablesByMigration = map[string][]string{
 		"detective_mcp_read_source_bindings",
 		"detective_mcp_read_collection_cycles",
 	},
+	"000036_evidence_ingestion_derivations.up.sql": {
+		"canonical_derivations",
+		"canonical_derivation_parents",
+	},
 }
 
 var requiredTables = []string{
@@ -162,6 +166,8 @@ var requiredTables = []string{
 	"canonical_graph_nodes",
 	"canonical_graph_edges",
 	"admission_decisions",
+	"canonical_derivations",
+	"canonical_derivation_parents",
 	"repository_snapshots",
 	"source_file_snapshots",
 	"repository_snapshot_intake_requests",

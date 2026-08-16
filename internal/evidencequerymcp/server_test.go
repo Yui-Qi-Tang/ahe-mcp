@@ -19,8 +19,8 @@ import (
 func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 	server := newServer(&fakeQueryCore{})
 	tools := server.Tools()
-	if len(tools) != 7 {
-		t.Fatalf("len(Tools()) = %d, want 7", len(tools))
+	if len(tools) != 10 {
+		t.Fatalf("len(Tools()) = %d, want 10", len(tools))
 	}
 	if tools[0].Name != ToolGetEvidenceRecord {
 		t.Fatalf("tool name = %q, want %q", tools[0].Name, ToolGetEvidenceRecord)
@@ -28,7 +28,18 @@ func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 	if tools[1].Name != ToolListEvidenceRecords {
 		t.Fatalf("tool name = %q, want %q", tools[1].Name, ToolListEvidenceRecords)
 	}
-	wantNames := []string{ToolGetEvidenceRecord, ToolListEvidenceRecords, ToolSearchEvidenceRecords, ToolGetGroundedEvidenceBrief, ToolListEvidenceNeighbors, ToolGetRelationProvenance, ToolGetMCPReadSourceStates}
+	wantNames := []string{
+		ToolGetEvidenceRecord,
+		ToolListEvidenceRecords,
+		ToolSearchEvidenceRecords,
+		ToolGetGroundedEvidenceBrief,
+		ToolListEvidenceNeighbors,
+		ToolGetRelationProvenance,
+		ToolGetMCPReadSourceStates,
+		ToolOpenCanonicalReadView,
+		ToolFindCanonicalPath,
+		ToolGetCanonicalTopologyDiagnostics,
+	}
 	for i, want := range wantNames {
 		if tools[i].Name != want {
 			t.Fatalf("tool[%d] name = %q, want %q", i, tools[i].Name, want)
@@ -2191,6 +2202,19 @@ type fakeQueryCore struct {
 	sourceStateInput         evidenceingestion.MCPReadSourceStateQueryInput
 	sourceStateResult        evidenceingestion.MCPReadSourceStateQueryResult
 	sourceStateErr           error
+	canonicalReadInput       evidenceingestion.CanonicalReadInput
+	canonicalReadResult      evidenceingestion.CanonicalReadView
+	canonicalReadErr         error
+	canonicalReadCalls       int
+}
+
+func (c *fakeQueryCore) ReadCanonicalGraphView(_ context.Context, input evidenceingestion.CanonicalReadInput) (evidenceingestion.CanonicalReadView, error) {
+	c.canonicalReadCalls++
+	c.canonicalReadInput = input
+	if c.canonicalReadErr != nil {
+		return evidenceingestion.CanonicalReadView{}, c.canonicalReadErr
+	}
+	return c.canonicalReadResult, nil
 }
 
 func (c *fakeQueryCore) QueryMCPReadSourceStates(_ context.Context, input evidenceingestion.MCPReadSourceStateQueryInput) (evidenceingestion.MCPReadSourceStateQueryResult, error) {

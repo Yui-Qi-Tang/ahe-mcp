@@ -1,3 +1,5 @@
+// Package evidencegraph defines AHE's canonical evidence domain schema and
+// validation. Generic topology storage and algorithms live in the graph module.
 package evidencegraph
 
 import (
@@ -12,10 +14,11 @@ import (
 	"time"
 )
 
+// CanonicalSchemaVersion identifies the canonical evidence artifact schema.
 const CanonicalSchemaVersion = "canonical-evidence-graph/v1"
 
 // CanonicalNodeKind separates directly observed evidence from transformed or
-// task-candidate claims. The legacy Graph remains the runtime policy surface.
+// task-candidate claims.
 type CanonicalNodeKind string
 
 const (
@@ -47,8 +50,8 @@ const (
 	TemporalSuperseded TemporalStatus = "superseded"
 )
 
-// CanonicalArtifact is the additive vNext research representation. It is not
-// consumed by Evidence Policy or the runtime EvidenceGraph interface.
+// CanonicalArtifact is one bounded canonical evidence view. PostgreSQL remains
+// authoritative; the artifact is a read-consistent transport for projection.
 type CanonicalArtifact struct {
 	SchemaVersion string             `json:"schema_version"`
 	SnapshotID    string             `json:"snapshot_id"`
@@ -76,6 +79,24 @@ type CanonicalEdge struct {
 	To            string                `json:"to"`
 	Relation      CanonicalEdgeRelation `json:"relation"`
 	ProvenanceRef string                `json:"provenance_ref"`
+}
+
+// TargetAnchor identifies a stable object referenced by source-backed
+// evidence without imposing domain-specific topology on the graph kernel.
+type TargetAnchor struct {
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+}
+
+// Validate checks that a target anchor has a domain-neutral kind and identity.
+func (a TargetAnchor) Validate() error {
+	if strings.TrimSpace(a.Kind) == "" {
+		return fmt.Errorf("kind is required")
+	}
+	if strings.TrimSpace(a.ID) == "" {
+		return fmt.Errorf("id is required")
+	}
+	return nil
 }
 
 type EvidencePayload struct {

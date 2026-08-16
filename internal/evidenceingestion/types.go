@@ -895,11 +895,21 @@ type RepositoryRelationNeighborResult struct {
 	NeighborUsage       *ResolvedCodeUsageSite
 }
 
+// DerivationAdmissionInput turns one pending statement proposal into a derived
+// canonical claim whose complete parent set is required.
+type DerivationAdmissionInput struct {
+	ParentNodeIDs []string
+	Method        string
+	Producer      string
+	TraceRef      string
+}
+
 // AdmissionInput admits one pending proposal occurrence into the canonical graph tables.
 type AdmissionInput struct {
 	ProposalOccurrenceID string
 	DecisionBy           string
 	DecisionReason       string
+	Derivation           *DerivationAdmissionInput
 }
 
 // ProposalDispositionInput records a terminal non-canonical outcome for one pending proposal.
@@ -918,6 +928,8 @@ type AdmissionResult struct {
 	CanonicalRef         string
 	RawEvidenceNodeIDs   []string
 	CanonicalEdgeIDs     []string
+	DerivationID         string
+	ParentNodeIDs        []string
 	Replayed             bool
 }
 

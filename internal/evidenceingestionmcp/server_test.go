@@ -1122,10 +1122,12 @@ func TestCallToolAdmitsPendingProposalThroughCore(t *testing.T) {
 			CanonicalRef:         "canon-node:1",
 			RawEvidenceNodeIDs:   []string{"canon-node:raw"},
 			CanonicalEdgeIDs:     []string{"canon-edge:1"},
+			DerivationID:         "derivation:1",
+			ParentNodeIDs:        []string{"canon-node:parent"},
 		},
 	}
 	server := newServer(core)
-	payload := []byte(`{"proposal_occurrence_id":"occ:1","decision_by":"unit-test","decision_reason":"accepted"}`)
+	payload := []byte(`{"proposal_occurrence_id":"occ:1","decision_by":"unit-test","decision_reason":"accepted","derivation":{"parent_node_ids":["canon-node:parent"],"method":"summary","producer":"unit-test","trace_ref":"trace:1"}}`)
 
 	data, err := server.CallTool(context.Background(), ToolAdmitPendingProposal, payload)
 	if err != nil {
@@ -1142,11 +1144,17 @@ func TestCallToolAdmitsPendingProposalThroughCore(t *testing.T) {
 	if core.admissionInput.ProposalOccurrenceID != "occ:1" || core.admissionInput.DecisionBy != "unit-test" || core.admissionInput.DecisionReason != "accepted" {
 		t.Fatalf("admission input not forwarded: %+v", core.admissionInput)
 	}
+	if core.admissionInput.Derivation == nil || !reflect.DeepEqual(core.admissionInput.Derivation.ParentNodeIDs, []string{"canon-node:parent"}) || core.admissionInput.Derivation.Method != "summary" || core.admissionInput.Derivation.Producer != "unit-test" || core.admissionInput.Derivation.TraceRef != "trace:1" {
+		t.Fatalf("derivation input not forwarded: %+v", core.admissionInput.Derivation)
+	}
 	if resp.ProposalOccurrenceID != "occ:1" || resp.AdmissionDecisionID != "adm:1" || resp.AdmissionOutcome != "admitted" || resp.CanonicalRef != "canon-node:1" {
 		t.Fatalf("unexpected response IDs: %+v", resp)
 	}
 	if !reflect.DeepEqual(resp.RawEvidenceNodeIDs, []string{"canon-node:raw"}) || !reflect.DeepEqual(resp.CanonicalEdgeIDs, []string{"canon-edge:1"}) {
 		t.Fatalf("graph IDs = raw %v edges %v", resp.RawEvidenceNodeIDs, resp.CanonicalEdgeIDs)
+	}
+	if resp.DerivationID != "derivation:1" || !reflect.DeepEqual(resp.ParentNodeIDs, []string{"canon-node:parent"}) {
+		t.Fatalf("derivation response = %+v", resp)
 	}
 }
 

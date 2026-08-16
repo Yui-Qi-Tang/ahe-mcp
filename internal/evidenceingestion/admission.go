@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
@@ -70,13 +71,23 @@ func admitPendingProposal(ctx context.Context, db sqlDB, input AdmissionInput) (
 		if err != nil {
 			return err
 		}
+		if mutation.derivation != nil {
+			if err := validateDerivedAdmissionInvariant(ctx, tx, mutation); err != nil {
+				return err
+			}
+		}
 		for _, node := range mutation.nodes {
-			if err := insertCanonicalNode(ctx, tx, node); err != nil {
+			if err := insertCanonicalNode(ctx, tx, node, mutation.derivation != nil); err != nil {
 				return err
 			}
 		}
 		for _, edge := range mutation.edges {
-			if err := insertCanonicalEdge(ctx, tx, edge); err != nil {
+			if err := insertCanonicalEdge(ctx, tx, edge, mutation.derivation != nil); err != nil {
+				return err
+			}
+		}
+		if mutation.derivation != nil {
+			if err := insertCanonicalDerivation(ctx, tx, *mutation.derivation, mutation.derivationParentEdges, proposal.ProposalOccurrenceID); err != nil {
 				return err
 			}
 		}
@@ -126,17 +137,29 @@ func normalizeAdmissionInput(input AdmissionInput) AdmissionInput {
 		input.DecisionBy = AdmissionProducerSlice9
 	}
 	input.DecisionReason = strings.TrimSpace(input.DecisionReason)
-	if input.DecisionReason == "" {
+	if input.Derivation != nil {
+		derivation := *input.Derivation
+		derivation.ParentNodeIDs = append([]string(nil), derivation.ParentNodeIDs...)
+		derivation.Method = strings.TrimSpace(derivation.Method)
+		derivation.Producer = strings.TrimSpace(derivation.Producer)
+		derivation.TraceRef = strings.TrimSpace(derivation.TraceRef)
+		input.Derivation = &derivation
+	}
+	if input.DecisionReason == "" && input.Derivation != nil {
+		input.DecisionReason = "derived statement admitted with complete canonical parent set"
+	} else if input.DecisionReason == "" {
 		input.DecisionReason = "source-backed statement proposal admitted"
 	}
 	return input
 }
 
 type canonicalAdmissionMutation struct {
-	result   AdmissionResult
-	nodes    []CanonicalGraphNode
-	edges    []CanonicalGraphEdge
-	decision admissionDecision
+	result                AdmissionResult
+	nodes                 []CanonicalGraphNode
+	edges                 []CanonicalGraphEdge
+	decision              admissionDecision
+	derivation            *evidencegraph.DerivationRecord
+	derivationParentEdges map[string]string
 }
 
 type admissionDecision struct {
@@ -154,6 +177,9 @@ type admissionDecisionMetadata struct {
 }
 
 func buildCanonicalAdmissionMutation(proposal ProposalQueryResult, input AdmissionInput) (canonicalAdmissionMutation, error) {
+	if input.Derivation != nil {
+		return buildDerivedAdmissionMutation(proposal, *input.Derivation)
+	}
 	if len(proposal.SourceRefs) == 0 {
 		return canonicalAdmissionMutation{}, newDomainError(ErrorUnsupportedAdmission, "proposal %s has no source refs", proposal.ProposalOccurrenceID)
 	}
@@ -213,6 +239,166 @@ func buildCanonicalAdmissionMutation(proposal ProposalQueryResult, input Admissi
 			CanonicalEdgeIDs:   edgeIDs,
 		},
 	}, nil
+}
+
+const maxDerivationParents = 64
+
+func buildDerivedAdmissionMutation(
+	proposal ProposalQueryResult,
+	input DerivationAdmissionInput,
+) (canonicalAdmissionMutation, error) {
+	parents, err := normalizeDerivationParents(input.ParentNodeIDs)
+	if err != nil {
+		return canonicalAdmissionMutation{}, err
+	}
+	if input.Method == "" || input.Producer == "" || input.TraceRef == "" {
+		return canonicalAdmissionMutation{}, newDomainError(
+			ErrorInvalidInput,
+			"derived admission requires method, producer, and trace_ref",
+		)
+	}
+
+	parentIdentity := strings.Join(parents, "\x00")
+	nodeID := evidencegraph.StableCanonicalID(
+		"canon-node",
+		string(evidencegraph.CanonicalDerivedClaim),
+		proposal.ProposalOccurrenceID,
+		proposal.StatementText,
+		parentIdentity,
+		input.Method,
+		input.Producer,
+		input.TraceRef,
+	)
+	payload := evidencegraph.EvidencePayload{
+		ID:         evidencegraph.StableCanonicalID("payload", nodeID),
+		SourceType: "derived",
+		Title:      "derived claim",
+		Source:     "ahe:derivation",
+		Claim:      proposal.StatementText,
+	}
+	provenance := evidencegraph.ProvenanceRecord{
+		ID:            evidencegraph.StableCanonicalID("provenance", nodeID),
+		OriginRefs:    append([]string(nil), parents...),
+		OriginGroupID: evidencegraph.StableCanonicalID("origin-group", parentIdentity),
+		Producer:      input.Producer,
+		Method:        input.Method,
+		MethodVersion: "v1",
+		TraceRef:      input.TraceRef,
+	}
+	digest, err := evidencegraph.PayloadDigest(payload)
+	if err != nil {
+		return canonicalAdmissionMutation{}, fmt.Errorf("computing derived payload digest: %w", err)
+	}
+	node := CanonicalGraphNode{
+		ID:         nodeID,
+		Kind:       evidencegraph.CanonicalDerivedClaim,
+		Payload:    payload,
+		Provenance: provenance,
+		Temporal: evidencegraph.TemporalRecord{
+			ID:     evidencegraph.StableCanonicalID("temporal", nodeID),
+			Status: evidencegraph.TemporalUnknown,
+		},
+		Integrity: evidencegraph.IntegrityRecord{
+			ID:        evidencegraph.StableCanonicalID("integrity", payload.ID),
+			Algorithm: "sha256",
+			Digest:    digest,
+		},
+		OriginProposalOccurrenceID: proposal.ProposalOccurrenceID,
+	}
+	derivation := evidencegraph.DerivationRecord{
+		ID:            evidencegraph.StableCanonicalID("derivation", nodeID, parentIdentity, input.Method, input.Producer, input.TraceRef),
+		NodeID:        nodeID,
+		Parents:       append([]string(nil), parents...),
+		Method:        input.Method,
+		Producer:      input.Producer,
+		TraceRef:      input.TraceRef,
+		ProvenanceRef: provenance.ID,
+	}
+
+	edges := make([]CanonicalGraphEdge, 0, len(parents))
+	edgeIDs := make([]string, 0, len(parents))
+	parentEdges := make(map[string]string, len(parents))
+	for _, parent := range parents {
+		edgeID := evidencegraph.StableCanonicalID("canon-edge", parent, nodeID, string(evidencegraph.CanonicalDerivedFrom))
+		edgeProvenance := evidencegraph.ProvenanceRecord{
+			ID:            evidencegraph.StableCanonicalID("provenance", edgeID),
+			OriginRefs:    []string{parent, nodeID},
+			OriginGroupID: provenance.OriginGroupID,
+			Producer:      input.Producer,
+			Method:        input.Method,
+			MethodVersion: "v1",
+			TraceRef:      input.TraceRef,
+		}
+		edges = append(edges, CanonicalGraphEdge{
+			ID:                         edgeID,
+			From:                       parent,
+			To:                         nodeID,
+			Relation:                   evidencegraph.CanonicalDerivedFrom,
+			Provenance:                 edgeProvenance,
+			OriginProposalOccurrenceID: proposal.ProposalOccurrenceID,
+		})
+		edgeIDs = append(edgeIDs, edgeID)
+		parentEdges[parent] = edgeID
+	}
+
+	decisionID, err := stableID("adm:", "admission_decision", struct {
+		ProposalOccurrenceID string `json:"proposal_occurrence_id"`
+		Outcome              string `json:"outcome"`
+		CanonicalRef         string `json:"canonical_ref"`
+	}{
+		ProposalOccurrenceID: proposal.ProposalOccurrenceID,
+		Outcome:              admissionOutcomeAdmitted,
+		CanonicalRef:         nodeID,
+	})
+	if err != nil {
+		return canonicalAdmissionMutation{}, err
+	}
+	return canonicalAdmissionMutation{
+		result: AdmissionResult{
+			ProposalOccurrenceID: proposal.ProposalOccurrenceID,
+			AdmissionDecisionID:  decisionID,
+			AdmissionOutcome:     admissionOutcomeAdmitted,
+			CanonicalRef:         nodeID,
+			CanonicalEdgeIDs:     edgeIDs,
+			DerivationID:         derivation.ID,
+			ParentNodeIDs:        append([]string(nil), parents...),
+		},
+		nodes: []CanonicalGraphNode{node},
+		edges: edges,
+		decision: admissionDecision{
+			ID:                 decisionID,
+			ProposalOccurrence: proposal.ProposalOccurrenceID,
+			Outcome:            admissionOutcomeAdmitted,
+			CanonicalRef:       nodeID,
+			CanonicalEdgeIDs:   edgeIDs,
+		},
+		derivation:            &derivation,
+		derivationParentEdges: parentEdges,
+	}, nil
+}
+
+func normalizeDerivationParents(values []string) ([]string, error) {
+	if len(values) == 0 {
+		return nil, newDomainError(ErrorInvalidInput, "derived admission requires at least one parent node")
+	}
+	if len(values) > maxDerivationParents {
+		return nil, newDomainError(ErrorInvalidInput, "derived admission supports at most %d parent nodes", maxDerivationParents)
+	}
+	parents := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		parent := strings.TrimSpace(value)
+		if !strings.HasPrefix(parent, "canon-node:") {
+			return nil, newDomainError(ErrorInvalidRecordID, "derivation parent %q must start with canon-node:", parent)
+		}
+		if _, exists := seen[parent]; exists {
+			return nil, newDomainError(ErrorInvalidInput, "derivation parent %q is duplicated", parent)
+		}
+		seen[parent] = struct{}{}
+		parents = append(parents, parent)
+	}
+	slices.Sort(parents)
+	return parents, nil
 }
 
 func buildClaimNode(proposal ProposalQueryResult) (CanonicalGraphNode, error) {
@@ -598,7 +784,53 @@ func loadAdmissionDecisionResult(
 	if err := json.Unmarshal(edgeIDsData, &result.CanonicalEdgeIDs); err != nil {
 		return AdmissionResult{}, admissionDecisionMetadata{}, fmt.Errorf("decoding canonical edge IDs: %w", err)
 	}
+	if err := loadAdmissionDerivationResult(ctx, tx, &result); err != nil {
+		return AdmissionResult{}, admissionDecisionMetadata{}, err
+	}
 	return result, metadata, nil
+}
+
+func loadAdmissionDerivationResult(ctx context.Context, tx sqlTx, result *AdmissionResult) error {
+	if result.CanonicalRef == "" {
+		return nil
+	}
+	var derivationID string
+	err := tx.queryRow(ctx, `
+		SELECT derivation_id
+		FROM canonical_derivations
+		WHERE node_id = $1
+	`, result.CanonicalRef).Scan(&derivationID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return fmt.Errorf("loading admission derivation: %w", err)
+	}
+	rows, err := tx.query(ctx, `
+		SELECT parent_node_id
+		FROM canonical_derivation_parents
+		WHERE derivation_id = $1
+		ORDER BY parent_node_id
+	`, derivationID)
+	if err != nil {
+		return fmt.Errorf("loading admission derivation parents: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var parentID string
+		if err := rows.Scan(&parentID); err != nil {
+			return fmt.Errorf("scanning admission derivation parent: %w", err)
+		}
+		result.ParentNodeIDs = append(result.ParentNodeIDs, parentID)
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterating admission derivation parents: %w", err)
+	}
+	if len(result.ParentNodeIDs) == 0 {
+		return fmt.Errorf("persisted derivation %q has no parents", derivationID)
+	}
+	result.DerivationID = derivationID
+	return nil
 }
 
 func loadCanonicalNode(ctx context.Context, db sqlQueryer, canonicalID string) (CanonicalQueryResult, error) {
@@ -658,7 +890,102 @@ func scanProposalQueryRow(row sqlRow, occurrenceID string) (ProposalQueryResult,
 	return result, nil
 }
 
-func insertCanonicalNode(ctx context.Context, tx sqlTx, node CanonicalGraphNode) error {
+const derivationAdmissionLockKey int64 = 4704080862826080598
+
+func validateDerivedAdmissionInvariant(ctx context.Context, tx sqlTx, mutation canonicalAdmissionMutation) error {
+	if mutation.derivation == nil || len(mutation.nodes) != 1 {
+		return newDomainError(ErrorDerivationInvariant, "derived admission must create exactly one derived node")
+	}
+	derivation := *mutation.derivation
+	if mutation.nodes[0].ID != derivation.NodeID || mutation.nodes[0].Kind != evidencegraph.CanonicalDerivedClaim {
+		return newDomainError(ErrorDerivationInvariant, "derivation target must be the new derived claim")
+	}
+	if derivation.ProvenanceRef != mutation.nodes[0].Provenance.ID {
+		return newDomainError(ErrorDerivationInvariant, "derivation provenance must reference the derived claim provenance")
+	}
+	if len(mutation.edges) != len(derivation.Parents) || len(mutation.derivationParentEdges) != len(derivation.Parents) {
+		return newDomainError(ErrorDerivationInvariant, "every derivation parent must have exactly one derived_from edge")
+	}
+	edges := make(map[string]CanonicalGraphEdge, len(mutation.edges))
+	for _, edge := range mutation.edges {
+		edges[edge.ID] = edge
+	}
+	for _, parent := range derivation.Parents {
+		edgeID, exists := mutation.derivationParentEdges[parent]
+		edge, edgeExists := edges[edgeID]
+		if !exists || !edgeExists || edge.From != parent || edge.To != derivation.NodeID || edge.Relation != evidencegraph.CanonicalDerivedFrom {
+			return newDomainError(ErrorDerivationInvariant, "derivation parent %q has no exact derived_from edge", parent)
+		}
+	}
+	if _, err := tx.exec(ctx, `SELECT pg_advisory_xact_lock($1)`, derivationAdmissionLockKey); err != nil {
+		return fmt.Errorf("locking canonical derivation admission: %w", err)
+	}
+
+	requested := append([]string{derivation.NodeID}, derivation.Parents...)
+	rows, err := tx.query(ctx, `
+		SELECT canonical_node_id
+		FROM canonical_graph_nodes
+		WHERE canonical_node_id = ANY($1::text[])
+		FOR KEY SHARE
+	`, requested)
+	if err != nil {
+		return fmt.Errorf("loading derivation admission nodes: %w", err)
+	}
+	existing := make(map[string]struct{}, len(requested))
+	for rows.Next() {
+		var nodeID string
+		if err := rows.Scan(&nodeID); err != nil {
+			rows.Close()
+			return fmt.Errorf("scanning derivation admission node: %w", err)
+		}
+		existing[nodeID] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("iterating derivation admission nodes: %w", err)
+	}
+	rows.Close()
+	if _, exists := existing[derivation.NodeID]; exists {
+		return newDomainError(ErrorDerivationInvariant, "derived target %q already exists; admission may only append a new immutable node", derivation.NodeID)
+	}
+	for _, parent := range derivation.Parents {
+		if parent == derivation.NodeID {
+			return newDomainError(ErrorDerivationInvariant, "derived target %q cannot be its own parent", derivation.NodeID)
+		}
+		if _, exists := existing[parent]; !exists {
+			return newDomainError(ErrorDerivationInvariant, "derivation parent %q is not an admitted canonical node", parent)
+		}
+	}
+
+	var witness []string
+	err = tx.queryRow(ctx, `
+		WITH RECURSIVE descendants(node_id, path) AS (
+			SELECT $1::text, ARRAY[$1::text]
+			UNION ALL
+			SELECT edge.to_node_id, descendants.path || edge.to_node_id
+			FROM descendants
+			JOIN canonical_graph_edges edge
+				ON edge.from_node_id = descendants.node_id
+				AND edge.relation = 'derived_from'
+			WHERE NOT edge.to_node_id = ANY(descendants.path)
+		)
+		SELECT path
+		FROM descendants
+		WHERE node_id = ANY($2::text[])
+			AND cardinality(path) > 1
+		ORDER BY cardinality(path), path::text
+		LIMIT 1
+	`, derivation.NodeID, derivation.Parents).Scan(&witness)
+	if err == nil {
+		return newDomainError(ErrorDerivationInvariant, "derived admission would create a cycle: %s", strings.Join(witness, " -> "))
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("checking derived admission cycle: %w", err)
+	}
+	return nil
+}
+
+func insertCanonicalNode(ctx context.Context, tx sqlTx, node CanonicalGraphNode, requireNew bool) error {
 	payload, err := jsonBytes(node.Payload)
 	if err != nil {
 		return err
@@ -675,7 +1002,7 @@ func insertCanonicalNode(ctx context.Context, tx sqlTx, node CanonicalGraphNode)
 	if err != nil {
 		return err
 	}
-	_, err = tx.exec(ctx, `
+	query := `
 		INSERT INTO canonical_graph_nodes (
 			canonical_node_id,
 			node_kind,
@@ -686,8 +1013,11 @@ func insertCanonicalNode(ctx context.Context, tx sqlTx, node CanonicalGraphNode)
 			origin_proposal_occurrence_id
 		)
 		VALUES ($1, $2, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7)
-		ON CONFLICT (canonical_node_id) DO NOTHING
-	`,
+	`
+	if !requireNew {
+		query += ` ON CONFLICT (canonical_node_id) DO NOTHING`
+	}
+	_, err = tx.exec(ctx, query,
 		node.ID,
 		string(node.Kind),
 		string(payload),
@@ -702,12 +1032,12 @@ func insertCanonicalNode(ctx context.Context, tx sqlTx, node CanonicalGraphNode)
 	return nil
 }
 
-func insertCanonicalEdge(ctx context.Context, tx sqlTx, edge CanonicalGraphEdge) error {
+func insertCanonicalEdge(ctx context.Context, tx sqlTx, edge CanonicalGraphEdge, requireNew bool) error {
 	provenance, err := jsonBytes(edge.Provenance)
 	if err != nil {
 		return err
 	}
-	_, err = tx.exec(ctx, `
+	query := `
 		INSERT INTO canonical_graph_edges (
 			canonical_edge_id,
 			from_node_id,
@@ -717,8 +1047,11 @@ func insertCanonicalEdge(ctx context.Context, tx sqlTx, edge CanonicalGraphEdge)
 			origin_proposal_occurrence_id
 		)
 		VALUES ($1, $2, $3, $4, $5::jsonb, $6)
-		ON CONFLICT (canonical_edge_id) DO NOTHING
-	`,
+	`
+	if !requireNew {
+		query += ` ON CONFLICT (canonical_edge_id) DO NOTHING`
+	}
+	_, err = tx.exec(ctx, query,
 		edge.ID,
 		edge.From,
 		edge.To,
@@ -728,6 +1061,54 @@ func insertCanonicalEdge(ctx context.Context, tx sqlTx, edge CanonicalGraphEdge)
 	)
 	if err != nil {
 		return fmt.Errorf("upserting canonical graph edge %s: %w", edge.ID, err)
+	}
+	return nil
+}
+
+func insertCanonicalDerivation(
+	ctx context.Context,
+	tx sqlTx,
+	derivation evidencegraph.DerivationRecord,
+	parentEdges map[string]string,
+	originProposalOccurrenceID string,
+) error {
+	if _, err := tx.exec(ctx, `
+		INSERT INTO canonical_derivations (
+			derivation_id,
+			node_id,
+			method,
+			producer,
+			trace_ref,
+			provenance_ref,
+			origin_proposal_occurrence_id
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`,
+		derivation.ID,
+		derivation.NodeID,
+		derivation.Method,
+		derivation.Producer,
+		derivation.TraceRef,
+		derivation.ProvenanceRef,
+		originProposalOccurrenceID,
+	); err != nil {
+		return fmt.Errorf("inserting canonical derivation %s: %w", derivation.ID, err)
+	}
+	for _, parent := range derivation.Parents {
+		edgeID, ok := parentEdges[parent]
+		if !ok {
+			return newDomainError(ErrorDerivationInvariant, "derivation parent %q has no derived_from edge", parent)
+		}
+		if _, err := tx.exec(ctx, `
+			INSERT INTO canonical_derivation_parents (
+				derivation_id,
+				parent_node_id,
+				canonical_edge_id
+			)
+			VALUES ($1, $2, $3)
+		`, derivation.ID, parent, edgeID); err != nil {
+			return fmt.Errorf("inserting canonical derivation parent %s/%s: %w", derivation.ID, parent, err)
+		}
 	}
 	return nil
 }

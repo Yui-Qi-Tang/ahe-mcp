@@ -38,10 +38,10 @@ func TestIntegrationVerifyCurrentAcceptsAppliedSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 35 {
-		t.Fatalf("AppliedMigrations = %d, want 35", status.AppliedMigrations)
+	if status.AppliedMigrations != 36 {
+		t.Fatalf("AppliedMigrations = %d, want 36", status.AppliedMigrations)
 	}
-	if status.LatestMigration != "000035_detective_mcp_read_runtime.up.sql" {
+	if status.LatestMigration != "000036_evidence_ingestion_derivations.up.sql" {
 		t.Fatalf("LatestMigration = %q", status.LatestMigration)
 	}
 }
@@ -53,7 +53,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	}
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM schema_migrations
-		WHERE migration_name = '000035_detective_mcp_read_runtime.up.sql'
+		WHERE migration_name = '000036_evidence_ingestion_derivations.up.sql'
 	`); err != nil {
 		t.Fatalf("delete latest migration row: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	if !errors.Is(err, ErrSchemaNotCurrent) {
 		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
 	}
-	if !strings.Contains(err.Error(), "34/35 embedded migrations are applied") {
+	if !strings.Contains(err.Error(), "35/36 embedded migrations are applied") {
 		t.Fatalf("VerifyCurrent() error = %v, want migration count detail", err)
 	}
 }
@@ -129,7 +129,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want true")
 	}
-	assertMigrationCount(t, ctx, pool, 35)
+	assertMigrationCount(t, ctx, pool, 36)
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "source_file_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshot_intake_requests")
@@ -178,6 +178,8 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	assertMigrationTableExists(t, ctx, pool, "repository_delta_extractions")
 	assertMigrationTableExists(t, ctx, pool, "detective_mcp_read_source_bindings")
 	assertMigrationTableExists(t, ctx, pool, "detective_mcp_read_collection_cycles")
+	assertMigrationTableExists(t, ctx, pool, "canonical_derivations")
+	assertMigrationTableExists(t, ctx, pool, "canonical_derivation_parents")
 	assertMigrationIndexExists(t, ctx, pool, "repo_work_failure_policy_due_idx")
 	assertMigrationIndexExists(t, ctx, pool, "repository_extraction_work_expired_execution_scan_idx")
 	assertMigrationIndexExists(t, ctx, pool, "detective_planner_recommendation_consumptions_run_idx")

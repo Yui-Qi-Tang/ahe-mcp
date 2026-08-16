@@ -128,6 +128,70 @@ func TestIntegrationGetEvidenceRecordAfterAdmissionReadOnly(t *testing.T) {
 	}
 }
 
+func TestIntegrationCanonicalReadViewHandlePathAndDiagnosticsReadOnly(t *testing.T) {
+	ctx, pool := integrationPool(t)
+	ingestServer, err := evidenceingestionmcp.NewServer(pool)
+	if err != nil {
+		t.Fatalf("ingest NewServer() error = %v", err)
+	}
+	queryServer, err := NewServer(pool)
+	if err != nil {
+		t.Fatalf("query NewServer() error = %v", err)
+	}
+
+	submit := callSubmitManualEvidence(t, ctx, ingestServer, integrationSubmitRequest(t, "query-canonical-read-view"))
+	admission := callAdmitPendingProposal(t, ctx, ingestServer, evidenceingestionmcp.AdmitPendingProposalRequest{
+		ProposalOccurrenceID: submit.ProposalOccurrenceID,
+		DecisionBy:           "integration-test",
+		DecisionReason:       "exercise external canonical read view handle",
+	})
+	if len(admission.RawEvidenceNodeIDs) != 1 || len(admission.CanonicalEdgeIDs) != 1 {
+		t.Fatalf("admission topology = %+v", admission)
+	}
+
+	before := tableCounts(t, ctx, pool)
+	opened, err := queryServer.OpenCanonicalReadView(ctx, OpenCanonicalReadViewRequest{
+		RootNodeIDs: []string{admission.CanonicalRef},
+		Relations:   []evidencegraph.CanonicalEdgeRelation{evidencegraph.CanonicalSupportsClaim},
+		MaxDepth:    1,
+		MaxNodes:    8,
+		MaxEdges:    8,
+	})
+	if err != nil {
+		t.Fatalf("OpenCanonicalReadView() error = %v", err)
+	}
+	if opened.View.Truncated || opened.View.NodeCount != 2 || opened.View.EdgeCount != 1 || opened.View.Handle == "" {
+		t.Fatalf("opened canonical read view = %+v", opened.View)
+	}
+
+	path, err := queryServer.FindCanonicalPath(FindCanonicalPathRequest{
+		Handle:     opened.View.Handle,
+		FromNodeID: admission.RawEvidenceNodeIDs[0],
+		ToNodeID:   admission.CanonicalRef,
+		Relations:  []evidencegraph.CanonicalEdgeRelation{evidencegraph.CanonicalSupportsClaim},
+	})
+	if err != nil {
+		t.Fatalf("FindCanonicalPath() error = %v", err)
+	}
+	if !path.Witness.Found || len(path.Witness.EdgeIDs) != 1 || path.Witness.EdgeIDs[0] != admission.CanonicalEdgeIDs[0] {
+		t.Fatalf("path witness = %+v", path.Witness)
+	}
+
+	diagnostics, err := queryServer.GetCanonicalTopologyDiagnostics(GetCanonicalTopologyDiagnosticsRequest{Handle: opened.View.Handle})
+	if err != nil {
+		t.Fatalf("GetCanonicalTopologyDiagnostics() error = %v", err)
+	}
+	if diagnostics.Diagnostics.DerivedFromCycle != nil ||
+		diagnostics.Diagnostics.SupersedesCycle != nil ||
+		len(diagnostics.ConflictClusters) != 0 {
+		t.Fatalf("topology diagnostics = %+v", diagnostics)
+	}
+	after := tableCounts(t, ctx, pool)
+	if before != after {
+		t.Fatalf("canonical view reads mutated tables: before %+v after %+v", before, after)
+	}
+}
+
 func TestIntegrationGroundedSearchCanonicalNeighborsAndRelationProvenanceReadOnly(t *testing.T) {
 	ctx, pool := integrationPool(t)
 	ingestServer, err := evidenceingestionmcp.NewServer(pool)
