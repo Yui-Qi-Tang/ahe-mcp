@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -158,6 +160,10 @@ func buildExtractorInput(ctx context.Context, db sqlDB, extractionViewID string)
 }
 
 func submitExtractorOutput(ctx context.Context, db sqlDB, input ExtractorOutputInput) (IngestResult, error) {
+	input.ProducerSessionRef = strings.TrimSpace(input.ProducerSessionRef)
+	if len(input.ProducerSessionRef) > ProducerSessionRefMaxBytes {
+		return IngestResult{}, newDomainError(ErrorInvalidInput, "producer_session_ref must be at most %d bytes", ProducerSessionRefMaxBytes)
+	}
 	if input.RequestID == "" {
 		return IngestResult{}, newDomainError(ErrorInvalidInput, "request_id is required")
 	}
@@ -171,7 +177,7 @@ func submitExtractorOutput(ctx context.Context, db sqlDB, input ExtractorOutputI
 	if err != nil {
 		return IngestResult{}, err
 	}
-	attemptCtx, err := buildAttemptContextFromSourceWithDefinition(sourceCtx, input.RequestID, 0, input.ExtractorDefinition)
+	attemptCtx, err := buildAttemptContextFromSourceWithDefinitionAndSession(sourceCtx, input.RequestID, 0, input.ExtractorDefinition, input.ProducerSessionRef)
 	if err != nil {
 		return IngestResult{}, err
 	}
@@ -298,6 +304,36 @@ func persistManualSource(ctx context.Context, db sqlDB, sourceCtx manualSourceCo
 	return changed, err
 }
 
+func persistExternalSource(
+	ctx context.Context,
+	db sqlDB,
+	sourceCtx manualSourceContext,
+	receipt externalSourceReceipt,
+) (bool, error) {
+	var changed bool
+	err := withTx(ctx, db, func(tx sqlTx) error {
+		sourceChanged, err := persistSourceAuthorityTx(ctx, tx, sourceCtx)
+		if err != nil {
+			return err
+		}
+		viewChanged, err := persistExtractionViewSpansTx(ctx, tx, sourceCtx)
+		if err != nil {
+			return err
+		}
+		requestChanged, err := persistSourceIntakeRequestTx(ctx, tx, sourceCtx)
+		if err != nil {
+			return err
+		}
+		receiptChanged, err := persistExternalSourceReceiptTx(ctx, tx, receipt)
+		if err != nil {
+			return err
+		}
+		changed = sourceChanged || viewChanged || requestChanged || receiptChanged
+		return nil
+	})
+	return changed, err
+}
+
 func persistSourceAuthorityTx(ctx context.Context, tx sqlTx, sourceCtx manualSourceContext) (bool, error) {
 	changed := false
 	tag, err := tx.exec(ctx, `
@@ -335,8 +371,44 @@ func persistSourceAuthorityTx(ctx context.Context, tx sqlTx, sourceCtx manualSou
 	if err != nil {
 		return false, fmt.Errorf("upserting source snapshot: %w", err)
 	}
-	changed = changed || tag.RowsAffected() > 0
+	snapshotChanged := tag.RowsAffected() > 0
+	if !snapshotChanged && sourceCtx.SourceSnapshot.SourceSystem == SourceSystemExternalDocument {
+		if err := verifyExternalSourceSnapshotReplay(ctx, tx, sourceCtx.SourceSnapshot); err != nil {
+			return false, err
+		}
+	}
+	changed = changed || snapshotChanged
 	return changed, nil
+}
+
+func verifyExternalSourceSnapshotReplay(ctx context.Context, tx sqlTx, expected SourceSnapshot) error {
+	var sourceSystem, sourceID, sourceVersion, rawContentHash string
+	var originJSON []byte
+	err := tx.queryRow(ctx, `
+		SELECT source_system, source_id, source_version, raw_content_hash, origin_metadata
+		FROM source_snapshots
+		WHERE source_snapshot_id = $1
+	`, expected.ID).Scan(&sourceSystem, &sourceID, &sourceVersion, &rawContentHash, &originJSON)
+	if err != nil {
+		return fmt.Errorf("reading external source snapshot %s: %w", expected.ID, err)
+	}
+	var origin map[string]string
+	if err := json.Unmarshal(originJSON, &origin); err != nil {
+		return fmt.Errorf("decoding external source snapshot %s origin metadata: %w", expected.ID, err)
+	}
+	if sourceSystem != expected.SourceSystem ||
+		sourceID != expected.SourceID ||
+		sourceVersion != expected.SourceVersion ||
+		rawContentHash != expected.RawContentHash ||
+		!maps.Equal(origin, expected.OriginMetadata) {
+		return newDomainError(
+			ErrorOccurrenceConflict,
+			"external source %s revision %s already exists with different content or provenance",
+			expected.SourceID,
+			expected.SourceVersion,
+		)
+	}
+	return nil
 }
 
 func persistSourceIntakeRequestTx(ctx context.Context, tx sqlTx, sourceCtx manualSourceContext) (bool, error) {
@@ -372,6 +444,77 @@ func persistSourceIntakeRequestTx(ctx context.Context, tx sqlTx, sourceCtx manua
 	}
 	if existingSnapshotID != sourceCtx.SourceSnapshot.ID || existingViewID != sourceCtx.ExtractionView.ID || existingPayloadHash != sourceCtx.RequestPayloadHash {
 		return false, newDomainError(ErrorIdempotencyKeyReused, "request_id %s already exists with different source payload", sourceCtx.RequestID)
+	}
+	return false, nil
+}
+
+func persistExternalSourceReceiptTx(ctx context.Context, tx sqlTx, receipt externalSourceReceipt) (bool, error) {
+	tag, err := tx.exec(ctx, `
+		INSERT INTO external_source_intake_receipts (
+			request_id,
+			source_snapshot_id,
+			extraction_view_id,
+			envelope_schema_version,
+			collector_id,
+			connector_id,
+			observed_at,
+			receipt_payload_hash
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (request_id) DO NOTHING
+	`,
+		receipt.RequestID,
+		receipt.SourceSnapshotID,
+		receipt.ExtractionViewID,
+		receipt.EnvelopeSchemaVersion,
+		receipt.CollectorID,
+		receipt.ConnectorID,
+		receipt.ObservedAt,
+		receipt.ReceiptPayloadHash,
+	)
+	if err != nil {
+		return false, fmt.Errorf("upserting external source intake receipt: %w", err)
+	}
+	if tag.RowsAffected() == 1 {
+		return true, nil
+	}
+	var existingSnapshotID, existingViewID, existingSchema, existingCollectorID, existingConnectorID, existingPayloadHash string
+	var existingObservedAt time.Time
+	err = tx.queryRow(ctx, `
+		SELECT
+			source_snapshot_id,
+			extraction_view_id,
+			envelope_schema_version,
+			collector_id,
+			connector_id,
+			observed_at,
+			receipt_payload_hash
+		FROM external_source_intake_receipts
+		WHERE request_id = $1
+	`, receipt.RequestID).Scan(
+		&existingSnapshotID,
+		&existingViewID,
+		&existingSchema,
+		&existingCollectorID,
+		&existingConnectorID,
+		&existingObservedAt,
+		&existingPayloadHash,
+	)
+	if err != nil {
+		return false, fmt.Errorf("reading external source intake receipt %s: %w", receipt.RequestID, err)
+	}
+	if existingSnapshotID != receipt.SourceSnapshotID ||
+		existingViewID != receipt.ExtractionViewID ||
+		existingSchema != receipt.EnvelopeSchemaVersion ||
+		existingCollectorID != receipt.CollectorID ||
+		existingConnectorID != receipt.ConnectorID ||
+		!existingObservedAt.Equal(receipt.ObservedAt) ||
+		existingPayloadHash != receipt.ReceiptPayloadHash {
+		return false, newDomainError(
+			ErrorIdempotencyKeyReused,
+			"request_id %s already exists with a different external source receipt",
+			receipt.RequestID,
+		)
 	}
 	return false, nil
 }
@@ -421,9 +564,10 @@ func persistAttemptStartWithOptions(ctx context.Context, db sqlDB, attemptCtx at
 				extractor_definition_id,
 				source_snapshot_id,
 				extraction_view_id,
-				request_id
+				request_id,
+				producer_session_ref
 			)
-			VALUES ($1, $2, $3, $4, $5)
+			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT (extraction_run_id) DO NOTHING
 		`,
 			attemptCtx.ExtractionRun.ID,
@@ -431,6 +575,7 @@ func persistAttemptStartWithOptions(ctx context.Context, db sqlDB, attemptCtx at
 			attemptCtx.ExtractionRun.SourceSnapshotID,
 			attemptCtx.ExtractionRun.ExtractionViewID,
 			attemptCtx.ExtractionRun.RequestID,
+			attemptCtx.ExtractionRun.ProducerSessionRef,
 		)
 		if err != nil {
 			return fmt.Errorf("upserting extraction run: %w", err)
@@ -956,6 +1101,7 @@ func getProposalByOccurrenceID(ctx context.Context, db sqlQueryer, occurrenceID 
 			ea.extraction_attempt_id,
 			ea.status,
 			er.extraction_run_id,
+			COALESCE(er.producer_session_ref, ''),
 			ed.extractor_definition_id,
 			ed.extractor_name,
 			ed.extractor_version,
@@ -1058,6 +1204,7 @@ func listProposalRecords(ctx context.Context, db sqlQueryer, input ProposalListI
 			ea.extraction_attempt_id,
 			ea.status,
 			er.extraction_run_id,
+			COALESCE(er.producer_session_ref, ''),
 			ed.extractor_definition_id,
 			ed.extractor_name,
 			ed.extractor_version,
@@ -1247,6 +1394,7 @@ func scanProposalQueryResult(row sqlRow) (ProposalQueryResult, error) {
 		&result.ExtractionAttemptID,
 		&result.ExtractionAttemptStatus,
 		&result.ExtractionRunID,
+		&result.ProducerSessionRef,
 		&result.ExtractorDefinitionID,
 		&result.ExtractorName,
 		&result.ExtractorVersion,

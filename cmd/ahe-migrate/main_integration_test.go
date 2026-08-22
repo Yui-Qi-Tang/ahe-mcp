@@ -36,10 +36,10 @@ func TestIntegrationRunAppliesAndVerifiesMigrations(t *testing.T) {
 	if first.SchemaVersion != resultSchemaVersion {
 		t.Fatalf("SchemaVersion = %q, want %q", first.SchemaVersion, resultSchemaVersion)
 	}
-	if first.AppliedMigrations != 36 {
-		t.Fatalf("AppliedMigrations = %d, want 36", first.AppliedMigrations)
+	if first.AppliedMigrations != 38 {
+		t.Fatalf("AppliedMigrations = %d, want 38", first.AppliedMigrations)
 	}
-	if first.LatestMigration != "000036_evidence_ingestion_derivations.up.sql" {
+	if first.LatestMigration != "000038_evidence_ingestion_producer_session_ref.up.sql" {
 		t.Fatalf("LatestMigration = %q", first.LatestMigration)
 	}
 

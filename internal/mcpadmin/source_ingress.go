@@ -18,6 +18,7 @@ const (
 	sourceIngressManualText     sourceIngressLaneKey = evidenceingestion.SourceSystemManualText
 	sourceIngressCodeFile       sourceIngressLaneKey = evidenceingestion.SourceSystemCodeFile
 	sourceIngressCodeRepository sourceIngressLaneKey = evidenceingestion.SourceSystemCodeRepository
+	sourceIngressExternalSource sourceIngressLaneKey = evidenceingestion.SourceSystemExternalDocument
 )
 
 type sourceIngressCall struct {
@@ -71,6 +72,7 @@ func newSourceIngressBackend(ctx context.Context, backend mcpstdio.Backend, buff
 			sourceIngressManualText:     {jobs: make(chan sourceIngressCall, bufferSize)},
 			sourceIngressCodeFile:       {jobs: make(chan sourceIngressCall, bufferSize)},
 			sourceIngressCodeRepository: {jobs: make(chan sourceIngressCall, bufferSize)},
+			sourceIngressExternalSource: {jobs: make(chan sourceIngressCall, bufferSize)},
 		},
 	}
 	for _, lane := range b.lanes {
@@ -161,6 +163,8 @@ func sourceIngressLaneForTool(name string, arguments json.RawMessage) (sourceIng
 			return sourceIngressCodeFile, true
 		}
 		return sourceIngressManualText, true
+	case evidenceingestionmcp.ToolSubmitExternalSource:
+		return sourceIngressExternalSource, true
 	case evidenceingestionmcp.ToolRunGoParserExtractor,
 		evidenceingestionmcp.ToolRunGoplsExtractor:
 		return sourceIngressCodeFile, true

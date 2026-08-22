@@ -15,14 +15,14 @@ import (
 func TestToolsExposeIngestAndExtractorInputTools(t *testing.T) {
 	server := newServer(&fakeCore{})
 	tools := server.Tools()
-	if len(tools) != 35 {
-		t.Fatalf("len(Tools()) = %d, want 35", len(tools))
+	if len(tools) != 36 {
+		t.Fatalf("len(Tools()) = %d, want 36", len(tools))
 	}
 	got := map[string]bool{}
 	for _, tool := range tools {
 		got[tool.Name] = tool.Write
 	}
-	for _, name := range []string{ToolSubmitManualEvidence, ToolSubmitTextSource, ToolSubmitExtractorOutput, ToolObserveGitRepositoryChange, ToolScheduleGitRepositoryExtractionWork, ToolClaimGitRepositoryExtractionWork, ToolRenewGitRepositoryExtractionWorkLease, ToolExecuteClaimedGitRepositoryExtractionWork, ToolRunGitRepositoryExtractionWorkerTick, ToolFinishGitRepositoryExtractionWork, ToolRecoverExpiredGitRepositoryExtractionWork, ToolRepairExpiredGitRepositoryExtractionWorkExecution, ToolRetryFailedGitRepositoryExtractionWork, ToolCaptureGitRepositorySnapshot, ToolCreateRepositoryExtractionRun, ToolRunRepositoryGoParserExtractor, ToolRunRepositoryGoplsExtractor, ToolActivateRepositorySourceGeneration, ToolRunLocalOllamaExtractor, ToolRunGoParserExtractor, ToolRunGoplsExtractor, ToolAdmitPendingProposal, ToolRecordPendingProposalDisposition, ToolClassifyFailedGitRepositoryExtractionWork, ToolConsumeDueGitRepositoryExtractionWorkRetryDecision, ToolRunDueGitRepositoryExtractionWorkRetryControllerTick, ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick} {
+	for _, name := range []string{ToolSubmitManualEvidence, ToolSubmitTextSource, ToolSubmitExternalSource, ToolSubmitExtractorOutput, ToolObserveGitRepositoryChange, ToolScheduleGitRepositoryExtractionWork, ToolClaimGitRepositoryExtractionWork, ToolRenewGitRepositoryExtractionWorkLease, ToolExecuteClaimedGitRepositoryExtractionWork, ToolRunGitRepositoryExtractionWorkerTick, ToolFinishGitRepositoryExtractionWork, ToolRecoverExpiredGitRepositoryExtractionWork, ToolRepairExpiredGitRepositoryExtractionWorkExecution, ToolRetryFailedGitRepositoryExtractionWork, ToolCaptureGitRepositorySnapshot, ToolCreateRepositoryExtractionRun, ToolRunRepositoryGoParserExtractor, ToolRunRepositoryGoplsExtractor, ToolActivateRepositorySourceGeneration, ToolRunLocalOllamaExtractor, ToolRunGoParserExtractor, ToolRunGoplsExtractor, ToolAdmitPendingProposal, ToolRecordPendingProposalDisposition, ToolClassifyFailedGitRepositoryExtractionWork, ToolConsumeDueGitRepositoryExtractionWorkRetryDecision, ToolRunDueGitRepositoryExtractionWorkRetryControllerTick, ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick} {
 		if !got[name] {
 			t.Fatalf("tool %s missing or not write-enabled: %+v", name, tools)
 		}
@@ -50,6 +50,70 @@ func TestToolsExposeIngestAndExtractorInputTools(t *testing.T) {
 	}
 	if write, ok := got[ToolListRepositorySourceGenerations]; !ok || write {
 		t.Fatalf("tool %s missing or write-enabled: %+v", ToolListRepositorySourceGenerations, tools)
+	}
+}
+
+func TestCallToolCapturesExternalSourceWithoutProposalWork(t *testing.T) {
+	receivedAt := time.Date(2026, 8, 23, 2, 4, 5, 0, time.UTC)
+	observedAt := time.Date(2026, 8, 23, 2, 3, 4, 0, time.UTC)
+	core := &fakeCore{
+		externalCaptureResult: evidenceingestion.ExternalSourceIntakeResult{
+			SourceIntakeResult: evidenceingestion.SourceIntakeResult{
+				SourceSnapshotID:    "srcsnap:external",
+				ExtractionViewID:    "view:external",
+				SourceSystem:        evidenceingestion.SourceSystemExternalDocument,
+				SourceID:            "extsrc:1",
+				RawContentHash:      "sha256:raw",
+				RenderedContentHash: "sha256:rendered",
+				SpanCatalogVersion:  evidenceingestion.SpanCatalogExternalDocumentLineV1,
+				Spans: []evidenceingestion.SpanEntry{{
+					ExtractionViewID:   "view:external",
+					SpanID:             "span:S1",
+					SpanCatalogVersion: evidenceingestion.SpanCatalogExternalDocumentLineV1,
+				}},
+			},
+			ExternalSourceSystem: "jira",
+			SourceNamespace:      "acme/eng",
+			ObjectType:           "issue",
+			ObjectID:             "AHE-42",
+			Revision:             "2026-08-23T02:00:00Z",
+			Coverage:             evidenceingestion.ExternalSourceCoverageFullDocument,
+			ObservedAt:           observedAt,
+			ReceivedAt:           receivedAt,
+		},
+	}
+	server := newServer(core)
+	req := testExternalSourceRequest("external-source")
+	payload, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("Marshal request: %v", err)
+	}
+
+	data, err := server.CallTool(context.Background(), ToolSubmitExternalSource, payload)
+	if err != nil {
+		t.Fatalf("CallTool() error = %v", err)
+	}
+	var resp SubmitExternalSourceResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		t.Fatalf("Unmarshal response: %v", err)
+	}
+	if core.externalCaptureCalls != 1 || core.captureCalls != 0 || core.ingestCalls != 0 || core.traceCalls != 0 {
+		t.Fatalf(
+			"core calls = external %d capture %d ingest %d trace %d, want 1/0/0/0",
+			core.externalCaptureCalls,
+			core.captureCalls,
+			core.ingestCalls,
+			core.traceCalls,
+		)
+	}
+	if !reflect.DeepEqual(core.externalCaptureInput, req) {
+		t.Fatalf("external source input = %#v, want %#v", core.externalCaptureInput, req)
+	}
+	if resp.SourceSystem != "jira" || resp.AuthoritySourceSystem != evidenceingestion.SourceSystemExternalDocument {
+		t.Fatalf("external source systems = %+v", resp)
+	}
+	if !resp.ReceivedAt.Equal(receivedAt) || !resp.ObservedAt.Equal(observedAt) || len(resp.Spans) != 1 {
+		t.Fatalf("external source response = %+v", resp)
 	}
 }
 
@@ -1342,6 +1406,9 @@ func TestCallToolSubmitsExtractorOutputThroughCore(t *testing.T) {
 	if core.extractorInput.RequestID != req.RequestID || core.extractorInput.SourceSnapshotID != req.SourceSnapshotID || core.extractorInput.ExtractionViewID != req.ExtractionViewID {
 		t.Fatalf("extractor input not forwarded: %+v", core.extractorInput)
 	}
+	if core.extractorInput.ProducerSessionRef != req.ProducerSessionRef {
+		t.Fatalf("producer session ref = %q, want %q", core.extractorInput.ProducerSessionRef, req.ProducerSessionRef)
+	}
 	if !reflect.DeepEqual(core.extractorInput.ExtractorDefinition, req.ExtractorDefinition) {
 		t.Fatalf("extractor definition not forwarded: %#v", core.extractorInput.ExtractorDefinition)
 	}
@@ -1421,6 +1488,16 @@ func TestCallToolErrorsAreStable(t *testing.T) {
 		assertToolError(t, err, toolErrorInvalidRequest)
 	})
 
+	t.Run("external source unknown field", func(t *testing.T) {
+		server := newServer(&fakeCore{})
+		_, err := server.CallTool(
+			context.Background(),
+			ToolSubmitExternalSource,
+			[]byte(`{"schema_version":"external-source-envelope-v1","summary":"model-generated"}`),
+		)
+		assertToolError(t, err, toolErrorInvalidRequest)
+	})
+
 	t.Run("expired claim discovery caller time rejected", func(t *testing.T) {
 		server := newServer(&fakeCore{})
 		_, err := server.CallTool(context.Background(), ToolListExpiredGitRepositoryExtractionWorkClaims, []byte(`{"repo_id":"ahe-wrap","extractor_name":"repository-go-parser-code-fact","limit":1,"as_of":"2026-07-21T12:00:00Z"}`))
@@ -1448,6 +1525,12 @@ func TestCallToolErrorsAreStable(t *testing.T) {
 	t.Run("extractor output attempt number rejected", func(t *testing.T) {
 		server := newServer(&fakeCore{})
 		_, err := server.CallTool(context.Background(), ToolSubmitExtractorOutput, []byte(`{"request_id":"r","source_snapshot_id":"srcsnap:1","extraction_view_id":"view:1","attempt_number":99,"extractor_output":{"proposals":[]}}`))
+		assertToolError(t, err, toolErrorInvalidRequest)
+	})
+
+	t.Run("extractor output requires producer provenance", func(t *testing.T) {
+		server := newServer(&fakeCore{})
+		_, err := server.CallTool(context.Background(), ToolSubmitExtractorOutput, []byte(`{"request_id":"r","source_snapshot_id":"srcsnap:1","extraction_view_id":"view:1","extractor_output":{"proposals":[]}}`))
 		assertToolError(t, err, toolErrorInvalidRequest)
 	})
 
@@ -1620,6 +1703,18 @@ func TestCallToolErrorsAreStable(t *testing.T) {
 		assertToolError(t, err, string(evidenceingestion.ErrorIdempotencyKeyReused))
 	})
 
+	t.Run("external source revision conflict", func(t *testing.T) {
+		server := newServer(&fakeCore{
+			externalCaptureErr: &evidenceingestion.DomainError{Kind: evidenceingestion.ErrorOccurrenceConflict, Message: "revision changed"},
+		})
+		payload, err := json.Marshal(testExternalSourceRequest("external-conflict"))
+		if err != nil {
+			t.Fatalf("Marshal request: %v", err)
+		}
+		_, err = server.CallTool(context.Background(), ToolSubmitExternalSource, payload)
+		assertToolError(t, err, string(evidenceingestion.ErrorOccurrenceConflict))
+	})
+
 	t.Run("admission state conflict", func(t *testing.T) {
 		server := newServer(&fakeCore{
 			admitErr: &evidenceingestion.DomainError{Kind: evidenceingestion.ErrorAdmissionStateConflict, Message: "proposal is not pending"},
@@ -1725,11 +1820,35 @@ func testTextSourceRequest(requestID string) SubmitTextSourceRequest {
 	}
 }
 
+func testExternalSourceRequest(requestID string) SubmitExternalSourceRequest {
+	return SubmitExternalSourceRequest{
+		SchemaVersion:   evidenceingestion.ExternalSourceEnvelopeSchemaV1,
+		RequestID:       requestID,
+		SourceSystem:    "jira",
+		SourceNamespace: "acme/eng",
+		ObjectType:      "issue",
+		ObjectID:        "AHE-42",
+		Revision:        "2026-08-23T02:00:00Z",
+		SourceLocation:  "https://acme.example/jira/AHE-42",
+		Title:           "External intake boundary",
+		ContentFormat:   evidenceingestion.ExternalSourceContentFormatMarkdown,
+		ContentFidelity: evidenceingestion.ExternalSourceContentFidelityVerbatim,
+		Content:         "# AHE-42\nExternal connector owns collection.\n",
+		Coverage:        evidenceingestion.ExternalSourceCoverageFullDocument,
+		CollectorID:     "claude-code",
+		ConnectorID:     "atlassian-rovo",
+		ObservedAt:      "2026-08-23T02:03:04Z",
+		SourceCreatedAt: "2026-08-22T01:00:00Z",
+		SourceUpdatedAt: "2026-08-23T02:00:00Z",
+	}
+}
+
 func testExtractorOutputRequest(requestID string) SubmitExtractorOutputRequest {
 	return SubmitExtractorOutputRequest{
-		RequestID:        requestID,
-		SourceSnapshotID: "srcsnap:1",
-		ExtractionViewID: "view:1",
+		RequestID:          requestID,
+		SourceSnapshotID:   "srcsnap:1",
+		ExtractionViewID:   "view:1",
+		ProducerSessionRef: "claude-code-session:test",
 		ExtractorDefinition: evidenceingestion.ExtractorDefinitionInput{
 			Name:    "unit-test-extractor",
 			Version: "v1",
@@ -1746,6 +1865,7 @@ type fakeCore struct {
 	generationListCalls           int
 	buildCalls                    int
 	captureCalls                  int
+	externalCaptureCalls          int
 	ingestCalls                   int
 	extractorCalls                int
 	trustedCalls                  int
@@ -1761,6 +1881,7 @@ type fakeCore struct {
 	activationInput               evidenceingestion.RepositorySourceGenerationActivationInput
 	generationListInput           evidenceingestion.RepositorySourceGenerationListInput
 	input                         evidenceingestion.ManualTextInput
+	externalCaptureInput          evidenceingestion.ExternalSourceEnvelopeV1
 	extractorInput                evidenceingestion.ExtractorOutputInput
 	trustedRequest                evidenceingestion.TrustedExtractorRequest
 	repositoryConfig              evidenceingestion.GitRepositorySnapshotConfig
@@ -1774,6 +1895,7 @@ type fakeCore struct {
 	buildResult                   evidenceingestion.ExtractorInput
 	buildRepositoryResult         evidenceingestion.RepositoryExtractorInput
 	captureResult                 evidenceingestion.SourceIntakeResult
+	externalCaptureResult         evidenceingestion.ExternalSourceIntakeResult
 	ingestResult                  evidenceingestion.IngestResult
 	extractorResult               evidenceingestion.IngestResult
 	trustedResult                 evidenceingestion.IngestResult
@@ -1805,6 +1927,7 @@ type fakeCore struct {
 	generationListErr             error
 	buildErr                      error
 	captureErr                    error
+	externalCaptureErr            error
 	ingestErr                     error
 	extractorErr                  error
 	trustedErr                    error
@@ -2035,6 +2158,15 @@ func (c *fakeCore) CaptureManualSource(_ context.Context, input evidenceingestio
 		return evidenceingestion.SourceIntakeResult{}, c.captureErr
 	}
 	return c.captureResult, nil
+}
+
+func (c *fakeCore) CaptureExternalSource(_ context.Context, input evidenceingestion.ExternalSourceEnvelopeV1) (evidenceingestion.ExternalSourceIntakeResult, error) {
+	c.externalCaptureCalls++
+	c.externalCaptureInput = input
+	if c.externalCaptureErr != nil {
+		return evidenceingestion.ExternalSourceIntakeResult{}, c.externalCaptureErr
+	}
+	return c.externalCaptureResult, nil
 }
 
 func (c *fakeCore) IngestManualText(_ context.Context, input evidenceingestion.ManualTextInput, fixture evidenceingestion.FrozenExtractorOutput) (evidenceingestion.IngestResult, error) {

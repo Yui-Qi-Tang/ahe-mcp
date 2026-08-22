@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
@@ -20,9 +21,11 @@ const (
 	ToolSubmitManualEvidence = "submit_manual_evidence"
 	// ToolSubmitTextSource is the Slice 4 source-only intake tool.
 	ToolSubmitTextSource = "submit_text_source"
-	// ToolSubmitExtractorOutput is the Slice 5 extractor-output handoff tool.
+	// ToolSubmitExternalSource accepts one provider-neutral external source envelope.
+	ToolSubmitExternalSource = "submit_external_source"
+	// ToolSubmitExtractorOutput is the Slice 5 proposal-producer handoff tool.
 	ToolSubmitExtractorOutput = "submit_extractor_output"
-	// ToolGetExtractorInput is the Slice 6 grounded input handoff tool.
+	// ToolGetExtractorInput is the Slice 6 grounded producer-input handoff tool.
 	ToolGetExtractorInput = "get_extractor_input"
 	// ToolInspectGoplsWorkspace returns bounded package and file inventory without persistence.
 	ToolInspectGoplsWorkspace = "inspect_gopls_workspace"
@@ -119,16 +122,20 @@ type SubmitTextSourceRequest struct {
 	OriginMetadata map[string]string `json:"origin_metadata,omitempty"`
 }
 
-// SubmitExtractorOutputRequest submits extractor output for an existing source view.
+// SubmitExternalSourceRequest is the provider-neutral external source envelope.
+type SubmitExternalSourceRequest = evidenceingestion.ExternalSourceEnvelopeV1
+
+// SubmitExtractorOutputRequest submits one identified producer's output for an existing source view.
 type SubmitExtractorOutputRequest struct {
 	RequestID           string                                     `json:"request_id"`
 	SourceSnapshotID    string                                     `json:"source_snapshot_id"`
 	ExtractionViewID    string                                     `json:"extraction_view_id"`
+	ProducerSessionRef  string                                     `json:"producer_session_ref,omitempty"`
 	ExtractorDefinition evidenceingestion.ExtractorDefinitionInput `json:"extractor_definition,omitempty"`
 	ExtractorOutput     evidenceingestion.FrozenExtractorOutput    `json:"extractor_output"`
 }
 
-// GetExtractorInputRequest loads one grounded source view for trusted local extraction.
+// GetExtractorInputRequest loads one grounded source view for a trusted proposal producer.
 type GetExtractorInputRequest struct {
 	ExtractionViewID string `json:"extraction_view_id"`
 }
@@ -344,6 +351,27 @@ type SubmitTextSourceResponse struct {
 	Replayed            bool                          `json:"replayed"`
 }
 
+// SubmitExternalSourceResponse returns immutable external source authority without proposals.
+type SubmitExternalSourceResponse struct {
+	SourceSnapshotID      string                        `json:"source_snapshot_id"`
+	ExtractionViewID      string                        `json:"extraction_view_id"`
+	AuthoritySourceSystem string                        `json:"authority_source_system"`
+	SourceID              string                        `json:"source_id"`
+	SourceSystem          string                        `json:"source_system"`
+	SourceNamespace       string                        `json:"source_namespace"`
+	ObjectType            string                        `json:"object_type"`
+	ObjectID              string                        `json:"object_id"`
+	Revision              string                        `json:"revision"`
+	Coverage              string                        `json:"coverage"`
+	ObservedAt            time.Time                     `json:"observed_at"`
+	ReceivedAt            time.Time                     `json:"received_at"`
+	RawContentHash        string                        `json:"raw_content_hash"`
+	RenderedContentHash   string                        `json:"rendered_content_hash"`
+	SpanCatalogVersion    string                        `json:"span_catalog_version"`
+	Spans                 []evidenceingestion.SpanEntry `json:"spans"`
+	Replayed              bool                          `json:"replayed"`
+}
+
 // GetExtractorInputResponse is the grounded, read-only source view package.
 type GetExtractorInputResponse = evidenceingestion.ExtractorInput
 
@@ -514,6 +542,7 @@ type ingestionCore interface {
 	RunExpiredRepositoryExtractionWorkMaintenanceTick(ctx context.Context, input evidenceingestion.RepositoryExtractionWorkExpiredMaintenanceTickInput) (evidenceingestion.RepositoryExtractionWorkExpiredMaintenanceTickResult, error)
 	CreateRepositoryExtractionRun(ctx context.Context, request evidenceingestion.RepositoryExtractionRunRequest) (evidenceingestion.RepositoryExtractionRunResult, error)
 	CaptureManualSource(ctx context.Context, input evidenceingestion.ManualTextInput) (evidenceingestion.SourceIntakeResult, error)
+	CaptureExternalSource(ctx context.Context, input evidenceingestion.ExternalSourceEnvelopeV1) (evidenceingestion.ExternalSourceIntakeResult, error)
 	IngestManualText(ctx context.Context, input evidenceingestion.ManualTextInput, fixture evidenceingestion.FrozenExtractorOutput) (evidenceingestion.IngestResult, error)
 	RunTrustedExtractor(ctx context.Context, request evidenceingestion.TrustedExtractorRequest, runner evidenceingestion.ExtractorRunner) (evidenceingestion.IngestResult, error)
 	RunRepositoryGoParserExtractor(ctx context.Context, request evidenceingestion.RepositoryGoParserRequest) (evidenceingestion.RepositoryIngestResult, error)
@@ -559,13 +588,18 @@ func (s *Server) Tools() []ToolDefinition {
 			Write:       true,
 		},
 		{
+			Name:        ToolSubmitExternalSource,
+			Description: "Submit one exact connector-observed external source envelope without creating proposals or canonical evidence.",
+			Write:       true,
+		},
+		{
 			Name:        ToolSubmitExtractorOutput,
-			Description: "Submit extractor output for an existing source snapshot and extraction view.",
+			Description: "Submit identified external-agent or local-extractor proposal output for an existing grounded source view, with an optional non-secret producer session reference for debugging.",
 			Write:       true,
 		},
 		{
 			Name:        ToolGetExtractorInput,
-			Description: "Load grounded source view data for a trusted local extractor.",
+			Description: "Load grounded source bytes and deterministic spans for an external agent or local extractor.",
 			Write:       false,
 		},
 		{
@@ -686,7 +720,7 @@ func (s *Server) Tools() []ToolDefinition {
 		},
 		{
 			Name:        ToolAdmitPendingProposal,
-			Description: "Admit one pending proposal occurrence as source-backed evidence, or as a new derived claim with an explicit complete canonical parent set.",
+			Description: "After a human reviews the proposal sentence, exact source quotes, source title/location, coverage/limitations, revision, and the version difference when a comparable prior revision exists, admit one pending proposal as source-backed evidence or an explicitly parented derived claim.",
 			Write:       true,
 		},
 		{
@@ -745,6 +779,20 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
 		}
 		resp, err := s.SubmitTextSource(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
+		}
+		return data, nil
+	case ToolSubmitExternalSource:
+		var req SubmitExternalSourceRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.SubmitExternalSource(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -1696,10 +1744,19 @@ func (s *Server) SubmitManualEvidence(ctx context.Context, req SubmitManualEvide
 
 // SubmitExtractorOutput materializes proposals from extractor output against an existing source view.
 func (s *Server) SubmitExtractorOutput(ctx context.Context, req SubmitExtractorOutputRequest) (SubmitExtractorOutputResponse, error) {
+	req.ExtractorDefinition.Name = strings.TrimSpace(req.ExtractorDefinition.Name)
+	req.ExtractorDefinition.Version = strings.TrimSpace(req.ExtractorDefinition.Version)
+	if req.ExtractorDefinition.Name == "" || req.ExtractorDefinition.Version == "" {
+		return SubmitExtractorOutputResponse{}, &ToolError{
+			Code:    toolErrorInvalidRequest,
+			Message: "extractor_definition.name and extractor_definition.version are required for producer provenance",
+		}
+	}
 	result, err := s.core.SubmitExtractorOutput(ctx, evidenceingestion.ExtractorOutputInput{
 		RequestID:           req.RequestID,
 		SourceSnapshotID:    req.SourceSnapshotID,
 		ExtractionViewID:    req.ExtractionViewID,
+		ProducerSessionRef:  req.ProducerSessionRef,
 		ExtractorDefinition: req.ExtractorDefinition,
 		Output:              req.ExtractorOutput,
 	})
@@ -1743,6 +1800,36 @@ func (s *Server) SubmitTextSource(ctx context.Context, req SubmitTextSourceReque
 		SpanCatalogVersion:  result.SpanCatalogVersion,
 		Spans:               append([]evidenceingestion.SpanEntry(nil), result.Spans...),
 		Replayed:            result.Replayed,
+	}, nil
+}
+
+// SubmitExternalSource persists one exact external object for later AHE-owned context assembly.
+func (s *Server) SubmitExternalSource(
+	ctx context.Context,
+	req SubmitExternalSourceRequest,
+) (SubmitExternalSourceResponse, error) {
+	result, err := s.core.CaptureExternalSource(ctx, req)
+	if err != nil {
+		return SubmitExternalSourceResponse{}, mapToolError(err)
+	}
+	return SubmitExternalSourceResponse{
+		SourceSnapshotID:      result.SourceSnapshotID,
+		ExtractionViewID:      result.ExtractionViewID,
+		AuthoritySourceSystem: result.SourceIntakeResult.SourceSystem,
+		SourceID:              result.SourceIntakeResult.SourceID,
+		SourceSystem:          result.ExternalSourceSystem,
+		SourceNamespace:       result.SourceNamespace,
+		ObjectType:            result.ObjectType,
+		ObjectID:              result.ObjectID,
+		Revision:              result.Revision,
+		Coverage:              result.Coverage,
+		ObservedAt:            result.ObservedAt,
+		ReceivedAt:            result.ReceivedAt,
+		RawContentHash:        result.RawContentHash,
+		RenderedContentHash:   result.RenderedContentHash,
+		SpanCatalogVersion:    result.SpanCatalogVersion,
+		Spans:                 append([]evidenceingestion.SpanEntry(nil), result.Spans...),
+		Replayed:              result.Replayed,
 	}, nil
 }
 
@@ -1865,6 +1952,10 @@ func (c postgresCore) CreateRepositoryExtractionRun(ctx context.Context, request
 
 func (c postgresCore) CaptureManualSource(ctx context.Context, input evidenceingestion.ManualTextInput) (evidenceingestion.SourceIntakeResult, error) {
 	return evidenceingestion.CaptureManualSource(ctx, c.pool, input)
+}
+
+func (c postgresCore) CaptureExternalSource(ctx context.Context, input evidenceingestion.ExternalSourceEnvelopeV1) (evidenceingestion.ExternalSourceIntakeResult, error) {
+	return evidenceingestion.CaptureExternalSource(ctx, c.pool, input)
 }
 
 func (c postgresCore) IngestManualText(ctx context.Context, input evidenceingestion.ManualTextInput, fixture evidenceingestion.FrozenExtractorOutput) (evidenceingestion.IngestResult, error) {

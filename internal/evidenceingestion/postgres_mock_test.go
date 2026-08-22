@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 
@@ -340,10 +341,11 @@ func TestMockSQLSubmitExtractorOutputFromExistingSource(t *testing.T) {
 	}
 
 	result, err := submitExtractorOutput(ctx, db, ExtractorOutputInput{
-		RequestID:        "extractor-output-request",
-		SourceSnapshotID: source.SourceSnapshotID,
-		ExtractionViewID: source.ExtractionViewID,
-		Output:           testFixture(),
+		RequestID:          "extractor-output-request",
+		SourceSnapshotID:   source.SourceSnapshotID,
+		ExtractionViewID:   source.ExtractionViewID,
+		ProducerSessionRef: "  claude-code-session:test  ",
+		Output:             testFixture(),
 	})
 	if err != nil {
 		t.Fatalf("submitExtractorOutput() error = %v", err)
@@ -358,6 +360,9 @@ func TestMockSQLSubmitExtractorOutputFromExistingSource(t *testing.T) {
 	if got.StatementText != "Refunds must be completed within 7 days." {
 		t.Fatalf("statement text = %q", got.StatementText)
 	}
+	if got.ProducerSessionRef != "claude-code-session:test" {
+		t.Fatalf("producer session ref = %q, want trimmed debug reference", got.ProducerSessionRef)
+	}
 	if len(db.sourceBlobs) != 1 || len(db.sourceSnapshots) != 1 || len(db.extractionViews) != 1 || len(db.spanEntries) != 2 {
 		t.Fatalf("source rows changed after extractor output: blobs %d snapshots %d views %d spans %d, want 1/1/1/2",
 			len(db.sourceBlobs), len(db.sourceSnapshots), len(db.extractionViews), len(db.spanEntries))
@@ -365,6 +370,27 @@ func TestMockSQLSubmitExtractorOutputFromExistingSource(t *testing.T) {
 	if len(db.extractionAttempts) != 1 || len(db.proposalBatches) != 1 || len(db.proposalOccurrences) != 1 {
 		t.Fatalf("proposal rows = attempts %d batches %d occurrences %d, want 1/1/1",
 			len(db.extractionAttempts), len(db.proposalBatches), len(db.proposalOccurrences))
+	}
+}
+
+func TestMockSQLSubmitExtractorOutputRejectsOversizedProducerSessionRef(t *testing.T) {
+	ctx := context.Background()
+	db := newMockSQLDB()
+	source, err := captureManualSource(ctx, db, testManualInput("mock-extractor-session-ref-limit"))
+	if err != nil {
+		t.Fatalf("captureManualSource() error = %v", err)
+	}
+
+	_, err = submitExtractorOutput(ctx, db, ExtractorOutputInput{
+		RequestID:          "extractor-session-ref-limit",
+		SourceSnapshotID:   source.SourceSnapshotID,
+		ExtractionViewID:   source.ExtractionViewID,
+		ProducerSessionRef: strings.Repeat("x", ProducerSessionRefMaxBytes+1),
+		Output:             testFixture(),
+	})
+	assertKind(t, err, ErrorInvalidInput)
+	if len(db.extractionRuns) != 0 {
+		t.Fatalf("extraction runs = %d, want no write after invalid session ref", len(db.extractionRuns))
 	}
 }
 
@@ -436,11 +462,14 @@ func TestMockSQLSubmitExtractorOutputUnknownSpanPersistsFailure(t *testing.T) {
 }
 
 type mockSQLDB struct {
-	sourceBlobs           map[string][]byte
-	sourceSnapshots       map[string]mockSourceSnapshot
-	extractionViews       map[string]mockExtractionView
-	spanEntries           map[string]SpanEntry
-	sourceIntakeRequests  map[string]mockSourceIntakeRequest
+	sourceBlobs          map[string][]byte
+	sourceSnapshots      map[string]mockSourceSnapshot
+	extractionViews      map[string]mockExtractionView
+	spanEntries          map[string]SpanEntry
+	sourceIntakeRequests map[string]mockSourceIntakeRequest
+
+	externalSourceReceipts map[string]mockExternalSourceReceipt
+
 	extractorDefinitions  map[string]mockExtractorDefinition
 	extractionRuns        map[string]mockExtractionRun
 	extractionAttempts    map[string]mockExtractionAttempt
@@ -475,6 +504,18 @@ type mockSourceIntakeRequest struct {
 	sourceSnapshotID   string
 	extractionViewID   string
 	requestPayloadHash string
+	createdAt          time.Time
+}
+
+type mockExternalSourceReceipt struct {
+	sourceSnapshotID      string
+	extractionViewID      string
+	envelopeSchemaVersion string
+	collectorID           string
+	connectorID           string
+	observedAt            time.Time
+	receiptPayloadHash    string
+	createdAt             time.Time
 }
 
 type mockExtractorDefinition struct {
@@ -488,6 +529,7 @@ type mockExtractionRun struct {
 	sourceSnapshotID      string
 	extractionViewID      string
 	requestID             string
+	producerSessionRef    string
 }
 
 type mockExtractionAttempt struct {
@@ -517,11 +559,14 @@ type mockAdmissionDecision struct {
 
 func newMockSQLDB() *mockSQLDB {
 	return &mockSQLDB{
-		sourceBlobs:           map[string][]byte{},
-		sourceSnapshots:       map[string]mockSourceSnapshot{},
-		extractionViews:       map[string]mockExtractionView{},
-		spanEntries:           map[string]SpanEntry{},
-		sourceIntakeRequests:  map[string]mockSourceIntakeRequest{},
+		sourceBlobs:          map[string][]byte{},
+		sourceSnapshots:      map[string]mockSourceSnapshot{},
+		extractionViews:      map[string]mockExtractionView{},
+		spanEntries:          map[string]SpanEntry{},
+		sourceIntakeRequests: map[string]mockSourceIntakeRequest{},
+
+		externalSourceReceipts: map[string]mockExternalSourceReceipt{},
+
 		extractorDefinitions:  map[string]mockExtractorDefinition{},
 		extractionRuns:        map[string]mockExtractionRun{},
 		extractionAttempts:    map[string]mockExtractionAttempt{},
@@ -641,6 +686,23 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 			sourceSnapshotID:   args[1].(string),
 			extractionViewID:   args[2].(string),
 			requestPayloadHash: args[3].(string),
+			createdAt:          time.Date(2026, 8, 23, 2, 4, 5, 0, time.UTC),
+		}
+		return mockExecResult(1), nil
+	case strings.Contains(query, "INSERT INTO external_source_intake_receipts"):
+		id := args[0].(string)
+		if _, ok := db.externalSourceReceipts[id]; ok {
+			return mockExecResult(0), nil
+		}
+		db.externalSourceReceipts[id] = mockExternalSourceReceipt{
+			sourceSnapshotID:      args[1].(string),
+			extractionViewID:      args[2].(string),
+			envelopeSchemaVersion: args[3].(string),
+			collectorID:           args[4].(string),
+			connectorID:           args[5].(string),
+			observedAt:            args[6].(time.Time),
+			receiptPayloadHash:    args[7].(string),
+			createdAt:             time.Date(2026, 8, 23, 2, 4, 5, 0, time.UTC),
 		}
 		return mockExecResult(1), nil
 	case strings.Contains(query, "INSERT INTO extractor_definitions"):
@@ -656,6 +718,7 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 			sourceSnapshotID:      args[2].(string),
 			extractionViewID:      args[3].(string),
 			requestID:             args[4].(string),
+			producerSessionRef:    args[5].(string),
 		}
 		return mockExecResult(1), nil
 	case strings.Contains(query, "INSERT INTO extraction_attempts"):
@@ -1144,12 +1207,51 @@ func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) s
 			return mockRow{err: pgx.ErrNoRows}
 		}
 		return mockRow{values: []any{occurrence.ProposalFingerprint, occurrence.StatementText}}
+	case strings.Contains(query, "SELECT created_at") && strings.Contains(query, "FROM external_source_intake_receipts"):
+		receipt, ok := db.externalSourceReceipts[args[0].(string)]
+		if !ok {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		return mockRow{values: []any{receipt.createdAt}}
+	case strings.Contains(query, "FROM external_source_intake_receipts"):
+		receipt, ok := db.externalSourceReceipts[args[0].(string)]
+		if !ok {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		return mockRow{values: []any{
+			receipt.sourceSnapshotID,
+			receipt.extractionViewID,
+			receipt.envelopeSchemaVersion,
+			receipt.collectorID,
+			receipt.connectorID,
+			receipt.observedAt,
+			receipt.receiptPayloadHash,
+		}}
+	case strings.Contains(query, "SELECT created_at") && strings.Contains(query, "FROM source_intake_requests"):
+		request, ok := db.sourceIntakeRequests[args[0].(string)]
+		if !ok {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		return mockRow{values: []any{request.createdAt}}
 	case strings.Contains(query, "FROM source_intake_requests"):
 		request, ok := db.sourceIntakeRequests[args[0].(string)]
 		if !ok {
 			return mockRow{err: pgx.ErrNoRows}
 		}
 		return mockRow{values: []any{request.sourceSnapshotID, request.extractionViewID, request.requestPayloadHash}}
+	case strings.Contains(query, "SELECT source_system, source_id, source_version, raw_content_hash, origin_metadata") &&
+		strings.Contains(query, "FROM source_snapshots"):
+		snapshot, ok := db.sourceSnapshots[args[0].(string)]
+		if !ok {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		return mockRow{values: []any{
+			snapshot.sourceSystem,
+			snapshot.sourceID,
+			snapshot.sourceVersion,
+			snapshot.rawContentHash,
+			snapshot.originMetadata,
+		}}
 	case strings.Contains(query, "AS rendered_byte_length") &&
 		strings.Contains(query, "AS max_span_byte_length"):
 		db.boundedViewPreflights++
@@ -1305,6 +1407,7 @@ func mockProposalQueryValues(db *mockSQLDB, occurrence ProposalOccurrence) ([]an
 		occurrence.ExtractionAttemptID,
 		attempt.status,
 		attempt.runID,
+		run.producerSessionRef,
 		run.extractorDefinitionID,
 		definition.name,
 		definition.version,
@@ -1412,6 +1515,8 @@ func (r mockRow) Scan(dest ...any) error {
 			*ptr = value.(int64)
 		case *bool:
 			*ptr = value.(bool)
+		case *time.Time:
+			*ptr = value.(time.Time)
 		case *[]byte:
 			switch v := value.(type) {
 			case []byte:

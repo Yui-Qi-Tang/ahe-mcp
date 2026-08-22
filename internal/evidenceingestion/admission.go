@@ -666,6 +666,7 @@ func loadProposalForAdmission(ctx context.Context, tx sqlTx, occurrenceID string
 			ea.extraction_attempt_id,
 			ea.status,
 			er.extraction_run_id,
+			COALESCE(er.producer_session_ref, ''),
 			ed.extractor_definition_id,
 			ed.extractor_name,
 			ed.extractor_version,

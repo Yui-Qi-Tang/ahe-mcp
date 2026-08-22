@@ -608,6 +608,81 @@ func TestIntegrationSubmitTextSourceRequestConflict(t *testing.T) {
 	assertTableCount(t, ctx, pool, "proposal_occurrences", 0)
 }
 
+func TestIntegrationSubmitExternalSourceAuthorityReplayAndConflict(t *testing.T) {
+	ctx, pool := integrationPool(t)
+	server, err := NewServer(pool)
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	req := integrationExternalSourceRequest("mcp-external-source")
+
+	first := callSubmitExternalSource(t, ctx, server, req)
+	if first.Replayed {
+		t.Fatal("first submit_external_source Replayed = true")
+	}
+	if first.AuthoritySourceSystem != evidenceingestion.SourceSystemExternalDocument ||
+		first.SourceSystem != req.SourceSystem ||
+		first.SourceNamespace != req.SourceNamespace ||
+		first.ObjectID != req.ObjectID {
+		t.Fatalf("external source response identity = %+v", first)
+	}
+	if first.ReceivedAt.IsZero() || first.ObservedAt.IsZero() {
+		t.Fatalf("external source times not populated: %+v", first)
+	}
+	if first.SpanCatalogVersion != evidenceingestion.SpanCatalogExternalDocumentLineV1 || len(first.Spans) != 2 {
+		t.Fatalf("external source spans = %+v", first)
+	}
+
+	var originJSON []byte
+	var receivedAt time.Time
+	var connectorID string
+	var observedAt time.Time
+	if err := pool.QueryRow(ctx, `
+		SELECT ss.origin_metadata, receipt.connector_id, receipt.observed_at, receipt.created_at
+		FROM source_snapshots ss
+		JOIN external_source_intake_receipts receipt ON receipt.source_snapshot_id = ss.source_snapshot_id
+		WHERE ss.source_snapshot_id = $1 AND receipt.request_id = $2
+	`, first.SourceSnapshotID, req.RequestID).Scan(&originJSON, &connectorID, &observedAt, &receivedAt); err != nil {
+		t.Fatalf("read external source authority: %v", err)
+	}
+	var origin map[string]string
+	if err := json.Unmarshal(originJSON, &origin); err != nil {
+		t.Fatalf("decode external source origin: %v", err)
+	}
+	if origin["external_source_system"] != "jira" ||
+		origin["external_content_fidelity"] != evidenceingestion.ExternalSourceContentFidelityVerbatim {
+		t.Fatalf("external source origin = %#v", origin)
+	}
+	if connectorID != req.ConnectorID || !observedAt.Equal(first.ObservedAt) {
+		t.Fatalf("external receipt connector/observed = %q/%v", connectorID, observedAt)
+	}
+	if !first.ReceivedAt.Equal(receivedAt.UTC()) {
+		t.Fatalf("received_at = %v, persisted = %v", first.ReceivedAt, receivedAt)
+	}
+
+	second := callSubmitExternalSource(t, ctx, server, req)
+	if !second.Replayed || second.SourceSnapshotID != first.SourceSnapshotID || !second.ReceivedAt.Equal(first.ReceivedAt) {
+		t.Fatalf("external source replay = %+v, want same receipt as %+v", second, first)
+	}
+
+	conflict := req
+	conflict.RequestID = "mcp-external-source-conflict"
+	conflict.Content = "# AHE-42\nDifferent bytes under the same Jira revision.\n"
+	payload, err := json.Marshal(conflict)
+	if err != nil {
+		t.Fatalf("Marshal conflict: %v", err)
+	}
+	_, err = server.CallTool(ctx, ToolSubmitExternalSource, payload)
+	assertToolError(t, err, string(evidenceingestion.ErrorOccurrenceConflict))
+
+	assertTableCount(t, ctx, pool, "source_blobs", 1)
+	assertTableCount(t, ctx, pool, "source_snapshots", 1)
+	assertTableCount(t, ctx, pool, "extraction_views", 1)
+	assertTableCount(t, ctx, pool, "source_intake_requests", 1)
+	assertTableCount(t, ctx, pool, "external_source_intake_receipts", 1)
+	assertTableCount(t, ctx, pool, "proposal_occurrences", 0)
+}
+
 func TestIntegrationGetExtractorInputRoundTrip(t *testing.T) {
 	ctx, pool := integrationPool(t)
 	server, err := NewServer(pool)
@@ -645,10 +720,11 @@ func TestIntegrationGetExtractorInputRoundTrip(t *testing.T) {
 	assertTableCount(t, ctx, pool, "proposal_occurrences", 0)
 
 	output := callSubmitExtractorOutput(t, ctx, server, SubmitExtractorOutputRequest{
-		RequestID:        "mcp-extractor-input-output",
-		SourceSnapshotID: input.SourceSnapshotID,
-		ExtractionViewID: input.ExtractionViewID,
-		ExtractorOutput:  integrationRequest(t, "unused").ExtractorOutput,
+		RequestID:           "mcp-extractor-input-output",
+		SourceSnapshotID:    input.SourceSnapshotID,
+		ExtractionViewID:    input.ExtractionViewID,
+		ExtractorDefinition: integrationAgentExtractorDefinition(),
+		ExtractorOutput:     integrationRequest(t, "unused").ExtractorOutput,
 	})
 	if output.Status != "pending" {
 		t.Fatalf("status = %q, want pending", output.Status)
@@ -681,10 +757,11 @@ func TestIntegrationSubmitExtractorOutputRoundTrip(t *testing.T) {
 	sourceReq := integrationTextSourceRequest(t, "mcp-source-for-output")
 	source := callSubmitTextSource(t, ctx, server, sourceReq)
 	outputReq := SubmitExtractorOutputRequest{
-		RequestID:        "mcp-extractor-output-round-trip",
-		SourceSnapshotID: source.SourceSnapshotID,
-		ExtractionViewID: source.ExtractionViewID,
-		ExtractorOutput:  integrationRequest(t, "unused").ExtractorOutput,
+		RequestID:           "mcp-extractor-output-round-trip",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ExtractorDefinition: integrationAgentExtractorDefinition(),
+		ExtractorOutput:     integrationRequest(t, "unused").ExtractorOutput,
 	}
 
 	resp := callSubmitExtractorOutput(t, ctx, server, outputReq)
@@ -726,10 +803,11 @@ func TestIntegrationSubmitExtractorOutputReplayConflictAndStrictErrors(t *testin
 	}
 	source := callSubmitTextSource(t, ctx, server, integrationTextSourceRequest(t, "mcp-source-for-output-replay"))
 	outputReq := SubmitExtractorOutputRequest{
-		RequestID:        "mcp-extractor-output-replay",
-		SourceSnapshotID: source.SourceSnapshotID,
-		ExtractionViewID: source.ExtractionViewID,
-		ExtractorOutput:  integrationRequest(t, "unused").ExtractorOutput,
+		RequestID:           "mcp-extractor-output-replay",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ExtractorDefinition: integrationAgentExtractorDefinition(),
+		ExtractorOutput:     integrationRequest(t, "unused").ExtractorOutput,
 	}
 
 	first := callSubmitExtractorOutput(t, ctx, server, outputReq)
@@ -787,6 +865,23 @@ func callSubmitTextSource(t *testing.T, ctx context.Context, server *Server, req
 		t.Fatalf("CallTool() error = %v", err)
 	}
 	var resp SubmitTextSourceResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		t.Fatalf("Unmarshal response: %v", err)
+	}
+	return resp
+}
+
+func callSubmitExternalSource(t *testing.T, ctx context.Context, server *Server, req SubmitExternalSourceRequest) SubmitExternalSourceResponse {
+	t.Helper()
+	payload, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("Marshal request: %v", err)
+	}
+	data, err := server.CallTool(ctx, ToolSubmitExternalSource, payload)
+	if err != nil {
+		t.Fatalf("CallTool() error = %v", err)
+	}
+	var resp SubmitExternalSourceResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
 		t.Fatalf("Unmarshal response: %v", err)
 	}
@@ -974,6 +1069,39 @@ func integrationTextSourceRequest(t *testing.T, requestID string) SubmitTextSour
 		RawText:        req.RawText,
 		OriginMetadata: req.OriginMetadata,
 		RequestID:      req.RequestID,
+	}
+}
+
+func integrationExternalSourceRequest(requestID string) SubmitExternalSourceRequest {
+	return SubmitExternalSourceRequest{
+		SchemaVersion:   evidenceingestion.ExternalSourceEnvelopeSchemaV1,
+		RequestID:       requestID,
+		SourceSystem:    "jira",
+		SourceNamespace: "acme/eng",
+		ObjectType:      "issue",
+		ObjectID:        "AHE-42",
+		Revision:        "2026-08-23T02:00:00Z",
+		SourceLocation:  "https://acme.example/jira/AHE-42",
+		Title:           "External intake boundary",
+		ContentFormat:   evidenceingestion.ExternalSourceContentFormatMarkdown,
+		ContentFidelity: evidenceingestion.ExternalSourceContentFidelityVerbatim,
+		Content:         "# AHE-42\nExternal connector owns collection.\n",
+		Coverage:        evidenceingestion.ExternalSourceCoverageFullDocument,
+		CollectorID:     "claude-code",
+		ConnectorID:     "atlassian-rovo",
+		ObservedAt:      "2026-08-23T02:03:04Z",
+		SourceCreatedAt: "2026-08-22T01:00:00Z",
+		SourceUpdatedAt: "2026-08-23T02:00:00Z",
+	}
+}
+
+func integrationAgentExtractorDefinition() evidenceingestion.ExtractorDefinitionInput {
+	return evidenceingestion.ExtractorDefinitionInput{
+		Name:    "external-cooperating-agent",
+		Version: "v1",
+		Config: map[string]string{
+			"producer_class": "external_agent",
+		},
 	}
 }
 

@@ -412,6 +412,27 @@ type SourceInfo struct {
 	RawContentHash     string                                `json:"raw_content_hash,omitempty"`
 	RepositorySnapshot *evidenceingestion.RepositorySnapshot `json:"repository_snapshot,omitempty"`
 	MCPRead            *MCPReadSourceProvenance              `json:"mcp_read,omitempty"`
+	ExternalSource     *ExternalSourceProvenance             `json:"external_source,omitempty"`
+}
+
+// ExternalSourceProvenance exposes the provider-neutral source authority
+// declared by the external agent or connector before proposal production.
+type ExternalSourceProvenance struct {
+	SchemaVersion                 string   `json:"schema_version"`
+	SourceSystem                  string   `json:"source_system"`
+	SourceNamespace               string   `json:"source_namespace"`
+	ObjectType                    string   `json:"object_type"`
+	ObjectID                      string   `json:"object_id"`
+	Revision                      string   `json:"revision"`
+	SourceLocation                string   `json:"source_location"`
+	Title                         string   `json:"title,omitempty"`
+	ContentFormat                 string   `json:"content_format"`
+	ContentFidelity               string   `json:"content_fidelity"`
+	Coverage                      string   `json:"coverage"`
+	Limitations                   []string `json:"limitations"`
+	SourceCreatedAt               string   `json:"source_created_at,omitempty"`
+	SourceUpdatedAt               string   `json:"source_updated_at,omitempty"`
+	GlobalAbsenceInferenceAllowed bool     `json:"global_absence_inference_allowed"`
 }
 
 // MCPReadSourceProvenance exposes the bounded, non-secret remote source
@@ -446,6 +467,7 @@ type ExtractorInfo struct {
 	ExtractorDefinitionID string `json:"extractor_definition_id"`
 	ExtractionRunID       string `json:"extraction_run_id"`
 	ExtractionAttemptID   string `json:"extraction_attempt_id"`
+	ProducerSessionRef    string `json:"producer_session_ref,omitempty"`
 	Name                  string `json:"name"`
 	Version               string `json:"version"`
 	ConfigHash            string `json:"config_hash"`
@@ -1245,6 +1267,7 @@ func mapProposalResult(result evidenceingestion.ProposalQueryResult) GetEvidence
 			ExtractorDefinitionID: result.ExtractorDefinitionID,
 			ExtractionRunID:       result.ExtractionRunID,
 			ExtractionAttemptID:   result.ExtractionAttemptID,
+			ProducerSessionRef:    result.ProducerSessionRef,
 			Name:                  result.ExtractorName,
 			Version:               result.ExtractorVersion,
 			ConfigHash:            result.ExtractorConfigHash,
@@ -1293,6 +1316,7 @@ func mapCanonicalResult(result evidenceingestion.CanonicalQueryResult) GetEviden
 			ExtractorDefinitionID: origin.ExtractorDefinitionID,
 			ExtractionRunID:       origin.ExtractionRunID,
 			ExtractionAttemptID:   origin.ExtractionAttemptID,
+			ProducerSessionRef:    origin.ProducerSessionRef,
 			Name:                  origin.ExtractorName,
 			Version:               origin.ExtractorVersion,
 			ConfigHash:            origin.ExtractorConfigHash,
@@ -2356,6 +2380,30 @@ func mapSourceInfo(result evidenceingestion.ProposalQueryResult) SourceInfo {
 			CoverageCompletionReason:      result.OriginMetadata["mcp_coverage_completion_reason"],
 			Limitations:                   limitations,
 			ProposalCandidates:            proposalCandidates,
+			GlobalAbsenceInferenceAllowed: result.OriginMetadata["global_absence_inference_allowed"] == "true",
+		}
+	}
+	if result.SourceSystem == evidenceingestion.SourceSystemExternalDocument {
+		limitations := []string{}
+		_ = json.Unmarshal(
+			[]byte(result.OriginMetadata["external_limitations_json"]),
+			&limitations,
+		)
+		source.ExternalSource = &ExternalSourceProvenance{
+			SchemaVersion:                 result.OriginMetadata["external_source_schema"],
+			SourceSystem:                  result.OriginMetadata["external_source_system"],
+			SourceNamespace:               result.OriginMetadata["external_source_namespace"],
+			ObjectType:                    result.OriginMetadata["external_object_type"],
+			ObjectID:                      result.OriginMetadata["external_object_id"],
+			Revision:                      result.OriginMetadata["external_revision"],
+			SourceLocation:                result.OriginMetadata["external_source_location"],
+			Title:                         result.OriginMetadata["external_title"],
+			ContentFormat:                 result.OriginMetadata["external_content_format"],
+			ContentFidelity:               result.OriginMetadata["external_content_fidelity"],
+			Coverage:                      result.OriginMetadata["external_coverage"],
+			Limitations:                   limitations,
+			SourceCreatedAt:               result.OriginMetadata["external_source_created_at"],
+			SourceUpdatedAt:               result.OriginMetadata["external_source_updated_at"],
 			GlobalAbsenceInferenceAllowed: result.OriginMetadata["global_absence_inference_allowed"] == "true",
 		}
 	}

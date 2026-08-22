@@ -279,6 +279,35 @@ func testManualInput(sourceID string) ManualTextInput {
 	}
 }
 
+func TestProducerSessionRefExtendsRunIdentityWithoutChangingEmptyIdentity(t *testing.T) {
+	sourceCtx, err := buildManualSourceContext(testManualInput("producer-session-identity"))
+	if err != nil {
+		t.Fatalf("buildManualSourceContext() error = %v", err)
+	}
+	definition := ExtractorDefinitionInput{Name: "external-agent", Version: "v1"}
+	legacy, err := buildAttemptContextFromSourceWithDefinition(sourceCtx, "producer-session-request", 1, definition)
+	if err != nil {
+		t.Fatalf("buildAttemptContextFromSourceWithDefinition() error = %v", err)
+	}
+	empty, err := buildAttemptContextFromSourceWithDefinitionAndSession(sourceCtx, "producer-session-request", 1, definition, "")
+	if err != nil {
+		t.Fatalf("empty session build error = %v", err)
+	}
+	withSession, err := buildAttemptContextFromSourceWithDefinitionAndSession(sourceCtx, "producer-session-request", 1, definition, "claude-code-session:test")
+	if err != nil {
+		t.Fatalf("session build error = %v", err)
+	}
+	if legacy.ExtractionRun.ID != empty.ExtractionRun.ID {
+		t.Fatalf("empty session run ID = %q, want legacy %q", empty.ExtractionRun.ID, legacy.ExtractionRun.ID)
+	}
+	if withSession.ExtractionRun.ID == legacy.ExtractionRun.ID {
+		t.Fatalf("session run ID = legacy %q, want distinct logical invocation", legacy.ExtractionRun.ID)
+	}
+	if withSession.ExtractionRun.ProducerSessionRef != "claude-code-session:test" {
+		t.Fatalf("producer session ref = %q", withSession.ExtractionRun.ProducerSessionRef)
+	}
+}
+
 func testFixture() FrozenExtractorOutput {
 	return FrozenExtractorOutput{Proposals: []ExtractorProposalOutput{{
 		ProposalLocalID: "stmt-1",

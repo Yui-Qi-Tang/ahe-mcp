@@ -121,6 +121,50 @@ func TestMapSourceInfoExposesTypedMCPReadProvenance(t *testing.T) {
 	}
 }
 
+func TestMapSourceInfoExposesTypedExternalSourceProvenance(t *testing.T) {
+	source := mapSourceInfo(evidenceingestion.ProposalQueryResult{
+		SourceBindingKind: evidenceingestion.ProposalSourceBindingSourceSnapshot,
+		SourceSnapshotID:  "srcsnap:test",
+		SourceSystem:      evidenceingestion.SourceSystemExternalDocument,
+		SourceID:          "extsrc:test",
+		SourceVersion:     "revision-42",
+		RawContentHash:    "sha256:document",
+		OriginMetadata: map[string]string{
+			"external_source_schema":           evidenceingestion.ExternalSourceEnvelopeSchemaV1,
+			"external_source_system":           "jira",
+			"external_source_namespace":        "acme/eng",
+			"external_object_type":             "issue",
+			"external_object_id":               "AHE-42",
+			"external_revision":                "revision-42",
+			"external_source_location":         "https://fixture.invalid/AHE-42",
+			"external_title":                   "Agent-first source intake",
+			"external_content_format":          evidenceingestion.ExternalSourceContentFormatMarkdown,
+			"external_content_fidelity":        evidenceingestion.ExternalSourceContentFidelityVerbatim,
+			"external_coverage":                evidenceingestion.ExternalSourceCoverageExactExcerpt,
+			"external_limitations_json":        `["comments were not requested"]`,
+			"external_source_created_at":       "2026-08-22T01:00:00Z",
+			"external_source_updated_at":       "2026-08-23T02:00:00Z",
+			"global_absence_inference_allowed": "false",
+		},
+	})
+
+	if source.ExternalSource == nil ||
+		source.ExternalSource.SchemaVersion != evidenceingestion.ExternalSourceEnvelopeSchemaV1 ||
+		source.ExternalSource.SourceSystem != "jira" ||
+		source.ExternalSource.SourceNamespace != "acme/eng" ||
+		source.ExternalSource.ObjectType != "issue" ||
+		source.ExternalSource.ObjectID != "AHE-42" ||
+		source.ExternalSource.Revision != "revision-42" ||
+		source.ExternalSource.SourceLocation != "https://fixture.invalid/AHE-42" ||
+		source.ExternalSource.Title != "Agent-first source intake" ||
+		source.ExternalSource.Coverage != evidenceingestion.ExternalSourceCoverageExactExcerpt ||
+		len(source.ExternalSource.Limitations) != 1 ||
+		source.ExternalSource.Limitations[0] != "comments were not requested" ||
+		source.ExternalSource.GlobalAbsenceInferenceAllowed {
+		t.Fatalf("typed external source provenance = %+v", source.ExternalSource)
+	}
+}
+
 func TestCallToolGetsDeterministicGroundedEvidenceBrief(t *testing.T) {
 	record := testRepositoryRelationResult("occ:brief")
 	coverage := evidenceingestion.RepositoryGoplsCoverage{

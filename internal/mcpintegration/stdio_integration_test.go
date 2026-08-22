@@ -47,6 +47,7 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	assertStdioInitialized(t, ctx, ingestMCP, "ahe-ingest-mcp-test")
 	assertStdioInitialized(t, ctx, queryMCP, "ahe-query-mcp-test")
 	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitTextSource)
+	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitExternalSource)
 	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolInspectGoplsWorkspace)
 	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolInspectGitRepositoryChange)
 	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolObserveGitRepositoryChange)
@@ -84,6 +85,7 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetMCPReadSourceStates)
 	assertStdioToolNotListed(t, ctx, queryMCP, "get_mcp_read_source_transition")
 	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitTextSource)
+	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitExternalSource)
 	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolRecordPendingProposalDisposition)
 
 	gitRoot := t.TempDir()

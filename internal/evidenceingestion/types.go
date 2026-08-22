@@ -17,6 +17,8 @@ const (
 	SourceSystemMCPReadDocument = "mcp_read_document"
 	// SourceSystemCodeRepository identifies one immutable repository snapshot projection.
 	SourceSystemCodeRepository = "code_repository"
+	// SourceSystemExternalDocument identifies one provider-neutral external source envelope.
+	SourceSystemExternalDocument = "external_document"
 
 	// ProposalSourceBindingSourceSnapshot identifies the legacy source snapshot and extraction view binding.
 	ProposalSourceBindingSourceSnapshot = "source_snapshot"
@@ -39,6 +41,10 @@ const (
 	RendererMCPReadDocumentIdentity = "mcp-read-document-identity"
 	// RendererMCPReadDocumentIdentityVersion is the MCP document identity renderer version.
 	RendererMCPReadDocumentIdentityVersion = "v1"
+	// RendererExternalDocumentIdentity names the identity renderer for exact external source content.
+	RendererExternalDocumentIdentity = "external-document-identity"
+	// RendererExternalDocumentIdentityVersion is the external document identity renderer version.
+	RendererExternalDocumentIdentityVersion = "v1"
 
 	// SpanCatalogManualLineV1 identifies the Slice 1 line span catalog.
 	SpanCatalogManualLineV1 = "manual-line-v1"
@@ -48,6 +54,8 @@ const (
 	SpanCatalogConnectorTextLineV1 = "connector-text-line-v1"
 	// SpanCatalogMCPReadDocumentLineV1 identifies deterministic line anchors for one MCP document.
 	SpanCatalogMCPReadDocumentLineV1 = "mcp-read-document-line-v1"
+	// SpanCatalogExternalDocumentLineV1 identifies deterministic line anchors for an external document.
+	SpanCatalogExternalDocumentLineV1 = "external-document-line-v1"
 
 	// ExtractorFrozenManualFixture names the Slice 1 fixture extractor.
 	ExtractorFrozenManualFixture = "frozen-manual-fixture"
@@ -137,6 +145,8 @@ const (
 	ProposalDispositionDecisionByMaxBytes = 200
 	// ProposalDispositionDecisionReasonMaxBytes caps one disposition reason.
 	ProposalDispositionDecisionReasonMaxBytes = 2000
+	// ProducerSessionRefMaxBytes caps one optional non-secret producer session reference.
+	ProducerSessionRefMaxBytes = 500
 
 	attemptStatusStarted   = "started"
 	attemptStatusSucceeded = "succeeded"
@@ -330,6 +340,7 @@ type ExtractorOutputInput struct {
 	RequestID           string
 	SourceSnapshotID    string
 	ExtractionViewID    string
+	ProducerSessionRef  string
 	ExtractorDefinition ExtractorDefinitionInput
 	Output              FrozenExtractorOutput
 }
@@ -545,6 +556,7 @@ type ExtractionRun struct {
 	ID                    string `json:"extraction_run_id"`
 	RequestID             string `json:"request_id"`
 	ExtractorDefinitionID string `json:"extractor_definition_id"`
+	ProducerSessionRef    string `json:"producer_session_ref,omitempty"`
 	SourceSnapshotID      string `json:"source_snapshot_id,omitempty"`
 	ExtractionViewID      string `json:"extraction_view_id,omitempty"`
 	RepositorySnapshotID  string `json:"repository_snapshot_id,omitempty"`
@@ -785,6 +797,7 @@ type ProposalQueryResult struct {
 	ExtractionAttemptID        string
 	ExtractionAttemptStatus    string
 	ExtractionRunID            string
+	ProducerSessionRef         string
 	ExtractorDefinitionID      string
 	ExtractorName              string
 	ExtractorVersion           string

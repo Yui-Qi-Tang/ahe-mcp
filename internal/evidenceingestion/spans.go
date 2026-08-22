@@ -22,17 +22,7 @@ func buildManualSource(input ManualTextInput) (SourceSnapshot, ExtractionView, [
 	}
 
 	rawHash := contentHash(input.Raw)
-	snapshotID, err := stableID("srcsnap:", "source_snapshot", struct {
-		SourceSystem   string `json:"source_system"`
-		SourceID       string `json:"source_id"`
-		SourceVersion  string `json:"source_version"`
-		RawContentHash string `json:"raw_content_hash"`
-	}{
-		SourceSystem:   contract.SourceSystem,
-		SourceID:       input.SourceID,
-		SourceVersion:  input.SourceVersion,
-		RawContentHash: rawHash,
-	})
+	snapshotID, err := sourceSnapshotID(contract.SourceSystem, input.SourceID, input.SourceVersion, rawHash)
 	if err != nil {
 		return SourceSnapshot{}, ExtractionView{}, nil, err
 	}
@@ -75,6 +65,31 @@ func buildManualSource(input ManualTextInput) (SourceSnapshot, ExtractionView, [
 		return SourceSnapshot{}, ExtractionView{}, nil, err
 	}
 	return snapshot, view, spans, nil
+}
+
+func sourceSnapshotID(sourceSystem, sourceID, sourceVersion, rawHash string) (string, error) {
+	if sourceSystem == SourceSystemExternalDocument {
+		return stableID("srcsnap:", "external_source_snapshot", struct {
+			SourceSystem  string `json:"source_system"`
+			SourceID      string `json:"source_id"`
+			SourceVersion string `json:"source_version"`
+		}{
+			SourceSystem:  sourceSystem,
+			SourceID:      sourceID,
+			SourceVersion: sourceVersion,
+		})
+	}
+	return stableID("srcsnap:", "source_snapshot", struct {
+		SourceSystem   string `json:"source_system"`
+		SourceID       string `json:"source_id"`
+		SourceVersion  string `json:"source_version"`
+		RawContentHash string `json:"raw_content_hash"`
+	}{
+		SourceSystem:   sourceSystem,
+		SourceID:       sourceID,
+		SourceVersion:  sourceVersion,
+		RawContentHash: rawHash,
+	})
 }
 
 func buildLineSpanCatalog(view ExtractionView, spanCatalogVersion string) ([]SpanEntry, error) {
@@ -156,6 +171,13 @@ func renderingContract(sourceSystem string) (sourceRenderingContract, error) {
 			RendererName:       RendererMCPReadDocumentIdentity,
 			RendererVersion:    RendererMCPReadDocumentIdentityVersion,
 			SpanCatalogVersion: SpanCatalogMCPReadDocumentLineV1,
+		}, nil
+	case SourceSystemExternalDocument:
+		return sourceRenderingContract{
+			SourceSystem:       SourceSystemExternalDocument,
+			RendererName:       RendererExternalDocumentIdentity,
+			RendererVersion:    RendererExternalDocumentIdentityVersion,
+			SpanCatalogVersion: SpanCatalogExternalDocumentLineV1,
 		}, nil
 	default:
 		return sourceRenderingContract{}, newDomainError(ErrorInvalidInput, "source system %q is not supported", sourceSystem)

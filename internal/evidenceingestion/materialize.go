@@ -114,6 +114,10 @@ func buildAttemptContextFromSource(sourceCtx manualSourceContext, requestID stri
 }
 
 func buildAttemptContextFromSourceWithDefinition(sourceCtx manualSourceContext, requestID string, attemptNumber int, definitionInput ExtractorDefinitionInput) (attemptContext, error) {
+	return buildAttemptContextFromSourceWithDefinitionAndSession(sourceCtx, requestID, attemptNumber, definitionInput, "")
+}
+
+func buildAttemptContextFromSourceWithDefinitionAndSession(sourceCtx manualSourceContext, requestID string, attemptNumber int, definitionInput ExtractorDefinitionInput, producerSessionRef string) (attemptContext, error) {
 	definition, err := buildExtractorDefinition(definitionInput)
 	if err != nil {
 		return attemptContext{}, err
@@ -132,11 +136,13 @@ func buildAttemptContextFromSourceWithDefinition(sourceCtx manualSourceContext, 
 		ExtractorDefinitionID string `json:"extractor_definition_id"`
 		SourceSnapshotID      string `json:"source_snapshot_id"`
 		ExtractionViewID      string `json:"extraction_view_id"`
+		ProducerSessionRef    string `json:"producer_session_ref,omitempty"`
 	}{
 		RequestID:             requestID,
 		ExtractorDefinitionID: definition.ID,
 		SourceSnapshotID:      sourceCtx.SourceSnapshot.ID,
 		ExtractionViewID:      sourceCtx.ExtractionView.ID,
+		ProducerSessionRef:    producerSessionRef,
 	})
 	if err != nil {
 		return attemptContext{}, err
@@ -145,6 +151,7 @@ func buildAttemptContextFromSourceWithDefinition(sourceCtx manualSourceContext, 
 		ID:                    runID,
 		RequestID:             requestID,
 		ExtractorDefinitionID: definition.ID,
+		ProducerSessionRef:    producerSessionRef,
 		SourceSnapshotID:      sourceCtx.SourceSnapshot.ID,
 		ExtractionViewID:      sourceCtx.ExtractionView.ID,
 	}

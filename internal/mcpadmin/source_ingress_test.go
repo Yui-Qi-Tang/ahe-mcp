@@ -74,6 +74,16 @@ func TestSourceIngressBackendRoutesTextSourceBySourceSystem(t *testing.T) {
 	}
 }
 
+func TestSourceIngressBackendRoutesExternalSourceIndependently(t *testing.T) {
+	got, routed := sourceIngressLaneForTool(
+		evidenceingestionmcp.ToolSubmitExternalSource,
+		json.RawMessage(`{"source_system":"jira"}`),
+	)
+	if !routed || got != sourceIngressExternalSource {
+		t.Fatalf("sourceIngressLaneForTool() = %q, %t, want %q, true", got, routed, sourceIngressExternalSource)
+	}
+}
+
 func TestSourceIngressBackendRoutesGenerationActivationThroughRepositoryLane(t *testing.T) {
 	got, routed := sourceIngressLaneForTool(
 		evidenceingestionmcp.ToolActivateRepositorySourceGeneration,

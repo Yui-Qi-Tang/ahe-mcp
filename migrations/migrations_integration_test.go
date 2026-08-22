@@ -38,10 +38,10 @@ func TestIntegrationVerifyCurrentAcceptsAppliedSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 36 {
-		t.Fatalf("AppliedMigrations = %d, want 36", status.AppliedMigrations)
+	if status.AppliedMigrations != 38 {
+		t.Fatalf("AppliedMigrations = %d, want 38", status.AppliedMigrations)
 	}
-	if status.LatestMigration != "000036_evidence_ingestion_derivations.up.sql" {
+	if status.LatestMigration != "000038_evidence_ingestion_producer_session_ref.up.sql" {
 		t.Fatalf("LatestMigration = %q", status.LatestMigration)
 	}
 }
@@ -53,7 +53,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	}
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM schema_migrations
-		WHERE migration_name = '000036_evidence_ingestion_derivations.up.sql'
+		WHERE migration_name = '000038_evidence_ingestion_producer_session_ref.up.sql'
 	`); err != nil {
 		t.Fatalf("delete latest migration row: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	if !errors.Is(err, ErrSchemaNotCurrent) {
 		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
 	}
-	if !strings.Contains(err.Error(), "35/36 embedded migrations are applied") {
+	if !strings.Contains(err.Error(), "37/38 embedded migrations are applied") {
 		t.Fatalf("VerifyCurrent() error = %v, want migration count detail", err)
 	}
 }
@@ -129,7 +129,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want true")
 	}
-	assertMigrationCount(t, ctx, pool, 36)
+	assertMigrationCount(t, ctx, pool, 38)
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "source_file_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshot_intake_requests")

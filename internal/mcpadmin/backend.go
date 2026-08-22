@@ -59,7 +59,7 @@ func ingestionTools() []mcpstdio.Tool {
 		{
 			Name:        evidenceingestionmcp.ToolSubmitTextSource,
 			Title:       "Submit Text Source",
-			Description: "Persist raw UTF-8 natural-language or code-file bytes as source authority for later local extraction.",
+			Description: "Persist raw UTF-8 natural-language or code-file bytes as source authority for a later proposal producer.",
 			InputSchema: submitTextSourceSchema(),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &write,
@@ -70,7 +70,7 @@ func ingestionTools() []mcpstdio.Tool {
 		{
 			Name:        evidenceingestionmcp.ToolSubmitExtractorOutput,
 			Title:       "Submit Extractor Output",
-			Description: "Submit local extractor output for an existing source snapshot and extraction view.",
+			Description: "Submit proposal candidates from an identified external agent or local extractor for an existing grounded source view, with an optional non-secret producer session reference for debugging.",
 			InputSchema: submitExtractorOutputSchema(),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &write,
@@ -81,9 +81,9 @@ func ingestionTools() []mcpstdio.Tool {
 		{
 			Name:        evidenceingestionmcp.ToolGetExtractorInput,
 			Title:       "Get Extractor Input",
-			Description: "Load grounded source view data for a trusted local extractor.",
+			Description: "Load grounded source bytes and deterministic spans for an external agent or local extractor.",
 			InputSchema: objectSchema(map[string]any{
-				"extraction_view_id": stringSchema("Extraction view ID returned by submit_text_source."),
+				"extraction_view_id": stringSchema("Extraction view ID returned by submit_text_source or submit_external_source."),
 			}, []string{"extraction_view_id"}),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &readOnly,
@@ -475,7 +475,7 @@ func ingestionTools() []mcpstdio.Tool {
 		{
 			Name:        evidenceingestionmcp.ToolAdmitPendingProposal,
 			Title:       "Admit Pending Proposal",
-			Description: "Admit one pending proposal occurrence into the canonical evidence graph.",
+			Description: "Ask a human to review the proposal sentence, exact source quotes, source title/location, coverage/limitations, revision, and the version difference when a comparable prior revision exists before admitting one pending proposal. AHE records the admission but does not prove that the conversation occurred.",
 			InputSchema: objectSchema(map[string]any{
 				"proposal_occurrence_id": stringSchema("Pending proposal occurrence ID."),
 				"decision_by":            stringSchema("Optional admission producer or reviewer identity."),
@@ -595,6 +595,18 @@ func ingestionTools() []mcpstdio.Tool {
 				IdempotentHint:  &idempotent,
 			},
 		},
+		{
+			Name:  evidenceingestionmcp.ToolSubmitExternalSource,
+			Title: "Submit External Source",
+			Description: "Persist one provider-neutral external source object. Content must be exact connector-observed text or JSON; " +
+				"do not submit a model summary or paraphrase. This creates source authority only, never a proposal or admission.",
+			InputSchema: submitExternalSourceSchema(),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &write,
+				DestructiveHint: &destructive,
+				IdempotentHint:  &idempotent,
+			},
+		},
 	}
 }
 
@@ -621,26 +633,101 @@ func submitTextSourceSchema() map[string]any {
 	})
 }
 
+func submitExternalSourceSchema() map[string]any {
+	limitations := map[string]any{
+		"type":        "array",
+		"description": "Required for excerpts or truncation; state exactly what is absent so AHE cannot infer global completeness.",
+		"maxItems":    evidenceingestion.ExternalSourceLimitationsMaxCount,
+		"items": boundedStringSchema(
+			"One bounded source-coverage limitation.",
+			evidenceingestion.ExternalSourceLimitationMaxBytes,
+		),
+	}
+	timestampSchema := func(description string) map[string]any {
+		schema := stringSchema(description)
+		schema["format"] = "date-time"
+		return schema
+	}
+	return objectSchema(map[string]any{
+		"schema_version": enumStringSchema(
+			"External source envelope contract version.",
+			evidenceingestion.ExternalSourceEnvelopeSchemaV1,
+		),
+		"request_id":       stringSchema("Idempotency key for this exact intake delivery."),
+		"source_system":    stringSchema("Lower-case external provider kind, such as jira or confluence."),
+		"source_namespace": stringSchema("Provider account, tenant, site, project, or space namespace."),
+		"object_type":      stringSchema("Provider-neutral object kind, such as issue, page, or comment."),
+		"object_id":        stringSchema("Stable provider object identifier within the declared namespace."),
+		"revision":         stringSchema("Immutable provider revision, version, or update token for these exact bytes."),
+		"source_location":  stringSchema("Auditable provider locator or URL for the source object."),
+		"title":            stringSchema("Optional source-provided title; do not synthesize one."),
+		"content_format": enumStringSchema(
+			"Encoding of the exact content string.",
+			evidenceingestion.ExternalSourceContentFormatPlainText,
+			evidenceingestion.ExternalSourceContentFormatMarkdown,
+			evidenceingestion.ExternalSourceContentFormatJSON,
+		),
+		"content_fidelity": enumStringSchema(
+			"Must attest that content is connector-observed rather than summarized or paraphrased.",
+			evidenceingestion.ExternalSourceContentFidelityVerbatim,
+		),
+		"content": boundedStringSchema(
+			"Exact connector-observed UTF-8 content for one source object; never a model summary.",
+			evidenceingestion.ExternalSourceContentMaxBytes,
+		),
+		"coverage": enumStringSchema(
+			"Whether content is complete, an intentional exact excerpt, or transport-truncated.",
+			evidenceingestion.ExternalSourceCoverageFullDocument,
+			evidenceingestion.ExternalSourceCoverageExactExcerpt,
+			evidenceingestion.ExternalSourceCoverageTruncatedDocument,
+		),
+		"limitations":       limitations,
+		"collector_id":      stringSchema("Stable external agent or collector identity that selected this object."),
+		"connector_id":      stringSchema("Stable connector or tool identity that observed the source."),
+		"observed_at":       timestampSchema("When the external connector observed these exact bytes."),
+		"source_created_at": timestampSchema("Optional source-system creation time."),
+		"source_updated_at": timestampSchema("Optional source-system update time for this revision."),
+	}, []string{
+		"schema_version",
+		"request_id",
+		"source_system",
+		"source_namespace",
+		"object_type",
+		"object_id",
+		"revision",
+		"source_location",
+		"content_format",
+		"content_fidelity",
+		"content",
+		"coverage",
+		"collector_id",
+		"connector_id",
+		"observed_at",
+	})
+}
+
 func submitExtractorOutputSchema() map[string]any {
 	return objectSchema(map[string]any{
 		"request_id":           stringSchema("Logical extraction request ID."),
-		"source_snapshot_id":   stringSchema("Source snapshot ID returned by submit_text_source."),
-		"extraction_view_id":   stringSchema("Extraction view ID returned by submit_text_source."),
+		"source_snapshot_id":   stringSchema("Source snapshot ID returned by submit_text_source or submit_external_source."),
+		"extraction_view_id":   stringSchema("Extraction view ID returned by submit_text_source or submit_external_source."),
+		"producer_session_ref": boundedStringSchema("Optional opaque non-secret session, task, or conversation reference supplied by the producer for debugging. Omit it when unavailable; never invent one or submit credentials.", evidenceingestion.ProducerSessionRefMaxBytes),
 		"extractor_definition": extractorDefinitionSchema(),
 		"extractor_output":     extractorOutputSchema(),
 	}, []string{
 		"request_id",
 		"source_snapshot_id",
 		"extraction_view_id",
+		"extractor_definition",
 		"extractor_output",
 	})
 }
 
 func extractorDefinitionSchema() map[string]any {
 	return objectSchema(map[string]any{
-		"name":    stringSchema("Extractor implementation name."),
-		"version": stringSchema("Extractor implementation/configuration version."),
-		"config":  stringMapSchema("Bounded deterministic extractor configuration."),
+		"name":    stringSchema("Stable external-agent or extractor producer name."),
+		"version": stringSchema("Producer contract or implementation version."),
+		"config":  stringMapSchema("Bounded producer configuration and declared identity metadata."),
 	}, []string{"name", "version"})
 }
 

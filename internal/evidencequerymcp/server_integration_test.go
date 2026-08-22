@@ -65,6 +65,108 @@ func TestIntegrationGetEvidenceRecordRoundTripReadOnly(t *testing.T) {
 	}
 }
 
+func TestIntegrationExternalAgentSourceProposalReviewAndAdmission(t *testing.T) {
+	ctx, pool := integrationPool(t)
+	ingestServer, err := evidenceingestionmcp.NewServer(pool)
+	if err != nil {
+		t.Fatalf("ingest NewServer() error = %v", err)
+	}
+	queryServer, err := NewServer(pool)
+	if err != nil {
+		t.Fatalf("query NewServer() error = %v", err)
+	}
+
+	source, err := ingestServer.SubmitExternalSource(ctx, evidenceingestionmcp.SubmitExternalSourceRequest{
+		SchemaVersion:   evidenceingestion.ExternalSourceEnvelopeSchemaV1,
+		RequestID:       "query-external-agent-source",
+		SourceSystem:    "jira",
+		SourceNamespace: "acme/eng",
+		ObjectType:      "issue",
+		ObjectID:        "AHE-42",
+		Revision:        "revision-42",
+		SourceLocation:  "https://fixture.invalid/AHE-42",
+		Title:           "Agent-first source intake",
+		ContentFormat:   evidenceingestion.ExternalSourceContentFormatMarkdown,
+		ContentFidelity: evidenceingestion.ExternalSourceContentFidelityVerbatim,
+		Content:         "# AHE-42\nExternal connector owns collection.\n",
+		Coverage:        evidenceingestion.ExternalSourceCoverageExactExcerpt,
+		Limitations:     []string{"comments were not requested"},
+		CollectorID:     "claude-code",
+		ConnectorID:     "atlassian-rovo",
+		ObservedAt:      "2026-08-23T02:03:04Z",
+		SourceUpdatedAt: "2026-08-23T02:00:00Z",
+	})
+	if err != nil {
+		t.Fatalf("SubmitExternalSource() error = %v", err)
+	}
+	input, err := ingestServer.GetExtractorInput(ctx, evidenceingestionmcp.GetExtractorInputRequest{
+		ExtractionViewID: source.ExtractionViewID,
+	})
+	if err != nil {
+		t.Fatalf("GetExtractorInput() error = %v", err)
+	}
+	if input.SourceSystem != evidenceingestion.SourceSystemExternalDocument ||
+		len(input.Spans) != 2 ||
+		input.Spans[1].Text != "External connector owns collection." {
+		t.Fatalf("external agent input = %+v", input)
+	}
+
+	proposal, err := ingestServer.SubmitExtractorOutput(ctx, evidenceingestionmcp.SubmitExtractorOutputRequest{
+		RequestID:          "query-external-agent-proposal",
+		SourceSnapshotID:   source.SourceSnapshotID,
+		ExtractionViewID:   source.ExtractionViewID,
+		ProducerSessionRef: "claude-code-session:integration-test",
+		ExtractorDefinition: evidenceingestion.ExtractorDefinitionInput{
+			Name:    "external-cooperating-agent",
+			Version: "v1",
+			Config: map[string]string{
+				"producer_class": "external_agent",
+			},
+		},
+		ExtractorOutput: evidenceingestion.FrozenExtractorOutput{
+			Proposals: []evidenceingestion.ExtractorProposalOutput{{
+				ProposalLocalID: "collection-owner",
+				StatementText:   "The connector is responsible for external collection.",
+				EvidenceRefs:    []string{input.Spans[1].SpanID},
+			}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SubmitExtractorOutput() error = %v", err)
+	}
+
+	review := callGetEvidenceRecord(t, ctx, queryServer, proposal.ProposalOccurrenceID)
+	if review.AdmissionOutcome != "pending" ||
+		review.StatementText != "The connector is responsible for external collection." ||
+		len(review.SourceRefs) != 1 ||
+		review.SourceRefs[0].QuotedText != "External connector owns collection." ||
+		review.Extractor.Name != "external-cooperating-agent" ||
+		review.Extractor.ProducerSessionRef != "claude-code-session:integration-test" {
+		t.Fatalf("external agent review record = %+v", review)
+	}
+	if review.Source.ExternalSource == nil ||
+		review.Source.ExternalSource.Title != "Agent-first source intake" ||
+		review.Source.ExternalSource.SourceLocation != "https://fixture.invalid/AHE-42" ||
+		review.Source.ExternalSource.Revision != "revision-42" ||
+		review.Source.ExternalSource.Coverage != evidenceingestion.ExternalSourceCoverageExactExcerpt ||
+		len(review.Source.ExternalSource.Limitations) != 1 {
+		t.Fatalf("external source review provenance = %+v", review.Source.ExternalSource)
+	}
+
+	admission := callAdmitPendingProposal(t, ctx, ingestServer, evidenceingestionmcp.AdmitPendingProposalRequest{
+		ProposalOccurrenceID: proposal.ProposalOccurrenceID,
+		DecisionBy:           "integration-human-reviewer",
+		DecisionReason:       "proposal and source quote reviewed",
+	})
+	admitted := callGetEvidenceRecord(t, ctx, queryServer, proposal.ProposalOccurrenceID)
+	if admitted.AdmissionOutcome != "admitted" ||
+		admitted.CanonicalRef == nil ||
+		*admitted.CanonicalRef != admission.CanonicalRef ||
+		admitted.Extractor.ProducerSessionRef != "claude-code-session:integration-test" {
+		t.Fatalf("external agent admission = %+v", admitted)
+	}
+}
+
 func TestIntegrationGetEvidenceRecordAfterAdmissionReadOnly(t *testing.T) {
 	ctx, pool := integrationPool(t)
 	ingestServer, err := evidenceingestionmcp.NewServer(pool)

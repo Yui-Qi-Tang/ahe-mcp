@@ -150,6 +150,10 @@ var requiredTablesByMigration = map[string][]string{
 		"canonical_derivations",
 		"canonical_derivation_parents",
 	},
+	"000037_evidence_ingestion_external_source_receipts.up.sql": {
+		"external_source_intake_receipts",
+	},
+	"000038_evidence_ingestion_producer_session_ref.up.sql": {},
 }
 
 var requiredTables = []string{
@@ -217,6 +221,7 @@ var requiredTables = []string{
 	"repository_delta_extractions",
 	"detective_mcp_read_source_bindings",
 	"detective_mcp_read_collection_cycles",
+	"external_source_intake_receipts",
 }
 
 // ErrSchemaNotCurrent indicates that the database cannot satisfy the embedded
