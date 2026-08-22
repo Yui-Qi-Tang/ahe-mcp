@@ -247,25 +247,7 @@ func runRepositoryExtractorExecution(
 	}
 	switch status {
 	case attemptStatusSucceeded:
-		result, err := replayRepositoryAttempt(ctx, db, attemptCtx)
-		if err != nil {
-			return RepositoryIngestResult{}, err
-		}
-		if loadDeltaExtraction {
-			delta, found, err := readRepositoryDeltaExtraction(ctx, db, attemptCtx.extractionAttempt.ID)
-			if err != nil {
-				return RepositoryIngestResult{}, err
-			}
-			if found {
-				if err := validateRepositoryDeltaExtraction(attemptCtx, result, delta); err != nil {
-					return RepositoryIngestResult{}, err
-				}
-				delta.Replayed = true
-				result.DeltaExtraction = &delta
-			}
-		}
-		result.Replayed = true
-		return attachRepositorySourceGeneration(ctx, db, result)
+		return replayCompletedRepositoryAttempt(ctx, db, attemptCtx, loadDeltaExtraction)
 	case attemptStatusFailed:
 		return RepositoryIngestResult{}, newDomainError(ErrorPersistedAttemptFailed, "attempt %s already failed", attemptCtx.extractionAttempt.ID)
 	}
@@ -306,10 +288,13 @@ func runRepositoryExtractorExecution(
 		}
 	}
 	started = startRepositoryExtractionPhase(observer)
-	err = persistProposalSuccessWithHook(ctx, db, batch, output, hook)
+	replayed, err := persistProposalSuccessWithHook(ctx, db, batch, output, hook)
 	finishRepositoryExtractionPhase(observer, repositoryExtractionPhasePersistSuccess, started, err)
 	if err != nil {
 		return RepositoryIngestResult{}, err
+	}
+	if replayed {
+		return replayCompletedRepositoryAttempt(ctx, db, attemptCtx, loadDeltaExtraction)
 	}
 	result := repositoryIngestResult(batch, false)
 	result.DeltaExtraction = execution.deltaExtraction
@@ -317,6 +302,28 @@ func runRepositoryExtractorExecution(
 	result, err = attachRepositorySourceGeneration(ctx, db, result)
 	finishRepositoryExtractionPhase(observer, repositoryExtractionPhaseCreateGeneration, started, err)
 	return result, err
+}
+
+func replayCompletedRepositoryAttempt(ctx context.Context, db sqlDB, attemptCtx repositoryAttemptContext, loadDeltaExtraction bool) (RepositoryIngestResult, error) {
+	result, err := replayRepositoryAttempt(ctx, db, attemptCtx)
+	if err != nil {
+		return RepositoryIngestResult{}, err
+	}
+	if loadDeltaExtraction {
+		delta, found, err := readRepositoryDeltaExtraction(ctx, db, attemptCtx.extractionAttempt.ID)
+		if err != nil {
+			return RepositoryIngestResult{}, err
+		}
+		if found {
+			if err := validateRepositoryDeltaExtraction(attemptCtx, result, delta); err != nil {
+				return RepositoryIngestResult{}, err
+			}
+			delta.Replayed = true
+			result.DeltaExtraction = &delta
+		}
+	}
+	result.Replayed = true
+	return attachRepositorySourceGeneration(ctx, db, result)
 }
 
 func attachRepositorySourceGeneration(ctx context.Context, db sqlDB, result RepositoryIngestResult) (RepositoryIngestResult, error) {

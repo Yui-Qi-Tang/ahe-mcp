@@ -507,6 +507,108 @@ func TestIntegrationSubmitExtractorOutputReplayAndConflict(t *testing.T) {
 	assertTableCount(t, ctx, pool, "proposal_occurrences", 1)
 }
 
+func TestIntegrationProposalSuccessRejectsStaleConcurrentCompletion(t *testing.T) {
+	ctx, pool := integrationPool(t)
+	input, firstOutput := integrationInputFixture(t, "stale-concurrent-completion-source")
+	source, err := CaptureManualSource(ctx, pool, input)
+	if err != nil {
+		t.Fatalf("CaptureManualSource() error = %v", err)
+	}
+	sourceCtx, err := loadManualSourceContext(ctx, pgxDB{pool: pool}, source.SourceSnapshotID, source.ExtractionViewID)
+	if err != nil {
+		t.Fatalf("loadManualSourceContext() error = %v", err)
+	}
+	attemptCtx, err := buildAttemptContextFromSource(sourceCtx, "stale-concurrent-completion", 0)
+	if err != nil {
+		t.Fatalf("buildAttemptContextFromSource() error = %v", err)
+	}
+	if _, err := persistAttemptStartForExistingSource(ctx, pgxDB{pool: pool}, attemptCtx); err != nil {
+		t.Fatalf("persistAttemptStartForExistingSource() error = %v", err)
+	}
+
+	firstBatch, err := materializeBatch(attemptCtx, firstOutput)
+	if err != nil {
+		t.Fatalf("materialize first output: %v", err)
+	}
+	secondOutput := firstOutput
+	secondOutput.Proposals = append([]ExtractorProposalOutput(nil), firstOutput.Proposals...)
+	secondOutput.Proposals[0].ProposalLocalID = "stale-second-completion"
+	secondBatch, err := materializeBatch(attemptCtx, secondOutput)
+	if err != nil {
+		t.Fatalf("materialize second output: %v", err)
+	}
+
+	replayed, err := persistProposalSuccess(ctx, pgxDB{pool: pool}, firstBatch, firstOutput)
+	if err != nil {
+		t.Fatalf("persist first proposal success: %v", err)
+	}
+	if replayed {
+		t.Fatal("persist first proposal success replayed = true, want false")
+	}
+	_, err = persistProposalSuccess(ctx, pgxDB{pool: pool}, secondBatch, secondOutput)
+	assertKind(t, err, ErrorIdempotencyKeyReused)
+
+	assertTableCount(t, ctx, pool, "proposal_batches", 1)
+	assertTableCount(t, ctx, pool, "proposal_occurrences", 1)
+}
+
+func TestIntegrationSubmitExtractorOutputConcurrentConflictHasOneWinner(t *testing.T) {
+	ctx, pool := integrationPool(t)
+	input, firstOutput := integrationInputFixture(t, "concurrent-extractor-output-source")
+	source, err := CaptureManualSource(ctx, pool, input)
+	if err != nil {
+		t.Fatalf("CaptureManualSource() error = %v", err)
+	}
+	secondOutput := firstOutput
+	secondOutput.Proposals = append([]ExtractorProposalOutput(nil), firstOutput.Proposals...)
+	secondOutput.Proposals[0].ProposalLocalID = "concurrent-second-output"
+
+	type call struct {
+		result IngestResult
+		err    error
+	}
+	calls := make(chan call, 2)
+	start := make(chan struct{})
+	for _, output := range []FrozenExtractorOutput{firstOutput, secondOutput} {
+		go func(output FrozenExtractorOutput) {
+			<-start
+			result, err := SubmitExtractorOutput(ctx, pool, ExtractorOutputInput{
+				RequestID:        "concurrent-extractor-output",
+				SourceSnapshotID: source.SourceSnapshotID,
+				ExtractionViewID: source.ExtractionViewID,
+				Output:           output,
+			})
+			calls <- call{result: result, err: err}
+		}(output)
+	}
+	close(start)
+
+	successes := 0
+	conflicts := 0
+	for range 2 {
+		got := <-calls
+		if got.err == nil {
+			if got.result.Replayed {
+				t.Fatalf("winning result Replayed = true: %+v", got.result)
+			}
+			successes++
+			continue
+		}
+		kind, ok := KindOf(got.err)
+		if !ok || kind != ErrorIdempotencyKeyReused {
+			t.Fatalf("concurrent SubmitExtractorOutput() error = %v, want %s", got.err, ErrorIdempotencyKeyReused)
+		}
+		conflicts++
+	}
+	if successes != 1 || conflicts != 1 {
+		t.Fatalf("concurrent results = %d successes/%d conflicts, want 1/1", successes, conflicts)
+	}
+
+	assertTableCount(t, ctx, pool, "extraction_attempts", 1)
+	assertTableCount(t, ctx, pool, "proposal_batches", 1)
+	assertTableCount(t, ctx, pool, "proposal_occurrences", 1)
+}
+
 func TestIntegrationSubmitExtractorOutputUnknownSpanPersistsFailure(t *testing.T) {
 	ctx, pool := integrationPool(t)
 	input, fixture := integrationInputFixture(t, "source-for-output-unknown-span")

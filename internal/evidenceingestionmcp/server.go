@@ -335,6 +335,7 @@ type SubmitExtractorOutputResponse struct {
 	ExtractionAttemptID  string `json:"extraction_attempt_id"`
 	ProposalOccurrenceID string `json:"proposal_occurrence_id"`
 	ProposalFingerprint  string `json:"proposal_fingerprint"`
+	ProposalCount        int    `json:"proposal_count"`
 	Status               string `json:"status"`
 	Replayed             bool   `json:"replayed"`
 }
@@ -1763,6 +1764,16 @@ func (s *Server) SubmitExtractorOutput(ctx context.Context, req SubmitExtractorO
 	if err != nil {
 		return SubmitExtractorOutputResponse{}, mapToolError(err)
 	}
+	if result.ProposalCount == 0 {
+		return SubmitExtractorOutputResponse{
+			SourceSnapshotID:    result.SourceSnapshotID,
+			ExtractionViewID:    result.ExtractionViewID,
+			ExtractionAttemptID: result.ExtractionAttemptID,
+			ProposalCount:       0,
+			Status:              "abstained",
+			Replayed:            result.Replayed,
+		}, nil
+	}
 	trace, err := s.core.TraceProposalProvenance(ctx, result.ProposalOccurrenceID)
 	if err != nil {
 		return SubmitExtractorOutputResponse{}, mapToolError(err)
@@ -1773,6 +1784,7 @@ func (s *Server) SubmitExtractorOutput(ctx context.Context, req SubmitExtractorO
 		ExtractionAttemptID:  result.ExtractionAttemptID,
 		ProposalOccurrenceID: result.ProposalOccurrenceID,
 		ProposalFingerprint:  result.ProposalFingerprint,
+		ProposalCount:        result.ProposalCount,
 		Status:               trace.AdmissionOutcome,
 		Replayed:             result.Replayed,
 	}, nil

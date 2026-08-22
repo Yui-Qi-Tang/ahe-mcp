@@ -255,8 +255,17 @@ func completeAttemptWithRawOutput(ctx context.Context, db sqlDB, attemptCtx atte
 		}
 		return IngestResult{}, err
 	}
-	if err := persistProposalSuccess(ctx, db, batch, output); err != nil {
+	replayed, err := persistProposalSuccess(ctx, db, batch, output)
+	if err != nil {
 		return IngestResult{}, err
+	}
+	if replayed {
+		result, err := replaySucceededAttempt(ctx, db, attemptCtx, batch.FixtureOutputHash)
+		if err != nil {
+			return IngestResult{}, err
+		}
+		result.Replayed = true
+		return result, nil
 	}
 	return ingestResultFromBatch(batch), nil
 }
@@ -848,19 +857,20 @@ func scanManualSourceContext(row sqlRow, missing func() error) (manualSourceCont
 	}, nil
 }
 
-func persistProposalSuccess(ctx context.Context, db sqlDB, batch MaterializedBatch, fixture FrozenExtractorOutput) error {
+func persistProposalSuccess(ctx context.Context, db sqlDB, batch MaterializedBatch, fixture FrozenExtractorOutput) (bool, error) {
 	return persistProposalSuccessWithHook(ctx, db, batch, fixture, nil)
 }
 
 type proposalSuccessHook func(context.Context, sqlTx) error
 
-func persistProposalSuccessWithHook(ctx context.Context, db sqlDB, batch MaterializedBatch, fixture FrozenExtractorOutput, hook proposalSuccessHook) error {
-	return withTx(ctx, db, func(tx sqlTx) error {
+func persistProposalSuccessWithHook(ctx context.Context, db sqlDB, batch MaterializedBatch, fixture FrozenExtractorOutput, hook proposalSuccessHook) (bool, error) {
+	replayed := false
+	err := withTx(ctx, db, func(tx sqlTx) error {
 		fixtureData, err := jsonBytes(fixture)
 		if err != nil {
 			return err
 		}
-		_, err = tx.exec(ctx, `
+		tag, err := tx.exec(ctx, `
 			UPDATE extraction_attempts
 			SET status = 'succeeded',
 				output_hash = $2,
@@ -869,9 +879,37 @@ func persistProposalSuccessWithHook(ctx context.Context, db sqlDB, batch Materia
 				failure_metadata = NULL,
 				completed_at = now()
 			WHERE extraction_attempt_id = $1
+				AND status = 'started'
 		`, batch.ExtractionAttempt.ID, batch.FixtureOutputHash, string(fixtureData))
 		if err != nil {
 			return fmt.Errorf("updating attempt success: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			var status, outputHash string
+			err := tx.queryRow(ctx, `
+				SELECT status, COALESCE(output_hash, '')
+				FROM extraction_attempts
+				WHERE extraction_attempt_id = $1
+				FOR UPDATE
+			`, batch.ExtractionAttempt.ID).Scan(&status, &outputHash)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return newDomainError(ErrorMissingSourceViewAttempt, "extraction attempt %s does not exist", batch.ExtractionAttempt.ID)
+				}
+				return fmt.Errorf("reading completed attempt: %w", err)
+			}
+			switch status {
+			case attemptStatusSucceeded:
+				if outputHash != batch.FixtureOutputHash {
+					return newDomainError(ErrorIdempotencyKeyReused, "attempt %s already succeeded with different extractor output", batch.ExtractionAttempt.ID)
+				}
+				replayed = true
+				return nil
+			case attemptStatusFailed:
+				return newDomainError(ErrorPersistedAttemptFailed, "attempt %s already failed", batch.ExtractionAttempt.ID)
+			default:
+				return newDomainError(ErrorInvalidInput, "attempt %s cannot complete from status %q", batch.ExtractionAttempt.ID, status)
+			}
 		}
 		_, err = tx.exec(ctx, `
 			INSERT INTO proposal_batches (
@@ -902,6 +940,7 @@ func persistProposalSuccessWithHook(ctx context.Context, db sqlDB, batch Materia
 		}
 		return nil
 	})
+	return replayed, err
 }
 
 func insertOccurrence(ctx context.Context, tx sqlTx, occurrence ProposalOccurrence) error {

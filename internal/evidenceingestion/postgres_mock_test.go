@@ -733,7 +733,10 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 		return mockExecResult(1), nil
 	case strings.Contains(query, "UPDATE extraction_attempts") && strings.Contains(query, "status = 'succeeded'"):
 		id := args[0].(string)
-		attempt := db.extractionAttempts[id]
+		attempt, ok := db.extractionAttempts[id]
+		if !ok || attempt.status != attemptStatusStarted {
+			return mockExecResult(0), nil
+		}
 		attempt.status = attemptStatusSucceeded
 		attempt.outputHash = args[1].(string)
 		attempt.fixtureOutput = args[2].(string)
@@ -1165,6 +1168,12 @@ func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) s
 			return mockRow{err: pgx.ErrNoRows}
 		}
 		return mockRow{values: []any{best}}
+	case strings.Contains(query, "SELECT status, COALESCE(output_hash, '')") && strings.Contains(query, "FROM extraction_attempts"):
+		attempt, ok := db.extractionAttempts[args[0].(string)]
+		if !ok {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		return mockRow{values: []any{attempt.status, attempt.outputHash}}
 	case strings.Contains(query, "SELECT status") && strings.Contains(query, "FROM extraction_attempts"):
 		attempt, ok := db.extractionAttempts[args[0].(string)]
 		if !ok {

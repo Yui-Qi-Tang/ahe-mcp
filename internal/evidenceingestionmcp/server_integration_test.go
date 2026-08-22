@@ -768,6 +768,9 @@ func TestIntegrationSubmitExtractorOutputRoundTrip(t *testing.T) {
 	if resp.Status != "pending" {
 		t.Fatalf("status = %q, want pending", resp.Status)
 	}
+	if resp.ProposalCount != 1 {
+		t.Fatalf("proposal count = %d, want 1", resp.ProposalCount)
+	}
 	if resp.SourceSnapshotID != source.SourceSnapshotID || resp.ExtractionViewID != source.ExtractionViewID {
 		t.Fatalf("response source = %s/%s, want %s/%s", resp.SourceSnapshotID, resp.ExtractionViewID, source.SourceSnapshotID, source.ExtractionViewID)
 	}
@@ -793,6 +796,38 @@ func TestIntegrationSubmitExtractorOutputRoundTrip(t *testing.T) {
 	assertTableCount(t, ctx, pool, "extraction_attempts", 1)
 	assertTableCount(t, ctx, pool, "proposal_batches", 1)
 	assertTableCount(t, ctx, pool, "proposal_occurrences", 1)
+}
+
+func TestIntegrationSubmitExtractorOutputAbstentionRoundTrip(t *testing.T) {
+	ctx, pool := integrationPool(t)
+	server, err := NewServer(pool)
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	source := callSubmitTextSource(t, ctx, server, integrationTextSourceRequest(t, "mcp-source-for-abstention"))
+	outputReq := SubmitExtractorOutputRequest{
+		RequestID:           "mcp-extractor-output-abstention",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ExtractorDefinition: integrationAgentExtractorDefinition(),
+		ExtractorOutput:     evidenceingestion.FrozenExtractorOutput{Proposals: []evidenceingestion.ExtractorProposalOutput{}},
+	}
+
+	first := callSubmitExtractorOutput(t, ctx, server, outputReq)
+	if first.Status != "abstained" || first.ProposalCount != 0 || first.ProposalOccurrenceID != "" || first.ProposalFingerprint != "" {
+		t.Fatalf("first abstention response = %+v", first)
+	}
+	second := callSubmitExtractorOutput(t, ctx, server, outputReq)
+	if second.Status != "abstained" || !second.Replayed {
+		t.Fatalf("replayed abstention response = %+v", second)
+	}
+	if second.ExtractionAttemptID != first.ExtractionAttemptID {
+		t.Fatalf("replayed attempt = %q, want %q", second.ExtractionAttemptID, first.ExtractionAttemptID)
+	}
+
+	assertTableCount(t, ctx, pool, "extraction_attempts", 1)
+	assertTableCount(t, ctx, pool, "proposal_batches", 1)
+	assertTableCount(t, ctx, pool, "proposal_occurrences", 0)
 }
 
 func TestIntegrationSubmitExtractorOutputReplayConflictAndStrictErrors(t *testing.T) {

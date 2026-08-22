@@ -1372,6 +1372,7 @@ func TestCallToolSubmitsTextSourceThroughCore(t *testing.T) {
 func TestCallToolSubmitsExtractorOutputThroughCore(t *testing.T) {
 	core := &fakeCore{
 		extractorResult: evidenceingestion.IngestResult{
+			ProposalCount:        1,
 			SourceSnapshotID:     "srcsnap:1",
 			ExtractionViewID:     "view:1",
 			ExtractionAttemptID:  "attempt:1",
@@ -1420,6 +1421,42 @@ func TestCallToolSubmitsExtractorOutputThroughCore(t *testing.T) {
 	}
 	if resp.Status != "pending" {
 		t.Fatalf("status = %q, want pending", resp.Status)
+	}
+	if resp.ProposalCount != 1 {
+		t.Fatalf("proposal count = %d, want 1", resp.ProposalCount)
+	}
+}
+
+func TestCallToolReturnsSuccessfulExtractorAbstentionWithoutTracingProposal(t *testing.T) {
+	core := &fakeCore{
+		extractorResult: evidenceingestion.IngestResult{
+			ProposalCount:       0,
+			SourceSnapshotID:    "srcsnap:1",
+			ExtractionViewID:    "view:1",
+			ExtractionAttemptID: "attempt:1",
+		},
+	}
+	server := newServer(core)
+	req := testExtractorOutputRequest("extractor-abstention")
+	req.ExtractorOutput.Proposals = nil
+	payload, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("Marshal request: %v", err)
+	}
+
+	data, err := server.CallTool(context.Background(), ToolSubmitExtractorOutput, payload)
+	if err != nil {
+		t.Fatalf("CallTool() error = %v", err)
+	}
+	var resp SubmitExtractorOutputResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		t.Fatalf("Unmarshal response: %v", err)
+	}
+	if core.extractorCalls != 1 || core.traceCalls != 0 {
+		t.Fatalf("core calls = extractor %d trace %d, want 1/0", core.extractorCalls, core.traceCalls)
+	}
+	if resp.Status != "abstained" || resp.ProposalCount != 0 || resp.ProposalOccurrenceID != "" || resp.ProposalFingerprint != "" {
+		t.Fatalf("abstention response = %+v", resp)
 	}
 }
 
