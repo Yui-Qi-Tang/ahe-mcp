@@ -153,7 +153,8 @@ var requiredTablesByMigration = map[string][]string{
 	"000037_evidence_ingestion_external_source_receipts.up.sql": {
 		"external_source_intake_receipts",
 	},
-	"000038_evidence_ingestion_producer_session_ref.up.sql": {},
+	"000038_evidence_ingestion_producer_session_ref.up.sql":         {},
+	"000039_evidence_ingestion_external_agent_core_contract.up.sql": {},
 }
 
 var requiredTables = []string{

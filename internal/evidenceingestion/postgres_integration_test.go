@@ -377,10 +377,11 @@ func TestIntegrationSubmitExtractorOutputRoundTrip(t *testing.T) {
 	}
 
 	result, err := SubmitExtractorOutput(ctx, pool, ExtractorOutputInput{
-		RequestID:        "extractor-output-round-trip",
-		SourceSnapshotID: source.SourceSnapshotID,
-		ExtractionViewID: source.ExtractionViewID,
-		Output:           fixture,
+		RequestID:           "extractor-output-round-trip",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              fixture,
 	})
 	if err != nil {
 		t.Fatalf("SubmitExtractorOutput() error = %v", err)
@@ -428,10 +429,11 @@ func TestIntegrationCombinedAndSplitFlowsShareMaterializationIdentity(t *testing
 		t.Fatalf("CaptureManualSource() error = %v", err)
 	}
 	split, err := SubmitExtractorOutput(ctx, pool, ExtractorOutputInput{
-		RequestID:        "split-extractor-materialization",
-		SourceSnapshotID: source.SourceSnapshotID,
-		ExtractionViewID: source.ExtractionViewID,
-		Output:           fixture,
+		RequestID:           "split-extractor-materialization",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              fixture,
 	})
 	if err != nil {
 		t.Fatalf("SubmitExtractorOutput() error = %v", err)
@@ -475,10 +477,11 @@ func TestIntegrationSubmitExtractorOutputReplayAndConflict(t *testing.T) {
 		t.Fatalf("CaptureManualSource() error = %v", err)
 	}
 	output := ExtractorOutputInput{
-		RequestID:        "extractor-output-replay",
-		SourceSnapshotID: source.SourceSnapshotID,
-		ExtractionViewID: source.ExtractionViewID,
-		Output:           fixture,
+		RequestID:           "extractor-output-replay",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              fixture,
 	}
 	first, err := SubmitExtractorOutput(ctx, pool, output)
 	if err != nil {
@@ -504,6 +507,45 @@ func TestIntegrationSubmitExtractorOutputReplayAndConflict(t *testing.T) {
 	assertTableCount(t, ctx, pool, "span_catalog_entries", 2)
 	assertTableCount(t, ctx, pool, "extraction_attempts", 1)
 	assertTableCount(t, ctx, pool, "proposal_batches", 1)
+	assertTableCount(t, ctx, pool, "proposal_occurrences", 1)
+}
+
+func TestIntegrationSubmitExtractorOutputSessionChangeReplaysFirstAnnotation(t *testing.T) {
+	ctx, pool := integrationPool(t)
+	input, fixture := integrationInputFixture(t, "source-for-session-replay")
+	source, err := CaptureManualSource(ctx, pool, input)
+	if err != nil {
+		t.Fatalf("CaptureManualSource() error = %v", err)
+	}
+	output := ExtractorOutputInput{
+		RequestID:           "extractor-session-replay",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ProducerSessionRef:  "session:first",
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              fixture,
+	}
+	first, err := SubmitExtractorOutput(ctx, pool, output)
+	if err != nil {
+		t.Fatalf("first SubmitExtractorOutput() error = %v", err)
+	}
+	output.ProducerSessionRef = "session:retry"
+	second, err := SubmitExtractorOutput(ctx, pool, output)
+	if err != nil {
+		t.Fatalf("second SubmitExtractorOutput() error = %v", err)
+	}
+	if !second.Replayed || second.ProposalOccurrenceID != first.ProposalOccurrenceID {
+		t.Fatalf("session retry result = %+v, want replay of %s", second, first.ProposalOccurrenceID)
+	}
+	proposal, err := TraceProposalProvenance(ctx, pool, first.ProposalOccurrenceID)
+	if err != nil {
+		t.Fatalf("TraceProposalProvenance() error = %v", err)
+	}
+	if proposal.ProducerSessionRef != "session:first" {
+		t.Fatalf("producer session ref = %q, want first annotation", proposal.ProducerSessionRef)
+	}
+	assertTableCount(t, ctx, pool, "extraction_runs", 1)
+	assertTableCount(t, ctx, pool, "extraction_attempts", 1)
 	assertTableCount(t, ctx, pool, "proposal_occurrences", 1)
 }
 
@@ -573,10 +615,11 @@ func TestIntegrationSubmitExtractorOutputConcurrentConflictHasOneWinner(t *testi
 		go func(output FrozenExtractorOutput) {
 			<-start
 			result, err := SubmitExtractorOutput(ctx, pool, ExtractorOutputInput{
-				RequestID:        "concurrent-extractor-output",
-				SourceSnapshotID: source.SourceSnapshotID,
-				ExtractionViewID: source.ExtractionViewID,
-				Output:           output,
+				RequestID:           "concurrent-extractor-output",
+				SourceSnapshotID:    source.SourceSnapshotID,
+				ExtractionViewID:    source.ExtractionViewID,
+				ExtractorDefinition: testExternalExtractorDefinition(),
+				Output:              output,
 			})
 			calls <- call{result: result, err: err}
 		}(output)
@@ -618,10 +661,11 @@ func TestIntegrationSubmitExtractorOutputUnknownSpanPersistsFailure(t *testing.T
 	}
 	fixture.Proposals[0].EvidenceRefs = []string{"span:S404"}
 	_, err = SubmitExtractorOutput(ctx, pool, ExtractorOutputInput{
-		RequestID:        "extractor-output-unknown-span",
-		SourceSnapshotID: source.SourceSnapshotID,
-		ExtractionViewID: source.ExtractionViewID,
-		Output:           fixture,
+		RequestID:           "extractor-output-unknown-span",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              fixture,
 	})
 	assertKind(t, err, ErrorUnknownSpan)
 
@@ -629,7 +673,7 @@ func TestIntegrationSubmitExtractorOutputUnknownSpanPersistsFailure(t *testing.T
 	if err != nil {
 		t.Fatalf("loadManualSourceContext() error = %v", err)
 	}
-	attemptCtx, err := buildAttemptContextFromSource(sourceCtx, "extractor-output-unknown-span", 0)
+	attemptCtx, err := buildAttemptContextFromSourceWithDefinition(sourceCtx, "extractor-output-unknown-span", 0, testExternalExtractorDefinition())
 	if err != nil {
 		t.Fatalf("buildAttemptContextFromSource() error = %v", err)
 	}

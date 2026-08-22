@@ -173,6 +173,11 @@ func submitExtractorOutput(ctx context.Context, db sqlDB, input ExtractorOutputI
 	if input.ExtractionViewID == "" {
 		return IngestResult{}, newDomainError(ErrorInvalidInput, "extraction_view_id is required")
 	}
+	input.ExtractorDefinition.Name = strings.TrimSpace(input.ExtractorDefinition.Name)
+	input.ExtractorDefinition.Version = strings.TrimSpace(input.ExtractorDefinition.Version)
+	if input.ExtractorDefinition.Name == "" || input.ExtractorDefinition.Version == "" {
+		return IngestResult{}, newDomainError(ErrorInvalidInput, "extractor definition name and version are required")
+	}
 	sourceCtx, err := loadManualSourceContext(ctx, db, input.SourceSnapshotID, input.ExtractionViewID)
 	if err != nil {
 		return IngestResult{}, err

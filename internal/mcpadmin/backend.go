@@ -724,11 +724,23 @@ func submitExtractorOutputSchema() map[string]any {
 }
 
 func extractorDefinitionSchema() map[string]any {
+	name := boundedStringSchema("Stable external-agent or extractor producer name.", evidenceingestion.ExtractorDefinitionNameMaxBytes)
+	name["minLength"] = 1
+	version := boundedStringSchema("Producer contract or implementation version.", evidenceingestion.ExtractorDefinitionVersionMaxBytes)
+	version["minLength"] = 1
 	return objectSchema(map[string]any{
-		"name":    stringSchema("Stable external-agent or extractor producer name."),
-		"version": stringSchema("Producer contract or implementation version."),
-		"config":  stringMapSchema("Bounded producer configuration and declared identity metadata."),
+		"name":    name,
+		"version": version,
+		"config":  extractorDefinitionConfigSchema(),
 	}, []string{"name", "version"})
+}
+
+func extractorDefinitionConfigSchema() map[string]any {
+	schema := stringMapSchema("Bounded producer configuration and declared identity metadata.")
+	schema["maxProperties"] = evidenceingestion.ExtractorDefinitionConfigMaxEntries
+	schema["propertyNames"] = boundedStringSchema("Extractor configuration key.", evidenceingestion.ExtractorDefinitionConfigKeyMaxBytes)
+	schema["additionalProperties"] = boundedStringSchema("Extractor configuration value.", evidenceingestion.ExtractorDefinitionConfigValueMaxBytes)
+	return schema
 }
 
 func manualSourceProperties() map[string]any {

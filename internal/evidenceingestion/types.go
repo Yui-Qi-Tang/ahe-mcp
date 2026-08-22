@@ -147,6 +147,18 @@ const (
 	ProposalDispositionDecisionReasonMaxBytes = 2000
 	// ProducerSessionRefMaxBytes caps one optional non-secret producer session reference.
 	ProducerSessionRefMaxBytes = 500
+	// ExtractorDefinitionNameMaxBytes caps one extractor producer name.
+	ExtractorDefinitionNameMaxBytes = 200
+	// ExtractorDefinitionVersionMaxBytes caps one extractor producer version.
+	ExtractorDefinitionVersionMaxBytes = 200
+	// ExtractorDefinitionConfigMaxEntries caps one extractor configuration map.
+	ExtractorDefinitionConfigMaxEntries = 64
+	// ExtractorDefinitionConfigKeyMaxBytes caps one extractor configuration key.
+	ExtractorDefinitionConfigKeyMaxBytes = 200
+	// ExtractorDefinitionConfigValueMaxBytes caps one extractor configuration value.
+	ExtractorDefinitionConfigValueMaxBytes = 4 << 10
+	// ExtractorDefinitionConfigMaxBytes caps compact serialized extractor configuration.
+	ExtractorDefinitionConfigMaxBytes = 60 << 10
 
 	attemptStatusStarted   = "started"
 	attemptStatusSucceeded = "succeeded"
@@ -535,7 +547,8 @@ type SpanEntry struct {
 }
 
 // ExtractorDefinitionInput identifies an extractor implementation/config before persistence.
-// The zero value preserves the Slice 1 frozen fixture definition.
+// The zero value is reserved for the legacy Slice 1 manual-fixture path; external
+// extractor-output submission requires an explicit name and version.
 type ExtractorDefinitionInput struct {
 	Name    string            `json:"name,omitempty"`
 	Version string            `json:"version,omitempty"`

@@ -1,6 +1,8 @@
 package evidenceingestion
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -279,7 +281,7 @@ func testManualInput(sourceID string) ManualTextInput {
 	}
 }
 
-func TestProducerSessionRefExtendsRunIdentityWithoutChangingEmptyIdentity(t *testing.T) {
+func TestProducerSessionRefDoesNotChangeRunIdentity(t *testing.T) {
 	sourceCtx, err := buildManualSourceContext(testManualInput("producer-session-identity"))
 	if err != nil {
 		t.Fatalf("buildManualSourceContext() error = %v", err)
@@ -300,12 +302,103 @@ func TestProducerSessionRefExtendsRunIdentityWithoutChangingEmptyIdentity(t *tes
 	if legacy.ExtractionRun.ID != empty.ExtractionRun.ID {
 		t.Fatalf("empty session run ID = %q, want legacy %q", empty.ExtractionRun.ID, legacy.ExtractionRun.ID)
 	}
-	if withSession.ExtractionRun.ID == legacy.ExtractionRun.ID {
-		t.Fatalf("session run ID = legacy %q, want distinct logical invocation", legacy.ExtractionRun.ID)
+	if withSession.ExtractionRun.ID != legacy.ExtractionRun.ID {
+		t.Fatalf("session run ID = %q, want semantic run ID %q", withSession.ExtractionRun.ID, legacy.ExtractionRun.ID)
 	}
 	if withSession.ExtractionRun.ProducerSessionRef != "claude-code-session:test" {
 		t.Fatalf("producer session ref = %q", withSession.ExtractionRun.ProducerSessionRef)
 	}
+}
+
+func TestBuildExtractorDefinitionRejectsUnboundedMetadata(t *testing.T) {
+	tests := []struct {
+		name  string
+		input ExtractorDefinitionInput
+	}{
+		{
+			name:  "name",
+			input: ExtractorDefinitionInput{Name: strings.Repeat("n", 201), Version: "v1"},
+		},
+		{
+			name:  "version",
+			input: ExtractorDefinitionInput{Name: "agent", Version: strings.Repeat("v", 201)},
+		},
+		{
+			name:  "name UTF-8",
+			input: ExtractorDefinitionInput{Name: string([]byte{0xff}), Version: "v1"},
+		},
+		{
+			name: "config entries",
+			input: ExtractorDefinitionInput{
+				Name:    "agent",
+				Version: "v1",
+				Config:  repeatedExtractorConfig(65, "value"),
+			},
+		},
+		{
+			name: "config key",
+			input: ExtractorDefinitionInput{
+				Name:    "agent",
+				Version: "v1",
+				Config:  map[string]string{strings.Repeat("k", 201): "value"},
+			},
+		},
+		{
+			name: "config value",
+			input: ExtractorDefinitionInput{
+				Name:    "agent",
+				Version: "v1",
+				Config:  map[string]string{"key": strings.Repeat("v", (4<<10)+1)},
+			},
+		},
+		{
+			name: "config UTF-8",
+			input: ExtractorDefinitionInput{
+				Name:    "agent",
+				Version: "v1",
+				Config:  map[string]string{"key": string([]byte{0xff})},
+			},
+		},
+		{
+			name: "config total",
+			input: ExtractorDefinitionInput{
+				Name:    "agent",
+				Version: "v1",
+				Config:  repeatedExtractorConfig(17, strings.Repeat("v", 4<<10)),
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := buildExtractorDefinition(test.input)
+			assertKind(t, err, ErrorInvalidInput)
+		})
+	}
+}
+
+func TestBuildExtractorDefinitionAcceptsMetadataBoundaries(t *testing.T) {
+	config := repeatedExtractorConfig(ExtractorDefinitionConfigMaxEntries, "value")
+	delete(config, "key-000")
+	config[strings.Repeat("k", ExtractorDefinitionConfigKeyMaxBytes)] = strings.Repeat("v", ExtractorDefinitionConfigValueMaxBytes)
+	definition, err := buildExtractorDefinition(ExtractorDefinitionInput{
+		Name:    strings.Repeat("n", ExtractorDefinitionNameMaxBytes),
+		Version: strings.Repeat("v", ExtractorDefinitionVersionMaxBytes),
+		Config:  config,
+	})
+	if err != nil {
+		t.Fatalf("buildExtractorDefinition() error = %v", err)
+	}
+	if len(definition.Config) != ExtractorDefinitionConfigMaxEntries {
+		t.Fatalf("config entries = %d, want %d", len(definition.Config), ExtractorDefinitionConfigMaxEntries)
+	}
+}
+
+func repeatedExtractorConfig(entries int, value string) map[string]string {
+	config := make(map[string]string, entries)
+	for i := range entries {
+		config[fmt.Sprintf("key-%03d", i)] = value
+	}
+	return config
 }
 
 func testFixture() FrozenExtractorOutput {
@@ -314,6 +407,10 @@ func testFixture() FrozenExtractorOutput {
 		StatementText:   "Refunds must be completed within 7 days.",
 		EvidenceRefs:    []string{"span:S1"},
 	}}}
+}
+
+func testExternalExtractorDefinition() ExtractorDefinitionInput {
+	return ExtractorDefinitionInput{Name: "test-external-agent", Version: "v1"}
 }
 
 func mustAttemptContext(t *testing.T, input ManualTextInput) attemptContext {

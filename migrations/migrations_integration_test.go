@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -38,11 +39,98 @@ func TestIntegrationVerifyCurrentAcceptsAppliedSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 38 {
-		t.Fatalf("AppliedMigrations = %d, want 38", status.AppliedMigrations)
+	if status.AppliedMigrations != 39 {
+		t.Fatalf("AppliedMigrations = %d, want 39", status.AppliedMigrations)
 	}
-	if status.LatestMigration != "000038_evidence_ingestion_producer_session_ref.up.sql" {
+	if status.LatestMigration != "000039_evidence_ingestion_external_agent_core_contract.up.sql" {
 		t.Fatalf("LatestMigration = %q", status.LatestMigration)
+	}
+}
+
+func TestIntegrationExternalAgentCoreContractMigration(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+
+	rawHashA := "sha256:" + strings.Repeat("a", 64)
+	rawHashB := "sha256:" + strings.Repeat("b", 64)
+	for _, source := range []struct {
+		rawHash   string
+		snapshot  string
+		view      string
+		requestID string
+		content   string
+	}{
+		{rawHash: rawHashA, snapshot: "srcsnap:migration-a", view: "view:migration-a", requestID: "intake-migration-a", content: "source a"},
+		{rawHash: rawHashB, snapshot: "srcsnap:migration-b", view: "view:migration-b", requestID: "intake-migration-b", content: "source b"},
+	} {
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO source_blobs (raw_content_hash, raw_content, byte_length)
+			VALUES ($1, $2, $3)
+		`, source.rawHash, []byte(source.content), len(source.content)); err != nil {
+			t.Fatalf("insert source blob %s: %v", source.snapshot, err)
+		}
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO source_snapshots (
+				source_snapshot_id, source_system, source_id, source_version, raw_content_hash
+			)
+			VALUES ($1, 'external-document', $1, 'v1', $2)
+		`, source.snapshot, source.rawHash); err != nil {
+			t.Fatalf("insert source snapshot %s: %v", source.snapshot, err)
+		}
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO extraction_views (
+				extraction_view_id, source_snapshot_id, renderer_name, renderer_version,
+				rendered_content, rendered_content_hash
+			)
+			VALUES ($1, $2, 'identity', 'v1', $3, $4)
+		`, source.view, source.snapshot, []byte(source.content), source.rawHash); err != nil {
+			t.Fatalf("insert extraction view %s: %v", source.view, err)
+		}
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO source_intake_requests (
+				request_id, source_snapshot_id, extraction_view_id, request_payload_hash
+			)
+			VALUES ($1, $2, $3, $4)
+		`, source.requestID, source.snapshot, source.view, source.rawHash); err != nil {
+			t.Fatalf("insert source intake request %s: %v", source.requestID, err)
+		}
+	}
+
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO external_source_intake_receipts (
+			request_id, source_snapshot_id, extraction_view_id, envelope_schema_version,
+			collector_id, connector_id, observed_at, receipt_payload_hash
+		)
+		VALUES (
+			'intake-migration-a', 'srcsnap:migration-b', 'view:migration-b', 'v1',
+			'collector', 'connector', now(), $1
+		)
+	`, rawHashA); err == nil {
+		t.Fatal("external receipt with mismatched intake tuple unexpectedly succeeded")
+	}
+
+	invalidDefinitions := []struct {
+		name    string
+		version string
+		config  string
+	}{
+		{name: strings.Repeat("n", 201), version: "v1", config: `{}`},
+		{name: "agent", version: strings.Repeat("v", 201), config: `{}`},
+		{name: "agent-array", version: "v1", config: `[]`},
+		{name: "agent-large", version: "v1", config: `{"key":"` + strings.Repeat("v", 64<<10) + `"}`},
+	}
+	for index, definition := range invalidDefinitions {
+		if _, err := pool.Exec(ctx, `
+			INSERT INTO extractor_definitions (
+				extractor_definition_id, extractor_name, extractor_version,
+				extractor_config_hash, extractor_config
+			)
+			VALUES ($1, $2, $3, $4, $5::jsonb)
+		`, fmt.Sprintf("extractor:migration-invalid-%d", index), definition.name, definition.version, rawHashA, definition.config); err == nil {
+			t.Fatalf("invalid extractor definition %d unexpectedly succeeded", index)
+		}
 	}
 }
 
@@ -53,7 +141,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	}
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM schema_migrations
-		WHERE migration_name = '000038_evidence_ingestion_producer_session_ref.up.sql'
+		WHERE migration_name = '000039_evidence_ingestion_external_agent_core_contract.up.sql'
 	`); err != nil {
 		t.Fatalf("delete latest migration row: %v", err)
 	}
@@ -62,7 +150,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	if !errors.Is(err, ErrSchemaNotCurrent) {
 		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
 	}
-	if !strings.Contains(err.Error(), "37/38 embedded migrations are applied") {
+	if !strings.Contains(err.Error(), "38/39 embedded migrations are applied") {
 		t.Fatalf("VerifyCurrent() error = %v, want migration count detail", err)
 	}
 }
@@ -129,7 +217,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want true")
 	}
-	assertMigrationCount(t, ctx, pool, 38)
+	assertMigrationCount(t, ctx, pool, 39)
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "source_file_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshot_intake_requests")

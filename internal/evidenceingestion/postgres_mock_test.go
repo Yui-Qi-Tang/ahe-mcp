@@ -341,11 +341,12 @@ func TestMockSQLSubmitExtractorOutputFromExistingSource(t *testing.T) {
 	}
 
 	result, err := submitExtractorOutput(ctx, db, ExtractorOutputInput{
-		RequestID:          "extractor-output-request",
-		SourceSnapshotID:   source.SourceSnapshotID,
-		ExtractionViewID:   source.ExtractionViewID,
-		ProducerSessionRef: "  claude-code-session:test  ",
-		Output:             testFixture(),
+		RequestID:           "extractor-output-request",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ProducerSessionRef:  "  claude-code-session:test  ",
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              testFixture(),
 	})
 	if err != nil {
 		t.Fatalf("submitExtractorOutput() error = %v", err)
@@ -373,6 +374,26 @@ func TestMockSQLSubmitExtractorOutputFromExistingSource(t *testing.T) {
 	}
 }
 
+func TestMockSQLSubmitExtractorOutputRequiresDefinition(t *testing.T) {
+	ctx := context.Background()
+	db := newMockSQLDB()
+	source, err := captureManualSource(ctx, db, testManualInput("mock-extractor-definition-required"))
+	if err != nil {
+		t.Fatalf("captureManualSource() error = %v", err)
+	}
+
+	_, err = submitExtractorOutput(ctx, db, ExtractorOutputInput{
+		RequestID:        "extractor-definition-required",
+		SourceSnapshotID: source.SourceSnapshotID,
+		ExtractionViewID: source.ExtractionViewID,
+		Output:           testFixture(),
+	})
+	assertKind(t, err, ErrorInvalidInput)
+	if len(db.extractionRuns) != 0 {
+		t.Fatalf("extraction runs = %d, want no write without producer identity", len(db.extractionRuns))
+	}
+}
+
 func TestMockSQLSubmitExtractorOutputRejectsOversizedProducerSessionRef(t *testing.T) {
 	ctx := context.Background()
 	db := newMockSQLDB()
@@ -382,11 +403,12 @@ func TestMockSQLSubmitExtractorOutputRejectsOversizedProducerSessionRef(t *testi
 	}
 
 	_, err = submitExtractorOutput(ctx, db, ExtractorOutputInput{
-		RequestID:          "extractor-session-ref-limit",
-		SourceSnapshotID:   source.SourceSnapshotID,
-		ExtractionViewID:   source.ExtractionViewID,
-		ProducerSessionRef: strings.Repeat("x", ProducerSessionRefMaxBytes+1),
-		Output:             testFixture(),
+		RequestID:           "extractor-session-ref-limit",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ProducerSessionRef:  strings.Repeat("x", ProducerSessionRefMaxBytes+1),
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              testFixture(),
 	})
 	assertKind(t, err, ErrorInvalidInput)
 	if len(db.extractionRuns) != 0 {
@@ -402,10 +424,11 @@ func TestMockSQLSubmitExtractorOutputReplayAndConflict(t *testing.T) {
 		t.Fatalf("captureManualSource() error = %v", err)
 	}
 	input := ExtractorOutputInput{
-		RequestID:        "extractor-output-replay",
-		SourceSnapshotID: source.SourceSnapshotID,
-		ExtractionViewID: source.ExtractionViewID,
-		Output:           testFixture(),
+		RequestID:           "extractor-output-replay",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              testFixture(),
 	}
 
 	first, err := submitExtractorOutput(ctx, db, input)
@@ -431,6 +454,45 @@ func TestMockSQLSubmitExtractorOutputReplayAndConflict(t *testing.T) {
 	}
 }
 
+func TestMockSQLSubmitExtractorOutputSessionChangeReplaysFirstAnnotation(t *testing.T) {
+	ctx := context.Background()
+	db := newMockSQLDB()
+	source, err := captureManualSource(ctx, db, testManualInput("mock-extractor-session-replay"))
+	if err != nil {
+		t.Fatalf("captureManualSource() error = %v", err)
+	}
+	input := ExtractorOutputInput{
+		RequestID:           "extractor-session-replay",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ProducerSessionRef:  "session:first",
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              testFixture(),
+	}
+	first, err := submitExtractorOutput(ctx, db, input)
+	if err != nil {
+		t.Fatalf("first submitExtractorOutput() error = %v", err)
+	}
+	input.ProducerSessionRef = "session:retry"
+	second, err := submitExtractorOutput(ctx, db, input)
+	if err != nil {
+		t.Fatalf("second submitExtractorOutput() error = %v", err)
+	}
+	if !second.Replayed || second.ProposalOccurrenceID != first.ProposalOccurrenceID {
+		t.Fatalf("session retry result = %+v, want replay of %s", second, first.ProposalOccurrenceID)
+	}
+	proposal, err := getProposalByOccurrenceID(ctx, db, first.ProposalOccurrenceID)
+	if err != nil {
+		t.Fatalf("getProposalByOccurrenceID() error = %v", err)
+	}
+	if proposal.ProducerSessionRef != "session:first" {
+		t.Fatalf("producer session ref = %q, want first annotation", proposal.ProducerSessionRef)
+	}
+	if len(db.extractionRuns) != 1 {
+		t.Fatalf("extraction runs = %d, want 1 semantic run", len(db.extractionRuns))
+	}
+}
+
 func TestMockSQLSubmitExtractorOutputUnknownSpanPersistsFailure(t *testing.T) {
 	ctx := context.Background()
 	db := newMockSQLDB()
@@ -442,10 +504,11 @@ func TestMockSQLSubmitExtractorOutputUnknownSpanPersistsFailure(t *testing.T) {
 	fixture.Proposals[0].EvidenceRefs = []string{"span:S404"}
 
 	_, err = submitExtractorOutput(ctx, db, ExtractorOutputInput{
-		RequestID:        "extractor-output-unknown-span",
-		SourceSnapshotID: source.SourceSnapshotID,
-		ExtractionViewID: source.ExtractionViewID,
-		Output:           fixture,
+		RequestID:           "extractor-output-unknown-span",
+		SourceSnapshotID:    source.SourceSnapshotID,
+		ExtractionViewID:    source.ExtractionViewID,
+		ExtractorDefinition: testExternalExtractorDefinition(),
+		Output:              fixture,
 	})
 	assertKind(t, err, ErrorUnknownSpan)
 	if len(db.proposalOccurrences) != 0 {
@@ -713,7 +776,11 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 		}
 		return mockExecResult(1), nil
 	case strings.Contains(query, "INSERT INTO extraction_runs"):
-		db.extractionRuns[args[0].(string)] = mockExtractionRun{
+		id := args[0].(string)
+		if _, ok := db.extractionRuns[id]; ok {
+			return mockExecResult(0), nil
+		}
+		db.extractionRuns[id] = mockExtractionRun{
 			extractorDefinitionID: args[1].(string),
 			sourceSnapshotID:      args[2].(string),
 			extractionViewID:      args[3].(string),

@@ -55,6 +55,20 @@ func TestBackendExposesAdminToolsAndDelegatesCalls(t *testing.T) {
 	if producerSessionRef["maxLength"] != evidenceingestion.ProducerSessionRefMaxBytes {
 		t.Fatalf("producer session ref schema = %+v", producerSessionRef)
 	}
+	extractorDefinition := outputProperties["extractor_definition"].(map[string]any)
+	extractorProperties := extractorDefinition["properties"].(map[string]any)
+	if extractorProperties["name"].(map[string]any)["minLength"] != 1 ||
+		extractorProperties["name"].(map[string]any)["maxLength"] != evidenceingestion.ExtractorDefinitionNameMaxBytes ||
+		extractorProperties["version"].(map[string]any)["minLength"] != 1 ||
+		extractorProperties["version"].(map[string]any)["maxLength"] != evidenceingestion.ExtractorDefinitionVersionMaxBytes {
+		t.Fatalf("extractor identity schema = %+v", extractorProperties)
+	}
+	config := extractorProperties["config"].(map[string]any)
+	if config["maxProperties"] != evidenceingestion.ExtractorDefinitionConfigMaxEntries ||
+		config["propertyNames"].(map[string]any)["maxLength"] != evidenceingestion.ExtractorDefinitionConfigKeyMaxBytes ||
+		config["additionalProperties"].(map[string]any)["maxLength"] != evidenceingestion.ExtractorDefinitionConfigValueMaxBytes {
+		t.Fatalf("extractor config schema = %+v", config)
+	}
 	for _, queryTool := range []string{
 		"get_evidence_record",
 		"get_grounded_evidence_brief",

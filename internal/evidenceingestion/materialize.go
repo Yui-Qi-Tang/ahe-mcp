@@ -3,6 +3,8 @@ package evidenceingestion
 import (
 	"fmt"
 	"slices"
+	"strings"
+	"unicode/utf8"
 )
 
 type attemptContext struct {
@@ -136,13 +138,11 @@ func buildAttemptContextFromSourceWithDefinitionAndSession(sourceCtx manualSourc
 		ExtractorDefinitionID string `json:"extractor_definition_id"`
 		SourceSnapshotID      string `json:"source_snapshot_id"`
 		ExtractionViewID      string `json:"extraction_view_id"`
-		ProducerSessionRef    string `json:"producer_session_ref,omitempty"`
 	}{
 		RequestID:             requestID,
 		ExtractorDefinitionID: definition.ID,
 		SourceSnapshotID:      sourceCtx.SourceSnapshot.ID,
 		ExtractionViewID:      sourceCtx.ExtractionView.ID,
-		ProducerSessionRef:    producerSessionRef,
 	})
 	if err != nil {
 		return attemptContext{}, err
@@ -213,16 +213,38 @@ func buildExtractorDefinition(input ExtractorDefinitionInput) (ExtractorDefiniti
 	if input.Name == "" && input.Version == "" && len(input.Config) == 0 {
 		input = defaultFrozenExtractorDefinitionInput()
 	}
+	input.Name = strings.TrimSpace(input.Name)
+	input.Version = strings.TrimSpace(input.Version)
 	if input.Name == "" {
 		return ExtractorDefinition{}, newDomainError(ErrorInvalidInput, "extractor definition name is required")
 	}
 	if input.Version == "" {
 		return ExtractorDefinition{}, newDomainError(ErrorInvalidInput, "extractor definition version is required")
 	}
+	if !utf8.ValidString(input.Name) || len(input.Name) > ExtractorDefinitionNameMaxBytes {
+		return ExtractorDefinition{}, newDomainError(ErrorInvalidInput, "extractor definition name must be valid UTF-8 and at most %d bytes", ExtractorDefinitionNameMaxBytes)
+	}
+	if !utf8.ValidString(input.Version) || len(input.Version) > ExtractorDefinitionVersionMaxBytes {
+		return ExtractorDefinition{}, newDomainError(ErrorInvalidInput, "extractor definition version must be valid UTF-8 and at most %d bytes", ExtractorDefinitionVersionMaxBytes)
+	}
 	config := cloneStringMap(input.Config)
+	if len(config) > ExtractorDefinitionConfigMaxEntries {
+		return ExtractorDefinition{}, newDomainError(ErrorInvalidInput, "extractor definition config must contain at most %d entries", ExtractorDefinitionConfigMaxEntries)
+	}
+	for key, value := range config {
+		if !utf8.ValidString(key) || len(key) > ExtractorDefinitionConfigKeyMaxBytes {
+			return ExtractorDefinition{}, newDomainError(ErrorInvalidInput, "extractor definition config keys must be valid UTF-8 and at most %d bytes", ExtractorDefinitionConfigKeyMaxBytes)
+		}
+		if !utf8.ValidString(value) || len(value) > ExtractorDefinitionConfigValueMaxBytes {
+			return ExtractorDefinition{}, newDomainError(ErrorInvalidInput, "extractor definition config values must be valid UTF-8 and at most %d bytes", ExtractorDefinitionConfigValueMaxBytes)
+		}
+	}
 	configData, err := deterministicJSON(config)
 	if err != nil {
 		return ExtractorDefinition{}, err
+	}
+	if len(configData) > ExtractorDefinitionConfigMaxBytes {
+		return ExtractorDefinition{}, newDomainError(ErrorInvalidInput, "extractor definition config must serialize to at most %d bytes", ExtractorDefinitionConfigMaxBytes)
 	}
 	configHash := contentHash(configData)
 	id, err := stableID("extractor:", "extractor_definition", struct {
