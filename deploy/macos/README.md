@@ -4,6 +4,11 @@ This directory packages the foreground `ahe-detective` binary for a per-user
 `launchd` supervisor. It does not install a LaunchAgent and does not run schema
 migrations.
 
+This packaging is optional and does not make AHE Core macOS-only. Linux and
+macOS can run `ahe-migrate`, `ahe-query-mcp`, `ahe-ingest-mcp`, and the local
+Git/text Detective path; see [INSTALL.md](../../INSTALL.md) for the platform
+matrix.
+
 ## Boundary
 
 - Build the binary from a reviewed commit.
@@ -18,7 +23,7 @@ migrations.
 
 ## Prepare
 
-Build both long-running surfaces and the trusted migration command:
+Build the four core programs, including the trusted migration command:
 
 ```sh
 make BIN_DIR=/absolute/release/bin build
@@ -36,7 +41,8 @@ DATABASE_DNS="$(cat /absolute/private/database-dns)" \
 The migration command is the schema-writing deployment boundary. The
 LaunchAgent wrapper never runs it. `ahe-detective` and `ahe-query-mcp` verify
 the current schema read-only and refuse startup when it does not match the
-embedded migration contract.
+embedded migration contract. The separately launched `ahe-ingest-mcp` performs
+the same verification.
 
 Render `com.ahe.detective.plist.example` by replacing every
 `__AHE_DETECTIVE_*__` token with an absolute path. Validate the rendered file:
