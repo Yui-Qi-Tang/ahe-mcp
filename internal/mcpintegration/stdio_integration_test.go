@@ -83,6 +83,9 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolListEvidenceNeighbors)
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetRelationProvenance)
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetMCPReadSourceStates)
+	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolOpenCanonicalReadView)
+	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolFindCanonicalPath)
+	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalTopologyDiagnostics)
 	assertStdioToolNotListed(t, ctx, queryMCP, "get_mcp_read_source_transition")
 	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitTextSource)
 	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitExternalSource)
@@ -703,6 +706,31 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	})
 	if relation.Surface != "canonical_evidence" || relation.CanonicalEdge == nil || relation.OriginRecord.RecordRef.ID != proposal.ProposalOccurrenceID {
 		t.Fatalf("canonical relation provenance response = %+v", relation)
+	}
+	openedView := stdioCallTool[evidencequerymcp.OpenCanonicalReadViewResponse](t, ctx, queryMCP, evidencequerymcp.ToolOpenCanonicalReadView, map[string]any{
+		"root_node_ids": []string{admission.RawEvidenceNodeIDs[0]},
+		"relations":     []string{"supports_claim"},
+		"max_depth":     1,
+		"max_nodes":     8,
+		"max_edges":     8,
+	})
+	if openedView.View.Handle == "" || openedView.View.NodeCount != 2 || openedView.View.EdgeCount != 1 || openedView.View.Truncated {
+		t.Fatalf("canonical read view response = %+v", openedView)
+	}
+	path := stdioCallTool[evidencequerymcp.FindCanonicalPathResponse](t, ctx, queryMCP, evidencequerymcp.ToolFindCanonicalPath, map[string]any{
+		"handle":       openedView.View.Handle,
+		"from_node_id": admission.RawEvidenceNodeIDs[0],
+		"to_node_id":   admission.CanonicalRef,
+		"relations":    []string{"supports_claim"},
+	})
+	if !path.Witness.Found || len(path.Witness.EdgeIDs) != 1 || path.Witness.EdgeIDs[0] != admission.CanonicalEdgeIDs[0] {
+		t.Fatalf("canonical path response = %+v", path)
+	}
+	diagnostics := stdioCallTool[evidencequerymcp.GetCanonicalTopologyDiagnosticsResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalTopologyDiagnostics, map[string]any{
+		"handle": openedView.View.Handle,
+	})
+	if diagnostics.Diagnostics.DerivedFromCycle != nil || diagnostics.Diagnostics.SupersedesCycle != nil || len(diagnostics.ConflictClusters) != 0 {
+		t.Fatalf("canonical topology diagnostics response = %+v", diagnostics)
 	}
 
 	dispositionSource := stdioCallTool[evidenceingestionmcp.SubmitTextSourceResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitTextSource, map[string]any{
