@@ -176,10 +176,30 @@ func (v canonicalRelationView) NodeIDs() iter.Seq[string] {
 
 func (v canonicalRelationView) Outgoing(id string) iter.Seq[graph.Edge[string, string, evidencegraph.CanonicalEdge]] {
 	return func(yield func(graph.Edge[string, string, evidencegraph.CanonicalEdge]) bool) {
+		edges := make([]graph.Edge[string, string, evidencegraph.CanonicalEdge], 0)
 		for edge := range v.topology.Outgoing(id) {
 			if _, allowed := v.relations[edge.Data.Relation]; !allowed {
 				continue
 			}
+			edges = append(edges, edge)
+		}
+		if _, allowed := v.relations[evidencegraph.CanonicalContradicts]; allowed {
+			for edge := range v.topology.Incoming(id) {
+				if edge.Data.Relation != evidencegraph.CanonicalContradicts || edge.From == edge.To {
+					continue
+				}
+				edges = append(edges, graph.Edge[string, string, evidencegraph.CanonicalEdge]{
+					ID:   edge.ID,
+					From: id,
+					To:   edge.From,
+					Data: edge.Data,
+				})
+			}
+		}
+		slices.SortFunc(edges, func(a, b graph.Edge[string, string, evidencegraph.CanonicalEdge]) int {
+			return strings.Compare(a.ID, b.ID)
+		})
+		for _, edge := range edges {
 			if !yield(edge) {
 				return
 			}

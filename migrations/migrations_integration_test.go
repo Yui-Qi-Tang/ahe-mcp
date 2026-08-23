@@ -39,10 +39,10 @@ func TestIntegrationVerifyCurrentAcceptsAppliedSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 39 {
-		t.Fatalf("AppliedMigrations = %d, want 39", status.AppliedMigrations)
+	if status.AppliedMigrations != 40 {
+		t.Fatalf("AppliedMigrations = %d, want 40", status.AppliedMigrations)
 	}
-	if status.LatestMigration != "000039_evidence_ingestion_external_agent_core_contract.up.sql" {
+	if status.LatestMigration != "000040_evidence_ingestion_canonical_contradictions.up.sql" {
 		t.Fatalf("LatestMigration = %q", status.LatestMigration)
 	}
 }
@@ -141,7 +141,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	}
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM schema_migrations
-		WHERE migration_name = '000039_evidence_ingestion_external_agent_core_contract.up.sql'
+		WHERE migration_name = '000040_evidence_ingestion_canonical_contradictions.up.sql'
 	`); err != nil {
 		t.Fatalf("delete latest migration row: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	if !errors.Is(err, ErrSchemaNotCurrent) {
 		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
 	}
-	if !strings.Contains(err.Error(), "38/39 embedded migrations are applied") {
+	if !strings.Contains(err.Error(), "39/40 embedded migrations are applied") {
 		t.Fatalf("VerifyCurrent() error = %v, want migration count detail", err)
 	}
 }
@@ -217,7 +217,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want true")
 	}
-	assertMigrationCount(t, ctx, pool, 39)
+	assertMigrationCount(t, ctx, pool, 40)
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "source_file_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshot_intake_requests")
@@ -268,6 +268,8 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	assertMigrationTableExists(t, ctx, pool, "detective_mcp_read_collection_cycles")
 	assertMigrationTableExists(t, ctx, pool, "canonical_derivations")
 	assertMigrationTableExists(t, ctx, pool, "canonical_derivation_parents")
+	assertMigrationTableExists(t, ctx, pool, "canonical_contradiction_proposals")
+	assertMigrationTableExists(t, ctx, pool, "canonical_contradiction_admission_decisions")
 	assertMigrationIndexExists(t, ctx, pool, "repo_work_failure_policy_due_idx")
 	assertMigrationIndexExists(t, ctx, pool, "repository_extraction_work_expired_execution_scan_idx")
 	assertMigrationIndexExists(t, ctx, pool, "detective_planner_recommendation_consumptions_run_idx")
@@ -286,6 +288,9 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	assertMigrationIndexExists(t, ctx, pool, "proposal_occurrences_relation_target_symbol_idx")
 	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_from_relation_idx")
 	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_to_relation_idx")
+	assertMigrationIndexExists(t, ctx, pool, "canonical_contradiction_proposals_outcome_idx")
+	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_contradiction_origin_idx")
+	assertMigrationColumnExists(t, ctx, pool, "canonical_graph_edges", "origin_canonical_contradiction_proposal_id")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_claim_attempts", "lease_duration_milliseconds")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_execution_requests", "heartbeat_lease_duration_milliseconds")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_execution_requests", "heartbeat_count")

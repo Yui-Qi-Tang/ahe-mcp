@@ -19,8 +19,8 @@ import (
 func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 	server := newServer(&fakeQueryCore{})
 	tools := server.Tools()
-	if len(tools) != 10 {
-		t.Fatalf("len(Tools()) = %d, want 10", len(tools))
+	if len(tools) != 11 {
+		t.Fatalf("len(Tools()) = %d, want 11", len(tools))
 	}
 	if tools[0].Name != ToolGetEvidenceRecord {
 		t.Fatalf("tool name = %q, want %q", tools[0].Name, ToolGetEvidenceRecord)
@@ -39,6 +39,7 @@ func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 		ToolOpenCanonicalReadView,
 		ToolFindCanonicalPath,
 		ToolGetCanonicalTopologyDiagnostics,
+		ToolGetCanonicalContradictionProposal,
 	}
 	for i, want := range wantNames {
 		if tools[i].Name != want {
@@ -1517,6 +1518,52 @@ func TestCallToolGetsCanonicalRelationProvenance(t *testing.T) {
 	}
 }
 
+func TestCallToolGetsCanonicalContradictionReviewCardAndRelationOrigin(t *testing.T) {
+	contradiction := testCanonicalContradictionResult()
+	core := &fakeQueryCore{contradictionResult: contradiction}
+	server := newServer(core)
+
+	data, err := server.CallTool(context.Background(), ToolGetCanonicalContradictionProposal, []byte(`{"canonical_contradiction_proposal_id":"contradiction-proposal:1"}`))
+	if err != nil {
+		t.Fatalf("CallTool(contradiction proposal) error = %v", err)
+	}
+	var review CanonicalContradictionProposalResponse
+	if err := json.Unmarshal(data, &review); err != nil {
+		t.Fatalf("Unmarshal contradiction proposal: %v", err)
+	}
+	if core.contradictionProposalID != "contradiction-proposal:1" || review.Proposal.Relation != "contradicts" || review.Decision == nil {
+		t.Fatalf("contradiction review = %+v", review)
+	}
+	if review.NodeA.RecordRef.ID != contradiction.NodeA.CanonicalID || review.NodeB.RecordRef.ID != contradiction.NodeB.CanonicalID || len(review.NodeA.SourceRefs) == 0 || len(review.NodeB.SourceRefs) == 0 {
+		t.Fatalf("review endpoints are not grounded: A=%+v B=%+v", review.NodeA, review.NodeB)
+	}
+
+	relation := evidenceingestion.CanonicalRelationQueryResult{
+		Edge: evidenceingestion.CanonicalGraphEdge{
+			ID:                            "canon-edge:contradiction",
+			From:                          contradiction.NodeA.CanonicalID,
+			To:                            contradiction.NodeB.CanonicalID,
+			Relation:                      evidencegraph.CanonicalContradicts,
+			OriginContradictionProposalID: contradiction.Proposal.ID,
+		},
+		From:                        contradiction.NodeA,
+		To:                          contradiction.NodeB,
+		OriginContradictionProposal: &contradiction,
+	}
+	server = newServer(&fakeQueryCore{canonicalRelationResult: relation})
+	data, err = server.CallTool(context.Background(), ToolGetRelationProvenance, []byte(`{"canonical_edge_id":"canon-edge:contradiction"}`))
+	if err != nil {
+		t.Fatalf("CallTool(contradiction relation) error = %v", err)
+	}
+	var provenance RelationProvenanceResponse
+	if err := json.Unmarshal(data, &provenance); err != nil {
+		t.Fatalf("Unmarshal contradiction relation: %v", err)
+	}
+	if provenance.OriginRecord != nil || provenance.OriginContradictionProposal == nil || provenance.OriginContradictionProposal.Proposal.CanonicalContradictionProposalID != contradiction.Proposal.ID {
+		t.Fatalf("contradiction relation origin = %+v", provenance)
+	}
+}
+
 func TestCallToolListsRepositorySymbolNeighbors(t *testing.T) {
 	relation := testRepositoryRelationResult("occ:neighbor")
 	neighbor := relation.CodeRelation.Target
@@ -2212,7 +2259,39 @@ func testCanonicalRelationResult() evidenceingestion.CanonicalRelationQueryResul
 		},
 		From:           from,
 		To:             to,
-		OriginProposal: origin,
+		OriginProposal: &origin,
+	}
+}
+
+func testCanonicalContradictionResult() evidenceingestion.CanonicalContradictionQueryResult {
+	nodeA := testCanonicalQueryResult("canon-node:a", "occ:a")
+	nodeB := testCanonicalQueryResult("canon-node:b", "occ:b")
+	nodeB.Payload.Claim = "Refunds may take 30 days."
+	return evidenceingestion.CanonicalContradictionQueryResult{
+		Proposal: evidenceingestion.CanonicalContradictionProposal{
+			ID:                  "contradiction-proposal:1",
+			RequestID:           "request:1",
+			ProposalFingerprint: "contradiction-fp:1",
+			NodeAID:             nodeA.CanonicalID,
+			NodeBID:             nodeB.CanonicalID,
+			Relation:            evidencegraph.CanonicalContradicts,
+			Rationale:           "The refund limits differ.",
+			ProducerName:        "claude-code",
+			ProducerVersion:     "workflow-v1",
+			ProducerSessionRef:  "session:1",
+			AdmissionOutcome:    "admitted",
+			CanonicalEdgeID:     "canon-edge:contradiction",
+		},
+		NodeA: nodeA,
+		NodeB: nodeB,
+		Decision: &evidenceingestion.CanonicalContradictionDecision{
+			ID:              "contradiction-adm:1",
+			ProposalID:      "contradiction-proposal:1",
+			Outcome:         "admitted",
+			CanonicalEdgeID: "canon-edge:contradiction",
+			DecisionBy:      "reviewer",
+			DecisionReason:  "reviewed both grounded claims",
+		},
 	}
 }
 
@@ -2234,6 +2313,9 @@ type fakeQueryCore struct {
 	searchErr                error
 	canonicalRelationResult  evidenceingestion.CanonicalRelationQueryResult
 	canonicalRelationErr     error
+	contradictionProposalID  string
+	contradictionResult      evidenceingestion.CanonicalContradictionQueryResult
+	contradictionErr         error
 	canonicalNeighborInput   evidenceingestion.CanonicalNeighborInput
 	canonicalNeighborResult  []evidenceingestion.CanonicalNeighborResult
 	canonicalNeighborErr     error
@@ -2274,6 +2356,14 @@ func (c *fakeQueryCore) GetCanonicalRelationByID(_ context.Context, _ string) (e
 		return evidenceingestion.CanonicalRelationQueryResult{}, c.canonicalRelationErr
 	}
 	return c.canonicalRelationResult, nil
+}
+
+func (c *fakeQueryCore) GetCanonicalContradictionProposal(_ context.Context, proposalID string) (evidenceingestion.CanonicalContradictionQueryResult, error) {
+	c.contradictionProposalID = proposalID
+	if c.contradictionErr != nil {
+		return evidenceingestion.CanonicalContradictionQueryResult{}, c.contradictionErr
+	}
+	return c.contradictionResult, nil
 }
 
 func (c *fakeQueryCore) GetCanonicalEvidenceByID(_ context.Context, canonicalID string) (evidenceingestion.CanonicalQueryResult, error) {

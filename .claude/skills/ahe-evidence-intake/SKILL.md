@@ -127,6 +127,43 @@ proposal admission approval.
 - Use the query MCP to read back admitted or dispositioned records when
   available.
 
+## Relate Conflicting Canonical Nodes
+
+Use this step only after both nodes exist through governed canonical admission.
+Do not encode a contradiction as a source-backed statement proposal and do not
+write a generic graph edge.
+
+1. Confirm both exact `canon-node:` IDs and read both canonical records.
+2. Call `submit_canonical_contradiction_proposal` with the two node IDs, a
+   source-bounded explanation of the incompatibility, a new request ID, the
+   proposing agent name and workflow version, and an optional stable non-secret
+   session reference.
+3. Call `get_canonical_contradiction_proposal`. Display a separate review card
+   containing:
+   - both canonical record payloads and IDs;
+   - exact source excerpts, titles, locations, revisions, coverage, and
+     limitations for both sides;
+   - the proposing agent's rationale, identity, version, and optional session
+     reference;
+   - the current proposal outcome and any prior decision.
+4. Stop and wait. Call `admit_pending_canonical_contradiction` only after the
+   human explicitly approves this relation. Use
+   `record_pending_canonical_contradiction_disposition` for an explicit
+   `rejected` or `audit_only` decision.
+5. Read the admitted edge with `get_relation_provenance` when available.
+
+`contradicts` is symmetric. AHE canonicalizes A/B order and retains one governed
+proposal per node pair, so do not submit the reverse pair as another relation.
+A node pair is single-use across every terminal outcome in v1: after
+`rejected`, `audit_only`, or `admitted`, the same two canonical node IDs cannot
+be proposed again. Changing the rationale, producer name/version, or session
+reference also conflicts instead of creating a new version. Do not create fake
+replacement nodes to bypass this limit; report that same-pair reconsideration
+is unsupported. A genuinely revised source normally produces new canonical
+node IDs and therefore a different pair.
+AHE records the reviewer fields but does not prove that the agent showed the
+card or that the conversation occurred.
+
 ## Completion Report
 
 Report results per provider object and proposal:
@@ -137,6 +174,8 @@ Report results per provider object and proposal:
 - admitted canonical reference and admission decision ID, when admitted;
 - rejected, `audit_only`, abstained, replayed, conflicted, or unprocessed state;
 - coverage, limitations, and any missing readback capability.
+- contradiction proposal and edge IDs plus the reviewer outcome when a
+  cross-node contradiction was considered.
 
 Do not claim that AHE cryptographically or independently verified the human
 review conversation. The cooperating agent is responsible for showing the
