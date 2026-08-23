@@ -183,11 +183,28 @@ func getCanonicalRelationByID(ctx context.Context, db sqlQueryer, canonicalEdgeI
 	if err != nil {
 		return CanonicalRelationQueryResult{}, err
 	}
-	origin, err := traceProposalProvenance(ctx, db, edge.OriginProposalOccurrenceID)
-	if err != nil {
-		return CanonicalRelationQueryResult{}, err
+	result := CanonicalRelationQueryResult{Edge: edge, From: from, To: to}
+	switch {
+	case edge.OriginProposalOccurrenceID != "":
+		origin, err := traceProposalProvenance(ctx, db, edge.OriginProposalOccurrenceID)
+		if err != nil {
+			return CanonicalRelationQueryResult{}, err
+		}
+		result.OriginProposal = &origin
+	case edge.OriginContradictionProposalID != "":
+		origin, err := hydrateCanonicalContradictionProposal(ctx, db, edge.OriginContradictionProposalID)
+		if err != nil {
+			return CanonicalRelationQueryResult{}, err
+		}
+		result.OriginContradictionProposal = &origin
+	default:
+		return CanonicalRelationQueryResult{}, newDomainError(
+			ErrorAdmissionStateConflict,
+			"canonical relation %s has no origin",
+			edge.ID,
+		)
 	}
-	return CanonicalRelationQueryResult{Edge: edge, From: from, To: to, OriginProposal: origin}, nil
+	return result, nil
 }
 
 func loadCanonicalEdge(ctx context.Context, db sqlQueryer, canonicalEdgeID string) (CanonicalGraphEdge, error) {
@@ -195,7 +212,13 @@ func loadCanonicalEdge(ctx context.Context, db sqlQueryer, canonicalEdgeID strin
 	var relation string
 	var provenanceData []byte
 	err := db.queryRow(ctx, `
-		SELECT canonical_edge_id, from_node_id, to_node_id, relation, provenance, origin_proposal_occurrence_id
+		SELECT canonical_edge_id,
+			from_node_id,
+			to_node_id,
+			relation,
+			provenance,
+			COALESCE(origin_proposal_occurrence_id, ''),
+			COALESCE(origin_canonical_contradiction_proposal_id, '')
 		FROM canonical_graph_edges
 		WHERE canonical_edge_id = $1
 	`, canonicalEdgeID).Scan(
@@ -205,6 +228,7 @@ func loadCanonicalEdge(ctx context.Context, db sqlQueryer, canonicalEdgeID strin
 		&relation,
 		&provenanceData,
 		&edge.OriginProposalOccurrenceID,
+		&edge.OriginContradictionProposalID,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

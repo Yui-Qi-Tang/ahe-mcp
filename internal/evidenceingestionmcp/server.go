@@ -83,6 +83,12 @@ const (
 	ToolAdmitPendingProposal = "admit_pending_proposal"
 	// ToolRecordPendingProposalDisposition records one rejected or audit-only operator decision.
 	ToolRecordPendingProposalDisposition = "record_pending_proposal_disposition"
+	// ToolSubmitCanonicalContradictionProposal proposes a human-reviewable contradiction between admitted nodes.
+	ToolSubmitCanonicalContradictionProposal = "submit_canonical_contradiction_proposal"
+	// ToolAdmitPendingCanonicalContradiction admits one reviewed contradiction proposal.
+	ToolAdmitPendingCanonicalContradiction = "admit_pending_canonical_contradiction"
+	// ToolRecordPendingCanonicalContradictionDisposition records a rejected or audit-only contradiction decision.
+	ToolRecordPendingCanonicalContradictionDisposition = "record_pending_canonical_contradiction_disposition"
 	// ToolRunLocalOllamaExtractor invokes a trusted local Ollama extractor over a saved source view.
 	ToolRunLocalOllamaExtractor = "run_local_ollama_extractor"
 	// ToolRunGoParserExtractor invokes a deterministic Go declaration extractor over a saved source view.
@@ -318,6 +324,33 @@ type RecordPendingProposalDispositionRequest struct {
 	DecisionReason       string `json:"decision_reason"`
 }
 
+// SubmitCanonicalContradictionProposalRequest proposes one symmetric relation
+// between two already-admitted canonical nodes.
+type SubmitCanonicalContradictionProposalRequest struct {
+	RequestID          string `json:"request_id"`
+	NodeAID            string `json:"node_a_id"`
+	NodeBID            string `json:"node_b_id"`
+	Rationale          string `json:"rationale"`
+	ProducerName       string `json:"producer_name"`
+	ProducerVersion    string `json:"producer_version"`
+	ProducerSessionRef string `json:"producer_session_ref,omitempty"`
+}
+
+// AdmitPendingCanonicalContradictionRequest records explicit human approval.
+type AdmitPendingCanonicalContradictionRequest struct {
+	ProposalID     string `json:"canonical_contradiction_proposal_id"`
+	DecisionBy     string `json:"decision_by"`
+	DecisionReason string `json:"decision_reason"`
+}
+
+// RecordPendingCanonicalContradictionDispositionRequest records a non-admitted terminal decision.
+type RecordPendingCanonicalContradictionDispositionRequest struct {
+	ProposalID     string `json:"canonical_contradiction_proposal_id"`
+	Outcome        string `json:"outcome"`
+	DecisionBy     string `json:"decision_by"`
+	DecisionReason string `json:"decision_reason"`
+}
+
 // SubmitManualEvidenceResponse is the minimal pending proposal response.
 type SubmitManualEvidenceResponse struct {
 	SourceSnapshotID     string `json:"source_snapshot_id"`
@@ -491,6 +524,32 @@ type RecordPendingProposalDispositionResponse struct {
 	Replayed             bool   `json:"replayed"`
 }
 
+// SubmitCanonicalContradictionProposalResponse reports durable proposal identity and state.
+type SubmitCanonicalContradictionProposalResponse struct {
+	CanonicalContradictionProposalID string `json:"canonical_contradiction_proposal_id"`
+	NodeAID                          string `json:"node_a_id"`
+	NodeBID                          string `json:"node_b_id"`
+	Relation                         string `json:"relation"`
+	Rationale                        string `json:"rationale"`
+	ProducerName                     string `json:"producer_name"`
+	ProducerVersion                  string `json:"producer_version"`
+	ProducerSessionRef               string `json:"producer_session_ref,omitempty"`
+	AdmissionOutcome                 string `json:"admission_outcome"`
+	CanonicalEdgeID                  string `json:"canonical_edge_id,omitempty"`
+	Replayed                         bool   `json:"replayed"`
+}
+
+// CanonicalContradictionDecisionResponse reports one immutable review result.
+type CanonicalContradictionDecisionResponse struct {
+	CanonicalContradictionProposalID string `json:"canonical_contradiction_proposal_id"`
+	AdmissionDecisionID              string `json:"admission_decision_id"`
+	AdmissionOutcome                 string `json:"admission_outcome"`
+	CanonicalEdgeID                  string `json:"canonical_edge_id,omitempty"`
+	DecisionBy                       string `json:"decision_by"`
+	DecisionReason                   string `json:"decision_reason"`
+	Replayed                         bool   `json:"replayed"`
+}
+
 // ToolError is the stable MCP-shaped error returned by the adapter.
 type ToolError struct {
 	Code    string `json:"code"`
@@ -518,6 +577,9 @@ func (e *ToolError) Unwrap() error {
 type ingestionCore interface {
 	AdmitPendingProposal(ctx context.Context, input evidenceingestion.AdmissionInput) (evidenceingestion.AdmissionResult, error)
 	RecordPendingProposalDisposition(ctx context.Context, input evidenceingestion.ProposalDispositionInput) (evidenceingestion.ProposalDispositionResult, error)
+	SubmitCanonicalContradictionProposal(ctx context.Context, input evidenceingestion.CanonicalContradictionProposalInput) (evidenceingestion.CanonicalContradictionProposalResult, error)
+	AdmitPendingCanonicalContradiction(ctx context.Context, input evidenceingestion.CanonicalContradictionAdmissionInput) (evidenceingestion.CanonicalContradictionDecisionResult, error)
+	RecordPendingCanonicalContradictionDisposition(ctx context.Context, input evidenceingestion.CanonicalContradictionDispositionInput) (evidenceingestion.CanonicalContradictionDecisionResult, error)
 	ActivateRepositorySourceGeneration(ctx context.Context, input evidenceingestion.RepositorySourceGenerationActivationInput) (evidenceingestion.RepositorySourceGenerationActivationResult, error)
 	ListRepositorySourceGenerations(ctx context.Context, input evidenceingestion.RepositorySourceGenerationListInput) ([]evidenceingestion.RepositorySourceGenerationStatus, error)
 	BuildExtractorInput(ctx context.Context, extractionViewID string) (evidenceingestion.ExtractorInput, error)
@@ -721,12 +783,27 @@ func (s *Server) Tools() []ToolDefinition {
 		},
 		{
 			Name:        ToolAdmitPendingProposal,
-			Description: "After a human reviews the proposal sentence, exact source quotes, source title/location, coverage/limitations, revision, and the version difference when a comparable prior revision exists, admit one pending proposal as source-backed evidence or an explicitly parented derived claim.",
+			Description: "Call only after the cooperating agent has displayed the proposal sentence, exact source quotes, source title/location, coverage/limitations, revision, and any comparable version difference and received explicit human approval. This call immediately and terminally admits one pending proposal as source-backed evidence or an explicitly parented derived claim. AHE records the decision but does not prove the review occurred.",
 			Write:       true,
 		},
 		{
 			Name:        ToolRecordPendingProposalDisposition,
-			Description: "Record one exact pending proposal as rejected or audit-only without mutating the canonical graph.",
+			Description: "Call only after an explicit human rejection or audit-only decision. This call immediately and terminally marks one pending proposal without creating canonical evidence; it cannot later be admitted. AHE records the decision but does not prove the review occurred.",
+			Write:       true,
+		},
+		{
+			Name:        ToolSubmitCanonicalContradictionProposal,
+			Description: "Create or exactly replay the single governed contradiction proposal for one unordered node pair of existing admitted canonical nodes. The pair is single-use across pending, admitted, rejected, and audit-only outcomes; changed metadata conflicts. This call does not create a canonical edge, and AHE does not infer or validate the semantic conflict.",
+			Write:       true,
+		},
+		{
+			Name:        ToolAdmitPendingCanonicalContradiction,
+			Description: "Call only after the cooperating agent has displayed both grounded canonical nodes, their source context, and the rationale and received explicit human approval. This call immediately and terminally admits the pending proposal and creates one symmetric canonical contradicts edge. AHE records the decision but does not prove the review occurred.",
+			Write:       true,
+		},
+		{
+			Name:        ToolRecordPendingCanonicalContradictionDisposition,
+			Description: "Call only after an explicit human rejected or audit-only decision. This call immediately and terminally disposes the pending contradiction proposal without creating an edge; the unordered node pair remains single-use in v1. AHE records the decision but does not prove the review occurred.",
 			Write:       true,
 		},
 		{
@@ -1260,6 +1337,36 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 			return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
 		}
 		return data, nil
+	case ToolSubmitCanonicalContradictionProposal:
+		var req SubmitCanonicalContradictionProposalRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.SubmitCanonicalContradictionProposal(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return marshalToolResponse(resp)
+	case ToolAdmitPendingCanonicalContradiction:
+		var req AdmitPendingCanonicalContradictionRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.AdmitPendingCanonicalContradiction(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return marshalToolResponse(resp)
+	case ToolRecordPendingCanonicalContradictionDisposition:
+		var req RecordPendingCanonicalContradictionDispositionRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.RecordPendingCanonicalContradictionDisposition(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return marshalToolResponse(resp)
 	default:
 		return nil, &ToolError{Code: toolErrorUnknownTool, Message: fmt.Sprintf("unknown tool %q", name)}
 	}
@@ -1680,6 +1787,85 @@ func (s *Server) RecordPendingProposalDisposition(
 	}, nil
 }
 
+// SubmitCanonicalContradictionProposal persists one dedicated relation proposal.
+func (s *Server) SubmitCanonicalContradictionProposal(
+	ctx context.Context,
+	req SubmitCanonicalContradictionProposalRequest,
+) (SubmitCanonicalContradictionProposalResponse, error) {
+	result, err := s.core.SubmitCanonicalContradictionProposal(ctx, evidenceingestion.CanonicalContradictionProposalInput{
+		RequestID:          req.RequestID,
+		NodeAID:            req.NodeAID,
+		NodeBID:            req.NodeBID,
+		Rationale:          req.Rationale,
+		ProducerName:       req.ProducerName,
+		ProducerVersion:    req.ProducerVersion,
+		ProducerSessionRef: req.ProducerSessionRef,
+	})
+	if err != nil {
+		return SubmitCanonicalContradictionProposalResponse{}, mapToolError(err)
+	}
+	proposal := result.Proposal
+	return SubmitCanonicalContradictionProposalResponse{
+		CanonicalContradictionProposalID: proposal.ID,
+		NodeAID:                          proposal.NodeAID,
+		NodeBID:                          proposal.NodeBID,
+		Relation:                         string(proposal.Relation),
+		Rationale:                        proposal.Rationale,
+		ProducerName:                     proposal.ProducerName,
+		ProducerVersion:                  proposal.ProducerVersion,
+		ProducerSessionRef:               proposal.ProducerSessionRef,
+		AdmissionOutcome:                 proposal.AdmissionOutcome,
+		CanonicalEdgeID:                  proposal.CanonicalEdgeID,
+		Replayed:                         result.Replayed,
+	}, nil
+}
+
+// AdmitPendingCanonicalContradiction records explicit approval and creates the edge.
+func (s *Server) AdmitPendingCanonicalContradiction(
+	ctx context.Context,
+	req AdmitPendingCanonicalContradictionRequest,
+) (CanonicalContradictionDecisionResponse, error) {
+	result, err := s.core.AdmitPendingCanonicalContradiction(ctx, evidenceingestion.CanonicalContradictionAdmissionInput{
+		ProposalID:     req.ProposalID,
+		DecisionBy:     req.DecisionBy,
+		DecisionReason: req.DecisionReason,
+	})
+	if err != nil {
+		return CanonicalContradictionDecisionResponse{}, mapToolError(err)
+	}
+	return mapCanonicalContradictionDecision(result), nil
+}
+
+// RecordPendingCanonicalContradictionDisposition records a terminal non-edge outcome.
+func (s *Server) RecordPendingCanonicalContradictionDisposition(
+	ctx context.Context,
+	req RecordPendingCanonicalContradictionDispositionRequest,
+) (CanonicalContradictionDecisionResponse, error) {
+	result, err := s.core.RecordPendingCanonicalContradictionDisposition(ctx, evidenceingestion.CanonicalContradictionDispositionInput{
+		ProposalID:     req.ProposalID,
+		Outcome:        req.Outcome,
+		DecisionBy:     req.DecisionBy,
+		DecisionReason: req.DecisionReason,
+	})
+	if err != nil {
+		return CanonicalContradictionDecisionResponse{}, mapToolError(err)
+	}
+	return mapCanonicalContradictionDecision(result), nil
+}
+
+func mapCanonicalContradictionDecision(result evidenceingestion.CanonicalContradictionDecisionResult) CanonicalContradictionDecisionResponse {
+	decision := result.Decision
+	return CanonicalContradictionDecisionResponse{
+		CanonicalContradictionProposalID: decision.ProposalID,
+		AdmissionDecisionID:              decision.ID,
+		AdmissionOutcome:                 decision.Outcome,
+		CanonicalEdgeID:                  decision.CanonicalEdgeID,
+		DecisionBy:                       decision.DecisionBy,
+		DecisionReason:                   decision.DecisionReason,
+		Replayed:                         result.Replayed,
+	}
+}
+
 // ActivateRepositorySourceGeneration advances one exact repository/extractor stream head.
 func (s *Server) ActivateRepositorySourceGeneration(
 	ctx context.Context,
@@ -1860,6 +2046,18 @@ func (c postgresCore) RecordPendingProposalDisposition(
 	return evidenceingestion.RecordPendingProposalDisposition(ctx, c.pool, input)
 }
 
+func (c postgresCore) SubmitCanonicalContradictionProposal(ctx context.Context, input evidenceingestion.CanonicalContradictionProposalInput) (evidenceingestion.CanonicalContradictionProposalResult, error) {
+	return evidenceingestion.SubmitCanonicalContradictionProposal(ctx, c.pool, input)
+}
+
+func (c postgresCore) AdmitPendingCanonicalContradiction(ctx context.Context, input evidenceingestion.CanonicalContradictionAdmissionInput) (evidenceingestion.CanonicalContradictionDecisionResult, error) {
+	return evidenceingestion.AdmitPendingCanonicalContradiction(ctx, c.pool, input)
+}
+
+func (c postgresCore) RecordPendingCanonicalContradictionDisposition(ctx context.Context, input evidenceingestion.CanonicalContradictionDispositionInput) (evidenceingestion.CanonicalContradictionDecisionResult, error) {
+	return evidenceingestion.RecordPendingCanonicalContradictionDisposition(ctx, c.pool, input)
+}
+
 func (c postgresCore) ActivateRepositorySourceGeneration(
 	ctx context.Context,
 	input evidenceingestion.RepositorySourceGenerationActivationInput,
@@ -2019,6 +2217,14 @@ func decodeStrict(payload []byte, dest any) error {
 		return err
 	}
 	return nil
+}
+
+func marshalToolResponse(response any) ([]byte, error) {
+	data, err := json.Marshal(response)
+	if err != nil {
+		return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
+	}
+	return data, nil
 }
 
 func cloneStringMap(values map[string]string) map[string]string {

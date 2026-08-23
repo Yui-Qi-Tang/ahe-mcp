@@ -74,6 +74,14 @@ const (
 	ProposalFingerprintCodeRelationV2 = "code-relation-v2"
 	// ProposalFingerprintCodeRelationV3 identifies snapshot-local same-file relations.
 	ProposalFingerprintCodeRelationV3 = "code-relation-v3"
+	// CanonicalContradictionProposalFingerprintV1 identifies one symmetric canonical contradiction proposal.
+	CanonicalContradictionProposalFingerprintV1 = "canonical-contradiction-v1"
+	// CanonicalContradictionProposalIDPrefix identifies canonical contradiction proposal records.
+	CanonicalContradictionProposalIDPrefix = "contradiction-proposal:"
+	// CanonicalContradictionRequestIDMaxBytes caps one relation proposal request identity.
+	CanonicalContradictionRequestIDMaxBytes = 200
+	// CanonicalContradictionRationaleMaxBytes caps one human-reviewable contradiction rationale.
+	CanonicalContradictionRationaleMaxBytes = 4000
 
 	// CodeFactSchemaV1 is the first controller-verified code fact transport contract.
 	CodeFactSchemaV1 = "code-fact-v1"
@@ -882,10 +890,11 @@ type GroundedEvidenceBriefQueryResult struct {
 
 // CanonicalRelationQueryResult is one canonical edge with both grounded endpoint records.
 type CanonicalRelationQueryResult struct {
-	Edge           CanonicalGraphEdge
-	From           CanonicalQueryResult
-	To             CanonicalQueryResult
-	OriginProposal ProposalQueryResult
+	Edge                        CanonicalGraphEdge
+	From                        CanonicalQueryResult
+	To                          CanonicalQueryResult
+	OriginProposal              *ProposalQueryResult
+	OriginContradictionProposal *CanonicalContradictionQueryResult
 }
 
 // CanonicalNeighborInput bounds one-hop canonical graph lookup.
@@ -969,6 +978,73 @@ type ProposalDispositionResult struct {
 	Replayed             bool
 }
 
+// CanonicalContradictionProposalInput proposes one symmetric contradiction
+// between two already-admitted canonical nodes.
+type CanonicalContradictionProposalInput struct {
+	RequestID          string
+	NodeAID            string
+	NodeBID            string
+	Rationale          string
+	ProducerName       string
+	ProducerVersion    string
+	ProducerSessionRef string
+}
+
+// CanonicalContradictionProposal is the durable pending or decided relation proposal.
+// NodeAID is always lexicographically smaller than NodeBID.
+type CanonicalContradictionProposal struct {
+	ID                  string
+	RequestID           string
+	RequestPayloadHash  string
+	ProposalFingerprint string
+	NodeAID             string
+	NodeBID             string
+	Relation            evidencegraph.CanonicalEdgeRelation
+	Rationale           string
+	ProducerName        string
+	ProducerVersion     string
+	ProducerSessionRef  string
+	AdmissionOutcome    string
+	CanonicalEdgeID     string
+}
+
+// CanonicalContradictionProposalResult reports proposal persistence or replay.
+type CanonicalContradictionProposalResult struct {
+	Proposal CanonicalContradictionProposal
+	Replayed bool
+}
+
+// CanonicalContradictionDecision records one human admission or disposition.
+type CanonicalContradictionDecision struct {
+	ID              string
+	ProposalID      string
+	Outcome         string
+	CanonicalEdgeID string
+	DecisionBy      string
+	DecisionReason  string
+}
+
+// CanonicalContradictionAdmissionInput admits one pending contradiction proposal.
+type CanonicalContradictionAdmissionInput struct {
+	ProposalID     string
+	DecisionBy     string
+	DecisionReason string
+}
+
+// CanonicalContradictionDispositionInput records a rejected or audit-only outcome.
+type CanonicalContradictionDispositionInput struct {
+	ProposalID     string
+	Outcome        string
+	DecisionBy     string
+	DecisionReason string
+}
+
+// CanonicalContradictionDecisionResult reports an admitted or disposed proposal.
+type CanonicalContradictionDecisionResult struct {
+	Decision CanonicalContradictionDecision
+	Replayed bool
+}
+
 // CanonicalGraphNode is the DB-facing persisted form of an evidencegraph canonical node.
 type CanonicalGraphNode struct {
 	ID                         string
@@ -992,12 +1068,22 @@ type CanonicalQueryResult struct {
 	OriginProposal             ProposalQueryResult
 }
 
+// CanonicalContradictionQueryResult returns the proposal, both grounded
+// canonical endpoints, and its optional terminal decision.
+type CanonicalContradictionQueryResult struct {
+	Proposal CanonicalContradictionProposal
+	NodeA    CanonicalQueryResult
+	NodeB    CanonicalQueryResult
+	Decision *CanonicalContradictionDecision
+}
+
 // CanonicalGraphEdge is the DB-facing persisted form of an evidencegraph canonical edge.
 type CanonicalGraphEdge struct {
-	ID                         string
-	From                       string
-	To                         string
-	Relation                   evidencegraph.CanonicalEdgeRelation
-	Provenance                 evidencegraph.ProvenanceRecord
-	OriginProposalOccurrenceID string
+	ID                            string
+	From                          string
+	To                            string
+	Relation                      evidencegraph.CanonicalEdgeRelation
+	Provenance                    evidencegraph.ProvenanceRecord
+	OriginProposalOccurrenceID    string
+	OriginContradictionProposalID string
 }

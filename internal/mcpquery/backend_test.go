@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
@@ -39,6 +40,7 @@ func TestBackendExposesOnlyShippingQueryToolsAndDelegatesCalls(t *testing.T) {
 		evidencequerymcp.ToolOpenCanonicalReadView,
 		evidencequerymcp.ToolFindCanonicalPath,
 		evidencequerymcp.ToolGetCanonicalTopologyDiagnostics,
+		evidencequerymcp.ToolGetCanonicalContradictionProposal,
 	}
 	if !reflect.DeepEqual(gotNames, wantNames) {
 		t.Fatalf("query tools = %v, want %v", gotNames, wantNames)
@@ -76,6 +78,54 @@ func TestBackendExposesOnlyShippingQueryToolsAndDelegatesCalls(t *testing.T) {
 	}
 	if calledName != evidencequerymcp.ToolGetEvidenceRecord || string(got) != string(payload) {
 		t.Fatalf("CallTool() = name %q payload %s", calledName, got)
+	}
+}
+
+func TestCanonicalTopologyToolMetadataStatesBoundedStructuralSemantics(t *testing.T) {
+	backendTools := make(map[string]string)
+	for _, tool := range queryTools() {
+		backendTools[tool.Name] = tool.Description
+	}
+	coreTools := make(map[string]string)
+	for _, tool := range new(evidencequerymcp.Server).Tools() {
+		coreTools[tool.Name] = tool.Description
+	}
+
+	wants := map[string][]string{
+		evidencequerymcp.ToolOpenCanonicalReadView: {
+			"bounded",
+			"instance-local",
+			"evicted",
+		},
+		evidencequerymcp.ToolFindCanonicalPath: {
+			"found_in_view=false",
+			"not global absence",
+			"contradicts",
+			"both directions",
+			"stored direction",
+		},
+		evidencequerymcp.ToolGetCanonicalTopologyDiagnostics: {
+			"connected components",
+			"does not imply",
+		},
+		evidencequerymcp.ToolGetCanonicalContradictionProposal: {
+			"canonical nodes",
+			"pending or terminal",
+		},
+	}
+	for name, fragments := range wants {
+		description, ok := backendTools[name]
+		if !ok {
+			t.Fatalf("backend tool %q is missing", name)
+		}
+		if description != coreTools[name] {
+			t.Errorf("tool %q descriptions drifted: backend=%q core=%q", name, description, coreTools[name])
+		}
+		for _, fragment := range fragments {
+			if !strings.Contains(description, fragment) {
+				t.Errorf("tool %q description %q does not contain %q", name, description, fragment)
+			}
+		}
 	}
 }
 

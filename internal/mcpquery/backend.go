@@ -135,7 +135,7 @@ func queryTools() []mcpstdio.Tool {
 		{
 			Name:        evidencequerymcp.ToolOpenCanonicalReadView,
 			Title:       "Open Canonical Read View",
-			Description: "Open and retain one bounded immutable PostgreSQL canonical graph view for repeated external reads under the returned handle.",
+			Description: "Materialize one bounded immutable canonical graph view from PostgreSQL and retain it under an instance-local cached handle; the handle can be evicted and is lost on process restart.",
 			InputSchema: openCanonicalReadViewSchema(),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &readOnly,
@@ -146,7 +146,7 @@ func queryTools() []mcpstdio.Tool {
 		{
 			Name:        evidencequerymcp.ToolFindCanonicalPath,
 			Title:       "Find Canonical Path",
-			Description: "Find one relation-scoped structural path witness inside an explicitly opened canonical graph view.",
+			Description: "Find one relation-scoped structural path witness inside an explicitly opened bounded view. found_in_view=false is not global absence. contradicts traverses both directions; every other relation follows its stored direction.",
 			InputSchema: findCanonicalPathSchema(),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &readOnly,
@@ -157,8 +157,21 @@ func queryTools() []mcpstdio.Tool {
 		{
 			Name:        evidencequerymcp.ToolGetCanonicalTopologyDiagnostics,
 			Title:       "Get Canonical Topology Diagnostics",
-			Description: "Read derived and supersedes cycle witnesses plus contradiction clusters inside an explicitly opened canonical graph view.",
+			Description: "Read derived_from and supersedes cycle witnesses plus contradiction connected components inside an opened view. Cluster membership does not imply a contradicts edge between every node pair.",
 			InputSchema: getCanonicalTopologyDiagnosticsSchema(),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &readOnly,
+				DestructiveHint: &destructive,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
+			Name:        evidencequerymcp.ToolGetCanonicalContradictionProposal,
+			Title:       "Get Canonical Contradiction Proposal",
+			Description: "Read one pending or terminal contradiction proposal with both complete grounded canonical nodes, producer rationale, and any human review decision.",
+			InputSchema: objectSchema(map[string]any{
+				"canonical_contradiction_proposal_id": stringSchema("Contradiction proposal ID with contradiction-proposal: prefix."),
+			}, []string{"canonical_contradiction_proposal_id"}),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &readOnly,
 				DestructiveHint: &destructive,
@@ -191,7 +204,7 @@ func findCanonicalPathSchema() map[string]any {
 		"from_node_id": stringSchema("Canonical evidence node ID where the path starts."),
 		"to_node_id":   stringSchema("Canonical evidence node ID where the path ends."),
 		"relations": canonicalRelationsSchema(
-			"Required non-empty canonical relation scope for path traversal.",
+			"Required non-empty canonical relation scope. contradicts traverses both directions; every other relation follows its stored direction.",
 			1,
 		),
 	}, []string{"handle", "from_node_id", "to_node_id", "relations"})

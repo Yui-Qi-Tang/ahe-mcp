@@ -76,6 +76,9 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunGoParserExtractor)
 	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunGoplsExtractor)
 	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRecordPendingProposalDisposition)
+	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitCanonicalContradictionProposal)
+	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction)
+	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition)
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetEvidenceRecord)
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolListEvidenceRecords)
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolSearchEvidenceRecords)
@@ -86,6 +89,7 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolOpenCanonicalReadView)
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolFindCanonicalPath)
 	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalTopologyDiagnostics)
+	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalContradictionProposal)
 	assertStdioToolNotListed(t, ctx, queryMCP, "get_mcp_read_source_transition")
 	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitTextSource)
 	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitExternalSource)
@@ -733,6 +737,85 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		t.Fatalf("canonical topology diagnostics response = %+v", diagnostics)
 	}
 
+	contradictionSource := stdioCallTool[evidenceingestionmcp.SubmitTextSourceResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitTextSource, map[string]any{
+		"request_id":      "stdio-contradiction-source-intake",
+		"source_id":       "fixture-refund-policy-contradiction",
+		"source_version":  "v1",
+		"raw_text":        string(raw),
+		"origin_metadata": map[string]string{"fixture": "manual_refund_policy"},
+	})
+	contradictionEndpointProposal := stdioCallTool[evidenceingestionmcp.RunLocalOllamaExtractorResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolRunLocalOllamaExtractor, map[string]any{
+		"request_id":         "stdio-local-ollama-contradiction-endpoint",
+		"extraction_view_id": contradictionSource.ExtractionViewID,
+		"model":              "fixture-model",
+		"base_url":           ollama.URL,
+		"num_predict":        256,
+	})
+	contradictionEndpoint := stdioCallTool[evidenceingestionmcp.AdmitPendingProposalResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingProposal, map[string]any{
+		"proposal_occurrence_id": contradictionEndpointProposal.ProposalOccurrenceID,
+		"decision_by":            "stdio-integration-test",
+		"decision_reason":        "create second grounded claim for relation admission",
+	})
+	if contradictionEndpoint.CanonicalRef == admission.CanonicalRef {
+		t.Fatalf("contradiction endpoint reused canonical claim %s", admission.CanonicalRef)
+	}
+	contradictionProposal := stdioCallTool[evidenceingestionmcp.SubmitCanonicalContradictionProposalResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitCanonicalContradictionProposal, map[string]any{
+		"request_id":           "stdio-canonical-contradiction",
+		"node_a_id":            contradictionEndpoint.CanonicalRef,
+		"node_b_id":            admission.CanonicalRef,
+		"rationale":            "the two grounded claims are mutually incompatible in this reviewed scope",
+		"producer_name":        "stdio-agent",
+		"producer_version":     "workflow-v1",
+		"producer_session_ref": "session:stdio-contradiction",
+	})
+	if contradictionProposal.AdmissionOutcome != "pending" || contradictionProposal.Relation != "contradicts" || contradictionProposal.NodeAID >= contradictionProposal.NodeBID {
+		t.Fatalf("contradiction proposal = %+v", contradictionProposal)
+	}
+	reviewCard := stdioCallTool[evidencequerymcp.CanonicalContradictionProposalResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalContradictionProposal, map[string]any{
+		"canonical_contradiction_proposal_id": contradictionProposal.CanonicalContradictionProposalID,
+	})
+	if reviewCard.Proposal.AdmissionOutcome != "pending" || reviewCard.Decision != nil || len(reviewCard.NodeA.SourceRefs) == 0 || len(reviewCard.NodeB.SourceRefs) == 0 {
+		t.Fatalf("pending contradiction review card = %+v", reviewCard)
+	}
+	contradictionAdmission := stdioCallTool[evidenceingestionmcp.CanonicalContradictionDecisionResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction, map[string]any{
+		"canonical_contradiction_proposal_id": contradictionProposal.CanonicalContradictionProposalID,
+		"decision_by":                         "stdio-integration-test",
+		"decision_reason":                     "reviewed both grounded claims and accepted the conflict",
+	})
+	if contradictionAdmission.AdmissionOutcome != "admitted" || contradictionAdmission.CanonicalEdgeID == "" {
+		t.Fatalf("contradiction admission = %+v", contradictionAdmission)
+	}
+	contradictionRelation := stdioCallTool[evidencequerymcp.RelationProvenanceResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetRelationProvenance, map[string]any{
+		"canonical_edge_id": contradictionAdmission.CanonicalEdgeID,
+	})
+	if contradictionRelation.RelationKind != "contradicts" || contradictionRelation.OriginRecord != nil || contradictionRelation.OriginContradictionProposal == nil {
+		t.Fatalf("contradiction relation provenance = %+v", contradictionRelation)
+	}
+	contradictionView := stdioCallTool[evidencequerymcp.OpenCanonicalReadViewResponse](t, ctx, queryMCP, evidencequerymcp.ToolOpenCanonicalReadView, map[string]any{
+		"root_node_ids": []string{admission.CanonicalRef, contradictionEndpoint.CanonicalRef},
+		"relations":     []string{"contradicts"},
+		"max_depth":     1,
+		"max_nodes":     4,
+		"max_edges":     4,
+	})
+	reverseContradictionPath := stdioCallTool[evidencequerymcp.FindCanonicalPathResponse](t, ctx, queryMCP, evidencequerymcp.ToolFindCanonicalPath, map[string]any{
+		"handle":       contradictionView.View.Handle,
+		"from_node_id": contradictionProposal.NodeBID,
+		"to_node_id":   contradictionProposal.NodeAID,
+		"relations":    []string{"contradicts"},
+	})
+	if !reverseContradictionPath.Witness.Found ||
+		len(reverseContradictionPath.Witness.EdgeIDs) != 1 ||
+		reverseContradictionPath.Witness.EdgeIDs[0] != contradictionAdmission.CanonicalEdgeID {
+		t.Fatalf("reverse contradiction path = %+v", reverseContradictionPath)
+	}
+	contradictionDiagnostics := stdioCallTool[evidencequerymcp.GetCanonicalTopologyDiagnosticsResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalTopologyDiagnostics, map[string]any{
+		"handle": contradictionView.View.Handle,
+	})
+	if len(contradictionDiagnostics.ConflictClusters) != 1 || len(contradictionDiagnostics.ConflictClusters[0].NodeIDs) != 2 {
+		t.Fatalf("contradiction topology diagnostics = %+v", contradictionDiagnostics)
+	}
+
 	dispositionSource := stdioCallTool[evidenceingestionmcp.SubmitTextSourceResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitTextSource, map[string]any{
 		"request_id":      "stdio-disposition-source-intake",
 		"source_id":       "fixture-refund-policy-disposition",
@@ -807,12 +890,14 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		t.Fatalf("conflicting disposition error = %+v", conflictingDispositionErr)
 	}
 
-	stdioAssertTableCount(t, ctx, pool, "source_snapshots", 2)
-	stdioAssertTableCount(t, ctx, pool, "extraction_attempts", 2)
-	stdioAssertTableCount(t, ctx, pool, "proposal_occurrences", 2)
-	stdioAssertTableCount(t, ctx, pool, "admission_decisions", 2)
-	stdioAssertTableCount(t, ctx, pool, "canonical_graph_nodes", 2)
-	stdioAssertTableCount(t, ctx, pool, "canonical_graph_edges", 1)
+	stdioAssertTableCount(t, ctx, pool, "source_snapshots", 3)
+	stdioAssertTableCount(t, ctx, pool, "extraction_attempts", 3)
+	stdioAssertTableCount(t, ctx, pool, "proposal_occurrences", 3)
+	stdioAssertTableCount(t, ctx, pool, "admission_decisions", 3)
+	stdioAssertTableCount(t, ctx, pool, "canonical_contradiction_proposals", 1)
+	stdioAssertTableCount(t, ctx, pool, "canonical_contradiction_admission_decisions", 1)
+	stdioAssertTableCount(t, ctx, pool, "canonical_graph_nodes", 4)
+	stdioAssertTableCount(t, ctx, pool, "canonical_graph_edges", 3)
 
 	retriedThirdWork := stdioCallTool[evidenceingestionmcp.RetryFailedGitRepositoryExtractionWorkResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolRetryFailedGitRepositoryExtractionWork, map[string]any{
 		"request_id":     "stdio-clean-work-third-retry",

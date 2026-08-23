@@ -155,6 +155,10 @@ var requiredTablesByMigration = map[string][]string{
 	},
 	"000038_evidence_ingestion_producer_session_ref.up.sql":         {},
 	"000039_evidence_ingestion_external_agent_core_contract.up.sql": {},
+	"000040_evidence_ingestion_canonical_contradictions.up.sql": {
+		"canonical_contradiction_proposals",
+		"canonical_contradiction_admission_decisions",
+	},
 }
 
 var requiredTables = []string{
@@ -223,6 +227,8 @@ var requiredTables = []string{
 	"detective_mcp_read_source_bindings",
 	"detective_mcp_read_collection_cycles",
 	"external_source_intake_receipts",
+	"canonical_contradiction_proposals",
+	"canonical_contradiction_admission_decisions",
 }
 
 // ErrSchemaNotCurrent indicates that the database cannot satisfy the embedded

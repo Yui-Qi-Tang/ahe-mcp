@@ -43,6 +43,8 @@ const (
 	ToolFindCanonicalPath = "find_canonical_path"
 	// ToolGetCanonicalTopologyDiagnostics reads cycle and conflict-cluster diagnostics from an opened view.
 	ToolGetCanonicalTopologyDiagnostics = "get_canonical_topology_diagnostics"
+	// ToolGetCanonicalContradictionProposal returns a review card for one contradiction proposal.
+	ToolGetCanonicalContradictionProposal = "get_canonical_contradiction_proposal"
 
 	toolErrorInvalidRequest  = "invalid_request"
 	toolErrorInvalidRecordID = "invalid_record_id"
@@ -314,6 +316,45 @@ type GetRelationProvenanceRequest struct {
 	CanonicalEdgeID      string `json:"canonical_edge_id,omitempty"`
 }
 
+// GetCanonicalContradictionProposalRequest selects one exact relation proposal.
+type GetCanonicalContradictionProposalRequest struct {
+	CanonicalContradictionProposalID string `json:"canonical_contradiction_proposal_id"`
+}
+
+// CanonicalContradictionProposalInfo exposes proposal and producer audit metadata.
+type CanonicalContradictionProposalInfo struct {
+	CanonicalContradictionProposalID string `json:"canonical_contradiction_proposal_id"`
+	RequestID                        string `json:"request_id"`
+	ProposalFingerprint              string `json:"proposal_fingerprint"`
+	NodeAID                          string `json:"node_a_id"`
+	NodeBID                          string `json:"node_b_id"`
+	Relation                         string `json:"relation"`
+	Rationale                        string `json:"rationale"`
+	ProducerName                     string `json:"producer_name"`
+	ProducerVersion                  string `json:"producer_version"`
+	ProducerSessionRef               string `json:"producer_session_ref,omitempty"`
+	AdmissionOutcome                 string `json:"admission_outcome"`
+	CanonicalEdgeID                  string `json:"canonical_edge_id,omitempty"`
+}
+
+// CanonicalContradictionDecisionInfo exposes the immutable human review result.
+type CanonicalContradictionDecisionInfo struct {
+	AdmissionDecisionID string `json:"admission_decision_id"`
+	AdmissionOutcome    string `json:"admission_outcome"`
+	CanonicalEdgeID     string `json:"canonical_edge_id,omitempty"`
+	DecisionBy          string `json:"decision_by"`
+	DecisionReason      string `json:"decision_reason"`
+}
+
+// CanonicalContradictionProposalResponse is the minimum human review card:
+// the proposal rationale, both complete grounded claims, and any decision.
+type CanonicalContradictionProposalResponse struct {
+	Proposal CanonicalContradictionProposalInfo  `json:"proposal"`
+	NodeA    GetEvidenceRecordResponse           `json:"node_a"`
+	NodeB    GetEvidenceRecordResponse           `json:"node_b"`
+	Decision *CanonicalContradictionDecisionInfo `json:"decision,omitempty"`
+}
+
 // CanonicalEdgeInfo exposes an admitted canonical edge without projection controls.
 type CanonicalEdgeInfo struct {
 	From       RecordRef                      `json:"from"`
@@ -324,15 +365,16 @@ type CanonicalEdgeInfo struct {
 
 // RelationProvenanceResponse preserves the distinct canonical and repository relation surfaces.
 type RelationProvenanceResponse struct {
-	RelationRef   RecordRef                               `json:"relation_ref"`
-	Surface       string                                  `json:"surface"`
-	RelationKind  string                                  `json:"relation_kind"`
-	OriginRecord  GetEvidenceRecordResponse               `json:"origin_record"`
-	SourceRefs    []evidenceingestion.ResolvedSourceRef   `json:"source_refs,omitempty"`
-	CodeRelation  *evidenceingestion.ResolvedCodeRelation `json:"code_relation,omitempty"`
-	CanonicalEdge *CanonicalEdgeInfo                      `json:"canonical_edge,omitempty"`
-	FromRecord    *GetEvidenceRecordResponse              `json:"from_record,omitempty"`
-	ToRecord      *GetEvidenceRecordResponse              `json:"to_record,omitempty"`
+	RelationRef                 RecordRef                               `json:"relation_ref"`
+	Surface                     string                                  `json:"surface"`
+	RelationKind                string                                  `json:"relation_kind"`
+	OriginRecord                *GetEvidenceRecordResponse              `json:"origin_record,omitempty"`
+	OriginContradictionProposal *CanonicalContradictionProposalResponse `json:"origin_contradiction_proposal,omitempty"`
+	SourceRefs                  []evidenceingestion.ResolvedSourceRef   `json:"source_refs,omitempty"`
+	CodeRelation                *evidenceingestion.ResolvedCodeRelation `json:"code_relation,omitempty"`
+	CanonicalEdge               *CanonicalEdgeInfo                      `json:"canonical_edge,omitempty"`
+	FromRecord                  *GetEvidenceRecordResponse              `json:"from_record,omitempty"`
+	ToRecord                    *GetEvidenceRecordResponse              `json:"to_record,omitempty"`
 }
 
 // ListEvidenceNeighborsRequest selects a canonical node or repository symbol as a one-hop root.
@@ -510,6 +552,7 @@ func (e *ToolError) Unwrap() error {
 type queryCore interface {
 	ReadCanonicalGraphView(ctx context.Context, input evidenceingestion.CanonicalReadInput) (evidenceingestion.CanonicalReadView, error)
 	GetCanonicalRelationByID(ctx context.Context, canonicalEdgeID string) (evidenceingestion.CanonicalRelationQueryResult, error)
+	GetCanonicalContradictionProposal(ctx context.Context, proposalID string) (evidenceingestion.CanonicalContradictionQueryResult, error)
 	GetCanonicalEvidenceByID(ctx context.Context, canonicalID string) (evidenceingestion.CanonicalQueryResult, error)
 	ListCanonicalNeighbors(ctx context.Context, input evidenceingestion.CanonicalNeighborInput) ([]evidenceingestion.CanonicalNeighborResult, error)
 	ListProposalRecords(ctx context.Context, input evidenceingestion.ProposalListInput) ([]evidenceingestion.ProposalQueryResult, error)
@@ -581,17 +624,22 @@ func (s *Server) Tools() []ToolDefinition {
 		},
 		{
 			Name:        ToolOpenCanonicalReadView,
-			Description: "Open and retain one bounded immutable PostgreSQL canonical graph view for repeated external reads under the returned handle.",
+			Description: "Materialize one bounded immutable canonical graph view from PostgreSQL and retain it under an instance-local cached handle; the handle can be evicted and is lost on process restart.",
 			ReadOnly:    true,
 		},
 		{
 			Name:        ToolFindCanonicalPath,
-			Description: "Find one relation-scoped structural path witness inside an explicitly opened canonical graph view.",
+			Description: "Find one relation-scoped structural path witness inside an explicitly opened bounded view. found_in_view=false is not global absence. contradicts traverses both directions; every other relation follows its stored direction.",
 			ReadOnly:    true,
 		},
 		{
 			Name:        ToolGetCanonicalTopologyDiagnostics,
-			Description: "Read derived and supersedes cycle witnesses plus contradiction clusters inside an explicitly opened canonical graph view.",
+			Description: "Read derived_from and supersedes cycle witnesses plus contradiction connected components inside an opened view. Cluster membership does not imply a contradicts edge between every node pair.",
+			ReadOnly:    true,
+		},
+		{
+			Name:        ToolGetCanonicalContradictionProposal,
+			Description: "Read one pending or terminal contradiction proposal with both complete grounded canonical nodes, producer rationale, and any human review decision.",
 			ReadOnly:    true,
 		},
 	}
@@ -676,6 +724,20 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
 		}
 		resp, err := s.GetRelationProvenance(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
+		}
+		return data, nil
+	case ToolGetCanonicalContradictionProposal:
+		var req GetCanonicalContradictionProposalRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.GetCanonicalContradictionProposal(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -949,6 +1011,22 @@ func (s *Server) GetRelationProvenance(ctx context.Context, req GetRelationProve
 	return mapRepositoryRelationProvenance(result), nil
 }
 
+// GetCanonicalContradictionProposal returns the complete review card for one proposal.
+func (s *Server) GetCanonicalContradictionProposal(ctx context.Context, req GetCanonicalContradictionProposalRequest) (CanonicalContradictionProposalResponse, error) {
+	proposalID := strings.TrimSpace(req.CanonicalContradictionProposalID)
+	if !strings.HasPrefix(proposalID, evidenceingestion.CanonicalContradictionProposalIDPrefix) {
+		return CanonicalContradictionProposalResponse{}, &ToolError{
+			Code:    toolErrorInvalidRecordID,
+			Message: fmt.Sprintf("canonical_contradiction_proposal_id %q must start with %s", proposalID, evidenceingestion.CanonicalContradictionProposalIDPrefix),
+		}
+	}
+	result, err := s.core.GetCanonicalContradictionProposal(ctx, proposalID)
+	if err != nil {
+		return CanonicalContradictionProposalResponse{}, mapToolError(err)
+	}
+	return mapCanonicalContradictionProposal(result), nil
+}
+
 // ListEvidenceNeighbors returns a bounded one-hop neighborhood on the surface implied by the root ID.
 func (s *Server) ListEvidenceNeighbors(ctx context.Context, req ListEvidenceNeighborsRequest) (ListEvidenceNeighborsResponse, error) {
 	canonicalID := strings.TrimSpace(req.CanonicalID)
@@ -1049,6 +1127,10 @@ func (c postgresCore) ReadCanonicalGraphView(ctx context.Context, input evidence
 
 func (c postgresCore) GetCanonicalRelationByID(ctx context.Context, canonicalEdgeID string) (evidenceingestion.CanonicalRelationQueryResult, error) {
 	return evidenceingestion.GetCanonicalRelationByID(ctx, c.pool, canonicalEdgeID)
+}
+
+func (c postgresCore) GetCanonicalContradictionProposal(ctx context.Context, proposalID string) (evidenceingestion.CanonicalContradictionQueryResult, error) {
+	return evidenceingestion.GetCanonicalContradictionProposal(ctx, c.pool, proposalID)
 }
 
 func (c postgresCore) TraceProposalProvenance(ctx context.Context, occurrenceID string) (evidenceingestion.ProposalQueryResult, error) {
@@ -2292,11 +2374,12 @@ func sortedMapKeys[T any](values map[string]T) []string {
 }
 
 func mapRepositoryRelationProvenance(result evidenceingestion.ProposalQueryResult) RelationProvenanceResponse {
+	origin := mapProposalResult(result)
 	return RelationProvenanceResponse{
 		RelationRef:  RecordRef{Kind: "proposal_relation", ID: result.ProposalOccurrenceID},
 		Surface:      "repository_code",
 		RelationKind: result.CodeRelation.RelationKind,
-		OriginRecord: mapProposalResult(result),
+		OriginRecord: &origin,
 		SourceRefs:   append([]evidenceingestion.ResolvedSourceRef(nil), result.SourceRefs...),
 		CodeRelation: cloneCodeRelation(result.CodeRelation),
 	}
@@ -2305,12 +2388,10 @@ func mapRepositoryRelationProvenance(result evidenceingestion.ProposalQueryResul
 func mapCanonicalRelationProvenance(result evidenceingestion.CanonicalRelationQueryResult) RelationProvenanceResponse {
 	from := mapCanonicalResult(result.From)
 	to := mapCanonicalResult(result.To)
-	return RelationProvenanceResponse{
+	response := RelationProvenanceResponse{
 		RelationRef:  RecordRef{Kind: "canonical_relation", ID: result.Edge.ID},
 		Surface:      "canonical_evidence",
 		RelationKind: string(result.Edge.Relation),
-		OriginRecord: mapProposalResult(result.OriginProposal),
-		SourceRefs:   append([]evidenceingestion.ResolvedSourceRef(nil), result.OriginProposal.SourceRefs...),
 		CanonicalEdge: &CanonicalEdgeInfo{
 			From:       RecordRef{Kind: "canonical_evidence", ID: result.Edge.From},
 			To:         RecordRef{Kind: "canonical_evidence", ID: result.Edge.To},
@@ -2320,6 +2401,48 @@ func mapCanonicalRelationProvenance(result evidenceingestion.CanonicalRelationQu
 		FromRecord: &from,
 		ToRecord:   &to,
 	}
+	if result.OriginProposal != nil {
+		origin := mapProposalResult(*result.OriginProposal)
+		response.OriginRecord = &origin
+		response.SourceRefs = append([]evidenceingestion.ResolvedSourceRef(nil), result.OriginProposal.SourceRefs...)
+	}
+	if result.OriginContradictionProposal != nil {
+		origin := mapCanonicalContradictionProposal(*result.OriginContradictionProposal)
+		response.OriginContradictionProposal = &origin
+	}
+	return response
+}
+
+func mapCanonicalContradictionProposal(result evidenceingestion.CanonicalContradictionQueryResult) CanonicalContradictionProposalResponse {
+	proposal := result.Proposal
+	response := CanonicalContradictionProposalResponse{
+		Proposal: CanonicalContradictionProposalInfo{
+			CanonicalContradictionProposalID: proposal.ID,
+			RequestID:                        proposal.RequestID,
+			ProposalFingerprint:              proposal.ProposalFingerprint,
+			NodeAID:                          proposal.NodeAID,
+			NodeBID:                          proposal.NodeBID,
+			Relation:                         string(proposal.Relation),
+			Rationale:                        proposal.Rationale,
+			ProducerName:                     proposal.ProducerName,
+			ProducerVersion:                  proposal.ProducerVersion,
+			ProducerSessionRef:               proposal.ProducerSessionRef,
+			AdmissionOutcome:                 proposal.AdmissionOutcome,
+			CanonicalEdgeID:                  proposal.CanonicalEdgeID,
+		},
+		NodeA: mapCanonicalResult(result.NodeA),
+		NodeB: mapCanonicalResult(result.NodeB),
+	}
+	if result.Decision != nil {
+		response.Decision = &CanonicalContradictionDecisionInfo{
+			AdmissionDecisionID: result.Decision.ID,
+			AdmissionOutcome:    result.Decision.Outcome,
+			CanonicalEdgeID:     result.Decision.CanonicalEdgeID,
+			DecisionBy:          result.Decision.DecisionBy,
+			DecisionReason:      result.Decision.DecisionReason,
+		}
+	}
+	return response
 }
 
 func mapSourceGeneration(result evidenceingestion.ProposalQueryResult) *SourceGenerationInfo {

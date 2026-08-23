@@ -15,14 +15,14 @@ import (
 func TestToolsExposeIngestAndExtractorInputTools(t *testing.T) {
 	server := newServer(&fakeCore{})
 	tools := server.Tools()
-	if len(tools) != 36 {
-		t.Fatalf("len(Tools()) = %d, want 36", len(tools))
+	if len(tools) != 39 {
+		t.Fatalf("len(Tools()) = %d, want 39", len(tools))
 	}
 	got := map[string]bool{}
 	for _, tool := range tools {
 		got[tool.Name] = tool.Write
 	}
-	for _, name := range []string{ToolSubmitManualEvidence, ToolSubmitTextSource, ToolSubmitExternalSource, ToolSubmitExtractorOutput, ToolObserveGitRepositoryChange, ToolScheduleGitRepositoryExtractionWork, ToolClaimGitRepositoryExtractionWork, ToolRenewGitRepositoryExtractionWorkLease, ToolExecuteClaimedGitRepositoryExtractionWork, ToolRunGitRepositoryExtractionWorkerTick, ToolFinishGitRepositoryExtractionWork, ToolRecoverExpiredGitRepositoryExtractionWork, ToolRepairExpiredGitRepositoryExtractionWorkExecution, ToolRetryFailedGitRepositoryExtractionWork, ToolCaptureGitRepositorySnapshot, ToolCreateRepositoryExtractionRun, ToolRunRepositoryGoParserExtractor, ToolRunRepositoryGoplsExtractor, ToolActivateRepositorySourceGeneration, ToolRunLocalOllamaExtractor, ToolRunGoParserExtractor, ToolRunGoplsExtractor, ToolAdmitPendingProposal, ToolRecordPendingProposalDisposition, ToolClassifyFailedGitRepositoryExtractionWork, ToolConsumeDueGitRepositoryExtractionWorkRetryDecision, ToolRunDueGitRepositoryExtractionWorkRetryControllerTick, ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick} {
+	for _, name := range []string{ToolSubmitManualEvidence, ToolSubmitTextSource, ToolSubmitExternalSource, ToolSubmitExtractorOutput, ToolObserveGitRepositoryChange, ToolScheduleGitRepositoryExtractionWork, ToolClaimGitRepositoryExtractionWork, ToolRenewGitRepositoryExtractionWorkLease, ToolExecuteClaimedGitRepositoryExtractionWork, ToolRunGitRepositoryExtractionWorkerTick, ToolFinishGitRepositoryExtractionWork, ToolRecoverExpiredGitRepositoryExtractionWork, ToolRepairExpiredGitRepositoryExtractionWorkExecution, ToolRetryFailedGitRepositoryExtractionWork, ToolCaptureGitRepositorySnapshot, ToolCreateRepositoryExtractionRun, ToolRunRepositoryGoParserExtractor, ToolRunRepositoryGoplsExtractor, ToolActivateRepositorySourceGeneration, ToolRunLocalOllamaExtractor, ToolRunGoParserExtractor, ToolRunGoplsExtractor, ToolAdmitPendingProposal, ToolRecordPendingProposalDisposition, ToolSubmitCanonicalContradictionProposal, ToolAdmitPendingCanonicalContradiction, ToolRecordPendingCanonicalContradictionDisposition, ToolClassifyFailedGitRepositoryExtractionWork, ToolConsumeDueGitRepositoryExtractionWorkRetryDecision, ToolRunDueGitRepositoryExtractionWorkRetryControllerTick, ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick} {
 		if !got[name] {
 			t.Fatalf("tool %s missing or not write-enabled: %+v", name, tools)
 		}
@@ -1263,6 +1263,93 @@ func TestCallToolRecordsPendingProposalDispositionThroughCore(t *testing.T) {
 	}
 }
 
+func TestCallToolCanonicalContradictionWorkflowThroughCore(t *testing.T) {
+	core := &fakeCore{
+		contradictionProposalResult: evidenceingestion.CanonicalContradictionProposalResult{
+			Proposal: evidenceingestion.CanonicalContradictionProposal{
+				ID:               "contradiction-proposal:1",
+				NodeAID:          "canon-node:a",
+				NodeBID:          "canon-node:b",
+				Relation:         "contradicts",
+				Rationale:        "the stated limits differ",
+				ProducerName:     "claude-code",
+				ProducerVersion:  "v1",
+				AdmissionOutcome: "pending",
+			},
+		},
+		contradictionDecisionResult: evidenceingestion.CanonicalContradictionDecisionResult{
+			Decision: evidenceingestion.CanonicalContradictionDecision{
+				ID:              "contradiction-adm:1",
+				ProposalID:      "contradiction-proposal:1",
+				Outcome:         "admitted",
+				CanonicalEdgeID: "canon-edge:1",
+				DecisionBy:      "reviewer",
+				DecisionReason:  "both claims were reviewed",
+			},
+		},
+	}
+	server := newServer(core)
+
+	data, err := server.CallTool(context.Background(), ToolSubmitCanonicalContradictionProposal, []byte(`{"request_id":"relation-1","node_a_id":"canon-node:b","node_b_id":"canon-node:a","rationale":"the stated limits differ","producer_name":"claude-code","producer_version":"v1","producer_session_ref":"session:1"}`))
+	if err != nil {
+		t.Fatalf("submit contradiction: %v", err)
+	}
+	var proposal SubmitCanonicalContradictionProposalResponse
+	if err := json.Unmarshal(data, &proposal); err != nil {
+		t.Fatalf("Unmarshal proposal: %v", err)
+	}
+	if core.contradictionProposalCalls != 1 || core.contradictionProposalInput.NodeAID != "canon-node:b" || core.contradictionProposalInput.ProducerSessionRef != "session:1" {
+		t.Fatalf("proposal input not forwarded: %+v", core.contradictionProposalInput)
+	}
+	if proposal.CanonicalContradictionProposalID != "contradiction-proposal:1" || proposal.Relation != "contradicts" || proposal.AdmissionOutcome != "pending" {
+		t.Fatalf("unexpected proposal response: %+v", proposal)
+	}
+
+	data, err = server.CallTool(context.Background(), ToolAdmitPendingCanonicalContradiction, []byte(`{"canonical_contradiction_proposal_id":"contradiction-proposal:1","decision_by":"reviewer","decision_reason":"both claims were reviewed"}`))
+	if err != nil {
+		t.Fatalf("admit contradiction: %v", err)
+	}
+	var decision CanonicalContradictionDecisionResponse
+	if err := json.Unmarshal(data, &decision); err != nil {
+		t.Fatalf("Unmarshal decision: %v", err)
+	}
+	if core.contradictionAdmissionCalls != 1 || core.contradictionAdmissionInput.ProposalID != "contradiction-proposal:1" {
+		t.Fatalf("admission input not forwarded: %+v", core.contradictionAdmissionInput)
+	}
+	if decision.CanonicalEdgeID != "canon-edge:1" || decision.AdmissionOutcome != "admitted" {
+		t.Fatalf("unexpected decision response: %+v", decision)
+	}
+}
+
+func TestCallToolRecordsCanonicalContradictionDispositionThroughCore(t *testing.T) {
+	core := &fakeCore{
+		contradictionDecisionResult: evidenceingestion.CanonicalContradictionDecisionResult{
+			Decision: evidenceingestion.CanonicalContradictionDecision{
+				ID:             "contradiction-adm:rejected",
+				ProposalID:     "contradiction-proposal:1",
+				Outcome:        evidenceingestion.ProposalDispositionRejected,
+				DecisionBy:     "reviewer",
+				DecisionReason: "the scopes do not conflict",
+			},
+		},
+	}
+	server := newServer(core)
+	data, err := server.CallTool(context.Background(), ToolRecordPendingCanonicalContradictionDisposition, []byte(`{"canonical_contradiction_proposal_id":"contradiction-proposal:1","outcome":"rejected","decision_by":"reviewer","decision_reason":"the scopes do not conflict"}`))
+	if err != nil {
+		t.Fatalf("CallTool(disposition) error = %v", err)
+	}
+	var response CanonicalContradictionDecisionResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		t.Fatalf("Unmarshal disposition: %v", err)
+	}
+	if core.contradictionDispositionCalls != 1 || core.contradictionDispositionInput.Outcome != evidenceingestion.ProposalDispositionRejected {
+		t.Fatalf("disposition input not forwarded: %+v", core.contradictionDispositionInput)
+	}
+	if response.AdmissionOutcome != evidenceingestion.ProposalDispositionRejected || response.CanonicalEdgeID != "" {
+		t.Fatalf("unexpected disposition response: %+v", response)
+	}
+}
+
 func TestCallToolSubmitsManualEvidenceThroughCore(t *testing.T) {
 	core := &fakeCore{
 		ingestResult: evidenceingestion.IngestResult{
@@ -1898,6 +1985,9 @@ func testExtractorOutputRequest(requestID string) SubmitExtractorOutputRequest {
 type fakeCore struct {
 	admitCalls                    int
 	dispositionCalls              int
+	contradictionProposalCalls    int
+	contradictionAdmissionCalls   int
+	contradictionDispositionCalls int
 	activationCalls               int
 	generationListCalls           int
 	buildCalls                    int
@@ -1915,6 +2005,9 @@ type fakeCore struct {
 	traceOccurrenceID             string
 	admissionInput                evidenceingestion.AdmissionInput
 	dispositionInput              evidenceingestion.ProposalDispositionInput
+	contradictionProposalInput    evidenceingestion.CanonicalContradictionProposalInput
+	contradictionAdmissionInput   evidenceingestion.CanonicalContradictionAdmissionInput
+	contradictionDispositionInput evidenceingestion.CanonicalContradictionDispositionInput
 	activationInput               evidenceingestion.RepositorySourceGenerationActivationInput
 	generationListInput           evidenceingestion.RepositorySourceGenerationListInput
 	input                         evidenceingestion.ManualTextInput
@@ -1927,6 +2020,8 @@ type fakeCore struct {
 	fixture                       evidenceingestion.FrozenExtractorOutput
 	admitResult                   evidenceingestion.AdmissionResult
 	dispositionResult             evidenceingestion.ProposalDispositionResult
+	contradictionProposalResult   evidenceingestion.CanonicalContradictionProposalResult
+	contradictionDecisionResult   evidenceingestion.CanonicalContradictionDecisionResult
 	activationResult              evidenceingestion.RepositorySourceGenerationActivationResult
 	generationListResult          []evidenceingestion.RepositorySourceGenerationStatus
 	buildResult                   evidenceingestion.ExtractorInput
@@ -1960,6 +2055,9 @@ type fakeCore struct {
 	gitObservationResult          evidenceingestion.GitRepositoryChangeObservationResult
 	admitErr                      error
 	dispositionErr                error
+	contradictionProposalErr      error
+	contradictionAdmissionErr     error
+	contradictionDispositionErr   error
 	activationErr                 error
 	generationListErr             error
 	buildErr                      error
@@ -2027,6 +2125,33 @@ func (c *fakeCore) RecordPendingProposalDisposition(
 		return evidenceingestion.ProposalDispositionResult{}, c.dispositionErr
 	}
 	return c.dispositionResult, nil
+}
+
+func (c *fakeCore) SubmitCanonicalContradictionProposal(_ context.Context, input evidenceingestion.CanonicalContradictionProposalInput) (evidenceingestion.CanonicalContradictionProposalResult, error) {
+	c.contradictionProposalCalls++
+	c.contradictionProposalInput = input
+	if c.contradictionProposalErr != nil {
+		return evidenceingestion.CanonicalContradictionProposalResult{}, c.contradictionProposalErr
+	}
+	return c.contradictionProposalResult, nil
+}
+
+func (c *fakeCore) AdmitPendingCanonicalContradiction(_ context.Context, input evidenceingestion.CanonicalContradictionAdmissionInput) (evidenceingestion.CanonicalContradictionDecisionResult, error) {
+	c.contradictionAdmissionCalls++
+	c.contradictionAdmissionInput = input
+	if c.contradictionAdmissionErr != nil {
+		return evidenceingestion.CanonicalContradictionDecisionResult{}, c.contradictionAdmissionErr
+	}
+	return c.contradictionDecisionResult, nil
+}
+
+func (c *fakeCore) RecordPendingCanonicalContradictionDisposition(_ context.Context, input evidenceingestion.CanonicalContradictionDispositionInput) (evidenceingestion.CanonicalContradictionDecisionResult, error) {
+	c.contradictionDispositionCalls++
+	c.contradictionDispositionInput = input
+	if c.contradictionDispositionErr != nil {
+		return evidenceingestion.CanonicalContradictionDecisionResult{}, c.contradictionDispositionErr
+	}
+	return c.contradictionDecisionResult, nil
 }
 
 func (c *fakeCore) ActivateRepositorySourceGeneration(

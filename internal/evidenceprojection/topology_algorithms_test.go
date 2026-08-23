@@ -91,6 +91,31 @@ func TestPreparedTopologyFindPathUsesExplicitRelationScope(t *testing.T) {
 	if !conflict.Found || !reflect.DeepEqual(conflict.EdgeIDs, []string{"edge:a-c-conflict"}) {
 		t.Fatalf("conflict path = %+v", conflict)
 	}
+	reverseConflict, err := prepared.FindPath(PathQuery{
+		FromNodeID: "source:c",
+		ToNodeID:   "source:a",
+		Relations:  []evidencegraph.CanonicalEdgeRelation{evidencegraph.CanonicalContradicts},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reverseConflict.Found ||
+		!reflect.DeepEqual(reverseConflict.NodeIDs, []string{"source:c", "source:a"}) ||
+		!reflect.DeepEqual(reverseConflict.EdgeIDs, []string{"edge:a-c-conflict"}) {
+		t.Fatalf("reverse conflict path = %+v", reverseConflict)
+	}
+
+	reverseDerived, err := prepared.FindPath(PathQuery{
+		FromNodeID: "derived",
+		ToNodeID:   "source:a",
+		Relations:  []evidencegraph.CanonicalEdgeRelation{evidencegraph.CanonicalDerivedFrom},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reverseDerived.Found {
+		t.Fatalf("directed derived path unexpectedly reversed: %+v", reverseDerived)
+	}
 
 	if _, err := prepared.FindPath(PathQuery{FromNodeID: "source:a", ToNodeID: "derived"}); err == nil {
 		t.Fatal("FindPath() accepted an empty relation scope")

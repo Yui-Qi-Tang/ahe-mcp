@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
@@ -102,4 +103,93 @@ func TestBackendExposesAdminToolsAndDelegatesCalls(t *testing.T) {
 	if calledName != evidenceingestionmcp.ToolSubmitTextSource || string(got) != string(payload) {
 		t.Fatalf("CallTool() = name %q payload %s", calledName, got)
 	}
+}
+
+func TestAdmissionToolMetadataStatesHumanReviewAndTerminalEffects(t *testing.T) {
+	tools := make(map[string]mcpToolMetadata)
+	for _, tool := range ingestionTools() {
+		tools[tool.Name] = mcpToolMetadata{
+			description: tool.Description,
+			destructive: tool.Annotations.DestructiveHint,
+		}
+	}
+	coreDescriptions := make(map[string]string)
+	for _, tool := range new(evidenceingestionmcp.Server).Tools() {
+		coreDescriptions[tool.Name] = tool.Description
+	}
+
+	for _, name := range []string{
+		evidenceingestionmcp.ToolAdmitPendingProposal,
+		evidenceingestionmcp.ToolRecordPendingProposalDisposition,
+		evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction,
+		evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition,
+	} {
+		tool, ok := tools[name]
+		if !ok {
+			t.Fatalf("tool %q is missing", name)
+		}
+		if tool.destructive == nil || !*tool.destructive {
+			t.Errorf("tool %q destructiveHint = %v, want true for a terminal lifecycle transition", name, tool.destructive)
+		}
+		if tool.description != coreDescriptions[name] {
+			t.Errorf("tool %q descriptions drifted: backend=%q core=%q", name, tool.description, coreDescriptions[name])
+		}
+		for _, want := range []string{"explicit human", "immediately", "terminal", "does not prove"} {
+			if !strings.Contains(tool.description, want) {
+				t.Errorf("tool %q description %q does not contain %q", name, tool.description, want)
+			}
+		}
+	}
+}
+
+func TestCanonicalContradictionToolMetadataStatesNodeAndPairContract(t *testing.T) {
+	backendTools := make(map[string]string)
+	for _, tool := range ingestionTools() {
+		backendTools[tool.Name] = tool.Description
+	}
+	coreTools := make(map[string]string)
+	for _, tool := range new(evidenceingestionmcp.Server).Tools() {
+		coreTools[tool.Name] = tool.Description
+	}
+
+	wants := map[string][]string{
+		evidenceingestionmcp.ToolSubmitCanonicalContradictionProposal: {
+			"canonical nodes",
+			"unordered node pair",
+			"single-use",
+			"does not create",
+			"does not infer or validate",
+		},
+		evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction: {
+			"canonical nodes",
+			"explicit human approval",
+			"immediately",
+			"terminal",
+		},
+		evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition: {
+			"explicit human",
+			"single-use",
+			"immediately",
+			"terminal",
+		},
+	}
+	for name, fragments := range wants {
+		description, ok := backendTools[name]
+		if !ok {
+			t.Fatalf("backend tool %q is missing", name)
+		}
+		if description != coreTools[name] {
+			t.Errorf("tool %q descriptions drifted: backend=%q core=%q", name, description, coreTools[name])
+		}
+		for _, fragment := range fragments {
+			if !strings.Contains(description, fragment) {
+				t.Errorf("tool %q description %q does not contain %q", name, description, fragment)
+			}
+		}
+	}
+}
+
+type mcpToolMetadata struct {
+	description string
+	destructive *bool
 }

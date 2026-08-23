@@ -43,6 +43,7 @@ func ingestionTools() []mcpstdio.Tool {
 	readOnly := true
 	write := false
 	destructive := false
+	terminal := true
 	idempotent := true
 	return []mcpstdio.Tool{
 		{
@@ -475,7 +476,7 @@ func ingestionTools() []mcpstdio.Tool {
 		{
 			Name:        evidenceingestionmcp.ToolAdmitPendingProposal,
 			Title:       "Admit Pending Proposal",
-			Description: "Ask a human to review the proposal sentence, exact source quotes, source title/location, coverage/limitations, revision, and the version difference when a comparable prior revision exists before admitting one pending proposal. AHE records the admission but does not prove that the conversation occurred.",
+			Description: "Call only after the cooperating agent has displayed the proposal sentence, exact source quotes, source title/location, coverage/limitations, revision, and any comparable version difference and received explicit human approval. This call immediately and terminally admits one pending proposal as source-backed evidence or an explicitly parented derived claim. AHE records the decision but does not prove the review occurred.",
 			InputSchema: objectSchema(map[string]any{
 				"proposal_occurrence_id": stringSchema("Pending proposal occurrence ID."),
 				"decision_by":            stringSchema("Optional admission producer or reviewer identity."),
@@ -483,14 +484,14 @@ func ingestionTools() []mcpstdio.Tool {
 			}, []string{"proposal_occurrence_id"}),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &write,
-				DestructiveHint: &destructive,
+				DestructiveHint: &terminal,
 				IdempotentHint:  &idempotent,
 			},
 		},
 		{
 			Name:        evidenceingestionmcp.ToolRecordPendingProposalDisposition,
 			Title:       "Record Pending Proposal Disposition",
-			Description: "Record one exact pending proposal as rejected or audit-only without creating canonical evidence.",
+			Description: "Call only after an explicit human rejection or audit-only decision. This call immediately and terminally marks one pending proposal without creating canonical evidence; it cannot later be admitted. AHE records the decision but does not prove the review occurred.",
 			InputSchema: objectSchema(map[string]any{
 				"proposal_occurrence_id": stringSchema("Pending proposal occurrence ID."),
 				"outcome": enumStringSchema(
@@ -515,7 +516,48 @@ func ingestionTools() []mcpstdio.Tool {
 			}, []string{"proposal_occurrence_id", "outcome", "decision_by", "decision_reason"}),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &write,
+				DestructiveHint: &terminal,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
+			Name:        evidenceingestionmcp.ToolSubmitCanonicalContradictionProposal,
+			Title:       "Submit Canonical Contradiction Proposal",
+			Description: "Create or exactly replay the single governed contradiction proposal for one unordered node pair of existing admitted canonical nodes. The pair is single-use across pending, admitted, rejected, and audit-only outcomes; changed metadata conflicts. This call does not create a canonical edge, and AHE does not infer or validate the semantic conflict.",
+			InputSchema: objectSchema(map[string]any{
+				"request_id":           boundedStringSchema("Idempotent contradiction proposal request ID.", evidenceingestion.CanonicalContradictionRequestIDMaxBytes),
+				"node_a_id":            stringSchema("First existing admitted canonical node ID; AHE normalizes pair order."),
+				"node_b_id":            stringSchema("Second existing admitted canonical node ID; AHE normalizes pair order."),
+				"rationale":            boundedStringSchema("Agent rationale describing the exact semantic conflict for human review.", evidenceingestion.CanonicalContradictionRationaleMaxBytes),
+				"producer_name":        boundedStringSchema("Stable name of the proposing agent or tool.", evidenceingestion.ExtractorDefinitionNameMaxBytes),
+				"producer_version":     boundedStringSchema("Version of the proposing agent, prompt, or workflow.", evidenceingestion.ExtractorDefinitionVersionMaxBytes),
+				"producer_session_ref": boundedStringSchema("Optional non-secret agent session reference for debugging.", evidenceingestion.ProducerSessionRefMaxBytes),
+			}, []string{"request_id", "node_a_id", "node_b_id", "rationale", "producer_name", "producer_version"}),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &write,
 				DestructiveHint: &destructive,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
+			Name:        evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction,
+			Title:       "Admit Pending Canonical Contradiction",
+			Description: "Call only after the cooperating agent has displayed both grounded canonical nodes, their source context, and the rationale and received explicit human approval. This call immediately and terminally admits the pending proposal and creates one symmetric canonical contradicts edge. AHE records the decision but does not prove the review occurred.",
+			InputSchema: canonicalContradictionDecisionSchema(false),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &write,
+				DestructiveHint: &terminal,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
+			Name:        evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition,
+			Title:       "Record Pending Canonical Contradiction Disposition",
+			Description: "Call only after an explicit human rejected or audit-only decision. This call immediately and terminally disposes the pending contradiction proposal without creating an edge; the unordered node pair remains single-use in v1. AHE records the decision but does not prove the review occurred.",
+			InputSchema: canonicalContradictionDecisionSchema(true),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &write,
+				DestructiveHint: &terminal,
 				IdempotentHint:  &idempotent,
 			},
 		},
@@ -741,6 +783,30 @@ func extractorDefinitionConfigSchema() map[string]any {
 	schema["propertyNames"] = boundedStringSchema("Extractor configuration key.", evidenceingestion.ExtractorDefinitionConfigKeyMaxBytes)
 	schema["additionalProperties"] = boundedStringSchema("Extractor configuration value.", evidenceingestion.ExtractorDefinitionConfigValueMaxBytes)
 	return schema
+}
+
+func canonicalContradictionDecisionSchema(includeOutcome bool) map[string]any {
+	properties := map[string]any{
+		"canonical_contradiction_proposal_id": stringSchema("Canonical contradiction proposal ID; normally pending, or the same terminal record for exact idempotent replay."),
+		"decision_by": boundedStringSchema(
+			"Stable reviewer identity.",
+			evidenceingestion.ProposalDispositionDecisionByMaxBytes,
+		),
+		"decision_reason": boundedStringSchema(
+			"Bounded human review reason.",
+			evidenceingestion.ProposalDispositionDecisionReasonMaxBytes,
+		),
+	}
+	required := []string{"canonical_contradiction_proposal_id", "decision_by", "decision_reason"}
+	if includeOutcome {
+		properties["outcome"] = enumStringSchema(
+			"Terminal non-edge outcome.",
+			evidenceingestion.ProposalDispositionRejected,
+			evidenceingestion.ProposalDispositionAuditOnly,
+		)
+		required = append(required, "outcome")
+	}
+	return objectSchema(properties, required)
 }
 
 func manualSourceProperties() map[string]any {
