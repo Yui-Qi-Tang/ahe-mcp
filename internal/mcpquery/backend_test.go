@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencequerymcp"
 )
 
@@ -35,6 +36,9 @@ func TestBackendExposesOnlyShippingQueryToolsAndDelegatesCalls(t *testing.T) {
 		evidencequerymcp.ToolListEvidenceNeighbors,
 		evidencequerymcp.ToolGetRelationProvenance,
 		evidencequerymcp.ToolGetMCPReadSourceStates,
+		evidencequerymcp.ToolOpenCanonicalReadView,
+		evidencequerymcp.ToolFindCanonicalPath,
+		evidencequerymcp.ToolGetCanonicalTopologyDiagnostics,
 	}
 	if !reflect.DeepEqual(gotNames, wantNames) {
 		t.Fatalf("query tools = %v, want %v", gotNames, wantNames)
@@ -72,5 +76,75 @@ func TestBackendExposesOnlyShippingQueryToolsAndDelegatesCalls(t *testing.T) {
 	}
 	if calledName != evidencequerymcp.ToolGetEvidenceRecord || string(got) != string(payload) {
 		t.Fatalf("CallTool() = name %q payload %s", calledName, got)
+	}
+}
+
+func TestCanonicalTopologyToolSchemasExposeBoundedContracts(t *testing.T) {
+	toolsByName := make(map[string]map[string]any)
+	for _, tool := range queryTools() {
+		toolsByName[tool.Name] = tool.InputSchema
+	}
+
+	assertRequiredFields(t, toolsByName[evidencequerymcp.ToolOpenCanonicalReadView],
+		"root_node_ids", "max_depth", "max_nodes", "max_edges",
+	)
+	assertRequiredFields(t, toolsByName[evidencequerymcp.ToolFindCanonicalPath],
+		"handle", "from_node_id", "to_node_id", "relations",
+	)
+	assertRequiredFields(t, toolsByName[evidencequerymcp.ToolGetCanonicalTopologyDiagnostics], "handle")
+
+	openProperties := schemaProperties(t, toolsByName[evidencequerymcp.ToolOpenCanonicalReadView])
+	assertIntegerBounds(t, openProperties, "max_depth", 0, 8)
+	assertIntegerBounds(t, openProperties, "max_nodes", 1, 1024)
+	assertIntegerBounds(t, openProperties, "max_edges", 0, 4096)
+
+	wantRelations := make([]string, 0, len(evidencegraph.CanonicalRelations()))
+	for _, relation := range evidencegraph.CanonicalRelations() {
+		wantRelations = append(wantRelations, string(relation))
+	}
+	for _, toolName := range []string{
+		evidencequerymcp.ToolOpenCanonicalReadView,
+		evidencequerymcp.ToolFindCanonicalPath,
+	} {
+		properties := schemaProperties(t, toolsByName[toolName])
+		relations, ok := properties["relations"].(map[string]any)
+		if !ok {
+			t.Fatalf("%s relations schema = %#v", toolName, properties["relations"])
+		}
+		items, ok := relations["items"].(map[string]any)
+		if !ok || !reflect.DeepEqual(items["enum"], wantRelations) {
+			t.Fatalf("%s relation enum = %#v, want %v", toolName, items["enum"], wantRelations)
+		}
+	}
+}
+
+func assertRequiredFields(t *testing.T, schema map[string]any, want ...string) {
+	t.Helper()
+	if schema == nil {
+		t.Fatal("tool schema is missing")
+	}
+	got, ok := schema["required"].([]string)
+	if !ok || !reflect.DeepEqual(got, want) {
+		t.Fatalf("required fields = %#v, want %v", schema["required"], want)
+	}
+}
+
+func schemaProperties(t *testing.T, schema map[string]any) map[string]any {
+	t.Helper()
+	properties, ok := schema["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("schema properties = %#v", schema["properties"])
+	}
+	return properties
+}
+
+func assertIntegerBounds(t *testing.T, properties map[string]any, name string, minimum, maximum int64) {
+	t.Helper()
+	property, ok := properties[name].(map[string]any)
+	if !ok {
+		t.Fatalf("%s schema = %#v", name, properties[name])
+	}
+	if property["type"] != "integer" || property["minimum"] != minimum || property["maximum"] != maximum {
+		t.Fatalf("%s bounds = %#v, want %d..%d", name, property, minimum, maximum)
 	}
 }

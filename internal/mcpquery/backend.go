@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencequerymcp"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpstdio"
@@ -131,7 +132,75 @@ func queryTools() []mcpstdio.Tool {
 				IdempotentHint:  &idempotent,
 			},
 		},
+		{
+			Name:        evidencequerymcp.ToolOpenCanonicalReadView,
+			Title:       "Open Canonical Read View",
+			Description: "Open and retain one bounded immutable PostgreSQL canonical graph view for repeated external reads under the returned handle.",
+			InputSchema: openCanonicalReadViewSchema(),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &readOnly,
+				DestructiveHint: &destructive,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
+			Name:        evidencequerymcp.ToolFindCanonicalPath,
+			Title:       "Find Canonical Path",
+			Description: "Find one relation-scoped structural path witness inside an explicitly opened canonical graph view.",
+			InputSchema: findCanonicalPathSchema(),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &readOnly,
+				DestructiveHint: &destructive,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
+			Name:        evidencequerymcp.ToolGetCanonicalTopologyDiagnostics,
+			Title:       "Get Canonical Topology Diagnostics",
+			Description: "Read derived and supersedes cycle witnesses plus contradiction clusters inside an explicitly opened canonical graph view.",
+			InputSchema: getCanonicalTopologyDiagnosticsSchema(),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &readOnly,
+				DestructiveHint: &destructive,
+				IdempotentHint:  &idempotent,
+			},
+		},
 	}
+}
+
+func openCanonicalReadViewSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"root_node_ids": stringArraySchema(
+			"Canonical evidence node IDs with canon-node: prefixes used as traversal roots.",
+			1,
+			32,
+		),
+		"relations": canonicalRelationsSchema(
+			"Optional canonical relation scope. Empty selects all canonical relations.",
+			0,
+		),
+		"max_depth": boundedIntegerSchema("Maximum traversal depth.", 0, 8),
+		"max_nodes": boundedIntegerSchema("Maximum canonical nodes retained in the view.", 1, 1024),
+		"max_edges": boundedIntegerSchema("Maximum canonical edges retained in the view; must be positive when max_depth is positive.", 0, 4096),
+	}, []string{"root_node_ids", "max_depth", "max_nodes", "max_edges"})
+}
+
+func findCanonicalPathSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"handle":       stringSchema("Handle returned by open_canonical_read_view."),
+		"from_node_id": stringSchema("Canonical evidence node ID where the path starts."),
+		"to_node_id":   stringSchema("Canonical evidence node ID where the path ends."),
+		"relations": canonicalRelationsSchema(
+			"Required non-empty canonical relation scope for path traversal.",
+			1,
+		),
+	}, []string{"handle", "from_node_id", "to_node_id", "relations"})
+}
+
+func getCanonicalTopologyDiagnosticsSchema() map[string]any {
+	return objectSchema(map[string]any{
+		"handle": stringSchema("Handle returned by open_canonical_read_view."),
+	}, []string{"handle"})
 }
 
 func getMCPReadSourceStatesSchema() map[string]any {
@@ -253,6 +322,35 @@ func stringSchema(description string) map[string]any {
 	return map[string]any{
 		"type":        "string",
 		"description": description,
+	}
+}
+
+func stringArraySchema(description string, minimum, maximum int64) map[string]any {
+	return map[string]any{
+		"type":        "array",
+		"description": description,
+		"items": map[string]any{
+			"type": "string",
+		},
+		"minItems": minimum,
+		"maxItems": maximum,
+	}
+}
+
+func canonicalRelationsSchema(description string, minimum int64) map[string]any {
+	values := make([]string, 0, len(evidencegraph.CanonicalRelations()))
+	for _, relation := range evidencegraph.CanonicalRelations() {
+		values = append(values, string(relation))
+	}
+	return map[string]any{
+		"type":        "array",
+		"description": description,
+		"items": map[string]any{
+			"type": "string",
+			"enum": values,
+		},
+		"minItems": minimum,
+		"maxItems": int64(len(values)),
 	}
 }
 
