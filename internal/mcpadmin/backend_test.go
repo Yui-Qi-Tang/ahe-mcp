@@ -123,6 +123,8 @@ func TestAdmissionToolMetadataStatesHumanReviewAndTerminalEffects(t *testing.T) 
 		evidenceingestionmcp.ToolRecordPendingProposalDisposition,
 		evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction,
 		evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition,
+		evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession,
+		evidenceingestionmcp.ToolRecordPendingCanonicalSupersessionDisposition,
 	} {
 		tool, ok := tools[name]
 		if !ok {
@@ -186,6 +188,74 @@ func TestCanonicalContradictionToolMetadataStatesNodeAndPairContract(t *testing.
 				t.Errorf("tool %q description %q does not contain %q", name, description, fragment)
 			}
 		}
+	}
+}
+
+func TestCanonicalSupersessionToolMetadataStatesDirectionAndReviewContract(t *testing.T) {
+	backendTools := make(map[string]mcpToolMetadata)
+	for _, tool := range ingestionTools() {
+		backendTools[tool.Name] = mcpToolMetadata{
+			description: tool.Description,
+		}
+	}
+	coreTools := make(map[string]string)
+	for _, tool := range new(evidenceingestionmcp.Server).Tools() {
+		coreTools[tool.Name] = tool.Description
+	}
+
+	wants := map[string][]string{
+		evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal: {
+			"directed pair",
+			"current claim",
+			"replaced historical claim",
+			"single-use",
+			"does not create",
+			"does not infer or validate",
+		},
+		evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession: {
+			"proposal sentence",
+			"source context",
+			"version difference",
+			"coverage/limitations",
+			"explicit human approval",
+			"current to replaced",
+		},
+		evidenceingestionmcp.ToolRecordPendingCanonicalSupersessionDisposition: {
+			"explicit human",
+			"directed pair",
+			"single-use",
+			"immediately",
+			"terminal",
+		},
+	}
+	for name, fragments := range wants {
+		tool, ok := backendTools[name]
+		if !ok {
+			t.Fatalf("backend tool %q is missing", name)
+		}
+		if tool.description != coreTools[name] {
+			t.Errorf("tool %q descriptions drifted: backend=%q core=%q", name, tool.description, coreTools[name])
+		}
+		for _, fragment := range fragments {
+			if !strings.Contains(tool.description, fragment) {
+				t.Errorf("tool %q description %q does not contain %q", name, tool.description, fragment)
+			}
+		}
+	}
+
+	var submitSchema map[string]any
+	for _, tool := range ingestionTools() {
+		if tool.Name == evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal {
+			submitSchema = tool.InputSchema
+			break
+		}
+	}
+	if submitSchema == nil {
+		t.Fatal("supersession submit schema is missing")
+	}
+	limitations := submitSchema["properties"].(map[string]any)["limitations"].(map[string]any)
+	if limitations["maxItems"] != evidenceingestion.CanonicalSupersessionLimitationsMaxEntries || limitations["items"].(map[string]any)["maxLength"] != evidenceingestion.CanonicalSupersessionLimitationMaxBytes {
+		t.Fatalf("supersession limitations schema = %+v", limitations)
 	}
 }
 

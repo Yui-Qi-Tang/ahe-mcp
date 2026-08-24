@@ -19,8 +19,8 @@ import (
 func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 	server := newServer(&fakeQueryCore{})
 	tools := server.Tools()
-	if len(tools) != 11 {
-		t.Fatalf("len(Tools()) = %d, want 11", len(tools))
+	if len(tools) != 12 {
+		t.Fatalf("len(Tools()) = %d, want 12", len(tools))
 	}
 	if tools[0].Name != ToolGetEvidenceRecord {
 		t.Fatalf("tool name = %q, want %q", tools[0].Name, ToolGetEvidenceRecord)
@@ -40,6 +40,7 @@ func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 		ToolFindCanonicalPath,
 		ToolGetCanonicalTopologyDiagnostics,
 		ToolGetCanonicalContradictionProposal,
+		ToolGetCanonicalSupersessionProposal,
 	}
 	for i, want := range wantNames {
 		if tools[i].Name != want {
@@ -1564,6 +1565,55 @@ func TestCallToolGetsCanonicalContradictionReviewCardAndRelationOrigin(t *testin
 	}
 }
 
+func TestCallToolGetsCanonicalSupersessionReviewCardAndRelationOrigin(t *testing.T) {
+	supersession := testCanonicalSupersessionResult()
+	core := &fakeQueryCore{supersessionResult: supersession}
+	server := newServer(core)
+
+	data, err := server.CallTool(context.Background(), ToolGetCanonicalSupersessionProposal, []byte(`{"canonical_supersession_proposal_id":"supersession-proposal:1"}`))
+	if err != nil {
+		t.Fatalf("CallTool(supersession proposal) error = %v", err)
+	}
+	var review CanonicalSupersessionProposalResponse
+	if err := json.Unmarshal(data, &review); err != nil {
+		t.Fatalf("Unmarshal supersession proposal: %v", err)
+	}
+	if core.supersessionProposalID != "supersession-proposal:1" || review.Proposal.Relation != "supersedes" || review.Decision == nil {
+		t.Fatalf("supersession review = %+v", review)
+	}
+	if review.Proposal.ProposalSentence == "" || review.Proposal.VersionDifference == "" || len(review.Proposal.Limitations) != 1 {
+		t.Fatalf("supersession review material = %+v", review.Proposal)
+	}
+	if review.From.RecordRef.ID != supersession.From.CanonicalID || review.To.RecordRef.ID != supersession.To.CanonicalID || len(review.From.SourceRefs) == 0 || len(review.To.SourceRefs) == 0 {
+		t.Fatalf("review endpoints are not grounded: from=%+v to=%+v", review.From, review.To)
+	}
+
+	relation := evidenceingestion.CanonicalRelationQueryResult{
+		Edge: evidenceingestion.CanonicalGraphEdge{
+			ID:                           "canon-edge:supersession",
+			From:                         supersession.From.CanonicalID,
+			To:                           supersession.To.CanonicalID,
+			Relation:                     evidencegraph.CanonicalSupersedes,
+			OriginSupersessionProposalID: supersession.Proposal.ID,
+		},
+		From:                       supersession.From,
+		To:                         supersession.To,
+		OriginSupersessionProposal: &supersession,
+	}
+	server = newServer(&fakeQueryCore{canonicalRelationResult: relation})
+	data, err = server.CallTool(context.Background(), ToolGetRelationProvenance, []byte(`{"canonical_edge_id":"canon-edge:supersession"}`))
+	if err != nil {
+		t.Fatalf("CallTool(supersession relation) error = %v", err)
+	}
+	var provenance RelationProvenanceResponse
+	if err := json.Unmarshal(data, &provenance); err != nil {
+		t.Fatalf("Unmarshal supersession relation: %v", err)
+	}
+	if provenance.OriginRecord != nil || provenance.OriginContradictionProposal != nil || provenance.OriginSupersessionProposal == nil || provenance.OriginSupersessionProposal.Proposal.CanonicalSupersessionProposalID != supersession.Proposal.ID {
+		t.Fatalf("supersession relation origin = %+v", provenance)
+	}
+}
+
 func TestCallToolListsRepositorySymbolNeighbors(t *testing.T) {
 	relation := testRepositoryRelationResult("occ:neighbor")
 	neighbor := relation.CodeRelation.Target
@@ -2295,6 +2345,41 @@ func testCanonicalContradictionResult() evidenceingestion.CanonicalContradiction
 	}
 }
 
+func testCanonicalSupersessionResult() evidenceingestion.CanonicalSupersessionQueryResult {
+	current := testCanonicalQueryResult("canon-node:current", "occ:current")
+	replaced := testCanonicalQueryResult("canon-node:replaced", "occ:replaced")
+	replaced.Payload.Claim = "Refunds may take 60 days."
+	return evidenceingestion.CanonicalSupersessionQueryResult{
+		Proposal: evidenceingestion.CanonicalSupersessionProposal{
+			ID:                  "supersession-proposal:1",
+			RequestID:           "request:1",
+			ProposalFingerprint: "supersession-fp:1",
+			FromNodeID:          current.CanonicalID,
+			ToNodeID:            replaced.CanonicalID,
+			Relation:            evidencegraph.CanonicalSupersedes,
+			ProposalSentence:    "The current refund claim supersedes the historical claim.",
+			Rationale:           "The current source explicitly replaces the older revision.",
+			VersionDifference:   "The refund period changes from 60 days to 30 days.",
+			Limitations:         []string{"Only the supplied policy scope was compared."},
+			ProducerName:        "claude-code",
+			ProducerVersion:     "workflow-v1",
+			ProducerSessionRef:  "session:1",
+			AdmissionOutcome:    "admitted",
+			CanonicalEdgeID:     "canon-edge:supersession",
+		},
+		From: current,
+		To:   replaced,
+		Decision: &evidenceingestion.CanonicalSupersessionDecision{
+			ID:              "supersession-adm:1",
+			ProposalID:      "supersession-proposal:1",
+			Outcome:         "admitted",
+			CanonicalEdgeID: "canon-edge:supersession",
+			DecisionBy:      "reviewer",
+			DecisionReason:  "reviewed both grounded versions",
+		},
+	}
+}
+
 type fakeQueryCore struct {
 	calls                    int
 	canonicalCalls           int
@@ -2316,6 +2401,9 @@ type fakeQueryCore struct {
 	contradictionProposalID  string
 	contradictionResult      evidenceingestion.CanonicalContradictionQueryResult
 	contradictionErr         error
+	supersessionProposalID   string
+	supersessionResult       evidenceingestion.CanonicalSupersessionQueryResult
+	supersessionErr          error
 	canonicalNeighborInput   evidenceingestion.CanonicalNeighborInput
 	canonicalNeighborResult  []evidenceingestion.CanonicalNeighborResult
 	canonicalNeighborErr     error
@@ -2364,6 +2452,14 @@ func (c *fakeQueryCore) GetCanonicalContradictionProposal(_ context.Context, pro
 		return evidenceingestion.CanonicalContradictionQueryResult{}, c.contradictionErr
 	}
 	return c.contradictionResult, nil
+}
+
+func (c *fakeQueryCore) GetCanonicalSupersessionProposal(_ context.Context, proposalID string) (evidenceingestion.CanonicalSupersessionQueryResult, error) {
+	c.supersessionProposalID = proposalID
+	if c.supersessionErr != nil {
+		return evidenceingestion.CanonicalSupersessionQueryResult{}, c.supersessionErr
+	}
+	return c.supersessionResult, nil
 }
 
 func (c *fakeQueryCore) GetCanonicalEvidenceByID(_ context.Context, canonicalID string) (evidenceingestion.CanonicalQueryResult, error) {
