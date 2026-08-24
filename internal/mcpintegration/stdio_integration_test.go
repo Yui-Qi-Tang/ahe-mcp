@@ -41,59 +41,74 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query NewServer() error = %v", err)
 	}
-	ingestMCP := stdioServer(t, "ahe-ingest-mcp-test", mcpadmin.NewBackend(ingestCore))
+	ingestBackend, err := mcpadmin.NewSourceIngressBackend(ctx, mcpadmin.NewBackend(ingestCore))
+	if err != nil {
+		t.Fatalf("ingest NewSourceIngressBackend() error = %v", err)
+	}
+	t.Cleanup(ingestBackend.Close)
+	ingestMCP := stdioServer(t, "ahe-ingest-mcp-test", ingestBackend)
 	queryMCP := stdioServer(t, "ahe-query-mcp-test", mcpquery.NewBackend(queryCore))
 
 	assertStdioInitialized(t, ctx, ingestMCP, "ahe-ingest-mcp-test")
 	assertStdioInitialized(t, ctx, queryMCP, "ahe-query-mcp-test")
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitTextSource)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitExternalSource)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolInspectGoplsWorkspace)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolInspectGitRepositoryChange)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolObserveGitRepositoryChange)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolScheduleGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolClaimGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRenewGitRepositoryExtractionWorkLease)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolExecuteClaimedGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolListExpiredGitRepositoryExtractionWorkClaims)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolListExpiredGitRepositoryExtractionWorkExecutions)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolFinishGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRecoverExpiredGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRepairExpiredGitRepositoryExtractionWorkExecution)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRetryFailedGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolClassifyFailedGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolListDueGitRepositoryExtractionWorkRetryDecisions)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolConsumeDueGitRepositoryExtractionWorkRetryDecision)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunDueGitRepositoryExtractionWorkRetryControllerTick)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolCaptureGitRepositorySnapshot)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolGetRepositoryExtractorInput)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunRepositoryGoParserExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunRepositoryGoplsExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolListRepositorySourceGenerations)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolActivateRepositorySourceGeneration)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunLocalOllamaExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunGoParserExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunGoplsExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRecordPendingProposalDisposition)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitCanonicalContradictionProposal)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetEvidenceRecord)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolListEvidenceRecords)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolSearchEvidenceRecords)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetGroundedEvidenceBrief)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolListEvidenceNeighbors)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetRelationProvenance)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetMCPReadSourceStates)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolOpenCanonicalReadView)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolFindCanonicalPath)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalTopologyDiagnostics)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalContradictionProposal)
-	assertStdioToolNotListed(t, ctx, queryMCP, "get_mcp_read_source_transition")
-	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitTextSource)
-	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitExternalSource)
-	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolRecordPendingProposalDisposition)
+	assertStdioToolNames(t, ctx, ingestMCP, []string{
+		evidenceingestionmcp.ToolSubmitManualEvidence,
+		evidenceingestionmcp.ToolSubmitTextSource,
+		evidenceingestionmcp.ToolSubmitExtractorOutput,
+		evidenceingestionmcp.ToolGetExtractorInput,
+		evidenceingestionmcp.ToolInspectGoplsWorkspace,
+		evidenceingestionmcp.ToolInspectGitRepositoryChange,
+		evidenceingestionmcp.ToolObserveGitRepositoryChange,
+		evidenceingestionmcp.ToolScheduleGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolClaimGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolRenewGitRepositoryExtractionWorkLease,
+		evidenceingestionmcp.ToolExecuteClaimedGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolRunGitRepositoryExtractionWorkerTick,
+		evidenceingestionmcp.ToolListExpiredGitRepositoryExtractionWorkClaims,
+		evidenceingestionmcp.ToolListExpiredGitRepositoryExtractionWorkExecutions,
+		evidenceingestionmcp.ToolFinishGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolRecoverExpiredGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolRepairExpiredGitRepositoryExtractionWorkExecution,
+		evidenceingestionmcp.ToolRetryFailedGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolCaptureGitRepositorySnapshot,
+		evidenceingestionmcp.ToolGetRepositoryExtractorInput,
+		evidenceingestionmcp.ToolCreateRepositoryExtractionRun,
+		evidenceingestionmcp.ToolRunRepositoryGoParserExtractor,
+		evidenceingestionmcp.ToolRunRepositoryGoplsExtractor,
+		evidenceingestionmcp.ToolListRepositorySourceGenerations,
+		evidenceingestionmcp.ToolActivateRepositorySourceGeneration,
+		evidenceingestionmcp.ToolRunLocalOllamaExtractor,
+		evidenceingestionmcp.ToolRunGoParserExtractor,
+		evidenceingestionmcp.ToolRunGoplsExtractor,
+		evidenceingestionmcp.ToolAdmitPendingProposal,
+		evidenceingestionmcp.ToolRecordPendingProposalDisposition,
+		evidenceingestionmcp.ToolSubmitCanonicalContradictionProposal,
+		evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction,
+		evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition,
+		evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal,
+		evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession,
+		evidenceingestionmcp.ToolRecordPendingCanonicalSupersessionDisposition,
+		evidenceingestionmcp.ToolClassifyFailedGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolListDueGitRepositoryExtractionWorkRetryDecisions,
+		evidenceingestionmcp.ToolConsumeDueGitRepositoryExtractionWorkRetryDecision,
+		evidenceingestionmcp.ToolRunDueGitRepositoryExtractionWorkRetryControllerTick,
+		evidenceingestionmcp.ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick,
+		evidenceingestionmcp.ToolSubmitExternalSource,
+	})
+	assertStdioToolNames(t, ctx, queryMCP, []string{
+		evidencequerymcp.ToolGetEvidenceRecord,
+		evidencequerymcp.ToolListEvidenceRecords,
+		evidencequerymcp.ToolSearchEvidenceRecords,
+		evidencequerymcp.ToolGetGroundedEvidenceBrief,
+		evidencequerymcp.ToolListEvidenceNeighbors,
+		evidencequerymcp.ToolGetRelationProvenance,
+		evidencequerymcp.ToolGetMCPReadSourceStates,
+		evidencequerymcp.ToolOpenCanonicalReadView,
+		evidencequerymcp.ToolFindCanonicalPath,
+		evidencequerymcp.ToolGetCanonicalTopologyDiagnostics,
+		evidencequerymcp.ToolGetCanonicalContradictionProposal,
+		evidencequerymcp.ToolGetCanonicalSupersessionProposal,
+	})
 
 	gitRoot := t.TempDir()
 	stdioWriteFile(t, filepath.Join(gitRoot, "main.go"), []byte("package main\n"))
@@ -816,6 +831,64 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		t.Fatalf("contradiction topology diagnostics = %+v", contradictionDiagnostics)
 	}
 
+	supersessionProposal := stdioCallTool[evidenceingestionmcp.SubmitCanonicalSupersessionProposalResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal, map[string]any{
+		"request_id":           "stdio-canonical-supersession",
+		"from_node_id":         contradictionEndpoint.CanonicalRef,
+		"to_node_id":           admission.CanonicalRef,
+		"proposal_sentence":    "The current refund claim supersedes the historical refund claim.",
+		"rationale":            "The reviewed current revision explicitly replaces the historical revision.",
+		"version_difference":   "The current revision changes the refund period from 60 days to 30 days.",
+		"limitations":          []string{"Only the supplied fixture scope was compared."},
+		"producer_name":        "stdio-agent",
+		"producer_version":     "workflow-v1",
+		"producer_session_ref": "session:stdio-supersession",
+	})
+	if supersessionProposal.AdmissionOutcome != "pending" || supersessionProposal.Relation != "supersedes" || supersessionProposal.FromNodeID != contradictionEndpoint.CanonicalRef || supersessionProposal.ToNodeID != admission.CanonicalRef {
+		t.Fatalf("supersession proposal = %+v", supersessionProposal)
+	}
+	supersessionReview := stdioCallTool[evidencequerymcp.CanonicalSupersessionProposalResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalSupersessionProposal, map[string]any{
+		"canonical_supersession_proposal_id": supersessionProposal.CanonicalSupersessionProposalID,
+	})
+	if supersessionReview.Proposal.AdmissionOutcome != "pending" || supersessionReview.Decision != nil || supersessionReview.Proposal.ProposalSentence == "" || supersessionReview.Proposal.VersionDifference == "" || len(supersessionReview.Proposal.Limitations) != 1 || len(supersessionReview.From.SourceRefs) == 0 || len(supersessionReview.To.SourceRefs) == 0 {
+		t.Fatalf("pending supersession review card = %+v", supersessionReview)
+	}
+	supersessionAdmission := stdioCallTool[evidenceingestionmcp.CanonicalSupersessionDecisionResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession, map[string]any{
+		"canonical_supersession_proposal_id": supersessionProposal.CanonicalSupersessionProposalID,
+		"decision_by":                        "stdio-integration-test",
+		"decision_reason":                    "reviewed the proposal sentence, both grounded versions, version difference, and limitations",
+	})
+	if supersessionAdmission.AdmissionOutcome != "admitted" || supersessionAdmission.CanonicalEdgeID == "" {
+		t.Fatalf("supersession admission = %+v", supersessionAdmission)
+	}
+	supersessionRelation := stdioCallTool[evidencequerymcp.RelationProvenanceResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetRelationProvenance, map[string]any{
+		"canonical_edge_id": supersessionAdmission.CanonicalEdgeID,
+	})
+	if supersessionRelation.RelationKind != "supersedes" || supersessionRelation.OriginRecord != nil || supersessionRelation.OriginContradictionProposal != nil || supersessionRelation.OriginSupersessionProposal == nil {
+		t.Fatalf("supersession relation provenance = %+v", supersessionRelation)
+	}
+	supersessionView := stdioCallTool[evidencequerymcp.OpenCanonicalReadViewResponse](t, ctx, queryMCP, evidencequerymcp.ToolOpenCanonicalReadView, map[string]any{
+		"root_node_ids": []string{contradictionEndpoint.CanonicalRef},
+		"relations":     []string{"supersedes"},
+		"max_depth":     1,
+		"max_nodes":     4,
+		"max_edges":     4,
+	})
+	supersessionPath := stdioCallTool[evidencequerymcp.FindCanonicalPathResponse](t, ctx, queryMCP, evidencequerymcp.ToolFindCanonicalPath, map[string]any{
+		"handle":       supersessionView.View.Handle,
+		"from_node_id": contradictionEndpoint.CanonicalRef,
+		"to_node_id":   admission.CanonicalRef,
+		"relations":    []string{"supersedes"},
+	})
+	if !supersessionPath.Witness.Found || len(supersessionPath.Witness.EdgeIDs) != 1 || supersessionPath.Witness.EdgeIDs[0] != supersessionAdmission.CanonicalEdgeID {
+		t.Fatalf("supersession path = %+v", supersessionPath)
+	}
+	supersessionDiagnostics := stdioCallTool[evidencequerymcp.GetCanonicalTopologyDiagnosticsResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalTopologyDiagnostics, map[string]any{
+		"handle": supersessionView.View.Handle,
+	})
+	if supersessionDiagnostics.Diagnostics.SupersedesCycle != nil {
+		t.Fatalf("supersession topology diagnostics = %+v", supersessionDiagnostics)
+	}
+
 	dispositionSource := stdioCallTool[evidenceingestionmcp.SubmitTextSourceResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitTextSource, map[string]any{
 		"request_id":      "stdio-disposition-source-intake",
 		"source_id":       "fixture-refund-policy-disposition",
@@ -896,8 +969,10 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	stdioAssertTableCount(t, ctx, pool, "admission_decisions", 3)
 	stdioAssertTableCount(t, ctx, pool, "canonical_contradiction_proposals", 1)
 	stdioAssertTableCount(t, ctx, pool, "canonical_contradiction_admission_decisions", 1)
+	stdioAssertTableCount(t, ctx, pool, "canonical_supersession_proposals", 1)
+	stdioAssertTableCount(t, ctx, pool, "canonical_supersession_admission_decisions", 1)
 	stdioAssertTableCount(t, ctx, pool, "canonical_graph_nodes", 4)
-	stdioAssertTableCount(t, ctx, pool, "canonical_graph_edges", 3)
+	stdioAssertTableCount(t, ctx, pool, "canonical_graph_edges", 4)
 
 	retriedThirdWork := stdioCallTool[evidenceingestionmcp.RetryFailedGitRepositoryExtractionWorkResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolRetryFailedGitRepositoryExtractionWork, map[string]any{
 		"request_id":     "stdio-clean-work-third-retry",
@@ -1477,7 +1552,7 @@ func assertStdioToolListed(t *testing.T, ctx context.Context, server *mcpstdio.S
 	t.Fatalf("tools/list missing %q: %+v", name, resp.Tools)
 }
 
-func assertStdioToolNotListed(t *testing.T, ctx context.Context, server *mcpstdio.Server, name string) {
+func assertStdioToolNames(t *testing.T, ctx context.Context, server *mcpstdio.Server, want []string) {
 	t.Helper()
 	result := stdioRPC(t, ctx, server, "tools/list", nil)
 	var resp struct {
@@ -1488,9 +1563,12 @@ func assertStdioToolNotListed(t *testing.T, ctx context.Context, server *mcpstdi
 	if err := json.Unmarshal(result, &resp); err != nil {
 		t.Fatalf("unmarshal tools/list: %v", err)
 	}
-	for _, tool := range resp.Tools {
-		if tool.Name == name {
-			t.Fatalf("tools/list unexpectedly contains %q: %+v", name, resp.Tools)
+	if len(resp.Tools) != len(want) {
+		t.Fatalf("tools/list count = %d, want %d: %+v", len(resp.Tools), len(want), resp.Tools)
+	}
+	for i, tool := range resp.Tools {
+		if tool.Name != want[i] {
+			t.Fatalf("tools/list[%d] = %q, want %q: %+v", i, tool.Name, want[i], resp.Tools)
 		}
 	}
 }

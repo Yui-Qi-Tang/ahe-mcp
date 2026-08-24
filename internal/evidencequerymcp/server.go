@@ -45,6 +45,8 @@ const (
 	ToolGetCanonicalTopologyDiagnostics = "get_canonical_topology_diagnostics"
 	// ToolGetCanonicalContradictionProposal returns a review card for one contradiction proposal.
 	ToolGetCanonicalContradictionProposal = "get_canonical_contradiction_proposal"
+	// ToolGetCanonicalSupersessionProposal returns a review card for one directed supersession proposal.
+	ToolGetCanonicalSupersessionProposal = "get_canonical_supersession_proposal"
 
 	toolErrorInvalidRequest  = "invalid_request"
 	toolErrorInvalidRecordID = "invalid_record_id"
@@ -355,6 +357,48 @@ type CanonicalContradictionProposalResponse struct {
 	Decision *CanonicalContradictionDecisionInfo `json:"decision,omitempty"`
 }
 
+// GetCanonicalSupersessionProposalRequest selects one exact directed relation proposal.
+type GetCanonicalSupersessionProposalRequest struct {
+	CanonicalSupersessionProposalID string `json:"canonical_supersession_proposal_id"`
+}
+
+// CanonicalSupersessionProposalInfo exposes direction, review material, and producer metadata.
+type CanonicalSupersessionProposalInfo struct {
+	CanonicalSupersessionProposalID string   `json:"canonical_supersession_proposal_id"`
+	RequestID                       string   `json:"request_id"`
+	ProposalFingerprint             string   `json:"proposal_fingerprint"`
+	FromNodeID                      string   `json:"from_node_id"`
+	ToNodeID                        string   `json:"to_node_id"`
+	Relation                        string   `json:"relation"`
+	ProposalSentence                string   `json:"proposal_sentence"`
+	Rationale                       string   `json:"rationale"`
+	VersionDifference               string   `json:"version_difference"`
+	Limitations                     []string `json:"limitations"`
+	ProducerName                    string   `json:"producer_name"`
+	ProducerVersion                 string   `json:"producer_version"`
+	ProducerSessionRef              string   `json:"producer_session_ref,omitempty"`
+	AdmissionOutcome                string   `json:"admission_outcome"`
+	CanonicalEdgeID                 string   `json:"canonical_edge_id,omitempty"`
+}
+
+// CanonicalSupersessionDecisionInfo exposes the immutable human review result.
+type CanonicalSupersessionDecisionInfo struct {
+	AdmissionDecisionID string `json:"admission_decision_id"`
+	AdmissionOutcome    string `json:"admission_outcome"`
+	CanonicalEdgeID     string `json:"canonical_edge_id,omitempty"`
+	DecisionBy          string `json:"decision_by"`
+	DecisionReason      string `json:"decision_reason"`
+}
+
+// CanonicalSupersessionProposalResponse is the minimum human review card:
+// proposal material, current and replaced grounded claims, and any decision.
+type CanonicalSupersessionProposalResponse struct {
+	Proposal CanonicalSupersessionProposalInfo  `json:"proposal"`
+	From     GetEvidenceRecordResponse          `json:"from"`
+	To       GetEvidenceRecordResponse          `json:"to"`
+	Decision *CanonicalSupersessionDecisionInfo `json:"decision,omitempty"`
+}
+
 // CanonicalEdgeInfo exposes an admitted canonical edge without projection controls.
 type CanonicalEdgeInfo struct {
 	From       RecordRef                      `json:"from"`
@@ -370,6 +414,7 @@ type RelationProvenanceResponse struct {
 	RelationKind                string                                  `json:"relation_kind"`
 	OriginRecord                *GetEvidenceRecordResponse              `json:"origin_record,omitempty"`
 	OriginContradictionProposal *CanonicalContradictionProposalResponse `json:"origin_contradiction_proposal,omitempty"`
+	OriginSupersessionProposal  *CanonicalSupersessionProposalResponse  `json:"origin_supersession_proposal,omitempty"`
 	SourceRefs                  []evidenceingestion.ResolvedSourceRef   `json:"source_refs,omitempty"`
 	CodeRelation                *evidenceingestion.ResolvedCodeRelation `json:"code_relation,omitempty"`
 	CanonicalEdge               *CanonicalEdgeInfo                      `json:"canonical_edge,omitempty"`
@@ -553,6 +598,7 @@ type queryCore interface {
 	ReadCanonicalGraphView(ctx context.Context, input evidenceingestion.CanonicalReadInput) (evidenceingestion.CanonicalReadView, error)
 	GetCanonicalRelationByID(ctx context.Context, canonicalEdgeID string) (evidenceingestion.CanonicalRelationQueryResult, error)
 	GetCanonicalContradictionProposal(ctx context.Context, proposalID string) (evidenceingestion.CanonicalContradictionQueryResult, error)
+	GetCanonicalSupersessionProposal(ctx context.Context, proposalID string) (evidenceingestion.CanonicalSupersessionQueryResult, error)
 	GetCanonicalEvidenceByID(ctx context.Context, canonicalID string) (evidenceingestion.CanonicalQueryResult, error)
 	ListCanonicalNeighbors(ctx context.Context, input evidenceingestion.CanonicalNeighborInput) ([]evidenceingestion.CanonicalNeighborResult, error)
 	ListProposalRecords(ctx context.Context, input evidenceingestion.ProposalListInput) ([]evidenceingestion.ProposalQueryResult, error)
@@ -640,6 +686,11 @@ func (s *Server) Tools() []ToolDefinition {
 		{
 			Name:        ToolGetCanonicalContradictionProposal,
 			Description: "Read one pending or terminal contradiction proposal with both complete grounded canonical nodes, producer rationale, and any human review decision.",
+			ReadOnly:    true,
+		},
+		{
+			Name:        ToolGetCanonicalSupersessionProposal,
+			Description: "Read one pending or terminal supersession proposal with its proposal sentence, both complete grounded canonical nodes (from=current, to=replaced), version difference, coverage/limitations, producer metadata, and any human review decision.",
 			ReadOnly:    true,
 		},
 	}
@@ -738,6 +789,20 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
 		}
 		resp, err := s.GetCanonicalContradictionProposal(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
+		}
+		return data, nil
+	case ToolGetCanonicalSupersessionProposal:
+		var req GetCanonicalSupersessionProposalRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.GetCanonicalSupersessionProposal(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -1027,6 +1092,22 @@ func (s *Server) GetCanonicalContradictionProposal(ctx context.Context, req GetC
 	return mapCanonicalContradictionProposal(result), nil
 }
 
+// GetCanonicalSupersessionProposal returns the complete review card for one directed proposal.
+func (s *Server) GetCanonicalSupersessionProposal(ctx context.Context, req GetCanonicalSupersessionProposalRequest) (CanonicalSupersessionProposalResponse, error) {
+	proposalID := strings.TrimSpace(req.CanonicalSupersessionProposalID)
+	if !strings.HasPrefix(proposalID, evidenceingestion.CanonicalSupersessionProposalIDPrefix) {
+		return CanonicalSupersessionProposalResponse{}, &ToolError{
+			Code:    toolErrorInvalidRecordID,
+			Message: fmt.Sprintf("canonical_supersession_proposal_id %q must start with %s", proposalID, evidenceingestion.CanonicalSupersessionProposalIDPrefix),
+		}
+	}
+	result, err := s.core.GetCanonicalSupersessionProposal(ctx, proposalID)
+	if err != nil {
+		return CanonicalSupersessionProposalResponse{}, mapToolError(err)
+	}
+	return mapCanonicalSupersessionProposal(result), nil
+}
+
 // ListEvidenceNeighbors returns a bounded one-hop neighborhood on the surface implied by the root ID.
 func (s *Server) ListEvidenceNeighbors(ctx context.Context, req ListEvidenceNeighborsRequest) (ListEvidenceNeighborsResponse, error) {
 	canonicalID := strings.TrimSpace(req.CanonicalID)
@@ -1131,6 +1212,10 @@ func (c postgresCore) GetCanonicalRelationByID(ctx context.Context, canonicalEdg
 
 func (c postgresCore) GetCanonicalContradictionProposal(ctx context.Context, proposalID string) (evidenceingestion.CanonicalContradictionQueryResult, error) {
 	return evidenceingestion.GetCanonicalContradictionProposal(ctx, c.pool, proposalID)
+}
+
+func (c postgresCore) GetCanonicalSupersessionProposal(ctx context.Context, proposalID string) (evidenceingestion.CanonicalSupersessionQueryResult, error) {
+	return evidenceingestion.GetCanonicalSupersessionProposal(ctx, c.pool, proposalID)
 }
 
 func (c postgresCore) TraceProposalProvenance(ctx context.Context, occurrenceID string) (evidenceingestion.ProposalQueryResult, error) {
@@ -2410,6 +2495,10 @@ func mapCanonicalRelationProvenance(result evidenceingestion.CanonicalRelationQu
 		origin := mapCanonicalContradictionProposal(*result.OriginContradictionProposal)
 		response.OriginContradictionProposal = &origin
 	}
+	if result.OriginSupersessionProposal != nil {
+		origin := mapCanonicalSupersessionProposal(*result.OriginSupersessionProposal)
+		response.OriginSupersessionProposal = &origin
+	}
 	return response
 }
 
@@ -2435,6 +2524,41 @@ func mapCanonicalContradictionProposal(result evidenceingestion.CanonicalContrad
 	}
 	if result.Decision != nil {
 		response.Decision = &CanonicalContradictionDecisionInfo{
+			AdmissionDecisionID: result.Decision.ID,
+			AdmissionOutcome:    result.Decision.Outcome,
+			CanonicalEdgeID:     result.Decision.CanonicalEdgeID,
+			DecisionBy:          result.Decision.DecisionBy,
+			DecisionReason:      result.Decision.DecisionReason,
+		}
+	}
+	return response
+}
+
+func mapCanonicalSupersessionProposal(result evidenceingestion.CanonicalSupersessionQueryResult) CanonicalSupersessionProposalResponse {
+	proposal := result.Proposal
+	response := CanonicalSupersessionProposalResponse{
+		Proposal: CanonicalSupersessionProposalInfo{
+			CanonicalSupersessionProposalID: proposal.ID,
+			RequestID:                       proposal.RequestID,
+			ProposalFingerprint:             proposal.ProposalFingerprint,
+			FromNodeID:                      proposal.FromNodeID,
+			ToNodeID:                        proposal.ToNodeID,
+			Relation:                        string(proposal.Relation),
+			ProposalSentence:                proposal.ProposalSentence,
+			Rationale:                       proposal.Rationale,
+			VersionDifference:               proposal.VersionDifference,
+			Limitations:                     append([]string(nil), proposal.Limitations...),
+			ProducerName:                    proposal.ProducerName,
+			ProducerVersion:                 proposal.ProducerVersion,
+			ProducerSessionRef:              proposal.ProducerSessionRef,
+			AdmissionOutcome:                proposal.AdmissionOutcome,
+			CanonicalEdgeID:                 proposal.CanonicalEdgeID,
+		},
+		From: mapCanonicalResult(result.From),
+		To:   mapCanonicalResult(result.To),
+	}
+	if result.Decision != nil {
+		response.Decision = &CanonicalSupersessionDecisionInfo{
 			AdmissionDecisionID: result.Decision.ID,
 			AdmissionOutcome:    result.Decision.Outcome,
 			CanonicalEdgeID:     result.Decision.CanonicalEdgeID,

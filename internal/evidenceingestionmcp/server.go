@@ -89,6 +89,12 @@ const (
 	ToolAdmitPendingCanonicalContradiction = "admit_pending_canonical_contradiction"
 	// ToolRecordPendingCanonicalContradictionDisposition records a rejected or audit-only contradiction decision.
 	ToolRecordPendingCanonicalContradictionDisposition = "record_pending_canonical_contradiction_disposition"
+	// ToolSubmitCanonicalSupersessionProposal proposes a human-reviewable directed version replacement.
+	ToolSubmitCanonicalSupersessionProposal = "submit_canonical_supersession_proposal"
+	// ToolAdmitPendingCanonicalSupersession admits one reviewed supersession proposal.
+	ToolAdmitPendingCanonicalSupersession = "admit_pending_canonical_supersession"
+	// ToolRecordPendingCanonicalSupersessionDisposition records a rejected or audit-only supersession decision.
+	ToolRecordPendingCanonicalSupersessionDisposition = "record_pending_canonical_supersession_disposition"
 	// ToolRunLocalOllamaExtractor invokes a trusted local Ollama extractor over a saved source view.
 	ToolRunLocalOllamaExtractor = "run_local_ollama_extractor"
 	// ToolRunGoParserExtractor invokes a deterministic Go declaration extractor over a saved source view.
@@ -351,6 +357,36 @@ type RecordPendingCanonicalContradictionDispositionRequest struct {
 	DecisionReason string `json:"decision_reason"`
 }
 
+// SubmitCanonicalSupersessionProposalRequest proposes one directed relation
+// from a current canonical claim to the historical claim it replaces.
+type SubmitCanonicalSupersessionProposalRequest struct {
+	RequestID          string   `json:"request_id"`
+	FromNodeID         string   `json:"from_node_id"`
+	ToNodeID           string   `json:"to_node_id"`
+	ProposalSentence   string   `json:"proposal_sentence"`
+	Rationale          string   `json:"rationale"`
+	VersionDifference  string   `json:"version_difference"`
+	Limitations        []string `json:"limitations"`
+	ProducerName       string   `json:"producer_name"`
+	ProducerVersion    string   `json:"producer_version"`
+	ProducerSessionRef string   `json:"producer_session_ref,omitempty"`
+}
+
+// AdmitPendingCanonicalSupersessionRequest records explicit human approval.
+type AdmitPendingCanonicalSupersessionRequest struct {
+	ProposalID     string `json:"canonical_supersession_proposal_id"`
+	DecisionBy     string `json:"decision_by"`
+	DecisionReason string `json:"decision_reason"`
+}
+
+// RecordPendingCanonicalSupersessionDispositionRequest records a non-admitted terminal decision.
+type RecordPendingCanonicalSupersessionDispositionRequest struct {
+	ProposalID     string `json:"canonical_supersession_proposal_id"`
+	Outcome        string `json:"outcome"`
+	DecisionBy     string `json:"decision_by"`
+	DecisionReason string `json:"decision_reason"`
+}
+
 // SubmitManualEvidenceResponse is the minimal pending proposal response.
 type SubmitManualEvidenceResponse struct {
 	SourceSnapshotID     string `json:"source_snapshot_id"`
@@ -550,6 +586,35 @@ type CanonicalContradictionDecisionResponse struct {
 	Replayed                         bool   `json:"replayed"`
 }
 
+// SubmitCanonicalSupersessionProposalResponse reports durable directed proposal identity and state.
+type SubmitCanonicalSupersessionProposalResponse struct {
+	CanonicalSupersessionProposalID string   `json:"canonical_supersession_proposal_id"`
+	FromNodeID                      string   `json:"from_node_id"`
+	ToNodeID                        string   `json:"to_node_id"`
+	Relation                        string   `json:"relation"`
+	ProposalSentence                string   `json:"proposal_sentence"`
+	Rationale                       string   `json:"rationale"`
+	VersionDifference               string   `json:"version_difference"`
+	Limitations                     []string `json:"limitations"`
+	ProducerName                    string   `json:"producer_name"`
+	ProducerVersion                 string   `json:"producer_version"`
+	ProducerSessionRef              string   `json:"producer_session_ref,omitempty"`
+	AdmissionOutcome                string   `json:"admission_outcome"`
+	CanonicalEdgeID                 string   `json:"canonical_edge_id,omitempty"`
+	Replayed                        bool     `json:"replayed"`
+}
+
+// CanonicalSupersessionDecisionResponse reports one immutable review result.
+type CanonicalSupersessionDecisionResponse struct {
+	CanonicalSupersessionProposalID string `json:"canonical_supersession_proposal_id"`
+	AdmissionDecisionID             string `json:"admission_decision_id"`
+	AdmissionOutcome                string `json:"admission_outcome"`
+	CanonicalEdgeID                 string `json:"canonical_edge_id,omitempty"`
+	DecisionBy                      string `json:"decision_by"`
+	DecisionReason                  string `json:"decision_reason"`
+	Replayed                        bool   `json:"replayed"`
+}
+
 // ToolError is the stable MCP-shaped error returned by the adapter.
 type ToolError struct {
 	Code    string `json:"code"`
@@ -580,6 +645,9 @@ type ingestionCore interface {
 	SubmitCanonicalContradictionProposal(ctx context.Context, input evidenceingestion.CanonicalContradictionProposalInput) (evidenceingestion.CanonicalContradictionProposalResult, error)
 	AdmitPendingCanonicalContradiction(ctx context.Context, input evidenceingestion.CanonicalContradictionAdmissionInput) (evidenceingestion.CanonicalContradictionDecisionResult, error)
 	RecordPendingCanonicalContradictionDisposition(ctx context.Context, input evidenceingestion.CanonicalContradictionDispositionInput) (evidenceingestion.CanonicalContradictionDecisionResult, error)
+	SubmitCanonicalSupersessionProposal(ctx context.Context, input evidenceingestion.CanonicalSupersessionProposalInput) (evidenceingestion.CanonicalSupersessionProposalResult, error)
+	AdmitPendingCanonicalSupersession(ctx context.Context, input evidenceingestion.CanonicalSupersessionAdmissionInput) (evidenceingestion.CanonicalSupersessionDecisionResult, error)
+	RecordPendingCanonicalSupersessionDisposition(ctx context.Context, input evidenceingestion.CanonicalSupersessionDispositionInput) (evidenceingestion.CanonicalSupersessionDecisionResult, error)
 	ActivateRepositorySourceGeneration(ctx context.Context, input evidenceingestion.RepositorySourceGenerationActivationInput) (evidenceingestion.RepositorySourceGenerationActivationResult, error)
 	ListRepositorySourceGenerations(ctx context.Context, input evidenceingestion.RepositorySourceGenerationListInput) ([]evidenceingestion.RepositorySourceGenerationStatus, error)
 	BuildExtractorInput(ctx context.Context, extractionViewID string) (evidenceingestion.ExtractorInput, error)
@@ -804,6 +872,21 @@ func (s *Server) Tools() []ToolDefinition {
 		{
 			Name:        ToolRecordPendingCanonicalContradictionDisposition,
 			Description: "Call only after an explicit human rejected or audit-only decision. This call immediately and terminally disposes the pending contradiction proposal without creating an edge; the unordered node pair remains single-use in v1. AHE records the decision but does not prove the review occurred.",
+			Write:       true,
+		},
+		{
+			Name:        ToolSubmitCanonicalSupersessionProposal,
+			Description: "Create or exactly replay the single governed supersession proposal for one directed pair of existing admitted canonical nodes, where from_node_id is the current claim and to_node_id is the replaced historical claim. The directed pair is single-use across pending, admitted, rejected, and audit-only outcomes; changed metadata conflicts. This call does not create a canonical edge, and AHE does not infer or validate the semantic supersession.",
+			Write:       true,
+		},
+		{
+			Name:        ToolAdmitPendingCanonicalSupersession,
+			Description: "Call only after the cooperating agent has displayed the proposal sentence, both grounded canonical nodes with source context, version difference, coverage/limitations, and received explicit human approval. This call immediately and terminally admits the pending proposal and creates one directed canonical supersedes edge from current to replaced. AHE records the decision but does not prove the review occurred.",
+			Write:       true,
+		},
+		{
+			Name:        ToolRecordPendingCanonicalSupersessionDisposition,
+			Description: "Call only after an explicit human rejected or audit-only decision. This call immediately and terminally disposes the pending supersession proposal without creating an edge; the directed pair remains single-use in v1. AHE records the decision but does not prove the review occurred.",
 			Write:       true,
 		},
 		{
@@ -1367,6 +1450,36 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 			return nil, err
 		}
 		return marshalToolResponse(resp)
+	case ToolSubmitCanonicalSupersessionProposal:
+		var req SubmitCanonicalSupersessionProposalRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.SubmitCanonicalSupersessionProposal(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return marshalToolResponse(resp)
+	case ToolAdmitPendingCanonicalSupersession:
+		var req AdmitPendingCanonicalSupersessionRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.AdmitPendingCanonicalSupersession(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return marshalToolResponse(resp)
+	case ToolRecordPendingCanonicalSupersessionDisposition:
+		var req RecordPendingCanonicalSupersessionDispositionRequest
+		if err := decodeStrict(payload, &req); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
+		resp, err := s.RecordPendingCanonicalSupersessionDisposition(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return marshalToolResponse(resp)
 	default:
 		return nil, &ToolError{Code: toolErrorUnknownTool, Message: fmt.Sprintf("unknown tool %q", name)}
 	}
@@ -1866,6 +1979,91 @@ func mapCanonicalContradictionDecision(result evidenceingestion.CanonicalContrad
 	}
 }
 
+// SubmitCanonicalSupersessionProposal persists one dedicated directed relation proposal.
+func (s *Server) SubmitCanonicalSupersessionProposal(
+	ctx context.Context,
+	req SubmitCanonicalSupersessionProposalRequest,
+) (SubmitCanonicalSupersessionProposalResponse, error) {
+	result, err := s.core.SubmitCanonicalSupersessionProposal(ctx, evidenceingestion.CanonicalSupersessionProposalInput{
+		RequestID:          req.RequestID,
+		FromNodeID:         req.FromNodeID,
+		ToNodeID:           req.ToNodeID,
+		ProposalSentence:   req.ProposalSentence,
+		Rationale:          req.Rationale,
+		VersionDifference:  req.VersionDifference,
+		Limitations:        append([]string(nil), req.Limitations...),
+		ProducerName:       req.ProducerName,
+		ProducerVersion:    req.ProducerVersion,
+		ProducerSessionRef: req.ProducerSessionRef,
+	})
+	if err != nil {
+		return SubmitCanonicalSupersessionProposalResponse{}, mapToolError(err)
+	}
+	proposal := result.Proposal
+	return SubmitCanonicalSupersessionProposalResponse{
+		CanonicalSupersessionProposalID: proposal.ID,
+		FromNodeID:                      proposal.FromNodeID,
+		ToNodeID:                        proposal.ToNodeID,
+		Relation:                        string(proposal.Relation),
+		ProposalSentence:                proposal.ProposalSentence,
+		Rationale:                       proposal.Rationale,
+		VersionDifference:               proposal.VersionDifference,
+		Limitations:                     append([]string(nil), proposal.Limitations...),
+		ProducerName:                    proposal.ProducerName,
+		ProducerVersion:                 proposal.ProducerVersion,
+		ProducerSessionRef:              proposal.ProducerSessionRef,
+		AdmissionOutcome:                proposal.AdmissionOutcome,
+		CanonicalEdgeID:                 proposal.CanonicalEdgeID,
+		Replayed:                        result.Replayed,
+	}, nil
+}
+
+// AdmitPendingCanonicalSupersession records explicit approval and creates the directed edge.
+func (s *Server) AdmitPendingCanonicalSupersession(
+	ctx context.Context,
+	req AdmitPendingCanonicalSupersessionRequest,
+) (CanonicalSupersessionDecisionResponse, error) {
+	result, err := s.core.AdmitPendingCanonicalSupersession(ctx, evidenceingestion.CanonicalSupersessionAdmissionInput{
+		ProposalID:     req.ProposalID,
+		DecisionBy:     req.DecisionBy,
+		DecisionReason: req.DecisionReason,
+	})
+	if err != nil {
+		return CanonicalSupersessionDecisionResponse{}, mapToolError(err)
+	}
+	return mapCanonicalSupersessionDecision(result), nil
+}
+
+// RecordPendingCanonicalSupersessionDisposition records a terminal non-edge outcome.
+func (s *Server) RecordPendingCanonicalSupersessionDisposition(
+	ctx context.Context,
+	req RecordPendingCanonicalSupersessionDispositionRequest,
+) (CanonicalSupersessionDecisionResponse, error) {
+	result, err := s.core.RecordPendingCanonicalSupersessionDisposition(ctx, evidenceingestion.CanonicalSupersessionDispositionInput{
+		ProposalID:     req.ProposalID,
+		Outcome:        req.Outcome,
+		DecisionBy:     req.DecisionBy,
+		DecisionReason: req.DecisionReason,
+	})
+	if err != nil {
+		return CanonicalSupersessionDecisionResponse{}, mapToolError(err)
+	}
+	return mapCanonicalSupersessionDecision(result), nil
+}
+
+func mapCanonicalSupersessionDecision(result evidenceingestion.CanonicalSupersessionDecisionResult) CanonicalSupersessionDecisionResponse {
+	decision := result.Decision
+	return CanonicalSupersessionDecisionResponse{
+		CanonicalSupersessionProposalID: decision.ProposalID,
+		AdmissionDecisionID:             decision.ID,
+		AdmissionOutcome:                decision.Outcome,
+		CanonicalEdgeID:                 decision.CanonicalEdgeID,
+		DecisionBy:                      decision.DecisionBy,
+		DecisionReason:                  decision.DecisionReason,
+		Replayed:                        result.Replayed,
+	}
+}
+
 // ActivateRepositorySourceGeneration advances one exact repository/extractor stream head.
 func (s *Server) ActivateRepositorySourceGeneration(
 	ctx context.Context,
@@ -2056,6 +2254,18 @@ func (c postgresCore) AdmitPendingCanonicalContradiction(ctx context.Context, in
 
 func (c postgresCore) RecordPendingCanonicalContradictionDisposition(ctx context.Context, input evidenceingestion.CanonicalContradictionDispositionInput) (evidenceingestion.CanonicalContradictionDecisionResult, error) {
 	return evidenceingestion.RecordPendingCanonicalContradictionDisposition(ctx, c.pool, input)
+}
+
+func (c postgresCore) SubmitCanonicalSupersessionProposal(ctx context.Context, input evidenceingestion.CanonicalSupersessionProposalInput) (evidenceingestion.CanonicalSupersessionProposalResult, error) {
+	return evidenceingestion.SubmitCanonicalSupersessionProposal(ctx, c.pool, input)
+}
+
+func (c postgresCore) AdmitPendingCanonicalSupersession(ctx context.Context, input evidenceingestion.CanonicalSupersessionAdmissionInput) (evidenceingestion.CanonicalSupersessionDecisionResult, error) {
+	return evidenceingestion.AdmitPendingCanonicalSupersession(ctx, c.pool, input)
+}
+
+func (c postgresCore) RecordPendingCanonicalSupersessionDisposition(ctx context.Context, input evidenceingestion.CanonicalSupersessionDispositionInput) (evidenceingestion.CanonicalSupersessionDecisionResult, error) {
+	return evidenceingestion.RecordPendingCanonicalSupersessionDisposition(ctx, c.pool, input)
 }
 
 func (c postgresCore) ActivateRepositorySourceGeneration(

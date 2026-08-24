@@ -178,6 +178,19 @@ func queryTools() []mcpstdio.Tool {
 				IdempotentHint:  &idempotent,
 			},
 		},
+		{
+			Name:        evidencequerymcp.ToolGetCanonicalSupersessionProposal,
+			Title:       "Get Canonical Supersession Proposal",
+			Description: "Read one pending or terminal supersession proposal with its proposal sentence, both complete grounded canonical nodes (from=current, to=replaced), version difference, coverage/limitations, producer metadata, and any human review decision.",
+			InputSchema: objectSchema(map[string]any{
+				"canonical_supersession_proposal_id": stringSchema("Supersession proposal ID with supersession-proposal: prefix."),
+			}, []string{"canonical_supersession_proposal_id"}),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &readOnly,
+				DestructiveHint: &destructive,
+				IdempotentHint:  &idempotent,
+			},
+		},
 	}
 }
 

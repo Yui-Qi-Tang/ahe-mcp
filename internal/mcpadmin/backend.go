@@ -562,6 +562,54 @@ func ingestionTools() []mcpstdio.Tool {
 			},
 		},
 		{
+			Name:        evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal,
+			Title:       "Submit Canonical Supersession Proposal",
+			Description: "Create or exactly replay the single governed supersession proposal for one directed pair of existing admitted canonical nodes, where from_node_id is the current claim and to_node_id is the replaced historical claim. The directed pair is single-use across pending, admitted, rejected, and audit-only outcomes; changed metadata conflicts. This call does not create a canonical edge, and AHE does not infer or validate the semantic supersession.",
+			InputSchema: objectSchema(map[string]any{
+				"request_id":         boundedStringSchema("Idempotent supersession proposal request ID.", evidenceingestion.CanonicalSupersessionRequestIDMaxBytes),
+				"from_node_id":       stringSchema("Existing admitted canonical node containing the current claim."),
+				"to_node_id":         stringSchema("Existing admitted canonical node containing the replaced historical claim."),
+				"proposal_sentence":  boundedStringSchema("Human-reviewable sentence stating that the current claim supersedes the historical claim.", evidenceingestion.CanonicalSupersessionProposalSentenceMaxBytes),
+				"rationale":          boundedStringSchema("Agent rationale grounding the exact version replacement for human review.", evidenceingestion.CanonicalSupersessionRationaleMaxBytes),
+				"version_difference": boundedStringSchema("Concrete human-reviewable difference between the current and historical claims.", evidenceingestion.CanonicalSupersessionVersionDifferenceMaxBytes),
+				"limitations": map[string]any{
+					"type":     "array",
+					"maxItems": evidenceingestion.CanonicalSupersessionLimitationsMaxEntries,
+					"items":    boundedStringSchema("One coverage or comparison limitation.", evidenceingestion.CanonicalSupersessionLimitationMaxBytes),
+				},
+				"producer_name":        boundedStringSchema("Stable name of the proposing agent or tool.", evidenceingestion.ExtractorDefinitionNameMaxBytes),
+				"producer_version":     boundedStringSchema("Version of the proposing agent, prompt, or workflow.", evidenceingestion.ExtractorDefinitionVersionMaxBytes),
+				"producer_session_ref": boundedStringSchema("Optional non-secret agent session reference for debugging.", evidenceingestion.ProducerSessionRefMaxBytes),
+			}, []string{"request_id", "from_node_id", "to_node_id", "proposal_sentence", "rationale", "version_difference", "limitations", "producer_name", "producer_version"}),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &write,
+				DestructiveHint: &destructive,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
+			Name:        evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession,
+			Title:       "Admit Pending Canonical Supersession",
+			Description: "Call only after the cooperating agent has displayed the proposal sentence, both grounded canonical nodes with source context, version difference, coverage/limitations, and received explicit human approval. This call immediately and terminally admits the pending proposal and creates one directed canonical supersedes edge from current to replaced. AHE records the decision but does not prove the review occurred.",
+			InputSchema: canonicalSupersessionDecisionSchema(false),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &write,
+				DestructiveHint: &terminal,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
+			Name:        evidenceingestionmcp.ToolRecordPendingCanonicalSupersessionDisposition,
+			Title:       "Record Pending Canonical Supersession Disposition",
+			Description: "Call only after an explicit human rejected or audit-only decision. This call immediately and terminally disposes the pending supersession proposal without creating an edge; the directed pair remains single-use in v1. AHE records the decision but does not prove the review occurred.",
+			InputSchema: canonicalSupersessionDecisionSchema(true),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &write,
+				DestructiveHint: &terminal,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
 			Name:        evidenceingestionmcp.ToolClassifyFailedGitRepositoryExtractionWork,
 			Title:       "Classify Failed Git Repository Extraction Work",
 			Description: "Record deterministic retry-policy-v1 classification and optional backoff for one exact terminal failed claim without requeueing it.",
@@ -798,6 +846,30 @@ func canonicalContradictionDecisionSchema(includeOutcome bool) map[string]any {
 		),
 	}
 	required := []string{"canonical_contradiction_proposal_id", "decision_by", "decision_reason"}
+	if includeOutcome {
+		properties["outcome"] = enumStringSchema(
+			"Terminal non-edge outcome.",
+			evidenceingestion.ProposalDispositionRejected,
+			evidenceingestion.ProposalDispositionAuditOnly,
+		)
+		required = append(required, "outcome")
+	}
+	return objectSchema(properties, required)
+}
+
+func canonicalSupersessionDecisionSchema(includeOutcome bool) map[string]any {
+	properties := map[string]any{
+		"canonical_supersession_proposal_id": stringSchema("Canonical supersession proposal ID; normally pending, or the same terminal record for exact idempotent replay."),
+		"decision_by": boundedStringSchema(
+			"Stable reviewer identity.",
+			evidenceingestion.ProposalDispositionDecisionByMaxBytes,
+		),
+		"decision_reason": boundedStringSchema(
+			"Bounded human review reason.",
+			evidenceingestion.ProposalDispositionDecisionReasonMaxBytes,
+		),
+	}
+	required := []string{"canonical_supersession_proposal_id", "decision_by", "decision_reason"}
 	if includeOutcome {
 		properties["outcome"] = enumStringSchema(
 			"Terminal non-edge outcome.",

@@ -511,10 +511,26 @@ func loadCanonicalContradictionProposalByID(
 	proposalID string,
 	forUpdate bool,
 ) (CanonicalContradictionProposal, *CanonicalContradictionDecision, error) {
-	query := canonicalContradictionProposalSelect + ` WHERE p.canonical_contradiction_proposal_id = $1`
 	if forUpdate {
-		query += ` FOR UPDATE OF p`
+		// Lock in a separate statement so a waiter gets a fresh READ COMMITTED
+		// snapshot when it subsequently joins the terminal decision. A joined
+		// SELECT FOR UPDATE can otherwise observe the updated proposal row while
+		// retaining a pre-wait snapshot that cannot see the inserted decision.
+		var lockedProposalID string
+		err := db.queryRow(ctx, `
+			SELECT canonical_contradiction_proposal_id
+			FROM canonical_contradiction_proposals
+			WHERE canonical_contradiction_proposal_id = $1
+			FOR UPDATE
+		`, proposalID).Scan(&lockedProposalID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return CanonicalContradictionProposal{}, nil, newDomainError(ErrorMissingSourceViewAttempt, "canonical contradiction proposal not found")
+			}
+			return CanonicalContradictionProposal{}, nil, fmt.Errorf("locking canonical contradiction proposal: %w", err)
+		}
 	}
+	query := canonicalContradictionProposalSelect + ` WHERE p.canonical_contradiction_proposal_id = $1`
 	return scanCanonicalContradictionProposal(db.queryRow(ctx, query, proposalID))
 }
 

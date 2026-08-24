@@ -41,6 +41,7 @@ func TestBackendExposesOnlyShippingQueryToolsAndDelegatesCalls(t *testing.T) {
 		evidencequerymcp.ToolFindCanonicalPath,
 		evidencequerymcp.ToolGetCanonicalTopologyDiagnostics,
 		evidencequerymcp.ToolGetCanonicalContradictionProposal,
+		evidencequerymcp.ToolGetCanonicalSupersessionProposal,
 	}
 	if !reflect.DeepEqual(gotNames, wantNames) {
 		t.Fatalf("query tools = %v, want %v", gotNames, wantNames)
@@ -111,6 +112,14 @@ func TestCanonicalTopologyToolMetadataStatesBoundedStructuralSemantics(t *testin
 		evidencequerymcp.ToolGetCanonicalContradictionProposal: {
 			"canonical nodes",
 			"pending or terminal",
+		},
+		evidencequerymcp.ToolGetCanonicalSupersessionProposal: {
+			"pending or terminal",
+			"proposal sentence",
+			"from=current",
+			"to=replaced",
+			"version difference",
+			"coverage/limitations",
 		},
 	}
 	for name, fragments := range wants {
