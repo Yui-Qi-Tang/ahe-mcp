@@ -610,10 +610,26 @@ func loadCanonicalSupersessionProposalByID(
 	proposalID string,
 	forUpdate bool,
 ) (CanonicalSupersessionProposal, *CanonicalSupersessionDecision, error) {
-	query := canonicalSupersessionProposalSelect + ` WHERE p.canonical_supersession_proposal_id = $1`
 	if forUpdate {
-		query += ` FOR UPDATE OF p`
+		// Lock in a separate statement so a waiter gets a fresh READ COMMITTED
+		// snapshot when it subsequently joins the terminal decision. A joined
+		// SELECT FOR UPDATE can otherwise observe the updated proposal row while
+		// retaining a pre-wait snapshot that cannot see the inserted decision.
+		var lockedProposalID string
+		err := db.queryRow(ctx, `
+			SELECT canonical_supersession_proposal_id
+			FROM canonical_supersession_proposals
+			WHERE canonical_supersession_proposal_id = $1
+			FOR UPDATE
+		`, proposalID).Scan(&lockedProposalID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return CanonicalSupersessionProposal{}, nil, newDomainError(ErrorMissingSourceViewAttempt, "canonical supersession proposal not found")
+			}
+			return CanonicalSupersessionProposal{}, nil, fmt.Errorf("locking canonical supersession proposal: %w", err)
+		}
 	}
+	query := canonicalSupersessionProposalSelect + ` WHERE p.canonical_supersession_proposal_id = $1`
 	return scanCanonicalSupersessionProposal(db.queryRow(ctx, query, proposalID))
 }
 

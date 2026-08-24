@@ -1,6 +1,7 @@
 package evidenceingestion
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -90,4 +91,76 @@ func TestBuildCanonicalContradictionEdgeIsOrderedAndAuditable(t *testing.T) {
 	if edge.Provenance.TraceRef != proposal.ID || edge.Provenance.ReviewRef != "contradiction-adm:1" || len(edge.Provenance.OriginRefs) != 2 {
 		t.Fatalf("edge provenance = %+v", edge.Provenance)
 	}
+}
+
+func TestLoadCanonicalContradictionProposalForUpdateRefreshesDecisionSnapshot(t *testing.T) {
+	db := &scriptedCanonicalContradictionQueryer{
+		rows: []sqlRow{
+			mockRow{values: []any{"contradiction-proposal:1"}},
+			mockRow{values: []any{
+				"contradiction-proposal:1",
+				"request:1",
+				"payload-hash",
+				"proposal-fingerprint",
+				"canon-node:a",
+				"canon-node:b",
+				"contradicts",
+				"The two grounded claims are mutually incompatible.",
+				"claude-code",
+				"workflow-v1",
+				"session:debug-1",
+				admissionOutcomeAdmitted,
+				"canon-edge:1",
+				"contradiction-adm:1",
+				admissionOutcomeAdmitted,
+				"canon-edge:1",
+				"reviewer@example.test",
+				"The contradiction was confirmed.",
+			}},
+		},
+	}
+
+	proposal, decision, err := loadCanonicalContradictionProposalByID(
+		context.Background(),
+		db,
+		"contradiction-proposal:1",
+		true,
+	)
+	if err != nil {
+		t.Fatalf("loadCanonicalContradictionProposalByID() error = %v", err)
+	}
+	if len(db.queries) != 2 {
+		t.Fatalf("query count = %d, want 2", len(db.queries))
+	}
+	if !strings.Contains(db.queries[0], "FOR UPDATE") || strings.Contains(db.queries[0], "LEFT JOIN") {
+		t.Fatalf("lock query must lock only the contradiction proposal row:\n%s", db.queries[0])
+	}
+	if !strings.Contains(db.queries[1], "LEFT JOIN canonical_contradiction_admission_decisions") || strings.Contains(db.queries[1], "FOR UPDATE") {
+		t.Fatalf("refresh query must read the contradiction proposal and decision in a new statement:\n%s", db.queries[1])
+	}
+	if proposal.AdmissionOutcome != admissionOutcomeAdmitted || proposal.CanonicalEdgeID != "canon-edge:1" {
+		t.Fatalf("proposal terminal state = %+v", proposal)
+	}
+	if decision == nil || decision.ID != "contradiction-adm:1" || decision.ProposalID != proposal.ID || decision.CanonicalEdgeID != proposal.CanonicalEdgeID {
+		t.Fatalf("decision = %+v", decision)
+	}
+}
+
+type scriptedCanonicalContradictionQueryer struct {
+	queries []string
+	rows    []sqlRow
+}
+
+func (*scriptedCanonicalContradictionQueryer) query(context.Context, string, ...any) (sqlRows, error) {
+	panic("unexpected query")
+}
+
+func (db *scriptedCanonicalContradictionQueryer) queryRow(_ context.Context, query string, _ ...any) sqlRow {
+	db.queries = append(db.queries, query)
+	if len(db.rows) == 0 {
+		panic("unexpected queryRow")
+	}
+	row := db.rows[0]
+	db.rows = db.rows[1:]
+	return row
 }

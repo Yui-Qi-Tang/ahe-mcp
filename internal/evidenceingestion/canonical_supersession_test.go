@@ -1,6 +1,7 @@
 package evidenceingestion
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -107,6 +108,81 @@ func TestBuildCanonicalSupersessionEdgeIsDirectedAndAuditable(t *testing.T) {
 	if edge.Provenance.TraceRef != proposal.ID || edge.Provenance.ReviewRef != "supersession-adm:1" || edge.Provenance.Method != "human_admitted_canonical_supersession" {
 		t.Fatalf("edge provenance = %+v", edge.Provenance)
 	}
+}
+
+func TestLoadCanonicalSupersessionProposalForUpdateRefreshesDecisionSnapshot(t *testing.T) {
+	db := &scriptedCanonicalSupersessionQueryer{
+		rows: []sqlRow{
+			mockRow{values: []any{"supersession-proposal:1"}},
+			mockRow{values: []any{
+				"supersession-proposal:1",
+				"request:1",
+				"payload-hash",
+				"proposal-fingerprint",
+				"canon-node:current",
+				"canon-node:replaced",
+				"supersedes",
+				"The current claim supersedes the previous claim.",
+				"The source explicitly replaces the previous revision.",
+				"The timeout changes from 60 seconds to 30 seconds.",
+				[]byte(`["Only the supplied policy scope was compared."]`),
+				"claude-code",
+				"workflow-v1",
+				"session:debug-1",
+				admissionOutcomeAdmitted,
+				"canon-edge:1",
+				"supersession-adm:1",
+				admissionOutcomeAdmitted,
+				"canon-edge:1",
+				"reviewer@example.test",
+				"The version transition was confirmed.",
+			}},
+		},
+	}
+
+	proposal, decision, err := loadCanonicalSupersessionProposalByID(
+		context.Background(),
+		db,
+		"supersession-proposal:1",
+		true,
+	)
+	if err != nil {
+		t.Fatalf("loadCanonicalSupersessionProposalByID() error = %v", err)
+	}
+	if len(db.queries) != 2 {
+		t.Fatalf("query count = %d, want 2", len(db.queries))
+	}
+	if !strings.Contains(db.queries[0], "FOR UPDATE") || strings.Contains(db.queries[0], "LEFT JOIN") {
+		t.Fatalf("lock query must lock only the proposal row:\n%s", db.queries[0])
+	}
+	if !strings.Contains(db.queries[1], "LEFT JOIN canonical_supersession_admission_decisions") || strings.Contains(db.queries[1], "FOR UPDATE") {
+		t.Fatalf("refresh query must read the proposal and decision without reusing the locking statement:\n%s", db.queries[1])
+	}
+	if proposal.AdmissionOutcome != admissionOutcomeAdmitted || proposal.CanonicalEdgeID != "canon-edge:1" {
+		t.Fatalf("proposal terminal state = %+v", proposal)
+	}
+	if decision == nil || decision.ID != "supersession-adm:1" || decision.ProposalID != proposal.ID || decision.CanonicalEdgeID != proposal.CanonicalEdgeID {
+		t.Fatalf("decision = %+v", decision)
+	}
+}
+
+type scriptedCanonicalSupersessionQueryer struct {
+	queries []string
+	rows    []sqlRow
+}
+
+func (*scriptedCanonicalSupersessionQueryer) query(context.Context, string, ...any) (sqlRows, error) {
+	panic("unexpected query")
+}
+
+func (db *scriptedCanonicalSupersessionQueryer) queryRow(_ context.Context, query string, _ ...any) sqlRow {
+	db.queries = append(db.queries, query)
+	if len(db.rows) == 0 {
+		panic("unexpected queryRow")
+	}
+	row := db.rows[0]
+	db.rows = db.rows[1:]
+	return row
 }
 
 func canonicalSupersessionTestInput() CanonicalSupersessionProposalInput {
