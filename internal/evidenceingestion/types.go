@@ -82,6 +82,22 @@ const (
 	CanonicalContradictionRequestIDMaxBytes = 200
 	// CanonicalContradictionRationaleMaxBytes caps one human-reviewable contradiction rationale.
 	CanonicalContradictionRationaleMaxBytes = 4000
+	// CanonicalSupersessionProposalFingerprintV1 identifies one directed canonical supersession proposal.
+	CanonicalSupersessionProposalFingerprintV1 = "canonical-supersession-v1"
+	// CanonicalSupersessionProposalIDPrefix identifies canonical supersession proposal records.
+	CanonicalSupersessionProposalIDPrefix = "supersession-proposal:"
+	// CanonicalSupersessionRequestIDMaxBytes caps one directed relation proposal request identity.
+	CanonicalSupersessionRequestIDMaxBytes = 200
+	// CanonicalSupersessionProposalSentenceMaxBytes caps one human-reviewable proposal sentence.
+	CanonicalSupersessionProposalSentenceMaxBytes = 4000
+	// CanonicalSupersessionRationaleMaxBytes caps one human-reviewable supersession rationale.
+	CanonicalSupersessionRationaleMaxBytes = 4000
+	// CanonicalSupersessionVersionDifferenceMaxBytes caps one human-reviewable version summary.
+	CanonicalSupersessionVersionDifferenceMaxBytes = 4000
+	// CanonicalSupersessionLimitationsMaxEntries caps review limitations on one proposal.
+	CanonicalSupersessionLimitationsMaxEntries = 32
+	// CanonicalSupersessionLimitationMaxBytes caps one review limitation.
+	CanonicalSupersessionLimitationMaxBytes = 2000
 
 	// CodeFactSchemaV1 is the first controller-verified code fact transport contract.
 	CodeFactSchemaV1 = "code-fact-v1"
@@ -895,6 +911,7 @@ type CanonicalRelationQueryResult struct {
 	To                          CanonicalQueryResult
 	OriginProposal              *ProposalQueryResult
 	OriginContradictionProposal *CanonicalContradictionQueryResult
+	OriginSupersessionProposal  *CanonicalSupersessionQueryResult
 }
 
 // CanonicalNeighborInput bounds one-hop canonical graph lookup.
@@ -1045,6 +1062,79 @@ type CanonicalContradictionDecisionResult struct {
 	Replayed bool
 }
 
+// CanonicalSupersessionProposalInput proposes that FromNodeID is the current
+// claim replacing the historical claim at ToNodeID.
+type CanonicalSupersessionProposalInput struct {
+	RequestID          string
+	FromNodeID         string
+	ToNodeID           string
+	ProposalSentence   string
+	Rationale          string
+	VersionDifference  string
+	Limitations        []string
+	ProducerName       string
+	ProducerVersion    string
+	ProducerSessionRef string
+}
+
+// CanonicalSupersessionProposal is one durable directed relation proposal.
+// FromNodeID is the current claim and ToNodeID is the replaced historical claim.
+type CanonicalSupersessionProposal struct {
+	ID                  string
+	RequestID           string
+	RequestPayloadHash  string
+	ProposalFingerprint string
+	FromNodeID          string
+	ToNodeID            string
+	Relation            evidencegraph.CanonicalEdgeRelation
+	ProposalSentence    string
+	Rationale           string
+	VersionDifference   string
+	Limitations         []string
+	ProducerName        string
+	ProducerVersion     string
+	ProducerSessionRef  string
+	AdmissionOutcome    string
+	CanonicalEdgeID     string
+}
+
+// CanonicalSupersessionProposalResult reports proposal persistence or replay.
+type CanonicalSupersessionProposalResult struct {
+	Proposal CanonicalSupersessionProposal
+	Replayed bool
+}
+
+// CanonicalSupersessionDecision records one human admission or disposition.
+type CanonicalSupersessionDecision struct {
+	ID              string
+	ProposalID      string
+	Outcome         string
+	CanonicalEdgeID string
+	DecisionBy      string
+	DecisionReason  string
+}
+
+// CanonicalSupersessionAdmissionInput admits one pending supersession proposal.
+type CanonicalSupersessionAdmissionInput struct {
+	ProposalID     string
+	DecisionBy     string
+	DecisionReason string
+}
+
+// CanonicalSupersessionDispositionInput records a rejected or audit-only outcome.
+type CanonicalSupersessionDispositionInput struct {
+	ProposalID     string
+	Outcome        string
+	DecisionBy     string
+	DecisionReason string
+}
+
+// CanonicalSupersessionDecisionResult reports an admitted or disposed proposal.
+type CanonicalSupersessionDecisionResult struct {
+	Decision CanonicalSupersessionDecision
+	Replayed bool
+}
+
 // CanonicalGraphNode is the DB-facing persisted form of an evidencegraph canonical node.
 type CanonicalGraphNode struct {
 	ID                         string
@@ -1077,6 +1167,15 @@ type CanonicalContradictionQueryResult struct {
 	Decision *CanonicalContradictionDecision
 }
 
+// CanonicalSupersessionQueryResult returns one directed proposal, both grounded
+// canonical endpoints, and its optional terminal decision.
+type CanonicalSupersessionQueryResult struct {
+	Proposal CanonicalSupersessionProposal
+	From     CanonicalQueryResult
+	To       CanonicalQueryResult
+	Decision *CanonicalSupersessionDecision
+}
+
 // CanonicalGraphEdge is the DB-facing persisted form of an evidencegraph canonical edge.
 type CanonicalGraphEdge struct {
 	ID                            string
@@ -1086,4 +1185,5 @@ type CanonicalGraphEdge struct {
 	Provenance                    evidencegraph.ProvenanceRecord
 	OriginProposalOccurrenceID    string
 	OriginContradictionProposalID string
+	OriginSupersessionProposalID  string
 }

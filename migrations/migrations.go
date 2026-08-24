@@ -159,6 +159,10 @@ var requiredTablesByMigration = map[string][]string{
 		"canonical_contradiction_proposals",
 		"canonical_contradiction_admission_decisions",
 	},
+	"000041_evidence_ingestion_canonical_supersessions.up.sql": {
+		"canonical_supersession_proposals",
+		"canonical_supersession_admission_decisions",
+	},
 }
 
 var requiredTables = []string{
@@ -229,6 +233,8 @@ var requiredTables = []string{
 	"external_source_intake_receipts",
 	"canonical_contradiction_proposals",
 	"canonical_contradiction_admission_decisions",
+	"canonical_supersession_proposals",
+	"canonical_supersession_admission_decisions",
 }
 
 // ErrSchemaNotCurrent indicates that the database cannot satisfy the embedded

@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -39,10 +41,10 @@ func TestIntegrationVerifyCurrentAcceptsAppliedSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 40 {
-		t.Fatalf("AppliedMigrations = %d, want 40", status.AppliedMigrations)
+	if status.AppliedMigrations != 41 {
+		t.Fatalf("AppliedMigrations = %d, want 41", status.AppliedMigrations)
 	}
-	if status.LatestMigration != "000040_evidence_ingestion_canonical_contradictions.up.sql" {
+	if status.LatestMigration != "000041_evidence_ingestion_canonical_supersessions.up.sql" {
 		t.Fatalf("LatestMigration = %q", status.LatestMigration)
 	}
 }
@@ -141,7 +143,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	}
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM schema_migrations
-		WHERE migration_name = '000040_evidence_ingestion_canonical_contradictions.up.sql'
+		WHERE migration_name = '000041_evidence_ingestion_canonical_supersessions.up.sql'
 	`); err != nil {
 		t.Fatalf("delete latest migration row: %v", err)
 	}
@@ -150,8 +152,85 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	if !errors.Is(err, ErrSchemaNotCurrent) {
 		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
 	}
-	if !strings.Contains(err.Error(), "39/40 embedded migrations are applied") {
+	if !strings.Contains(err.Error(), "40/41 embedded migrations are applied") {
 		t.Fatalf("VerifyCurrent() error = %v, want migration count detail", err)
+	}
+}
+
+func TestIntegrationCanonicalSupersessionMigrationRejectsLegacyEdges(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	migrationSet, err := loadMigrations()
+	if err != nil {
+		t.Fatalf("loadMigrations() error = %v", err)
+	}
+	var supersessionMigration embeddedMigration
+	for _, migration := range migrationSet {
+		if migration.name == "000041_evidence_ingestion_canonical_supersessions.up.sql" {
+			supersessionMigration = migration
+			break
+		}
+		if _, err := pool.Exec(ctx, migration.sql); err != nil {
+			t.Fatalf("applying predecessor migration %s: %v", migration.name, err)
+		}
+	}
+	if supersessionMigration.name == "" {
+		t.Fatal("canonical supersession migration was not loaded")
+	}
+
+	raw := []byte("Refunds must be completed within 7 days.\nThis rule applies only to overseas orders.\n")
+	ingested, err := evidenceingestion.IngestManualText(
+		ctx,
+		pool,
+		evidenceingestion.ManualTextInput{
+			SourceID:      "migration-legacy-supersedes",
+			SourceVersion: "v1",
+			Raw:           raw,
+			RequestID:     "migration-legacy-supersedes-request",
+			AttemptNumber: 1,
+		},
+		evidenceingestion.FrozenExtractorOutput{Proposals: []evidenceingestion.ExtractorProposalOutput{{
+			ProposalLocalID: "stmt-1",
+			StatementText:   "Refunds must be completed within 7 days.",
+			EvidenceRefs:    []string{"span:S1"},
+		}}},
+	)
+	if err != nil {
+		t.Fatalf("ingest legacy supersedes fixture: %v", err)
+	}
+	admitted, err := evidenceingestion.AdmitPendingProposal(ctx, pool, evidenceingestion.AdmissionInput{
+		ProposalOccurrenceID: ingested.ProposalOccurrenceID,
+		DecisionBy:           "migration-test",
+		DecisionReason:       "create canonical endpoints before migration 41",
+	})
+	if err != nil {
+		t.Fatalf("admit legacy supersedes fixture: %v", err)
+	}
+	if len(admitted.RawEvidenceNodeIDs) != 1 {
+		t.Fatalf("raw evidence nodes = %+v", admitted.RawEvidenceNodeIDs)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO canonical_graph_edges (
+			canonical_edge_id,
+			from_node_id,
+			to_node_id,
+			relation,
+			provenance,
+			origin_proposal_occurrence_id,
+			origin_canonical_contradiction_proposal_id
+		)
+		VALUES (
+			'canon-edge:legacy-supersedes', $1, $2, 'supersedes', '{}'::jsonb, $3, NULL
+		)
+	`, admitted.CanonicalRef, admitted.RawEvidenceNodeIDs[0], ingested.ProposalOccurrenceID); err != nil {
+		t.Fatalf("insert legacy supersedes edge: %v", err)
+	}
+
+	_, err = pool.Exec(ctx, supersessionMigration.sql)
+	if err == nil {
+		t.Fatal("migration 41 accepted a legacy supersedes edge")
+	}
+	if !strings.Contains(err.Error(), "requires zero existing supersedes edges") {
+		t.Fatalf("migration 41 error = %v, want legacy-edge preflight detail", err)
 	}
 }
 
@@ -217,7 +296,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want true")
 	}
-	assertMigrationCount(t, ctx, pool, 40)
+	assertMigrationCount(t, ctx, pool, 41)
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "source_file_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshot_intake_requests")
@@ -270,6 +349,8 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	assertMigrationTableExists(t, ctx, pool, "canonical_derivation_parents")
 	assertMigrationTableExists(t, ctx, pool, "canonical_contradiction_proposals")
 	assertMigrationTableExists(t, ctx, pool, "canonical_contradiction_admission_decisions")
+	assertMigrationTableExists(t, ctx, pool, "canonical_supersession_proposals")
+	assertMigrationTableExists(t, ctx, pool, "canonical_supersession_admission_decisions")
 	assertMigrationIndexExists(t, ctx, pool, "repo_work_failure_policy_due_idx")
 	assertMigrationIndexExists(t, ctx, pool, "repository_extraction_work_expired_execution_scan_idx")
 	assertMigrationIndexExists(t, ctx, pool, "detective_planner_recommendation_consumptions_run_idx")
@@ -290,7 +371,10 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_to_relation_idx")
 	assertMigrationIndexExists(t, ctx, pool, "canonical_contradiction_proposals_outcome_idx")
 	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_contradiction_origin_idx")
+	assertMigrationIndexExists(t, ctx, pool, "canonical_supersession_proposals_outcome_idx")
+	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_supersession_origin_idx")
 	assertMigrationColumnExists(t, ctx, pool, "canonical_graph_edges", "origin_canonical_contradiction_proposal_id")
+	assertMigrationColumnExists(t, ctx, pool, "canonical_graph_edges", "origin_canonical_supersession_proposal_id")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_claim_attempts", "lease_duration_milliseconds")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_execution_requests", "heartbeat_lease_duration_milliseconds")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_execution_requests", "heartbeat_count")
