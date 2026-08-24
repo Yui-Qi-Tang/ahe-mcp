@@ -32,6 +32,15 @@ func TestBackendExposesAdminToolsAndDelegatesCalls(t *testing.T) {
 			t.Fatalf("admin tool %q has incomplete annotations", tool.Name)
 		}
 	}
+	coreTools := new(evidenceingestionmcp.Server).Tools()
+	if len(tools) != len(coreTools) {
+		t.Fatalf("admin tools count = %d, core tools count = %d", len(tools), len(coreTools))
+	}
+	for _, tool := range coreTools {
+		if _, ok := names[tool.Name]; !ok {
+			t.Fatalf("admin tools do not expose core tool %q", tool.Name)
+		}
+	}
 	if _, ok := names[evidenceingestionmcp.ToolSubmitTextSource]; !ok {
 		t.Fatalf("admin tools do not contain %q", evidenceingestionmcp.ToolSubmitTextSource)
 	}

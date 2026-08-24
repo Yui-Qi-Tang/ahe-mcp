@@ -1538,6 +1538,12 @@ func TestCallToolGetsCanonicalContradictionReviewCardAndRelationOrigin(t *testin
 	if review.NodeA.RecordRef.ID != contradiction.NodeA.CanonicalID || review.NodeB.RecordRef.ID != contradiction.NodeB.CanonicalID || len(review.NodeA.SourceRefs) == 0 || len(review.NodeB.SourceRefs) == 0 {
 		t.Fatalf("review endpoints are not grounded: A=%+v B=%+v", review.NodeA, review.NodeB)
 	}
+	if review.NodeA.StatementText != "Refunds must be completed within 7 days." || review.NodeA.SourceRefs[0].QuotedText != "Refunds must be completed within 7 days." {
+		t.Fatalf("contradiction node A grounding = %+v", review.NodeA)
+	}
+	if review.NodeB.StatementText != "Refunds may take 30 days." || review.NodeB.SourceRefs[0].QuotedText != "Refunds may take 30 days." {
+		t.Fatalf("contradiction node B grounding = %+v", review.NodeB)
+	}
 
 	relation := evidenceingestion.CanonicalRelationQueryResult{
 		Edge: evidenceingestion.CanonicalGraphEdge{
@@ -1586,6 +1592,12 @@ func TestCallToolGetsCanonicalSupersessionReviewCardAndRelationOrigin(t *testing
 	}
 	if review.From.RecordRef.ID != supersession.From.CanonicalID || review.To.RecordRef.ID != supersession.To.CanonicalID || len(review.From.SourceRefs) == 0 || len(review.To.SourceRefs) == 0 {
 		t.Fatalf("review endpoints are not grounded: from=%+v to=%+v", review.From, review.To)
+	}
+	if review.From.StatementText != "Refunds may take 30 days." || review.From.SourceRefs[0].QuotedText != "Refunds may take 30 days." {
+		t.Fatalf("supersession current grounding = %+v", review.From)
+	}
+	if review.To.StatementText != "Refunds may take 60 days." || review.To.SourceRefs[0].QuotedText != "Refunds may take 60 days." {
+		t.Fatalf("supersession replaced grounding = %+v", review.To)
 	}
 
 	relation := evidenceingestion.CanonicalRelationQueryResult{
@@ -2149,6 +2161,34 @@ func testCanonicalQueryResult(canonicalID, occurrenceID string) evidenceingestio
 	}
 }
 
+func setTestCanonicalClaim(
+	result *evidenceingestion.CanonicalQueryResult,
+	claim string,
+	sourceVersion string,
+) {
+	contentHash := testGroundedEvidenceRepositoryContentHash(claim)
+	snapshotID := "srcsnap:" + sourceVersion
+	viewID := "view:" + sourceVersion
+
+	result.Payload.Source = "manual_text:fixture-refund-policy@" + sourceVersion
+	result.Payload.Span = claim
+	result.Payload.Claim = claim
+	result.Provenance.OriginRefs = []string{snapshotID, viewID}
+	result.Provenance.OriginGroupID = snapshotID
+
+	origin := &result.OriginProposal
+	origin.StatementText = claim
+	origin.SourceSnapshotID = snapshotID
+	origin.SourceVersion = sourceVersion
+	origin.RawContentHash = contentHash
+	origin.ExtractionViewID = viewID
+	origin.RenderedContentHash = contentHash
+	origin.SourceRefs[0].ExtractionViewID = viewID
+	origin.SourceRefs[0].EndByte = len(claim)
+	origin.SourceRefs[0].QuotedTextHash = contentHash
+	origin.SourceRefs[0].QuotedText = claim
+}
+
 func testRepositoryRelationResult(occurrenceID string) evidenceingestion.ProposalQueryResult {
 	result := testRepositoryQueryResult(occurrenceID)
 	caller := evidenceingestion.ResolvedCodeDeclarationEndpoint{
@@ -2316,7 +2356,7 @@ func testCanonicalRelationResult() evidenceingestion.CanonicalRelationQueryResul
 func testCanonicalContradictionResult() evidenceingestion.CanonicalContradictionQueryResult {
 	nodeA := testCanonicalQueryResult("canon-node:a", "occ:a")
 	nodeB := testCanonicalQueryResult("canon-node:b", "occ:b")
-	nodeB.Payload.Claim = "Refunds may take 30 days."
+	setTestCanonicalClaim(&nodeB, "Refunds may take 30 days.", "v2")
 	return evidenceingestion.CanonicalContradictionQueryResult{
 		Proposal: evidenceingestion.CanonicalContradictionProposal{
 			ID:                  "contradiction-proposal:1",
@@ -2348,7 +2388,8 @@ func testCanonicalContradictionResult() evidenceingestion.CanonicalContradiction
 func testCanonicalSupersessionResult() evidenceingestion.CanonicalSupersessionQueryResult {
 	current := testCanonicalQueryResult("canon-node:current", "occ:current")
 	replaced := testCanonicalQueryResult("canon-node:replaced", "occ:replaced")
-	replaced.Payload.Claim = "Refunds may take 60 days."
+	setTestCanonicalClaim(&current, "Refunds may take 30 days.", "v2")
+	setTestCanonicalClaim(&replaced, "Refunds may take 60 days.", "v1")
 	return evidenceingestion.CanonicalSupersessionQueryResult{
 		Proposal: evidenceingestion.CanonicalSupersessionProposal{
 			ID:                  "supersession-proposal:1",

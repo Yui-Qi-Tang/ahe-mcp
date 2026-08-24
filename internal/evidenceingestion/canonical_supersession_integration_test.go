@@ -120,39 +120,49 @@ func TestIntegrationCanonicalSupersessionAdmissionRoundTrip(t *testing.T) {
 }
 
 func TestIntegrationCanonicalSupersessionDispositionDoesNotWriteEdge(t *testing.T) {
-	ctx, pool := integrationPool(t)
-	currentNodeID := ingestAndAdmitSupersessionFixture(t, ctx, pool, "supersession-reject-current", "supersession-reject-current-source")
-	replacedNodeID := ingestAndAdmitSupersessionFixture(t, ctx, pool, "supersession-reject-old", "supersession-reject-old-source")
-	proposal, err := SubmitCanonicalSupersessionProposal(
-		ctx,
-		pool,
-		canonicalSupersessionIntegrationInput("supersession-reject-request", currentNodeID, replacedNodeID),
-	)
-	if err != nil {
-		t.Fatalf("SubmitCanonicalSupersessionProposal() error = %v", err)
+	for _, outcome := range []string{ProposalDispositionRejected, ProposalDispositionAuditOnly} {
+		t.Run(outcome, func(t *testing.T) {
+			ctx, pool := integrationPool(t)
+			currentNodeID := ingestAndAdmitSupersessionFixture(t, ctx, pool, "supersession-"+outcome+"-current", "supersession-"+outcome+"-current-source")
+			replacedNodeID := ingestAndAdmitSupersessionFixture(t, ctx, pool, "supersession-"+outcome+"-old", "supersession-"+outcome+"-old-source")
+			proposal, err := SubmitCanonicalSupersessionProposal(
+				ctx,
+				pool,
+				canonicalSupersessionIntegrationInput("supersession-"+outcome+"-request", currentNodeID, replacedNodeID),
+			)
+			if err != nil {
+				t.Fatalf("SubmitCanonicalSupersessionProposal() error = %v", err)
+			}
+			input := CanonicalSupersessionDispositionInput{
+				ProposalID:     proposal.Proposal.ID,
+				Outcome:        outcome,
+				DecisionBy:     "integration-reviewer",
+				DecisionReason: "the supplied records did not prove an admitted replacement",
+			}
+			decision, err := RecordPendingCanonicalSupersessionDisposition(ctx, pool, input)
+			if err != nil {
+				t.Fatalf("RecordPendingCanonicalSupersessionDisposition() error = %v", err)
+			}
+			if decision.Decision.CanonicalEdgeID != "" || decision.Decision.Outcome != outcome || decision.Replayed {
+				t.Fatalf("disposition = %+v", decision)
+			}
+			replay, err := RecordPendingCanonicalSupersessionDisposition(ctx, pool, input)
+			if err != nil {
+				t.Fatalf("replay disposition: %v", err)
+			}
+			if !replay.Replayed || replay.Decision.ID != decision.Decision.ID {
+				t.Fatalf("disposition replay = %+v", replay)
+			}
+			changedInput := input
+			changedInput.DecisionBy = "different-reviewer"
+			changedInput.DecisionReason = "must not replace the first disposition audit"
+			_, err = RecordPendingCanonicalSupersessionDisposition(ctx, pool, changedInput)
+			assertKind(t, err, ErrorAdmissionStateConflict)
+			assertTableCount(t, ctx, pool, "canonical_supersession_proposals", 1)
+			assertTableCount(t, ctx, pool, "canonical_supersession_admission_decisions", 1)
+			assertTableCount(t, ctx, pool, "canonical_graph_edges", 2)
+		})
 	}
-	decision, err := RecordPendingCanonicalSupersessionDisposition(ctx, pool, CanonicalSupersessionDispositionInput{
-		ProposalID:     proposal.Proposal.ID,
-		Outcome:        ProposalDispositionRejected,
-		DecisionBy:     "integration-reviewer",
-		DecisionReason: "the supplied records did not prove replacement",
-	})
-	if err != nil {
-		t.Fatalf("RecordPendingCanonicalSupersessionDisposition() error = %v", err)
-	}
-	if decision.Decision.CanonicalEdgeID != "" || decision.Decision.Outcome != ProposalDispositionRejected {
-		t.Fatalf("disposition = %+v", decision)
-	}
-	_, err = RecordPendingCanonicalSupersessionDisposition(ctx, pool, CanonicalSupersessionDispositionInput{
-		ProposalID:     proposal.Proposal.ID,
-		Outcome:        ProposalDispositionRejected,
-		DecisionBy:     "different-reviewer",
-		DecisionReason: "must not replace the first disposition audit",
-	})
-	assertKind(t, err, ErrorAdmissionStateConflict)
-	assertTableCount(t, ctx, pool, "canonical_supersession_proposals", 1)
-	assertTableCount(t, ctx, pool, "canonical_supersession_admission_decisions", 1)
-	assertTableCount(t, ctx, pool, "canonical_graph_edges", 2)
 }
 
 func TestIntegrationCanonicalSupersessionAdmissionRejectsCycle(t *testing.T) {

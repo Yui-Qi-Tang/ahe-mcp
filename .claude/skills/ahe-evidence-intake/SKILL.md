@@ -164,6 +164,19 @@ node IDs and therefore a different pair.
 AHE records the reviewer fields but does not prove that the agent showed the
 card or that the conversation occurred.
 
+## Relate Replaced Canonical Nodes
+
+Use this only when the supplied records explicitly establish that one admitted
+claim replaces another. Call `submit_canonical_supersession_proposal` with
+`from_node_id=current` and `to_node_id=replaced`, then read
+`get_canonical_supersession_proposal`. Show both grounded records, the proposal
+sentence, version difference, coverage, limitations, producer metadata, and any
+decision. Stop and wait for explicit approval before admission; otherwise record
+an explicit `rejected` or `audit_only` disposition. A directed pair is single-use
+in v1. The reverse pair is distinct, but AHE rejects admissions that would create
+a `supersedes` cycle. Do not infer replacement from revision order or source
+generation lifecycle, and do not submit when the semantic link is uncertain.
+
 ## Completion Report
 
 Report results per provider object and proposal:
@@ -176,6 +189,8 @@ Report results per provider object and proposal:
 - coverage, limitations, and any missing readback capability.
 - contradiction proposal and edge IDs plus the reviewer outcome when a
   cross-node contradiction was considered.
+- supersession proposal and edge IDs plus the reviewer outcome when a version
+  replacement was considered.
 
 Do not claim that AHE cryptographically or independently verified the human
 review conversation. The cooperating agent is responsible for showing the

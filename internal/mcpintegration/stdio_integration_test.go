@@ -41,63 +41,74 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query NewServer() error = %v", err)
 	}
-	ingestMCP := stdioServer(t, "ahe-ingest-mcp-test", mcpadmin.NewBackend(ingestCore))
+	ingestBackend, err := mcpadmin.NewSourceIngressBackend(ctx, mcpadmin.NewBackend(ingestCore))
+	if err != nil {
+		t.Fatalf("ingest NewSourceIngressBackend() error = %v", err)
+	}
+	t.Cleanup(ingestBackend.Close)
+	ingestMCP := stdioServer(t, "ahe-ingest-mcp-test", ingestBackend)
 	queryMCP := stdioServer(t, "ahe-query-mcp-test", mcpquery.NewBackend(queryCore))
 
 	assertStdioInitialized(t, ctx, ingestMCP, "ahe-ingest-mcp-test")
 	assertStdioInitialized(t, ctx, queryMCP, "ahe-query-mcp-test")
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitTextSource)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitExternalSource)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolInspectGoplsWorkspace)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolInspectGitRepositoryChange)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolObserveGitRepositoryChange)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolScheduleGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolClaimGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRenewGitRepositoryExtractionWorkLease)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolExecuteClaimedGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolListExpiredGitRepositoryExtractionWorkClaims)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolListExpiredGitRepositoryExtractionWorkExecutions)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolFinishGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRecoverExpiredGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRepairExpiredGitRepositoryExtractionWorkExecution)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRetryFailedGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolClassifyFailedGitRepositoryExtractionWork)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolListDueGitRepositoryExtractionWorkRetryDecisions)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolConsumeDueGitRepositoryExtractionWorkRetryDecision)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunDueGitRepositoryExtractionWorkRetryControllerTick)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolCaptureGitRepositorySnapshot)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolGetRepositoryExtractorInput)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunRepositoryGoParserExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunRepositoryGoplsExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolListRepositorySourceGenerations)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolActivateRepositorySourceGeneration)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunLocalOllamaExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunGoParserExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRunGoplsExtractor)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRecordPendingProposalDisposition)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitCanonicalContradictionProposal)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession)
-	assertStdioToolListed(t, ctx, ingestMCP, evidenceingestionmcp.ToolRecordPendingCanonicalSupersessionDisposition)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetEvidenceRecord)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolListEvidenceRecords)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolSearchEvidenceRecords)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetGroundedEvidenceBrief)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolListEvidenceNeighbors)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetRelationProvenance)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetMCPReadSourceStates)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolOpenCanonicalReadView)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolFindCanonicalPath)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalTopologyDiagnostics)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalContradictionProposal)
-	assertStdioToolListed(t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalSupersessionProposal)
-	assertStdioToolNotListed(t, ctx, queryMCP, "get_mcp_read_source_transition")
-	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitTextSource)
-	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolSubmitExternalSource)
-	assertStdioToolNotListed(t, ctx, queryMCP, evidenceingestionmcp.ToolRecordPendingProposalDisposition)
+	assertStdioToolNames(t, ctx, ingestMCP, []string{
+		evidenceingestionmcp.ToolSubmitManualEvidence,
+		evidenceingestionmcp.ToolSubmitTextSource,
+		evidenceingestionmcp.ToolSubmitExtractorOutput,
+		evidenceingestionmcp.ToolGetExtractorInput,
+		evidenceingestionmcp.ToolInspectGoplsWorkspace,
+		evidenceingestionmcp.ToolInspectGitRepositoryChange,
+		evidenceingestionmcp.ToolObserveGitRepositoryChange,
+		evidenceingestionmcp.ToolScheduleGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolClaimGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolRenewGitRepositoryExtractionWorkLease,
+		evidenceingestionmcp.ToolExecuteClaimedGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolRunGitRepositoryExtractionWorkerTick,
+		evidenceingestionmcp.ToolListExpiredGitRepositoryExtractionWorkClaims,
+		evidenceingestionmcp.ToolListExpiredGitRepositoryExtractionWorkExecutions,
+		evidenceingestionmcp.ToolFinishGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolRecoverExpiredGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolRepairExpiredGitRepositoryExtractionWorkExecution,
+		evidenceingestionmcp.ToolRetryFailedGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolCaptureGitRepositorySnapshot,
+		evidenceingestionmcp.ToolGetRepositoryExtractorInput,
+		evidenceingestionmcp.ToolCreateRepositoryExtractionRun,
+		evidenceingestionmcp.ToolRunRepositoryGoParserExtractor,
+		evidenceingestionmcp.ToolRunRepositoryGoplsExtractor,
+		evidenceingestionmcp.ToolListRepositorySourceGenerations,
+		evidenceingestionmcp.ToolActivateRepositorySourceGeneration,
+		evidenceingestionmcp.ToolRunLocalOllamaExtractor,
+		evidenceingestionmcp.ToolRunGoParserExtractor,
+		evidenceingestionmcp.ToolRunGoplsExtractor,
+		evidenceingestionmcp.ToolAdmitPendingProposal,
+		evidenceingestionmcp.ToolRecordPendingProposalDisposition,
+		evidenceingestionmcp.ToolSubmitCanonicalContradictionProposal,
+		evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction,
+		evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition,
+		evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal,
+		evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession,
+		evidenceingestionmcp.ToolRecordPendingCanonicalSupersessionDisposition,
+		evidenceingestionmcp.ToolClassifyFailedGitRepositoryExtractionWork,
+		evidenceingestionmcp.ToolListDueGitRepositoryExtractionWorkRetryDecisions,
+		evidenceingestionmcp.ToolConsumeDueGitRepositoryExtractionWorkRetryDecision,
+		evidenceingestionmcp.ToolRunDueGitRepositoryExtractionWorkRetryControllerTick,
+		evidenceingestionmcp.ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick,
+		evidenceingestionmcp.ToolSubmitExternalSource,
+	})
+	assertStdioToolNames(t, ctx, queryMCP, []string{
+		evidencequerymcp.ToolGetEvidenceRecord,
+		evidencequerymcp.ToolListEvidenceRecords,
+		evidencequerymcp.ToolSearchEvidenceRecords,
+		evidencequerymcp.ToolGetGroundedEvidenceBrief,
+		evidencequerymcp.ToolListEvidenceNeighbors,
+		evidencequerymcp.ToolGetRelationProvenance,
+		evidencequerymcp.ToolGetMCPReadSourceStates,
+		evidencequerymcp.ToolOpenCanonicalReadView,
+		evidencequerymcp.ToolFindCanonicalPath,
+		evidencequerymcp.ToolGetCanonicalTopologyDiagnostics,
+		evidencequerymcp.ToolGetCanonicalContradictionProposal,
+		evidencequerymcp.ToolGetCanonicalSupersessionProposal,
+	})
 
 	gitRoot := t.TempDir()
 	stdioWriteFile(t, filepath.Join(gitRoot, "main.go"), []byte("package main\n"))
@@ -1541,7 +1552,7 @@ func assertStdioToolListed(t *testing.T, ctx context.Context, server *mcpstdio.S
 	t.Fatalf("tools/list missing %q: %+v", name, resp.Tools)
 }
 
-func assertStdioToolNotListed(t *testing.T, ctx context.Context, server *mcpstdio.Server, name string) {
+func assertStdioToolNames(t *testing.T, ctx context.Context, server *mcpstdio.Server, want []string) {
 	t.Helper()
 	result := stdioRPC(t, ctx, server, "tools/list", nil)
 	var resp struct {
@@ -1552,9 +1563,12 @@ func assertStdioToolNotListed(t *testing.T, ctx context.Context, server *mcpstdi
 	if err := json.Unmarshal(result, &resp); err != nil {
 		t.Fatalf("unmarshal tools/list: %v", err)
 	}
-	for _, tool := range resp.Tools {
-		if tool.Name == name {
-			t.Fatalf("tools/list unexpectedly contains %q: %+v", name, resp.Tools)
+	if len(resp.Tools) != len(want) {
+		t.Fatalf("tools/list count = %d, want %d: %+v", len(resp.Tools), len(want), resp.Tools)
+	}
+	for i, tool := range resp.Tools {
+		if tool.Name != want[i] {
+			t.Fatalf("tools/list[%d] = %q, want %q: %+v", i, tool.Name, want[i], resp.Tools)
 		}
 	}
 }
