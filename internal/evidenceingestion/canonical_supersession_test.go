@@ -51,6 +51,26 @@ func TestPrepareCanonicalSupersessionProposalSeparatesSessionFromFingerprint(t *
 	}
 }
 
+func TestPrepareCanonicalSupersessionProposalPreservesEmptyLimitations(t *testing.T) {
+	input := canonicalSupersessionTestInput()
+	input.Limitations = []string{}
+
+	prepared, err := prepareCanonicalSupersessionProposal(input)
+	if err != nil {
+		t.Fatalf("prepareCanonicalSupersessionProposal() error = %v", err)
+	}
+	if prepared.input.Limitations == nil {
+		t.Fatal("prepared limitations = nil, want empty array")
+	}
+	data, err := jsonBytes(prepared.input.Limitations)
+	if err != nil {
+		t.Fatalf("jsonBytes() error = %v", err)
+	}
+	if got, want := string(data), "[]"; got != want {
+		t.Fatalf("serialized limitations = %s, want %s", got, want)
+	}
+}
+
 func TestPrepareCanonicalSupersessionProposalRejectsInvalidInput(t *testing.T) {
 	tests := []struct {
 		name   string

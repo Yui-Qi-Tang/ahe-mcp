@@ -95,7 +95,7 @@ func submitCanonicalSupersessionProposal(
 		ProposalSentence:    prepared.input.ProposalSentence,
 		Rationale:           prepared.input.Rationale,
 		VersionDifference:   prepared.input.VersionDifference,
-		Limitations:         append([]string(nil), prepared.input.Limitations...),
+		Limitations:         append([]string{}, prepared.input.Limitations...),
 		ProducerName:        prepared.input.ProducerName,
 		ProducerVersion:     prepared.input.ProducerVersion,
 		ProducerSessionRef:  prepared.input.ProducerSessionRef,
@@ -193,7 +193,7 @@ func prepareCanonicalSupersessionProposal(
 	input.ProducerName = strings.TrimSpace(input.ProducerName)
 	input.ProducerVersion = strings.TrimSpace(input.ProducerVersion)
 	input.ProducerSessionRef = strings.TrimSpace(input.ProducerSessionRef)
-	input.Limitations = append([]string(nil), input.Limitations...)
+	input.Limitations = append([]string{}, input.Limitations...)
 	for index := range input.Limitations {
 		input.Limitations[index] = strings.TrimSpace(input.Limitations[index])
 	}
