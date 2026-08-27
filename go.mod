@@ -1,9 +1,9 @@
 module github.com/Yui-Qi-Tang/ahe-mcp
 
-go 1.26.5
+go 1.27.0
 
 require (
-	github.com/Yui-Qi-Tang/graph v0.1.1
+	github.com/Yui-Qi-Tang/graph v0.1.2
 	github.com/jackc/pgx/v5 v5.10.0
 )
 
