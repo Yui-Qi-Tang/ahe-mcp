@@ -549,7 +549,7 @@ func processAcceptanceRepository(t *testing.T, gitPath string) string {
 		}
 	}
 	files := map[string]string{
-		"go.mod":  "module example.com/detective-acceptance\n\ngo 1.26\n",
+		"go.mod":  "module example.com/detective-acceptance\n\ngo 1.27\n",
 		"main.go": "package acceptance\n\nfunc Collect() string { return \"evidence\" }\n",
 	}
 	for path, content := range files {
