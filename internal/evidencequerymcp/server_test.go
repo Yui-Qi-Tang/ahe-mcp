@@ -1626,6 +1626,24 @@ func TestCallToolGetsCanonicalSupersessionReviewCardAndRelationOrigin(t *testing
 	}
 }
 
+func TestCallToolCanonicalSupersessionReviewCardPreservesEmptyLimitations(t *testing.T) {
+	supersession := testCanonicalSupersessionResult()
+	supersession.Proposal.Limitations = []string{}
+	server := newServer(&fakeQueryCore{supersessionResult: supersession})
+
+	data, err := server.CallTool(context.Background(), ToolGetCanonicalSupersessionProposal, []byte(`{"canonical_supersession_proposal_id":"supersession-proposal:1"}`))
+	if err != nil {
+		t.Fatalf("CallTool() error = %v", err)
+	}
+	var review CanonicalSupersessionProposalResponse
+	if err := json.Unmarshal(data, &review); err != nil {
+		t.Fatalf("Unmarshal supersession proposal: %v", err)
+	}
+	if review.Proposal.Limitations == nil || len(review.Proposal.Limitations) != 0 {
+		t.Fatalf("review limitations = %#v, want non-nil empty array", review.Proposal.Limitations)
+	}
+}
+
 func TestCallToolListsRepositorySymbolNeighbors(t *testing.T) {
 	relation := testRepositoryRelationResult("occ:neighbor")
 	neighbor := relation.CodeRelation.Target

@@ -2547,7 +2547,7 @@ func mapCanonicalSupersessionProposal(result evidenceingestion.CanonicalSuperses
 			ProposalSentence:                proposal.ProposalSentence,
 			Rationale:                       proposal.Rationale,
 			VersionDifference:               proposal.VersionDifference,
-			Limitations:                     append([]string(nil), proposal.Limitations...),
+			Limitations:                     append([]string{}, proposal.Limitations...),
 			ProducerName:                    proposal.ProducerName,
 			ProducerVersion:                 proposal.ProducerVersion,
 			ProducerSessionRef:              proposal.ProducerSessionRef,

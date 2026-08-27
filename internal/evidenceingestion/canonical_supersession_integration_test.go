@@ -119,6 +119,41 @@ func TestIntegrationCanonicalSupersessionAdmissionRoundTrip(t *testing.T) {
 	}
 }
 
+func TestIntegrationCanonicalSupersessionProposalAllowsEmptyLimitations(t *testing.T) {
+	ctx, pool := integrationPool(t)
+	currentNodeID := ingestAndAdmitSupersessionFixture(t, ctx, pool, "supersession-empty-limitations-current", "supersession-empty-limitations-current-source")
+	replacedNodeID := ingestAndAdmitSupersessionFixture(t, ctx, pool, "supersession-empty-limitations-replaced", "supersession-empty-limitations-replaced-source")
+	input := canonicalSupersessionIntegrationInput("supersession-empty-limitations-request", currentNodeID, replacedNodeID)
+	input.Limitations = []string{}
+
+	result, err := SubmitCanonicalSupersessionProposal(ctx, pool, input)
+	if err != nil {
+		t.Fatalf("SubmitCanonicalSupersessionProposal() error = %v", err)
+	}
+	if result.Proposal.Limitations == nil || len(result.Proposal.Limitations) != 0 {
+		t.Fatalf("proposal limitations = %#v, want non-nil empty array", result.Proposal.Limitations)
+	}
+
+	stored, err := GetCanonicalSupersessionProposal(ctx, pool, result.Proposal.ID)
+	if err != nil {
+		t.Fatalf("GetCanonicalSupersessionProposal() error = %v", err)
+	}
+	if stored.Proposal.Limitations == nil || len(stored.Proposal.Limitations) != 0 {
+		t.Fatalf("stored limitations = %#v, want non-nil empty array", stored.Proposal.Limitations)
+	}
+	var limitations string
+	if err := pool.QueryRow(ctx, `
+		SELECT limitations::text
+		FROM canonical_supersession_proposals
+		WHERE canonical_supersession_proposal_id = $1
+	`, result.Proposal.ID).Scan(&limitations); err != nil {
+		t.Fatalf("read stored limitations: %v", err)
+	}
+	if got, want := limitations, "[]"; got != want {
+		t.Fatalf("stored limitations JSON = %s, want %s", got, want)
+	}
+}
+
 func TestIntegrationCanonicalSupersessionDispositionDoesNotWriteEdge(t *testing.T) {
 	for _, outcome := range []string{ProposalDispositionRejected, ProposalDispositionAuditOnly} {
 		t.Run(outcome, func(t *testing.T) {

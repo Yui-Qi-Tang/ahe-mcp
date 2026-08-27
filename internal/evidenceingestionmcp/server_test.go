@@ -1412,6 +1412,42 @@ func TestCallToolCanonicalSupersessionWorkflowThroughCore(t *testing.T) {
 	}
 }
 
+func TestCallToolCanonicalSupersessionPreservesEmptyLimitations(t *testing.T) {
+	core := &fakeCore{
+		supersessionProposalResult: evidenceingestion.CanonicalSupersessionProposalResult{
+			Proposal: evidenceingestion.CanonicalSupersessionProposal{
+				ID:                "supersession-proposal:empty-limitations",
+				FromNodeID:        "canon-node:current",
+				ToNodeID:          "canon-node:replaced",
+				Relation:          "supersedes",
+				ProposalSentence:  "The current claim supersedes the historical claim.",
+				Rationale:         "The current source explicitly replaces the older revision.",
+				VersionDifference: "The timeout changes from 60 seconds to 30 seconds.",
+				Limitations:       []string{},
+				ProducerName:      "claude-code",
+				ProducerVersion:   "v1",
+				AdmissionOutcome:  "pending",
+			},
+		},
+	}
+	server := newServer(core)
+
+	data, err := server.CallTool(context.Background(), ToolSubmitCanonicalSupersessionProposal, []byte(`{"request_id":"supersession-empty-limitations","from_node_id":"canon-node:current","to_node_id":"canon-node:replaced","proposal_sentence":"The current claim supersedes the historical claim.","rationale":"The current source explicitly replaces the older revision.","version_difference":"The timeout changes from 60 seconds to 30 seconds.","limitations":[],"producer_name":"claude-code","producer_version":"v1"}`))
+	if err != nil {
+		t.Fatalf("CallTool() error = %v", err)
+	}
+	if core.supersessionProposalInput.Limitations == nil {
+		t.Fatal("core limitations = nil, want empty array")
+	}
+	var response SubmitCanonicalSupersessionProposalResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		t.Fatalf("Unmarshal proposal: %v", err)
+	}
+	if response.Limitations == nil || len(response.Limitations) != 0 {
+		t.Fatalf("response limitations = %#v, want non-nil empty array", response.Limitations)
+	}
+}
+
 func TestCallToolRecordsCanonicalSupersessionDispositionThroughCore(t *testing.T) {
 	core := &fakeCore{
 		supersessionDecisionResult: evidenceingestion.CanonicalSupersessionDecisionResult{
