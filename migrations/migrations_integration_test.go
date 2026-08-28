@@ -41,10 +41,10 @@ func TestIntegrationVerifyCurrentAcceptsAppliedSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 41 {
-		t.Fatalf("AppliedMigrations = %d, want 41", status.AppliedMigrations)
+	if status.AppliedMigrations != 42 {
+		t.Fatalf("AppliedMigrations = %d, want 42", status.AppliedMigrations)
 	}
-	if status.LatestMigration != "000041_evidence_ingestion_canonical_supersessions.up.sql" {
+	if status.LatestMigration != "000042_evidence_ingestion_canonical_supersession_v2.up.sql" {
 		t.Fatalf("LatestMigration = %q", status.LatestMigration)
 	}
 }
@@ -143,7 +143,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	}
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM schema_migrations
-		WHERE migration_name = '000041_evidence_ingestion_canonical_supersessions.up.sql'
+		WHERE migration_name = '000042_evidence_ingestion_canonical_supersession_v2.up.sql'
 	`); err != nil {
 		t.Fatalf("delete latest migration row: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	if !errors.Is(err, ErrSchemaNotCurrent) {
 		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
 	}
-	if !strings.Contains(err.Error(), "40/41 embedded migrations are applied") {
+	if !strings.Contains(err.Error(), "41/42 embedded migrations are applied") {
 		t.Fatalf("VerifyCurrent() error = %v, want migration count detail", err)
 	}
 }
@@ -234,6 +234,235 @@ func TestIntegrationCanonicalSupersessionMigrationRejectsLegacyEdges(t *testing.
 	}
 }
 
+func TestIntegrationCanonicalSupersessionV2MigrationFailsClosedOnPairV1State(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		prepare    func(context.Context, *pgxpool.Pool, string, string, string) error
+		wantCounts string
+	}{
+		{
+			name: "proposal",
+			prepare: func(ctx context.Context, pool *pgxpool.Pool, proposalID, fromNodeID, toNodeID string) error {
+				return insertPendingPairV1Supersession(ctx, pool, proposalID, fromNodeID, toNodeID)
+			},
+			wantCounts: "supersedes_edges=0 proposals=1 decisions=0",
+		},
+		{
+			name: "decision",
+			prepare: func(ctx context.Context, pool *pgxpool.Pool, proposalID, fromNodeID, toNodeID string) error {
+				if err := insertPendingPairV1Supersession(ctx, pool, proposalID, fromNodeID, toNodeID); err != nil {
+					return err
+				}
+				tx, err := pool.Begin(ctx)
+				if err != nil {
+					return err
+				}
+				defer func() { _ = tx.Rollback(context.Background()) }()
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO canonical_supersession_admission_decisions (
+						canonical_supersession_admission_decision_id,
+						canonical_supersession_proposal_id,
+						outcome,
+						decision_by,
+						decision_reason
+					)
+					VALUES ('supersession-decision:migration-42', $1, 'rejected', 'migration-test', 'preflight')
+				`, proposalID); err != nil {
+					return err
+				}
+				if _, err := tx.Exec(ctx, `
+					UPDATE canonical_supersession_proposals
+					SET admission_outcome = 'rejected', decided_at = now()
+					WHERE canonical_supersession_proposal_id = $1
+				`, proposalID); err != nil {
+					return err
+				}
+				return tx.Commit(ctx)
+			},
+			wantCounts: "supersedes_edges=0 proposals=1 decisions=1",
+		},
+		{
+			name: "edge",
+			prepare: func(ctx context.Context, pool *pgxpool.Pool, proposalID, fromNodeID, toNodeID string) error {
+				if err := insertPendingPairV1Supersession(ctx, pool, proposalID, fromNodeID, toNodeID); err != nil {
+					return err
+				}
+				tx, err := pool.Begin(ctx)
+				if err != nil {
+					return err
+				}
+				defer func() { _ = tx.Rollback(context.Background()) }()
+				const edgeID = "canon-edge:migration-42-pair-v1"
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO canonical_graph_edges (
+						canonical_edge_id,
+						from_node_id,
+						to_node_id,
+						relation,
+						provenance,
+						origin_proposal_occurrence_id,
+						origin_canonical_contradiction_proposal_id,
+						origin_canonical_supersession_proposal_id
+					)
+					VALUES ($1, $2, $3, 'supersedes', '{}'::jsonb, NULL, NULL, $4)
+				`, edgeID, fromNodeID, toNodeID, proposalID); err != nil {
+					return err
+				}
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO canonical_supersession_admission_decisions (
+						canonical_supersession_admission_decision_id,
+						canonical_supersession_proposal_id,
+						outcome,
+						canonical_edge_id,
+						decision_by,
+						decision_reason
+					)
+					VALUES ('supersession-decision:migration-42', $1, 'admitted', $2, 'migration-test', 'preflight')
+				`, proposalID, edgeID); err != nil {
+					return err
+				}
+				if _, err := tx.Exec(ctx, `
+					UPDATE canonical_supersession_proposals
+					SET admission_outcome = 'admitted', canonical_edge_id = $2, decided_at = now()
+					WHERE canonical_supersession_proposal_id = $1
+				`, proposalID, edgeID); err != nil {
+					return err
+				}
+				return tx.Commit(ctx)
+			},
+			wantCounts: "supersedes_edges=1 proposals=1 decisions=1",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, pool := migrationTestPool(t)
+			migration42 := applyThroughCanonicalSupersessionV1(t, ctx, pool)
+			fromNodeID, toNodeID := createCanonicalSupersessionEndpoints(t, ctx, pool)
+			const proposalID = "supersession-proposal:migration-42-preflight"
+			if err := test.prepare(ctx, pool, proposalID, fromNodeID, toNodeID); err != nil {
+				t.Fatalf("prepare pair-v1 %s state: %v", test.name, err)
+			}
+
+			_, err := pool.Exec(ctx, migration42.sql)
+			if err == nil {
+				t.Fatalf("migration 42 accepted non-empty pair-v1 %s state", test.name)
+			}
+			if !strings.Contains(err.Error(), "requires empty pair-v1 supersession state") ||
+				!strings.Contains(err.Error(), test.wantCounts) {
+				t.Fatalf("migration 42 error = %v, want %q", err, test.wantCounts)
+			}
+			assertMigrationTableExists(t, ctx, pool, "canonical_supersession_proposals")
+			assertMigrationTableExists(t, ctx, pool, "canonical_supersession_admission_decisions")
+			assertMigrationTableMissing(t, ctx, pool, "canonical_supersession_lineages")
+		})
+	}
+}
+
+func applyThroughCanonicalSupersessionV1(
+	t *testing.T,
+	ctx context.Context,
+	pool *pgxpool.Pool,
+) embeddedMigration {
+	t.Helper()
+	migrationSet, err := loadMigrations()
+	if err != nil {
+		t.Fatalf("loadMigrations() error = %v", err)
+	}
+	for _, migration := range migrationSet {
+		if migration.name == "000042_evidence_ingestion_canonical_supersession_v2.up.sql" {
+			return migration
+		}
+		if _, err := pool.Exec(ctx, migration.sql); err != nil {
+			t.Fatalf("applying predecessor migration %s: %v", migration.name, err)
+		}
+	}
+	t.Fatal("canonical supersession v2 migration was not loaded")
+	return embeddedMigration{}
+}
+
+func createCanonicalSupersessionEndpoints(
+	t *testing.T,
+	ctx context.Context,
+	pool *pgxpool.Pool,
+) (string, string) {
+	t.Helper()
+	endpoints := make([]string, 0, 2)
+	for index := 1; index <= 2; index++ {
+		ingested, err := evidenceingestion.IngestManualText(
+			ctx,
+			pool,
+			evidenceingestion.ManualTextInput{
+				SourceID:      fmt.Sprintf("migration-42-endpoint-%d", index),
+				SourceVersion: "v1",
+				Raw:           []byte(fmt.Sprintf("Canonical supersession endpoint %d.\n", index)),
+				RequestID:     fmt.Sprintf("migration-42-endpoint-request-%d", index),
+				AttemptNumber: 1,
+			},
+			evidenceingestion.FrozenExtractorOutput{Proposals: []evidenceingestion.ExtractorProposalOutput{{
+				ProposalLocalID: "stmt-1",
+				StatementText:   fmt.Sprintf("Canonical supersession endpoint %d.", index),
+				EvidenceRefs:    []string{"span:S1"},
+			}}},
+		)
+		if err != nil {
+			t.Fatalf("ingest supersession endpoint %d: %v", index, err)
+		}
+		admitted, err := evidenceingestion.AdmitPendingProposal(ctx, pool, evidenceingestion.AdmissionInput{
+			ProposalOccurrenceID: ingested.ProposalOccurrenceID,
+			DecisionBy:           "migration-test",
+			DecisionReason:       "create migration 42 pair-v1 endpoint",
+		})
+		if err != nil {
+			t.Fatalf("admit supersession endpoint %d: %v", index, err)
+		}
+		endpoints = append(endpoints, admitted.CanonicalRef)
+	}
+	return endpoints[0], endpoints[1]
+}
+
+func insertPendingPairV1Supersession(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	proposalID string,
+	fromNodeID string,
+	toNodeID string,
+) error {
+	_, err := pool.Exec(ctx, `
+		INSERT INTO canonical_supersession_proposals (
+			canonical_supersession_proposal_id,
+			request_id,
+			request_payload_hash,
+			proposal_fingerprint,
+			from_node_id,
+			to_node_id,
+			relation,
+			proposal_sentence,
+			rationale,
+			version_difference,
+			limitations,
+			producer_name,
+			producer_version,
+			admission_outcome
+		)
+		VALUES (
+			$1,
+			'migration-42-pair-v1-request',
+			'sha256:migration-42-request',
+			'sha256:migration-42-proposal',
+			$2,
+			$3,
+			'supersedes',
+			'New endpoint replaces old endpoint.',
+			'Migration preflight fixture.',
+			'Fixture version difference.',
+			'[]'::jsonb,
+			'migration-test',
+			'v1',
+			'pending'
+		)
+	`, proposalID, fromNodeID, toNodeID)
+	return err
+}
+
 func TestIntegrationVerifyCurrentRejectsChecksumDrift(t *testing.T) {
 	ctx, pool := migrationTestPool(t)
 	if _, err := ApplyUp(ctx, pool); err != nil {
@@ -274,6 +503,183 @@ func TestIntegrationVerifyCurrentRejectsMissingRequiredTable(t *testing.T) {
 	}
 }
 
+func TestIntegrationVerifyCurrentRejectsMissingCanonicalSupersessionTrigger(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		DROP TRIGGER canonical_supersession_edges_authority_trigger
+		ON canonical_graph_edges
+	`); err != nil {
+		t.Fatalf("drop canonical supersession authority trigger: %v", err)
+	}
+
+	_, err := VerifyCurrent(ctx, pool)
+	if !errors.Is(err, ErrSchemaNotCurrent) {
+		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
+	}
+	if !strings.Contains(err.Error(), "canonical_supersession_edges_authority_trigger is missing") {
+		t.Fatalf("VerifyCurrent() error = %v, want missing supersession trigger detail", err)
+	}
+}
+
+func TestIntegrationVerifyCurrentRejectsMissingCanonicalSupersessionHeadTrigger(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		DROP TRIGGER canonical_supersession_head_authority_trigger
+		ON canonical_supersession_admission_head
+	`); err != nil {
+		t.Fatalf("drop canonical supersession head trigger: %v", err)
+	}
+
+	_, err := VerifyCurrent(ctx, pool)
+	if !errors.Is(err, ErrSchemaNotCurrent) {
+		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
+	}
+	if !strings.Contains(err.Error(), "canonical_supersession_head_authority_trigger is missing") {
+		t.Fatalf("VerifyCurrent() error = %v, want missing head trigger detail", err)
+	}
+}
+
+func TestIntegrationVerifyCurrentRejectsReplacedCanonicalSupersessionFunction(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		CREATE OR REPLACE FUNCTION canonical_supersession_assert_edge(checked_edge_id TEXT)
+		RETURNS VOID
+		LANGUAGE plpgsql
+		AS $$
+		BEGIN
+			RETURN;
+		END $$
+	`); err != nil {
+		t.Fatalf("replace canonical supersession authority helper: %v", err)
+	}
+
+	_, err := VerifyCurrent(ctx, pool)
+	if !errors.Is(err, ErrSchemaNotCurrent) {
+		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
+	}
+	if !strings.Contains(err.Error(), "canonical_supersession_assert_edge does not match its definition contract") {
+		t.Fatalf("VerifyCurrent() error = %v, want supersession function definition detail", err)
+	}
+}
+
+func TestIntegrationVerifyCurrentRejectsChangedCanonicalSupersessionFunctionExecutionContract(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		ALTER FUNCTION canonical_supersession_stable_id(TEXT, TEXT[])
+		VOLATILE
+	`); err != nil {
+		t.Fatalf("change canonical supersession stable ID execution contract: %v", err)
+	}
+
+	_, err := VerifyCurrent(ctx, pool)
+	if !errors.Is(err, ErrSchemaNotCurrent) {
+		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
+	}
+	if !strings.Contains(err.Error(), "canonical_supersession_stable_id does not match its execution contract") {
+		t.Fatalf("VerifyCurrent() error = %v, want stable ID execution detail", err)
+	}
+}
+
+func TestIntegrationVerifyCurrentRejectsMalformedCanonicalSupersessionConstraint(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		ALTER TABLE admission_decisions
+			DROP CONSTRAINT admission_decisions_supersession_binding_uq CASCADE;
+		ALTER TABLE admission_decisions
+			ADD CONSTRAINT admission_decisions_supersession_binding_uq
+			UNIQUE (admission_decision_id, proposal_occurrence_id)
+	`); err != nil {
+		t.Fatalf("replace canonical supersession constraint: %v", err)
+	}
+
+	_, err := VerifyCurrent(ctx, pool)
+	if !errors.Is(err, ErrSchemaNotCurrent) {
+		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
+	}
+	if !strings.Contains(err.Error(), "admission_decisions_supersession_binding_uq does not match its definition contract") {
+		t.Fatalf("VerifyCurrent() error = %v, want supersession constraint definition detail", err)
+	}
+}
+
+func TestIntegrationVerifyCurrentRejectsMissingCanonicalSupersessionHeadConstraint(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
+		ALTER TABLE canonical_supersession_admission_head
+		DROP CONSTRAINT canonical_supersession_head_coordinate_ck
+	`); err != nil {
+		t.Fatalf("drop canonical supersession head coordinate constraint: %v", err)
+	}
+
+	_, err := VerifyCurrent(ctx, pool)
+	if !errors.Is(err, ErrSchemaNotCurrent) {
+		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
+	}
+	if !strings.Contains(err.Error(), "canonical_supersession_head_coordinate_ck is missing") {
+		t.Fatalf("VerifyCurrent() error = %v, want missing head constraint detail", err)
+	}
+}
+
+func TestIntegrationCanonicalSupersessionV2RejectsBareSupersedesEdge(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+	fromNodeID, toNodeID := createCanonicalSupersessionEndpoints(t, ctx, pool)
+	var originProposalOccurrenceID string
+	if err := pool.QueryRow(ctx, `
+		SELECT origin_proposal_occurrence_id
+		FROM canonical_graph_nodes
+		WHERE canonical_node_id = $1
+	`, fromNodeID).Scan(&originProposalOccurrenceID); err != nil {
+		t.Fatalf("read endpoint proposal occurrence: %v", err)
+	}
+
+	_, err := pool.Exec(ctx, `
+		INSERT INTO canonical_graph_edges (
+			canonical_edge_id,
+			from_node_id,
+			to_node_id,
+			relation,
+			provenance,
+			origin_proposal_occurrence_id,
+			origin_canonical_contradiction_proposal_id
+		)
+		VALUES (
+			'canon-edge:migration-42-bare',
+			$1,
+			$2,
+			'supersedes',
+			'{}'::jsonb,
+			$3,
+			NULL
+		)
+	`, fromNodeID, toNodeID, originProposalOccurrenceID)
+	if err == nil {
+		t.Fatal("bare supersedes edge unexpectedly committed")
+	}
+	if !strings.Contains(err.Error(), "lacks exact supersession replacement authority") {
+		t.Fatalf("bare supersedes edge error = %v, want authority detail", err)
+	}
+}
+
 func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	ctx, pool := migrationTestPool(t)
 	for _, name := range []string{
@@ -296,7 +702,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want true")
 	}
-	assertMigrationCount(t, ctx, pool, 41)
+	assertMigrationCount(t, ctx, pool, 42)
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "source_file_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshot_intake_requests")
@@ -349,8 +755,13 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	assertMigrationTableExists(t, ctx, pool, "canonical_derivation_parents")
 	assertMigrationTableExists(t, ctx, pool, "canonical_contradiction_proposals")
 	assertMigrationTableExists(t, ctx, pool, "canonical_contradiction_admission_decisions")
-	assertMigrationTableExists(t, ctx, pool, "canonical_supersession_proposals")
-	assertMigrationTableExists(t, ctx, pool, "canonical_supersession_admission_decisions")
+	assertMigrationTableExists(t, ctx, pool, "canonical_supersession_lineages")
+	assertMigrationTableExists(t, ctx, pool, "canonical_supersession_admission_events")
+	assertMigrationTableExists(t, ctx, pool, "canonical_supersession_admission_head")
+	assertMigrationTableExists(t, ctx, pool, "canonical_supersession_members")
+	assertMigrationTableExists(t, ctx, pool, "canonical_supersession_replacement_targets")
+	assertMigrationTableMissing(t, ctx, pool, "canonical_supersession_proposals")
+	assertMigrationTableMissing(t, ctx, pool, "canonical_supersession_admission_decisions")
 	assertMigrationIndexExists(t, ctx, pool, "repo_work_failure_policy_due_idx")
 	assertMigrationIndexExists(t, ctx, pool, "repository_extraction_work_expired_execution_scan_idx")
 	assertMigrationIndexExists(t, ctx, pool, "detective_planner_recommendation_consumptions_run_idx")
@@ -371,10 +782,10 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_to_relation_idx")
 	assertMigrationIndexExists(t, ctx, pool, "canonical_contradiction_proposals_outcome_idx")
 	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_contradiction_origin_idx")
-	assertMigrationIndexExists(t, ctx, pool, "canonical_supersession_proposals_outcome_idx")
-	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_supersession_origin_idx")
+	assertMigrationIndexExists(t, ctx, pool, "canonical_supersession_events_lineage_revision_idx")
+	assertMigrationIndexExists(t, ctx, pool, "canonical_supersession_targets_target_idx")
 	assertMigrationColumnExists(t, ctx, pool, "canonical_graph_edges", "origin_canonical_contradiction_proposal_id")
-	assertMigrationColumnExists(t, ctx, pool, "canonical_graph_edges", "origin_canonical_supersession_proposal_id")
+	assertMigrationColumnMissing(t, ctx, pool, "canonical_graph_edges", "origin_canonical_supersession_proposal_id")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_claim_attempts", "lease_duration_milliseconds")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_execution_requests", "heartbeat_lease_duration_milliseconds")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_execution_requests", "heartbeat_count")
@@ -1476,6 +1887,17 @@ func assertMigrationTableExists(t *testing.T, ctx context.Context, pool *pgxpool
 	}
 }
 
+func assertMigrationTableMissing(t *testing.T, ctx context.Context, pool *pgxpool.Pool, table string) {
+	t.Helper()
+	var got *string
+	if err := pool.QueryRow(ctx, `SELECT to_regclass($1)::text`, table).Scan(&got); err != nil {
+		t.Fatalf("checking missing table %s: %v", table, err)
+	}
+	if got != nil && *got != "" {
+		t.Fatalf("table %s still exists", table)
+	}
+}
+
 func assertMigrationIndexExists(t *testing.T, ctx context.Context, pool *pgxpool.Pool, index string) {
 	t.Helper()
 	var got *string
@@ -1503,6 +1925,25 @@ func assertMigrationColumnExists(t *testing.T, ctx context.Context, pool *pgxpoo
 	}
 	if !exists {
 		t.Fatalf("column %s.%s does not exist", table, column)
+	}
+}
+
+func assertMigrationColumnMissing(t *testing.T, ctx context.Context, pool *pgxpool.Pool, table, column string) {
+	t.Helper()
+	var exists bool
+	if err := pool.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM information_schema.columns
+			WHERE table_schema = current_schema()
+			  AND table_name = $1
+			  AND column_name = $2
+		)
+	`, table, column).Scan(&exists); err != nil {
+		t.Fatalf("checking missing column %s.%s: %v", table, column, err)
+	}
+	if exists {
+		t.Fatalf("column %s.%s still exists", table, column)
 	}
 }
 

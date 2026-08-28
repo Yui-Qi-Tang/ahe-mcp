@@ -53,6 +53,21 @@ func admitPendingProposal(ctx context.Context, db sqlDB, input AdmissionInput) (
 			if err != nil {
 				return err
 			}
+			wasSupersessionAdmission, err := proposalHasSupersessionAdmissionEvent(
+				ctx,
+				tx,
+				input.ProposalOccurrenceID,
+			)
+			if err != nil {
+				return err
+			}
+			if wasSupersessionAdmission {
+				return newDomainError(
+					ErrorAdmissionStateConflict,
+					"proposal %s was admitted through the supersession writer; use AdmitPendingSupersession for exact replay",
+					input.ProposalOccurrenceID,
+				)
+			}
 			replay.Replayed = true
 			result = replay
 			return nil
@@ -107,6 +122,24 @@ func admitPendingProposal(ctx context.Context, db sqlDB, input AdmissionInput) (
 		return AdmissionResult{}, err
 	}
 	return result, nil
+}
+
+func proposalHasSupersessionAdmissionEvent(
+	ctx context.Context,
+	tx sqlTx,
+	proposalOccurrenceID string,
+) (bool, error) {
+	var found bool
+	if err := tx.queryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM canonical_supersession_admission_events
+			WHERE proposal_occurrence_id = $1
+		)
+	`, proposalOccurrenceID).Scan(&found); err != nil {
+		return false, fmt.Errorf("checking admission replay authority: %w", err)
+	}
+	return found, nil
 }
 
 func getCanonicalEvidenceByID(ctx context.Context, db sqlQueryer, canonicalID string) (CanonicalQueryResult, error) {

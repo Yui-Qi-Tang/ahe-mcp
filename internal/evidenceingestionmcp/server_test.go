@@ -15,14 +15,14 @@ import (
 func TestToolsExposeIngestAndExtractorInputTools(t *testing.T) {
 	server := newServer(&fakeCore{})
 	tools := server.Tools()
-	if len(tools) != 42 {
-		t.Fatalf("len(Tools()) = %d, want 42", len(tools))
+	if len(tools) != 40 {
+		t.Fatalf("len(Tools()) = %d, want 40", len(tools))
 	}
 	got := map[string]bool{}
 	for _, tool := range tools {
 		got[tool.Name] = tool.Write
 	}
-	for _, name := range []string{ToolSubmitManualEvidence, ToolSubmitTextSource, ToolSubmitExternalSource, ToolSubmitExtractorOutput, ToolObserveGitRepositoryChange, ToolScheduleGitRepositoryExtractionWork, ToolClaimGitRepositoryExtractionWork, ToolRenewGitRepositoryExtractionWorkLease, ToolExecuteClaimedGitRepositoryExtractionWork, ToolRunGitRepositoryExtractionWorkerTick, ToolFinishGitRepositoryExtractionWork, ToolRecoverExpiredGitRepositoryExtractionWork, ToolRepairExpiredGitRepositoryExtractionWorkExecution, ToolRetryFailedGitRepositoryExtractionWork, ToolCaptureGitRepositorySnapshot, ToolCreateRepositoryExtractionRun, ToolRunRepositoryGoParserExtractor, ToolRunRepositoryGoplsExtractor, ToolActivateRepositorySourceGeneration, ToolRunLocalOllamaExtractor, ToolRunGoParserExtractor, ToolRunGoplsExtractor, ToolAdmitPendingProposal, ToolRecordPendingProposalDisposition, ToolSubmitCanonicalContradictionProposal, ToolAdmitPendingCanonicalContradiction, ToolRecordPendingCanonicalContradictionDisposition, ToolSubmitCanonicalSupersessionProposal, ToolAdmitPendingCanonicalSupersession, ToolRecordPendingCanonicalSupersessionDisposition, ToolClassifyFailedGitRepositoryExtractionWork, ToolConsumeDueGitRepositoryExtractionWorkRetryDecision, ToolRunDueGitRepositoryExtractionWorkRetryControllerTick, ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick} {
+	for _, name := range []string{ToolSubmitManualEvidence, ToolSubmitTextSource, ToolSubmitExternalSource, ToolSubmitExtractorOutput, ToolObserveGitRepositoryChange, ToolScheduleGitRepositoryExtractionWork, ToolClaimGitRepositoryExtractionWork, ToolRenewGitRepositoryExtractionWorkLease, ToolExecuteClaimedGitRepositoryExtractionWork, ToolRunGitRepositoryExtractionWorkerTick, ToolFinishGitRepositoryExtractionWork, ToolRecoverExpiredGitRepositoryExtractionWork, ToolRepairExpiredGitRepositoryExtractionWorkExecution, ToolRetryFailedGitRepositoryExtractionWork, ToolCaptureGitRepositorySnapshot, ToolCreateRepositoryExtractionRun, ToolRunRepositoryGoParserExtractor, ToolRunRepositoryGoplsExtractor, ToolActivateRepositorySourceGeneration, ToolRunLocalOllamaExtractor, ToolRunGoParserExtractor, ToolRunGoplsExtractor, ToolAdmitPendingProposal, ToolRecordPendingProposalDisposition, ToolSubmitCanonicalContradictionProposal, ToolAdmitPendingCanonicalContradiction, ToolRecordPendingCanonicalContradictionDisposition, ToolAdmitPendingSupersession, ToolClassifyFailedGitRepositoryExtractionWork, ToolConsumeDueGitRepositoryExtractionWorkRetryDecision, ToolRunDueGitRepositoryExtractionWorkRetryControllerTick, ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick} {
 		if !got[name] {
 			t.Fatalf("tool %s missing or not write-enabled: %+v", name, tools)
 		}
@@ -1350,130 +1350,142 @@ func TestCallToolRecordsCanonicalContradictionDispositionThroughCore(t *testing.
 	}
 }
 
-func TestCallToolCanonicalSupersessionWorkflowThroughCore(t *testing.T) {
+func TestCallToolAdmitsPendingSupersessionThroughCore(t *testing.T) {
+	basis := evidenceingestion.SupersessionLineageBasis{
+		SourceSystem:    "jira",
+		SourceNamespace: "acme/engineering",
+		ObjectType:      "issue",
+		ObjectID:        "AHE-42",
+		SlotKind:        "field",
+		SlotID:          "description",
+	}
 	core := &fakeCore{
-		supersessionProposalResult: evidenceingestion.CanonicalSupersessionProposalResult{
-			Proposal: evidenceingestion.CanonicalSupersessionProposal{
-				ID:                 "supersession-proposal:1",
-				FromNodeID:         "canon-node:current",
-				ToNodeID:           "canon-node:replaced",
-				Relation:           "supersedes",
-				ProposalSentence:   "The current timeout claim supersedes the historical claim.",
-				Rationale:          "The newer source explicitly replaces the older revision.",
-				VersionDifference:  "The timeout changes from 60 seconds to 30 seconds.",
-				Limitations:        []string{"Only the supplied policy scope was compared."},
-				ProducerName:       "claude-code",
-				ProducerVersion:    "v1",
-				ProducerSessionRef: "session:1",
-				AdmissionOutcome:   "pending",
+		supersessionAdmissionResult: evidenceingestion.SupersessionAdmissionResult{
+			AdmissionResult: evidenceingestion.AdmissionResult{
+				ProposalOccurrenceID: "occ:new",
+				AdmissionDecisionID:  "admission:new",
+				AdmissionOutcome:     "admitted",
+				CanonicalRef:         "canon-node:new",
+				RawEvidenceNodeIDs:   []string{"raw-node:new"},
+				CanonicalEdgeIDs:     []string{"canon-edge:support", "canon-edge:old-a", "canon-edge:old-b"},
+				Replayed:             true,
 			},
-		},
-		supersessionDecisionResult: evidenceingestion.CanonicalSupersessionDecisionResult{
-			Decision: evidenceingestion.CanonicalSupersessionDecision{
-				ID:              "supersession-adm:1",
-				ProposalID:      "supersession-proposal:1",
-				Outcome:         "admitted",
-				CanonicalEdgeID: "canon-edge:1",
-				DecisionBy:      "reviewer",
-				DecisionReason:  "both versions and their sources were reviewed",
-			},
+			LineageKey:                "lineage:canonical",
+			TargetNodeIDs:             []string{"canon-node:old-a", "canon-node:old-b"},
+			BootstrappedTargetNodeIDs: []string{"canon-node:old-a"},
+			SupersedesEdgeIDs:         []string{"canon-edge:old-a", "canon-edge:old-b"},
+			AdmissionEventID:          "supersession-event:7",
+			EventRevision:             7,
+			PreviousHeadEventID:       "supersession-event:6",
+			DecisionBy:                "yuki",
+			DecisionReason:            "reviewed exact source and replacement set",
 		},
 	}
 	server := newServer(core)
+	payload := []byte(`{"proposal_occurrence_id":"occ:new","decision_by":"yuki","decision_reason":"reviewed exact source and replacement set","basis":{"source_system":"jira","source_namespace":"acme/engineering","object_type":"issue","object_id":"AHE-42","slot_kind":"field","slot_id":"description"},"target_node_ids":["canon-node:old-b","canon-node:old-a"],"expected_revision":6,"expected_head_event_id":"supersession-event:6"}`)
 
-	data, err := server.CallTool(context.Background(), ToolSubmitCanonicalSupersessionProposal, []byte(`{"request_id":"supersession-1","from_node_id":"canon-node:current","to_node_id":"canon-node:replaced","proposal_sentence":"The current timeout claim supersedes the historical claim.","rationale":"The newer source explicitly replaces the older revision.","version_difference":"The timeout changes from 60 seconds to 30 seconds.","limitations":["Only the supplied policy scope was compared."],"producer_name":"claude-code","producer_version":"v1","producer_session_ref":"session:1"}`))
-	if err != nil {
-		t.Fatalf("submit supersession: %v", err)
-	}
-	var proposal SubmitCanonicalSupersessionProposalResponse
-	if err := json.Unmarshal(data, &proposal); err != nil {
-		t.Fatalf("Unmarshal proposal: %v", err)
-	}
-	if core.supersessionProposalCalls != 1 || core.supersessionProposalInput.FromNodeID != "canon-node:current" || core.supersessionProposalInput.ToNodeID != "canon-node:replaced" || len(core.supersessionProposalInput.Limitations) != 1 {
-		t.Fatalf("proposal input not forwarded: %+v", core.supersessionProposalInput)
-	}
-	if proposal.CanonicalSupersessionProposalID != "supersession-proposal:1" || proposal.Relation != "supersedes" || proposal.AdmissionOutcome != "pending" || len(proposal.Limitations) != 1 {
-		t.Fatalf("unexpected proposal response: %+v", proposal)
-	}
-
-	data, err = server.CallTool(context.Background(), ToolAdmitPendingCanonicalSupersession, []byte(`{"canonical_supersession_proposal_id":"supersession-proposal:1","decision_by":"reviewer","decision_reason":"both versions and their sources were reviewed"}`))
-	if err != nil {
-		t.Fatalf("admit supersession: %v", err)
-	}
-	var decision CanonicalSupersessionDecisionResponse
-	if err := json.Unmarshal(data, &decision); err != nil {
-		t.Fatalf("Unmarshal decision: %v", err)
-	}
-	if core.supersessionAdmissionCalls != 1 || core.supersessionAdmissionInput.ProposalID != "supersession-proposal:1" {
-		t.Fatalf("admission input not forwarded: %+v", core.supersessionAdmissionInput)
-	}
-	if decision.CanonicalEdgeID != "canon-edge:1" || decision.AdmissionOutcome != "admitted" {
-		t.Fatalf("unexpected decision response: %+v", decision)
-	}
-}
-
-func TestCallToolCanonicalSupersessionPreservesEmptyLimitations(t *testing.T) {
-	core := &fakeCore{
-		supersessionProposalResult: evidenceingestion.CanonicalSupersessionProposalResult{
-			Proposal: evidenceingestion.CanonicalSupersessionProposal{
-				ID:                "supersession-proposal:empty-limitations",
-				FromNodeID:        "canon-node:current",
-				ToNodeID:          "canon-node:replaced",
-				Relation:          "supersedes",
-				ProposalSentence:  "The current claim supersedes the historical claim.",
-				Rationale:         "The current source explicitly replaces the older revision.",
-				VersionDifference: "The timeout changes from 60 seconds to 30 seconds.",
-				Limitations:       []string{},
-				ProducerName:      "claude-code",
-				ProducerVersion:   "v1",
-				AdmissionOutcome:  "pending",
-			},
-		},
-	}
-	server := newServer(core)
-
-	data, err := server.CallTool(context.Background(), ToolSubmitCanonicalSupersessionProposal, []byte(`{"request_id":"supersession-empty-limitations","from_node_id":"canon-node:current","to_node_id":"canon-node:replaced","proposal_sentence":"The current claim supersedes the historical claim.","rationale":"The current source explicitly replaces the older revision.","version_difference":"The timeout changes from 60 seconds to 30 seconds.","limitations":[],"producer_name":"claude-code","producer_version":"v1"}`))
+	data, err := server.CallTool(context.Background(), ToolAdmitPendingSupersession, payload)
 	if err != nil {
 		t.Fatalf("CallTool() error = %v", err)
 	}
-	if core.supersessionProposalInput.Limitations == nil {
-		t.Fatal("core limitations = nil, want empty array")
+	wantInput := evidenceingestion.SupersessionAdmissionInput{
+		ProposalOccurrenceID: "occ:new",
+		DecisionBy:           "yuki",
+		DecisionReason:       "reviewed exact source and replacement set",
+		Basis:                basis,
+		TargetNodeIDs:        []string{"canon-node:old-b", "canon-node:old-a"},
+		ExpectedRevision:     6,
+		ExpectedHeadEventID:  "supersession-event:6",
 	}
-	var response SubmitCanonicalSupersessionProposalResponse
+	if core.supersessionAdmissionCalls != 1 || !reflect.DeepEqual(core.supersessionAdmissionInput, wantInput) {
+		t.Fatalf("supersession admission calls/input = %d/%+v, want 1/%+v", core.supersessionAdmissionCalls, core.supersessionAdmissionInput, wantInput)
+	}
+
+	var response AdmitPendingSupersessionResponse
 	if err := json.Unmarshal(data, &response); err != nil {
-		t.Fatalf("Unmarshal proposal: %v", err)
+		t.Fatalf("Unmarshal response: %v", err)
 	}
-	if response.Limitations == nil || len(response.Limitations) != 0 {
-		t.Fatalf("response limitations = %#v, want non-nil empty array", response.Limitations)
+	if response.ProposalOccurrenceID != "occ:new" || response.CanonicalRef != "canon-node:new" || response.LineageKey != "lineage:canonical" {
+		t.Fatalf("admission identity response = %+v", response)
+	}
+	if response.AdmissionDecisionID != "admission:new" || response.AdmissionOutcome != "admitted" || !reflect.DeepEqual(response.RawEvidenceNodeIDs, []string{"raw-node:new"}) {
+		t.Fatalf("admission audit response = %+v", response)
+	}
+	if !reflect.DeepEqual(response.CanonicalEdgeIDs, []string{"canon-edge:support", "canon-edge:old-a", "canon-edge:old-b"}) || !reflect.DeepEqual(response.BootstrappedTargetNodeIDs, []string{"canon-node:old-a"}) {
+		t.Fatalf("canonical mutation response = %+v", response)
+	}
+	if !reflect.DeepEqual(response.TargetNodeIDs, []string{"canon-node:old-a", "canon-node:old-b"}) {
+		t.Fatalf("normalized target response = %v", response.TargetNodeIDs)
+	}
+	if !reflect.DeepEqual(response.SupersedesEdgeIDs, []string{"canon-edge:old-a", "canon-edge:old-b"}) || response.AdmissionEventID != "supersession-event:7" || response.EventRevision != 7 || response.PreviousHeadEventID != "supersession-event:6" {
+		t.Fatalf("edge/event response = %+v", response)
+	}
+	if response.DecisionBy != "yuki" || response.DecisionReason != "reviewed exact source and replacement set" || !response.Replayed {
+		t.Fatalf("audit/replay response = %+v", response)
 	}
 }
 
-func TestCallToolRecordsCanonicalSupersessionDispositionThroughCore(t *testing.T) {
+func TestCallToolAdmitPendingSupersessionRejectsCallerDerivedState(t *testing.T) {
+	tests := []struct {
+		name    string
+		payload string
+	}{
+		{
+			name:    "top level completion",
+			payload: `{"proposal_occurrence_id":"occ:new","decision_by":"yuki","decision_reason":"reviewed","basis":{"source_system":"jira","source_namespace":"acme/engineering","object_type":"issue","object_id":"AHE-42","slot_kind":"field","slot_id":"description"},"target_node_ids":["canon-node:old"],"expected_revision":0,"complete":true}`,
+		},
+		{
+			name:    "caller supplied currentness",
+			payload: `{"proposal_occurrence_id":"occ:new","decision_by":"yuki","decision_reason":"reviewed","basis":{"source_system":"jira","source_namespace":"acme/engineering","object_type":"issue","object_id":"AHE-42","slot_kind":"field","slot_id":"description"},"target_node_ids":["canon-node:old"],"expected_revision":0,"current":true}`,
+		},
+		{
+			name:    "model supplied lineage",
+			payload: `{"proposal_occurrence_id":"occ:new","decision_by":"yuki","decision_reason":"reviewed","basis":{"source_system":"jira","source_namespace":"acme/engineering","object_type":"issue","object_id":"AHE-42","slot_kind":"field","slot_id":"description"},"target_node_ids":["canon-node:old"],"expected_revision":0,"lineage_key":"model-choice"}`,
+		},
+		{
+			name:    "revision in lineage basis",
+			payload: `{"proposal_occurrence_id":"occ:new","decision_by":"yuki","decision_reason":"reviewed","basis":{"source_system":"jira","source_namespace":"acme/engineering","object_type":"issue","object_id":"AHE-42","slot_kind":"field","slot_id":"description","revision":"r2"},"target_node_ids":["canon-node:old"],"expected_revision":0}`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			core := &fakeCore{}
+			server := newServer(core)
+			_, err := server.CallTool(context.Background(), ToolAdmitPendingSupersession, []byte(test.payload))
+			assertToolError(t, err, toolErrorInvalidRequest)
+			if core.supersessionAdmissionCalls != 0 {
+				t.Fatalf("supersession admission calls = %d, want 0", core.supersessionAdmissionCalls)
+			}
+		})
+	}
+}
+
+func TestCallToolAdmitPendingSupersessionMapsCoreError(t *testing.T) {
 	core := &fakeCore{
-		supersessionDecisionResult: evidenceingestion.CanonicalSupersessionDecisionResult{
-			Decision: evidenceingestion.CanonicalSupersessionDecision{
-				ID:             "supersession-adm:rejected",
-				ProposalID:     "supersession-proposal:1",
-				Outcome:        evidenceingestion.ProposalDispositionRejected,
-				DecisionBy:     "reviewer",
-				DecisionReason: "the newer source does not replace the older scope",
-			},
+		supersessionAdmissionErr: &evidenceingestion.DomainError{
+			Kind:    evidenceingestion.ErrorSupersessionHeadConflict,
+			Message: "supersession head is stale",
 		},
 	}
 	server := newServer(core)
-	data, err := server.CallTool(context.Background(), ToolRecordPendingCanonicalSupersessionDisposition, []byte(`{"canonical_supersession_proposal_id":"supersession-proposal:1","outcome":"rejected","decision_by":"reviewer","decision_reason":"the newer source does not replace the older scope"}`))
-	if err != nil {
-		t.Fatalf("CallTool(disposition) error = %v", err)
+	payload := []byte(`{"proposal_occurrence_id":"occ:new","decision_by":"yuki","decision_reason":"reviewed","basis":{"source_system":"jira","source_namespace":"acme/engineering","object_type":"issue","object_id":"AHE-42","slot_kind":"field","slot_id":"description"},"target_node_ids":["canon-node:old"],"expected_revision":0}`)
+
+	_, err := server.CallTool(context.Background(), ToolAdmitPendingSupersession, payload)
+	assertToolError(t, err, string(evidenceingestion.ErrorSupersessionHeadConflict))
+	if core.supersessionAdmissionCalls != 1 {
+		t.Fatalf("supersession admission calls = %d, want 1", core.supersessionAdmissionCalls)
 	}
-	var response CanonicalSupersessionDecisionResponse
-	if err := json.Unmarshal(data, &response); err != nil {
-		t.Fatalf("Unmarshal disposition: %v", err)
-	}
-	if core.supersessionDispositionCalls != 1 || core.supersessionDispositionInput.Outcome != evidenceingestion.ProposalDispositionRejected {
-		t.Fatalf("disposition input not forwarded: %+v", core.supersessionDispositionInput)
-	}
-	if response.AdmissionOutcome != evidenceingestion.ProposalDispositionRejected || response.CanonicalEdgeID != "" {
-		t.Fatalf("unexpected disposition response: %+v", response)
+}
+
+func TestCallToolRetiredCanonicalSupersessionToolsAreUnknown(t *testing.T) {
+	server := newServer(&fakeCore{})
+	for _, name := range []string{
+		"submit_canonical_supersession_proposal",
+		"admit_pending_canonical_supersession",
+		"record_pending_canonical_supersession_disposition",
+	} {
+		_, err := server.CallTool(context.Background(), name, []byte(`{}`))
+		assertToolError(t, err, toolErrorUnknownTool)
 	}
 }
 
@@ -2115,9 +2127,7 @@ type fakeCore struct {
 	contradictionProposalCalls    int
 	contradictionAdmissionCalls   int
 	contradictionDispositionCalls int
-	supersessionProposalCalls     int
 	supersessionAdmissionCalls    int
-	supersessionDispositionCalls  int
 	activationCalls               int
 	generationListCalls           int
 	buildCalls                    int
@@ -2138,9 +2148,7 @@ type fakeCore struct {
 	contradictionProposalInput    evidenceingestion.CanonicalContradictionProposalInput
 	contradictionAdmissionInput   evidenceingestion.CanonicalContradictionAdmissionInput
 	contradictionDispositionInput evidenceingestion.CanonicalContradictionDispositionInput
-	supersessionProposalInput     evidenceingestion.CanonicalSupersessionProposalInput
-	supersessionAdmissionInput    evidenceingestion.CanonicalSupersessionAdmissionInput
-	supersessionDispositionInput  evidenceingestion.CanonicalSupersessionDispositionInput
+	supersessionAdmissionInput    evidenceingestion.SupersessionAdmissionInput
 	activationInput               evidenceingestion.RepositorySourceGenerationActivationInput
 	generationListInput           evidenceingestion.RepositorySourceGenerationListInput
 	input                         evidenceingestion.ManualTextInput
@@ -2155,8 +2163,7 @@ type fakeCore struct {
 	dispositionResult             evidenceingestion.ProposalDispositionResult
 	contradictionProposalResult   evidenceingestion.CanonicalContradictionProposalResult
 	contradictionDecisionResult   evidenceingestion.CanonicalContradictionDecisionResult
-	supersessionProposalResult    evidenceingestion.CanonicalSupersessionProposalResult
-	supersessionDecisionResult    evidenceingestion.CanonicalSupersessionDecisionResult
+	supersessionAdmissionResult   evidenceingestion.SupersessionAdmissionResult
 	activationResult              evidenceingestion.RepositorySourceGenerationActivationResult
 	generationListResult          []evidenceingestion.RepositorySourceGenerationStatus
 	buildResult                   evidenceingestion.ExtractorInput
@@ -2193,9 +2200,7 @@ type fakeCore struct {
 	contradictionProposalErr      error
 	contradictionAdmissionErr     error
 	contradictionDispositionErr   error
-	supersessionProposalErr       error
 	supersessionAdmissionErr      error
-	supersessionDispositionErr    error
 	activationErr                 error
 	generationListErr             error
 	buildErr                      error
@@ -2292,31 +2297,13 @@ func (c *fakeCore) RecordPendingCanonicalContradictionDisposition(_ context.Cont
 	return c.contradictionDecisionResult, nil
 }
 
-func (c *fakeCore) SubmitCanonicalSupersessionProposal(_ context.Context, input evidenceingestion.CanonicalSupersessionProposalInput) (evidenceingestion.CanonicalSupersessionProposalResult, error) {
-	c.supersessionProposalCalls++
-	c.supersessionProposalInput = input
-	if c.supersessionProposalErr != nil {
-		return evidenceingestion.CanonicalSupersessionProposalResult{}, c.supersessionProposalErr
-	}
-	return c.supersessionProposalResult, nil
-}
-
-func (c *fakeCore) AdmitPendingCanonicalSupersession(_ context.Context, input evidenceingestion.CanonicalSupersessionAdmissionInput) (evidenceingestion.CanonicalSupersessionDecisionResult, error) {
+func (c *fakeCore) AdmitPendingSupersession(_ context.Context, input evidenceingestion.SupersessionAdmissionInput) (evidenceingestion.SupersessionAdmissionResult, error) {
 	c.supersessionAdmissionCalls++
 	c.supersessionAdmissionInput = input
 	if c.supersessionAdmissionErr != nil {
-		return evidenceingestion.CanonicalSupersessionDecisionResult{}, c.supersessionAdmissionErr
+		return evidenceingestion.SupersessionAdmissionResult{}, c.supersessionAdmissionErr
 	}
-	return c.supersessionDecisionResult, nil
-}
-
-func (c *fakeCore) RecordPendingCanonicalSupersessionDisposition(_ context.Context, input evidenceingestion.CanonicalSupersessionDispositionInput) (evidenceingestion.CanonicalSupersessionDecisionResult, error) {
-	c.supersessionDispositionCalls++
-	c.supersessionDispositionInput = input
-	if c.supersessionDispositionErr != nil {
-		return evidenceingestion.CanonicalSupersessionDecisionResult{}, c.supersessionDispositionErr
-	}
-	return c.supersessionDecisionResult, nil
+	return c.supersessionAdmissionResult, nil
 }
 
 func (c *fakeCore) ActivateRepositorySourceGeneration(

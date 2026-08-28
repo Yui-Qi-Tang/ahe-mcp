@@ -52,8 +52,14 @@ const (
 	ErrorAdmissionStateConflict ErrorKind = "admission_state_conflict"
 	// ErrorDerivationInvariant means a derived admission would violate canonical derivation invariants.
 	ErrorDerivationInvariant ErrorKind = "derivation_invariant"
-	// ErrorSupersessionInvariant means a supersession admission would violate directed graph invariants.
+	// ErrorSupersessionInvariant means a supersession mutation violates lineage or endpoint invariants.
 	ErrorSupersessionInvariant ErrorKind = "supersession_invariant"
+	// ErrorSupersessionLineageNotFound means a canonical supersession lineage is absent.
+	ErrorSupersessionLineageNotFound ErrorKind = "supersession_lineage_not_found"
+	// ErrorSupersessionHeadConflict means a supersession command used a stale revision or event head.
+	ErrorSupersessionHeadConflict ErrorKind = "supersession_head_conflict"
+	// ErrorSupersessionReplayConflict means a repeated supersession command differs from its admitted event.
+	ErrorSupersessionReplayConflict ErrorKind = "supersession_replay_conflict"
 	// ErrorSourceGenerationConflict means a source generation or head transition violates lifecycle invariants.
 	ErrorSourceGenerationConflict ErrorKind = "source_generation_conflict"
 	// ErrorChangeObservationConflict means a persisted change token maps to inconsistent observation material.

@@ -17,7 +17,7 @@ the canonical detailed workflow for:
 - exact connector collection and immutable source intake;
 - span-grounded proposal production;
 - human review cards and admission or disposition;
-- governed canonical contradiction and supersession proposals;
+- governed contradiction proposals and fresh Supersession admission;
 - completion reporting.
 
 If that file is unavailable or conflicts with the live MCP schema, stop and
@@ -31,7 +31,7 @@ controls workflow and safety boundaries.
 - Identify Codex-produced extraction with:
   - name: `codex-grounded-extractor`
   - version: `ahe-external-intake-v1`
-- Identify Codex contradiction and supersession proposals with:
+- Identify Codex contradiction proposals with:
   - producer name: `codex-canonical-relation-proposer`
   - producer version: `ahe-canonical-relation-v1`
 - Never copy `claude-code`, `stdio-agent`, or another fixture identity into a
@@ -39,8 +39,8 @@ controls workflow and safety boundaries.
   collection, extraction, or relation proposal.
 - Increment the extractor version only when proposal selection or grounding
   semantics change. Increment the relation producer version when contradiction
-  or supersession proposal and review semantics change. Formatting-only edits
-  do not change either version.
+  proposal and review semantics change. Formatting-only edits do not change
+  either version.
 - Supply a stable, opaque, non-secret session reference only when the host
   exposes one. Omit it rather than inventing or reconstructing one.
 - When delegating, give the sub-agent an explicit provider-object scope and the
@@ -60,6 +60,8 @@ A valid delegated decision contains all of:
 - the outcome for each ID: approve, reject, or `audit_only`;
 - the reviewer identity required by the configured workflow;
 - a human-supplied decision reason whenever the live schema requires it.
+- for a Supersession approval, the exact complete `target_node_ids` and all six
+  reviewed basis fields; the agent may freshly read the head coordinate.
 
 Canonical relation decisions and terminal source-proposal dispositions require
 a decision reason in the current schema. If a tool makes the reason optional
@@ -88,11 +90,15 @@ Use this order, omitting only steps that the live server proves unnecessary:
 10. Apply only the exact approved admissions or explicit dispositions.
 11. Read back final records and report the resulting IDs and states.
 
-For canonical contradictions or replacements, use the corresponding dedicated
-proposal, read, review, admission, and disposition tools from the shared skill.
-Do not write generic edges. `contradicts` is symmetric; `supersedes` is directed
-from the current node to the replaced node. Do not infer supersession from
-provider revision order alone.
+For canonical contradictions, use the dedicated proposal, read, review,
+admission, and disposition tools from the shared skill. For a replacement,
+keep the fresh external-source proposal pending; read it, each exact older
+target, and `get_canonical_supersession_head`; then show the complete target set
+and six-field source-object/slot basis. Only an explicit approval may be applied
+with `admit_pending_supersession`; rejection or `audit_only` uses the ordinary
+pending-proposal disposition tool. Read currentness with the returned lineage
+key. Do not write generic edges, infer replacement from revision order, or
+supply completeness, members, winner, status, head, or hashes.
 
 ## Parent Handoff
 
@@ -104,6 +110,8 @@ Return a compact, directly inspectable package containing:
 - version differences and uncertainty;
 - readback results and missing capabilities;
 - the exact human decision still required;
+- admitted Supersession lineage, event, edge, head, and currentness results when
+  replacement was considered;
 - whether any canonical mutation occurred.
 
 Never place credentials, tokens, DSNs, private conversation text, or raw

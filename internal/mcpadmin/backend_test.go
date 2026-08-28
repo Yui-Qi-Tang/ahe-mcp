@@ -132,8 +132,7 @@ func TestAdmissionToolMetadataStatesHumanReviewAndTerminalEffects(t *testing.T) 
 		evidenceingestionmcp.ToolRecordPendingProposalDisposition,
 		evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction,
 		evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition,
-		evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession,
-		evidenceingestionmcp.ToolRecordPendingCanonicalSupersessionDisposition,
+		evidenceingestionmcp.ToolAdmitPendingSupersession,
 	} {
 		tool, ok := tools[name]
 		if !ok {
@@ -200,11 +199,12 @@ func TestCanonicalContradictionToolMetadataStatesNodeAndPairContract(t *testing.
 	}
 }
 
-func TestCanonicalSupersessionToolMetadataStatesDirectionAndReviewContract(t *testing.T) {
+func TestCanonicalSupersessionToolMetadataStatesFreshAdmissionContract(t *testing.T) {
 	backendTools := make(map[string]mcpToolMetadata)
 	for _, tool := range ingestionTools() {
 		backendTools[tool.Name] = mcpToolMetadata{
 			description: tool.Description,
+			destructive: tool.Annotations.DestructiveHint,
 		}
 	}
 	coreTools := make(map[string]string)
@@ -212,59 +212,80 @@ func TestCanonicalSupersessionToolMetadataStatesDirectionAndReviewContract(t *te
 		coreTools[tool.Name] = tool.Description
 	}
 
-	wants := map[string][]string{
-		evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal: {
-			"directed pair",
-			"current claim",
-			"replaced historical claim",
-			"single-use",
-			"does not create",
-			"does not infer or validate",
-		},
-		evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession: {
-			"proposal sentence",
-			"source context",
-			"version difference",
-			"coverage/limitations",
-			"explicit human approval",
-			"current to replaced",
-		},
-		evidenceingestionmcp.ToolRecordPendingCanonicalSupersessionDisposition: {
-			"explicit human",
-			"directed pair",
-			"single-use",
-			"immediately",
-			"terminal",
-		},
+	name := evidenceingestionmcp.ToolAdmitPendingSupersession
+	tool, ok := backendTools[name]
+	if !ok {
+		t.Fatalf("backend tool %q is missing", name)
 	}
-	for name, fragments := range wants {
-		tool, ok := backendTools[name]
-		if !ok {
-			t.Fatalf("backend tool %q is missing", name)
-		}
-		if tool.description != coreTools[name] {
-			t.Errorf("tool %q descriptions drifted: backend=%q core=%q", name, tool.description, coreTools[name])
-		}
-		for _, fragment := range fragments {
-			if !strings.Contains(tool.description, fragment) {
-				t.Errorf("tool %q description %q does not contain %q", name, tool.description, fragment)
-			}
+	if tool.description != coreTools[name] {
+		t.Errorf("tool %q descriptions drifted: backend=%q core=%q", name, tool.description, coreTools[name])
+	}
+	if tool.destructive == nil || !*tool.destructive {
+		t.Errorf("tool %q destructiveHint = %v, want terminal mutation", name, tool.destructive)
+	}
+	for _, fragment := range []string{
+		"fresh pending proposal",
+		"exact source quotes",
+		"source title and location",
+		"provider revision",
+		"complete set",
+		"coverage/limitations",
+		"reviewed six-field",
+		"head coordinate (revision and event ID)",
+		"explicit human approval",
+		"immediately and terminally",
+		"new-to-old",
+		"first four basis fields",
+		"slot_kind and slot_id",
+		"does not prove",
+		"record_pending_proposal_disposition",
+	} {
+		if !strings.Contains(tool.description, fragment) {
+			t.Errorf("tool %q description %q does not contain %q", name, tool.description, fragment)
 		}
 	}
 
-	var submitSchema map[string]any
+	var admissionSchema map[string]any
 	for _, tool := range ingestionTools() {
-		if tool.Name == evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal {
-			submitSchema = tool.InputSchema
+		if tool.Name == name {
+			admissionSchema = tool.InputSchema
 			break
 		}
 	}
-	if submitSchema == nil {
-		t.Fatal("supersession submit schema is missing")
+	if admissionSchema == nil {
+		t.Fatal("supersession admission schema is missing")
 	}
-	limitations := submitSchema["properties"].(map[string]any)["limitations"].(map[string]any)
-	if limitations["maxItems"] != evidenceingestion.CanonicalSupersessionLimitationsMaxEntries || limitations["items"].(map[string]any)["maxLength"] != evidenceingestion.CanonicalSupersessionLimitationMaxBytes {
-		t.Fatalf("supersession limitations schema = %+v", limitations)
+	properties := admissionSchema["properties"].(map[string]any)
+	for _, forbidden := range []string{"lineage_key", "complete", "current", "winner", "status", "revision"} {
+		if _, exists := properties[forbidden]; exists {
+			t.Errorf("supersession schema exposes caller authority field %q", forbidden)
+		}
+	}
+	targets := properties["target_node_ids"].(map[string]any)
+	if targets["minItems"] != 1 || targets["maxItems"] != 64 || targets["uniqueItems"] != true {
+		t.Fatalf("supersession target schema = %+v", targets)
+	}
+	basis := properties["basis"].(map[string]any)
+	wantBasis := []string{"source_system", "source_namespace", "object_type", "object_id", "slot_kind", "slot_id"}
+	if !reflect.DeepEqual(basis["required"], wantBasis) || basis["additionalProperties"] != false {
+		t.Fatalf("supersession basis schema = %+v", basis)
+	}
+	coordinateBranches, ok := admissionSchema["oneOf"].([]map[string]any)
+	if !ok || len(coordinateBranches) != 2 {
+		t.Fatalf("supersession coordinate oneOf = %#v, want zero and positive revision branches", admissionSchema["oneOf"])
+	}
+	zeroProperties := coordinateBranches[0]["properties"].(map[string]any)
+	zeroRevision := zeroProperties["expected_revision"].(map[string]any)
+	zeroHead := zeroProperties["expected_head_event_id"].(map[string]any)
+	if zeroRevision["const"] != int64(0) || zeroHead["maxLength"] != int64(0) {
+		t.Fatalf("zero-head coordinate schema = %#v", coordinateBranches[0])
+	}
+	positiveProperties := coordinateBranches[1]["properties"].(map[string]any)
+	positiveRevision := positiveProperties["expected_revision"].(map[string]any)
+	positiveHead := positiveProperties["expected_head_event_id"].(map[string]any)
+	if positiveRevision["minimum"] != int64(1) || positiveHead["minLength"] != int64(1) ||
+		!reflect.DeepEqual(coordinateBranches[1]["required"], []string{"expected_head_event_id"}) {
+		t.Fatalf("positive-head coordinate schema = %#v", coordinateBranches[1])
 	}
 }
 
