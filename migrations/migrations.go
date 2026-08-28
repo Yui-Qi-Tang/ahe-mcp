@@ -163,6 +163,13 @@ var requiredTablesByMigration = map[string][]string{
 		"canonical_supersession_proposals",
 		"canonical_supersession_admission_decisions",
 	},
+	"000042_evidence_ingestion_canonical_supersession_v2.up.sql": {
+		"canonical_supersession_lineages",
+		"canonical_supersession_admission_events",
+		"canonical_supersession_admission_head",
+		"canonical_supersession_members",
+		"canonical_supersession_replacement_targets",
+	},
 }
 
 var requiredTables = []string{
@@ -233,8 +240,363 @@ var requiredTables = []string{
 	"external_source_intake_receipts",
 	"canonical_contradiction_proposals",
 	"canonical_contradiction_admission_decisions",
-	"canonical_supersession_proposals",
-	"canonical_supersession_admission_decisions",
+	"canonical_supersession_lineages",
+	"canonical_supersession_admission_events",
+	"canonical_supersession_admission_head",
+	"canonical_supersession_members",
+	"canonical_supersession_replacement_targets",
+}
+
+type requiredCanonicalSupersessionTrigger struct {
+	Name     string
+	Table    string
+	Function string
+}
+
+var requiredCanonicalSupersessionTriggers = []requiredCanonicalSupersessionTrigger{
+	{
+		Name:     "canonical_supersession_lineages_authority_trigger",
+		Table:    "canonical_supersession_lineages",
+		Function: "canonical_supersession_lineage_authority_trigger",
+	},
+	{
+		Name:     "canonical_supersession_events_authority_trigger",
+		Table:    "canonical_supersession_admission_events",
+		Function: "canonical_supersession_event_authority_trigger",
+	},
+	{
+		Name:     "canonical_supersession_members_authority_trigger",
+		Table:    "canonical_supersession_members",
+		Function: "canonical_supersession_member_authority_trigger",
+	},
+	{
+		Name:     "canonical_supersession_head_authority_trigger",
+		Table:    "canonical_supersession_admission_head",
+		Function: "canonical_supersession_head_authority_trigger",
+	},
+	{
+		Name:     "canonical_supersession_nodes_authority_trigger",
+		Table:    "canonical_graph_nodes",
+		Function: "canonical_supersession_node_authority_trigger",
+	},
+	{
+		Name:     "canonical_supersession_decisions_authority_trigger",
+		Table:    "admission_decisions",
+		Function: "canonical_supersession_decision_authority_trigger",
+	},
+	{
+		Name:     "canonical_supersession_proposals_authority_trigger",
+		Table:    "proposal_occurrences",
+		Function: "canonical_supersession_proposal_authority_trigger",
+	},
+	{
+		Name:     "canonical_supersession_edges_authority_trigger",
+		Table:    "canonical_graph_edges",
+		Function: "canonical_supersession_edge_authority_trigger",
+	},
+	{
+		Name:     "canonical_supersession_targets_authority_trigger",
+		Table:    "canonical_supersession_replacement_targets",
+		Function: "canonical_supersession_target_authority_trigger",
+	},
+}
+
+type requiredCanonicalSupersessionFunction struct {
+	Name         string
+	Arguments    string
+	Result       string
+	SourceSHA256 string
+	Volatility   string
+	Strict       bool
+}
+
+var requiredCanonicalSupersessionFunctions = []requiredCanonicalSupersessionFunction{
+	{
+		Name:         "canonical_supersession_stable_id",
+		Arguments:    "text, text[]",
+		Result:       "text",
+		SourceSHA256: "sha256:41dae87ad6770731024e5d77db72bb2ae28075f69e022161468aa0e7933c1174",
+		Volatility:   "i",
+		Strict:       true,
+	},
+	{
+		Name:         "canonical_supersession_assert_edge",
+		Arguments:    "text",
+		Result:       "void",
+		SourceSHA256: "sha256:6668d32c3d55ab9c349f61ded365deff9bc729be7070b6ebc01491aa900ff147",
+	},
+	{
+		Name:         "canonical_supersession_assert_target",
+		Arguments:    "text, text, text",
+		Result:       "void",
+		SourceSHA256: "sha256:b1afcb69ee285a3e88496382b9baef3263d8af0dbf6809e4256a820e881e086b",
+	},
+	{
+		Name:         "canonical_supersession_assert_event",
+		Arguments:    "text",
+		Result:       "void",
+		SourceSHA256: "sha256:6ca36ecdbd3e9617bb0f05041326e8ba6037bd7af5624c64d7dcc9b3b0995713",
+	},
+	{
+		Name:         "canonical_supersession_lineage_authority_trigger",
+		Result:       "trigger",
+		SourceSHA256: "sha256:e9ab006b6f1017494e063d8b8c7ee21c5ab21158cdbe1c230d3b9aeb7c60d772",
+	},
+	{
+		Name:         "canonical_supersession_event_authority_trigger",
+		Result:       "trigger",
+		SourceSHA256: "sha256:41cd6f4752bc891c45b08fd2a08d0ff533904c8d79462b5927e6c9ef14fb5d0e",
+	},
+	{
+		Name:         "canonical_supersession_member_authority_trigger",
+		Result:       "trigger",
+		SourceSHA256: "sha256:f36bec9612b5216112c34f95a90b74054456d2f1737d843cfc74c326f13604c6",
+	},
+	{
+		Name:         "canonical_supersession_head_authority_trigger",
+		Result:       "trigger",
+		SourceSHA256: "sha256:3f041d59ae1fd1fa3680333f072bb73a1daa186d7cb7877441fc96f0f6eab705",
+	},
+	{
+		Name:         "canonical_supersession_node_authority_trigger",
+		Result:       "trigger",
+		SourceSHA256: "sha256:137136ee32f037fdddcd40bee6296cfd6cdb7578b7a49b585e6a333cbf4de3c6",
+	},
+	{
+		Name:         "canonical_supersession_decision_authority_trigger",
+		Result:       "trigger",
+		SourceSHA256: "sha256:fba72d4168898d10e1c8140a9db3ca31125c160e086306d827a534de135d76f6",
+	},
+	{
+		Name:         "canonical_supersession_proposal_authority_trigger",
+		Result:       "trigger",
+		SourceSHA256: "sha256:0e4bb17c57aa03549744e39815f97c6fab4359a9682d1d2afaa4730c38a51679",
+	},
+	{
+		Name:         "canonical_supersession_edge_authority_trigger",
+		Result:       "trigger",
+		SourceSHA256: "sha256:872f58dc2bed5445290fdafd9656cfa75d91697041ba14a44bda8c02147f719e",
+	},
+	{
+		Name:         "canonical_supersession_target_authority_trigger",
+		Result:       "trigger",
+		SourceSHA256: "sha256:23e8601a652a80f465415ba78e903f45ff6cc36cb5ab6772c2c86a9f278eaebc",
+	},
+}
+
+type requiredCanonicalSupersessionConstraint struct {
+	Name              string
+	Table             string
+	Type              string
+	Deferrable        bool
+	InitiallyDeferred bool
+	Definition        string
+}
+
+var requiredCanonicalSupersessionConstraints = []requiredCanonicalSupersessionConstraint{
+	{
+		Name:       "canonical_graph_edges_exact_origin_ck",
+		Table:      "canonical_graph_edges",
+		Type:       "c",
+		Definition: "CHECK ((num_nonnulls(origin_proposal_occurrence_id, origin_canonical_contradiction_proposal_id) = 1))",
+	},
+	{
+		Name:       "admission_decisions_supersession_binding_uq",
+		Table:      "admission_decisions",
+		Type:       "u",
+		Definition: "UNIQUE (admission_decision_id, proposal_occurrence_id, canonical_ref, outcome)",
+	},
+	{
+		Name:       "canonical_supersession_lineages_pkey",
+		Table:      "canonical_supersession_lineages",
+		Type:       "p",
+		Definition: "PRIMARY KEY (lineage_key)",
+	},
+	{
+		Name:       "canonical_supersession_lineages_basis_uq",
+		Table:      "canonical_supersession_lineages",
+		Type:       "u",
+		Definition: "UNIQUE (source_system, source_namespace, object_type, object_id, slot_kind, slot_id)",
+	},
+	{
+		Name:       "canonical_supersession_admission_events_pkey",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "p",
+		Definition: "PRIMARY KEY (event_id)",
+	},
+	{
+		Name:       "canonical_supersession_events_revision_uq",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "u",
+		Definition: "UNIQUE (revision)",
+	},
+	{
+		Name:       "canonical_supersession_events_previous_event_uq",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "u",
+		Definition: "UNIQUE (previous_event_id)",
+	},
+	{
+		Name:       "canonical_supersession_events_replacement_node_uq",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "u",
+		Definition: "UNIQUE (replacement_node_id)",
+	},
+	{
+		Name:       "canonical_supersession_events_proposal_occurrence_uq",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "u",
+		Definition: "UNIQUE (proposal_occurrence_id)",
+	},
+	{
+		Name:       "canonical_supersession_events_admission_decision_uq",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "u",
+		Definition: "UNIQUE (admission_decision_id)",
+	},
+	{
+		Name:       "canonical_supersession_events_event_revision_uq",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "u",
+		Definition: "UNIQUE (event_id, revision)",
+	},
+	{
+		Name:       "canonical_supersession_events_lineage_replacement_uq",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "u",
+		Definition: "UNIQUE (event_id, lineage_key, replacement_node_id)",
+	},
+	{
+		Name:       "canonical_supersession_events_event_id_hash_ck",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "c",
+		Definition: "CHECK ((event_id = ('admission-event:v2:'::text || event_payload_hash)))",
+	},
+	{
+		Name:       "canonical_supersession_events_previous_ck",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "c",
+		Definition: "CHECK ((((revision = 1) AND (previous_revision = 0) AND (previous_event_id IS NULL)) OR ((revision > 1) AND (previous_event_id IS NOT NULL))))",
+	},
+	{
+		Name:       "canonical_supersession_events_previous_fk",
+		Table:      "canonical_supersession_admission_events",
+		Type:       "f",
+		Definition: "FOREIGN KEY (previous_event_id, previous_revision) REFERENCES canonical_supersession_admission_events(event_id, revision)",
+	},
+	{
+		Name:  "canonical_supersession_events_admission_fk",
+		Table: "canonical_supersession_admission_events",
+		Type:  "f",
+		Definition: "FOREIGN KEY (admission_decision_id, proposal_occurrence_id, replacement_node_id, admission_outcome) " +
+			"REFERENCES admission_decisions(admission_decision_id, proposal_occurrence_id, canonical_ref, outcome)",
+	},
+	{
+		Name:       "canonical_supersession_admission_head_pkey",
+		Table:      "canonical_supersession_admission_head",
+		Type:       "p",
+		Definition: "PRIMARY KEY (chain_key)",
+	},
+	{
+		Name:       "canonical_supersession_head_event_uq",
+		Table:      "canonical_supersession_admission_head",
+		Type:       "u",
+		Definition: "UNIQUE (head_event_id)",
+	},
+	{
+		Name:       "canonical_supersession_head_coordinate_ck",
+		Table:      "canonical_supersession_admission_head",
+		Type:       "c",
+		Definition: "CHECK ((((revision = 0) AND (head_event_id IS NULL)) OR ((revision > 0) AND (head_event_id IS NOT NULL))))",
+	},
+	{
+		Name:              "canonical_supersession_head_event_fk",
+		Table:             "canonical_supersession_admission_head",
+		Type:              "f",
+		Deferrable:        true,
+		InitiallyDeferred: true,
+		Definition: "FOREIGN KEY (head_event_id, revision) " +
+			"REFERENCES canonical_supersession_admission_events(event_id, revision) " +
+			"DEFERRABLE INITIALLY DEFERRED",
+	},
+	{
+		Name:       "canonical_supersession_members_pkey",
+		Table:      "canonical_supersession_members",
+		Type:       "p",
+		Definition: "PRIMARY KEY (canonical_node_id)",
+	},
+	{
+		Name:       "canonical_supersession_members_lineage_node_uq",
+		Table:      "canonical_supersession_members",
+		Type:       "u",
+		Definition: "UNIQUE (lineage_key, canonical_node_id)",
+	},
+	{
+		Name:       "canonical_supersession_members_node_fk",
+		Table:      "canonical_supersession_members",
+		Type:       "f",
+		Definition: "FOREIGN KEY (canonical_node_id) REFERENCES canonical_graph_nodes(canonical_node_id)",
+	},
+	{
+		Name:       "canonical_supersession_members_lineage_fk",
+		Table:      "canonical_supersession_members",
+		Type:       "f",
+		Definition: "FOREIGN KEY (lineage_key) REFERENCES canonical_supersession_lineages(lineage_key)",
+	},
+	{
+		Name:       "canonical_supersession_members_event_fk",
+		Table:      "canonical_supersession_members",
+		Type:       "f",
+		Definition: "FOREIGN KEY (first_admission_event_id) REFERENCES canonical_supersession_admission_events(event_id)",
+	},
+	{
+		Name:              "canonical_supersession_event_replacement_member_fk",
+		Table:             "canonical_supersession_admission_events",
+		Type:              "f",
+		Deferrable:        true,
+		InitiallyDeferred: true,
+		Definition: "FOREIGN KEY (lineage_key, replacement_node_id) " +
+			"REFERENCES canonical_supersession_members(lineage_key, canonical_node_id) " +
+			"DEFERRABLE INITIALLY DEFERRED",
+	},
+	{
+		Name:       "canonical_supersession_replacement_targets_pkey",
+		Table:      "canonical_supersession_replacement_targets",
+		Type:       "p",
+		Definition: "PRIMARY KEY (event_id, target_node_id)",
+	},
+	{
+		Name:       "canonical_supersession_targets_distinct_nodes_ck",
+		Table:      "canonical_supersession_replacement_targets",
+		Type:       "c",
+		Definition: "CHECK ((replacement_node_id <> target_node_id))",
+	},
+	{
+		Name:       "canonical_supersession_targets_edge_uq",
+		Table:      "canonical_supersession_replacement_targets",
+		Type:       "u",
+		Definition: "UNIQUE (canonical_edge_id)",
+	},
+	{
+		Name:       "canonical_supersession_targets_edge_fk",
+		Table:      "canonical_supersession_replacement_targets",
+		Type:       "f",
+		Definition: "FOREIGN KEY (canonical_edge_id) REFERENCES canonical_graph_edges(canonical_edge_id)",
+	},
+	{
+		Name:  "canonical_supersession_targets_event_fk",
+		Table: "canonical_supersession_replacement_targets",
+		Type:  "f",
+		Definition: "FOREIGN KEY (event_id, lineage_key, replacement_node_id) " +
+			"REFERENCES canonical_supersession_admission_events(event_id, lineage_key, replacement_node_id)",
+	},
+	{
+		Name:  "canonical_supersession_targets_member_fk",
+		Table: "canonical_supersession_replacement_targets",
+		Type:  "f",
+		Definition: "FOREIGN KEY (lineage_key, target_node_id) " +
+			"REFERENCES canonical_supersession_members(lineage_key, canonical_node_id)",
+	},
 }
 
 // ErrSchemaNotCurrent indicates that the database cannot satisfy the embedded
@@ -349,6 +711,10 @@ func ApplyUp(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
 		rollback()
 		return false, fmt.Errorf("evidence ingestion schema is incomplete after migrations: %d/%d required tables exist", existing, len(requiredTables))
 	}
+	if err := verifyCanonicalSupersessionSchemaObjects(ctx, tx); err != nil {
+		rollback()
+		return false, fmt.Errorf("evidence ingestion schema is incomplete after migrations: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return false, fmt.Errorf("committing migration transaction: %w", err)
 	}
@@ -411,6 +777,9 @@ func VerifyCurrent(ctx context.Context, pool *pgxpool.Pool) (SchemaStatus, error
 			existing,
 			len(requiredTables),
 		)
+	}
+	if err := verifyCanonicalSupersessionSchemaObjects(ctx, tx); err != nil {
+		return SchemaStatus{}, fmt.Errorf("%w: %v", ErrSchemaNotCurrent, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return SchemaStatus{}, fmt.Errorf("committing schema verification transaction: %w", err)
@@ -548,4 +917,162 @@ func existingTableCount(ctx context.Context, db tableQueryer, tables []string) (
 		return 0, fmt.Errorf("checking evidence ingestion schema: %w", err)
 	}
 	return count, nil
+}
+
+func verifyCanonicalSupersessionSchemaObjects(ctx context.Context, db tableQueryer) error {
+	for _, required := range requiredCanonicalSupersessionTriggers {
+		var (
+			tableName         string
+			functionName      string
+			triggerType       int
+			enabled           string
+			constraintTrigger bool
+			deferrable        bool
+			initiallyDeferred bool
+		)
+		err := db.QueryRow(ctx, `
+			SELECT
+				table_rel.relname,
+				function_proc.proname,
+				trigger_row.tgtype::INTEGER,
+				trigger_row.tgenabled::TEXT,
+				trigger_row.tgconstraint <> 0,
+				trigger_row.tgdeferrable,
+				trigger_row.tginitdeferred
+			FROM pg_trigger AS trigger_row
+			JOIN pg_class AS table_rel ON table_rel.oid = trigger_row.tgrelid
+			JOIN pg_namespace AS table_ns ON table_ns.oid = table_rel.relnamespace
+			JOIN pg_proc AS function_proc ON function_proc.oid = trigger_row.tgfoid
+			JOIN pg_namespace AS function_ns ON function_ns.oid = function_proc.pronamespace
+			WHERE table_ns.nspname = current_schema()
+			  AND function_ns.nspname = current_schema()
+			  AND trigger_row.tgname = $1
+			  AND NOT trigger_row.tgisinternal
+		`, required.Name).Scan(
+			&tableName,
+			&functionName,
+			&triggerType,
+			&enabled,
+			&constraintTrigger,
+			&deferrable,
+			&initiallyDeferred,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("required canonical supersession trigger %s is missing", required.Name)
+		}
+		if err != nil {
+			return fmt.Errorf("checking canonical supersession trigger %s: %w", required.Name, err)
+		}
+		const afterRowInsertUpdateDelete = 1 | 4 | 8 | 16
+		if tableName != required.Table || functionName != required.Function ||
+			triggerType != afterRowInsertUpdateDelete || enabled != "O" ||
+			!constraintTrigger || !deferrable || !initiallyDeferred {
+			return fmt.Errorf("required canonical supersession trigger %s does not match its deferred authority contract", required.Name)
+		}
+	}
+
+	for _, required := range requiredCanonicalSupersessionFunctions {
+		var (
+			language   string
+			arguments  string
+			result     string
+			kind       string
+			security   bool
+			volatility string
+			strict     bool
+			source     string
+		)
+		err := db.QueryRow(ctx, `
+			SELECT
+				language_row.lanname,
+				oidvectortypes(function_row.proargtypes),
+				pg_get_function_result(function_row.oid),
+				function_row.prokind::TEXT,
+				function_row.prosecdef,
+				function_row.provolatile::TEXT,
+				function_row.proisstrict,
+				function_row.prosrc
+			FROM pg_proc AS function_row
+			JOIN pg_namespace AS function_ns ON function_ns.oid = function_row.pronamespace
+			JOIN pg_language AS language_row ON language_row.oid = function_row.prolang
+			WHERE function_ns.nspname = current_schema()
+			  AND function_row.proname = $1
+			  AND oidvectortypes(function_row.proargtypes) = $2
+		`, required.Name, required.Arguments).Scan(
+			&language,
+			&arguments,
+			&result,
+			&kind,
+			&security,
+			&volatility,
+			&strict,
+			&source,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("required canonical supersession function %s(%s) is missing", required.Name, required.Arguments)
+		}
+		if err != nil {
+			return fmt.Errorf("checking canonical supersession function %s: %w", required.Name, err)
+		}
+		if language != "plpgsql" || arguments != required.Arguments ||
+			result != required.Result || kind != "f" || security {
+			return fmt.Errorf("required canonical supersession function %s does not match its signature contract", required.Name)
+		}
+		if required.Volatility != "" &&
+			(volatility != required.Volatility || strict != required.Strict) {
+			return fmt.Errorf("required canonical supersession function %s does not match its execution contract", required.Name)
+		}
+		sourceSum := sha256.Sum256([]byte(source))
+		if "sha256:"+hex.EncodeToString(sourceSum[:]) != required.SourceSHA256 {
+			return fmt.Errorf("required canonical supersession function %s does not match its definition contract", required.Name)
+		}
+	}
+
+	for _, required := range requiredCanonicalSupersessionConstraints {
+		var (
+			tableName         string
+			constraintType    string
+			deferrable        bool
+			initiallyDeferred bool
+			validated         bool
+			definition        string
+		)
+		err := db.QueryRow(ctx, `
+			SELECT
+				table_rel.relname,
+				constraint_row.contype::TEXT,
+				constraint_row.condeferrable,
+				constraint_row.condeferred,
+				constraint_row.convalidated,
+				pg_get_constraintdef(constraint_row.oid)
+			FROM pg_constraint AS constraint_row
+			JOIN pg_class AS table_rel ON table_rel.oid = constraint_row.conrelid
+			JOIN pg_namespace AS table_ns ON table_ns.oid = table_rel.relnamespace
+			WHERE table_ns.nspname = current_schema()
+			  AND constraint_row.conname = $1
+		`, required.Name).Scan(
+			&tableName,
+			&constraintType,
+			&deferrable,
+			&initiallyDeferred,
+			&validated,
+			&definition,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("required canonical supersession constraint %s is missing", required.Name)
+		}
+		if err != nil {
+			return fmt.Errorf("checking canonical supersession constraint %s: %w", required.Name, err)
+		}
+		if tableName != required.Table || constraintType != required.Type ||
+			deferrable != required.Deferrable || initiallyDeferred != required.InitiallyDeferred ||
+			!validated || normalizeSchemaDefinition(definition) != normalizeSchemaDefinition(required.Definition) {
+			return fmt.Errorf("required canonical supersession constraint %s does not match its definition contract", required.Name)
+		}
+	}
+	return nil
+}
+
+func normalizeSchemaDefinition(value string) string {
+	return strings.ToLower(strings.Join(strings.Fields(value), " "))
 }

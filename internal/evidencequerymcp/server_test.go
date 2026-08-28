@@ -14,13 +14,14 @@ import (
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencesupersession"
 )
 
 func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 	server := newServer(&fakeQueryCore{})
 	tools := server.Tools()
-	if len(tools) != 12 {
-		t.Fatalf("len(Tools()) = %d, want 12", len(tools))
+	if len(tools) != 13 {
+		t.Fatalf("len(Tools()) = %d, want 13", len(tools))
 	}
 	if tools[0].Name != ToolGetEvidenceRecord {
 		t.Fatalf("tool name = %q, want %q", tools[0].Name, ToolGetEvidenceRecord)
@@ -40,7 +41,8 @@ func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 		ToolFindCanonicalPath,
 		ToolGetCanonicalTopologyDiagnostics,
 		ToolGetCanonicalContradictionProposal,
-		ToolGetCanonicalSupersessionProposal,
+		ToolGetCanonicalSupersessionHead,
+		ToolGetCanonicalSupersessionCurrentness,
 	}
 	for i, want := range wantNames {
 		if tools[i].Name != want {
@@ -1571,49 +1573,149 @@ func TestCallToolGetsCanonicalContradictionReviewCardAndRelationOrigin(t *testin
 	}
 }
 
-func TestCallToolGetsCanonicalSupersessionReviewCardAndRelationOrigin(t *testing.T) {
-	supersession := testCanonicalSupersessionResult()
-	core := &fakeQueryCore{supersessionResult: supersession}
+func TestCallToolGetsCanonicalSupersessionHeadAsWriterCoordinate(t *testing.T) {
+	core := &fakeQueryCore{supersessionHeadResult: evidenceingestion.CanonicalSupersessionHead{
+		ChainKey:    "canonical-supersession",
+		Revision:    7,
+		HeadEventID: "supersession-event:7",
+	}}
 	server := newServer(core)
 
-	data, err := server.CallTool(context.Background(), ToolGetCanonicalSupersessionProposal, []byte(`{"canonical_supersession_proposal_id":"supersession-proposal:1"}`))
+	data, err := server.CallTool(context.Background(), ToolGetCanonicalSupersessionHead, []byte(`{}`))
 	if err != nil {
-		t.Fatalf("CallTool(supersession proposal) error = %v", err)
+		t.Fatalf("CallTool(supersession head) error = %v", err)
 	}
-	var review CanonicalSupersessionProposalResponse
-	if err := json.Unmarshal(data, &review); err != nil {
-		t.Fatalf("Unmarshal supersession proposal: %v", err)
+	var response CanonicalSupersessionHeadResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		t.Fatalf("Unmarshal supersession head: %v", err)
 	}
-	if core.supersessionProposalID != "supersession-proposal:1" || review.Proposal.Relation != "supersedes" || review.Decision == nil {
-		t.Fatalf("supersession review = %+v", review)
+	if core.supersessionHeadCalls != 1 || response.ChainKey != "canonical-supersession" ||
+		response.Revision != 7 || response.HeadEventID != "supersession-event:7" {
+		t.Fatalf("supersession head = %+v, calls = %d", response, core.supersessionHeadCalls)
 	}
-	if review.Proposal.ProposalSentence == "" || review.Proposal.VersionDifference == "" || len(review.Proposal.Limitations) != 1 {
-		t.Fatalf("supersession review material = %+v", review.Proposal)
+}
+
+func TestCallToolGetsCanonicalSupersessionCurrentnessWithStatusAndWitness(t *testing.T) {
+	lineageKey := "lineage:v1:sha256:" + strings.Repeat("a", 64)
+	result := testCanonicalSupersessionCurrentnessResult(lineageKey)
+	core := &fakeQueryCore{supersessionCurrentnessResult: result}
+	server := newServer(core)
+
+	data, err := server.CallTool(
+		context.Background(),
+		ToolGetCanonicalSupersessionCurrentness,
+		[]byte(`{"lineage_key":" `+lineageKey+` "}`),
+	)
+	if err != nil {
+		t.Fatalf("CallTool(supersession currentness) error = %v", err)
 	}
-	if review.From.RecordRef.ID != supersession.From.CanonicalID || review.To.RecordRef.ID != supersession.To.CanonicalID || len(review.From.SourceRefs) == 0 || len(review.To.SourceRefs) == 0 {
-		t.Fatalf("review endpoints are not grounded: from=%+v to=%+v", review.From, review.To)
+	var response CanonicalSupersessionCurrentnessResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		t.Fatalf("Unmarshal supersession currentness: %v", err)
 	}
-	if review.From.StatementText != "Refunds may take 30 days." || review.From.SourceRefs[0].QuotedText != "Refunds may take 30 days." {
-		t.Fatalf("supersession current grounding = %+v", review.From)
+	if core.supersessionCurrentnessLineageKey != lineageKey || response.Projection.LineageKey != lineageKey {
+		t.Fatalf("lineage key: core = %q, response = %q", core.supersessionCurrentnessLineageKey, response.Projection.LineageKey)
 	}
-	if review.To.StatementText != "Refunds may take 60 days." || review.To.SourceRefs[0].QuotedText != "Refunds may take 60 days." {
-		t.Fatalf("supersession replaced grounding = %+v", review.To)
+	if !response.Projection.ClosureAvailable || len(response.Projection.Nodes) != 2 ||
+		response.Projection.Nodes[0].Status != "current" ||
+		response.Projection.Nodes[1].Status != "superseded" ||
+		!reflect.DeepEqual(response.Projection.Nodes[1].IncomingEdgeIDs, []string{"canon-edge:v2-v1"}) {
+		t.Fatalf("currentness statuses = %+v", response.Projection)
+	}
+	if response.Projection.Witness == nil || response.Projection.Witness.ID != "closure-witness:1" ||
+		response.Projection.Witness.Basis.ObjectID != "POLICY-1" ||
+		response.Projection.Witness.Head.Revision != 2 ||
+		response.Projection.HistoryHash == "" || response.Projection.CutHash == "" ||
+		response.Projection.ObjectClaimManifestHash == "" || len(response.Limitations) != 1 {
+		t.Fatalf("currentness authority material = %+v", response)
+	}
+}
+
+func TestCallToolCanonicalSupersessionInputsAreServerDerived(t *testing.T) {
+	lineageKey := "lineage:v1:sha256:" + strings.Repeat("a", 64)
+	tests := []struct {
+		name    string
+		tool    string
+		payload string
+	}{
+		{name: "head accepts no lineage", tool: ToolGetCanonicalSupersessionHead, payload: `{"lineage_key":"` + lineageKey + `"}`},
+		{name: "complete", tool: ToolGetCanonicalSupersessionCurrentness, payload: `{"lineage_key":"` + lineageKey + `","complete":true}`},
+		{name: "current", tool: ToolGetCanonicalSupersessionCurrentness, payload: `{"lineage_key":"` + lineageKey + `","current":true}`},
+		{name: "members", tool: ToolGetCanonicalSupersessionCurrentness, payload: `{"lineage_key":"` + lineageKey + `","member_node_ids":[]}`},
+		{name: "winner", tool: ToolGetCanonicalSupersessionCurrentness, payload: `{"lineage_key":"` + lineageKey + `","winner_node_id":"canon-node:v2"}`},
+		{name: "head", tool: ToolGetCanonicalSupersessionCurrentness, payload: `{"lineage_key":"` + lineageKey + `","head":{"revision":2}}`},
+		{name: "hash", tool: ToolGetCanonicalSupersessionCurrentness, payload: `{"lineage_key":"` + lineageKey + `","cut_hash":"caller-value"}`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			core := &fakeQueryCore{}
+			_, err := newServer(core).CallTool(context.Background(), test.tool, []byte(test.payload))
+			assertToolError(t, err, toolErrorInvalidRequest)
+			if core.supersessionHeadCalls != 0 || core.supersessionCurrentnessCalls != 0 {
+				t.Fatalf("core calls = head %d, currentness %d; want 0", core.supersessionHeadCalls, core.supersessionCurrentnessCalls)
+			}
+		})
+	}
+}
+
+func TestCallToolCanonicalSupersessionCurrentnessRejectsInvalidLineageAndMapsDomainErrors(t *testing.T) {
+	core := &fakeQueryCore{}
+	server := newServer(core)
+	_, err := server.CallTool(
+		context.Background(),
+		ToolGetCanonicalSupersessionCurrentness,
+		[]byte(`{"lineage_key":"lineage:caller-label"}`),
+	)
+	assertToolError(t, err, toolErrorInvalidRecordID)
+	if core.supersessionCurrentnessCalls != 0 {
+		t.Fatalf("currentness calls = %d, want 0", core.supersessionCurrentnessCalls)
 	}
 
+	lineageKey := "lineage:v1:sha256:" + strings.Repeat("b", 64)
+	core.supersessionCurrentnessErr = &evidenceingestion.DomainError{
+		Kind:    evidenceingestion.ErrorInvalidInput,
+		Message: "injected invalid authority cut",
+	}
+	_, err = server.CallTool(
+		context.Background(),
+		ToolGetCanonicalSupersessionCurrentness,
+		[]byte(`{"lineage_key":"`+lineageKey+`"}`),
+	)
+	assertToolError(t, err, toolErrorInvalidRequest)
+
+	core.supersessionCurrentnessErr = &evidenceingestion.DomainError{
+		Kind:    evidenceingestion.ErrorSupersessionLineageNotFound,
+		Message: "lineage not found",
+	}
+	_, err = server.CallTool(
+		context.Background(),
+		ToolGetCanonicalSupersessionCurrentness,
+		[]byte(`{"lineage_key":"`+lineageKey+`"}`),
+	)
+	assertToolError(t, err, toolErrorNotFound)
+}
+
+func TestCallToolCanonicalSupersessionRelationUsesOrdinaryProposalOrigin(t *testing.T) {
+	from := testCanonicalQueryResult("canon-node:v2", "occ:v2")
+	to := testCanonicalQueryResult("canon-node:v1", "occ:v1")
+	origin := testQueryResult("occ:v2")
+	origin.AdmissionOutcome = "admitted"
+	origin.CanonicalRef = from.CanonicalID
 	relation := evidenceingestion.CanonicalRelationQueryResult{
 		Edge: evidenceingestion.CanonicalGraphEdge{
-			ID:                           "canon-edge:supersession",
-			From:                         supersession.From.CanonicalID,
-			To:                           supersession.To.CanonicalID,
-			Relation:                     evidencegraph.CanonicalSupersedes,
-			OriginSupersessionProposalID: supersession.Proposal.ID,
+			ID:                         "canon-edge:v2-v1",
+			From:                       from.CanonicalID,
+			To:                         to.CanonicalID,
+			Relation:                   evidencegraph.CanonicalSupersedes,
+			OriginProposalOccurrenceID: origin.ProposalOccurrenceID,
 		},
-		From:                       supersession.From,
-		To:                         supersession.To,
-		OriginSupersessionProposal: &supersession,
+		From:           from,
+		To:             to,
+		OriginProposal: &origin,
 	}
-	server = newServer(&fakeQueryCore{canonicalRelationResult: relation})
-	data, err = server.CallTool(context.Background(), ToolGetRelationProvenance, []byte(`{"canonical_edge_id":"canon-edge:supersession"}`))
+	server := newServer(&fakeQueryCore{canonicalRelationResult: relation})
+
+	data, err := server.CallTool(context.Background(), ToolGetRelationProvenance, []byte(`{"canonical_edge_id":"canon-edge:v2-v1"}`))
 	if err != nil {
 		t.Fatalf("CallTool(supersession relation) error = %v", err)
 	}
@@ -1621,26 +1723,12 @@ func TestCallToolGetsCanonicalSupersessionReviewCardAndRelationOrigin(t *testing
 	if err := json.Unmarshal(data, &provenance); err != nil {
 		t.Fatalf("Unmarshal supersession relation: %v", err)
 	}
-	if provenance.OriginRecord != nil || provenance.OriginContradictionProposal != nil || provenance.OriginSupersessionProposal == nil || provenance.OriginSupersessionProposal.Proposal.CanonicalSupersessionProposalID != supersession.Proposal.ID {
+	if provenance.OriginRecord == nil || provenance.OriginRecord.RecordRef.ID != origin.ProposalOccurrenceID ||
+		provenance.OriginContradictionProposal != nil {
 		t.Fatalf("supersession relation origin = %+v", provenance)
 	}
-}
-
-func TestCallToolCanonicalSupersessionReviewCardPreservesEmptyLimitations(t *testing.T) {
-	supersession := testCanonicalSupersessionResult()
-	supersession.Proposal.Limitations = []string{}
-	server := newServer(&fakeQueryCore{supersessionResult: supersession})
-
-	data, err := server.CallTool(context.Background(), ToolGetCanonicalSupersessionProposal, []byte(`{"canonical_supersession_proposal_id":"supersession-proposal:1"}`))
-	if err != nil {
-		t.Fatalf("CallTool() error = %v", err)
-	}
-	var review CanonicalSupersessionProposalResponse
-	if err := json.Unmarshal(data, &review); err != nil {
-		t.Fatalf("Unmarshal supersession proposal: %v", err)
-	}
-	if review.Proposal.Limitations == nil || len(review.Proposal.Limitations) != 0 {
-		t.Fatalf("review limitations = %#v, want non-nil empty array", review.Proposal.Limitations)
+	if bytes.Contains(data, []byte("origin_supersession_proposal")) {
+		t.Fatalf("supersession relation exposed retired pair-v1 origin: %s", data)
 	}
 }
 
@@ -1712,6 +1800,7 @@ func TestCallToolRejectsInvalidRequests(t *testing.T) {
 		code    string
 	}{
 		{name: "unknown tool", tool: "submit_manual_evidence", payload: []byte(`{}`), code: toolErrorUnknownTool},
+		{name: "retired pair supersession query", tool: "get_canonical_supersession_proposal", payload: []byte(`{}`), code: toolErrorUnknownTool},
 		{name: "malformed json", tool: ToolGetEvidenceRecord, payload: []byte(`{`), code: toolErrorInvalidRequest},
 		{name: "unknown field", tool: ToolGetEvidenceRecord, payload: []byte(`{"proposal_occurrence_id":"occ:1","projection":"raw"}`), code: toolErrorInvalidRequest},
 		{name: "proposal and canonical id", tool: ToolGetEvidenceRecord, payload: []byte(`{"proposal_occurrence_id":"occ:1","canonical_id":"canon-node:1"}`), code: toolErrorInvalidRequest},
@@ -2403,82 +2492,102 @@ func testCanonicalContradictionResult() evidenceingestion.CanonicalContradiction
 	}
 }
 
-func testCanonicalSupersessionResult() evidenceingestion.CanonicalSupersessionQueryResult {
-	current := testCanonicalQueryResult("canon-node:current", "occ:current")
-	replaced := testCanonicalQueryResult("canon-node:replaced", "occ:replaced")
-	setTestCanonicalClaim(&current, "Refunds may take 30 days.", "v2")
-	setTestCanonicalClaim(&replaced, "Refunds may take 60 days.", "v1")
-	return evidenceingestion.CanonicalSupersessionQueryResult{
-		Proposal: evidenceingestion.CanonicalSupersessionProposal{
-			ID:                  "supersession-proposal:1",
-			RequestID:           "request:1",
-			ProposalFingerprint: "supersession-fp:1",
-			FromNodeID:          current.CanonicalID,
-			ToNodeID:            replaced.CanonicalID,
-			Relation:            evidencegraph.CanonicalSupersedes,
-			ProposalSentence:    "The current refund claim supersedes the historical claim.",
-			Rationale:           "The current source explicitly replaces the older revision.",
-			VersionDifference:   "The refund period changes from 60 days to 30 days.",
-			Limitations:         []string{"Only the supplied policy scope was compared."},
-			ProducerName:        "claude-code",
-			ProducerVersion:     "workflow-v1",
-			ProducerSessionRef:  "session:1",
-			AdmissionOutcome:    "admitted",
-			CanonicalEdgeID:     "canon-edge:supersession",
+func testCanonicalSupersessionCurrentnessResult(lineageKey string) evidenceingestion.CanonicalSupersessionCurrentness {
+	head := evidencesupersession.ClosureHead{
+		ChainKey:    "canonical-supersession",
+		Revision:    2,
+		HeadEventID: "supersession-event:2",
+	}
+	basis := evidencesupersession.Basis{
+		SourceSystem:    "jira",
+		SourceNamespace: "company",
+		ObjectType:      "issue",
+		ObjectID:        "POLICY-1",
+		SlotKind:        "field",
+		SlotID:          "description",
+	}
+	return evidenceingestion.CanonicalSupersessionCurrentness{
+		Projection: evidencesupersession.CurrentnessProjection{
+			ContractVersion:         evidencesupersession.ClosureCutContractVersionV1,
+			AlgorithmVersion:        evidencesupersession.CurrentnessAlgorithmVersionV1,
+			Semantics:               evidencesupersession.CurrentnessSemanticsV1,
+			CoveragePolicy:          evidencesupersession.ObjectCoveragePolicyV1,
+			LineageKey:              lineageKey,
+			Head:                    head,
+			HistoryHash:             "supersession-history:1",
+			CutHash:                 "closure-cut:1",
+			ObjectClaimManifestHash: "object-claim-manifest:1",
+			ClosureAvailable:        true,
+			FrontierNodeIDs:         []string{"canon-node:v2"},
+			Nodes: []evidencesupersession.NodeCurrentness{
+				{NodeID: "canon-node:v2", Status: evidencesupersession.CurrentnessCurrent, IncomingEdgeIDs: []string{}},
+				{NodeID: "canon-node:v1", Status: evidencesupersession.CurrentnessSuperseded, IncomingEdgeIDs: []string{"canon-edge:v2-v1"}},
+			},
+			Witness: &evidencesupersession.ClosureWitness{
+				ContractVersion:         evidencesupersession.ClosureWitnessContractVersionV1,
+				ID:                      "closure-witness:1",
+				AlgorithmVersion:        evidencesupersession.CurrentnessAlgorithmVersionV1,
+				Semantics:               evidencesupersession.CurrentnessSemanticsV1,
+				CoveragePolicy:          evidencesupersession.ObjectCoveragePolicyV1,
+				LineageKey:              lineageKey,
+				Basis:                   basis,
+				Head:                    head,
+				HistoryHash:             "supersession-history:1",
+				CutHash:                 "closure-cut:1",
+				ObjectClaimManifestHash: "object-claim-manifest:1",
+				NodeIDs:                 []string{"canon-node:v1", "canon-node:v2"},
+				EdgeIDs:                 []string{"canon-edge:v2-v1"},
+				FrontierNodeIDs:         []string{"canon-node:v2"},
+			},
 		},
-		From: current,
-		To:   replaced,
-		Decision: &evidenceingestion.CanonicalSupersessionDecision{
-			ID:              "supersession-adm:1",
-			ProposalID:      "supersession-proposal:1",
-			Outcome:         "admitted",
-			CanonicalEdgeID: "canon-edge:supersession",
-			DecisionBy:      "reviewer",
-			DecisionReason:  "reviewed both grounded versions",
-		},
+		Limitations: []string{"currentness is limited to the admitted snapshot"},
 	}
 }
 
 type fakeQueryCore struct {
-	calls                    int
-	canonicalCalls           int
-	listCalls                int
-	occurrenceID             string
-	canonicalID              string
-	result                   evidenceingestion.ProposalQueryResult
-	canonicalResult          evidenceingestion.CanonicalQueryResult
-	listInput                evidenceingestion.ProposalListInput
-	listResult               []evidenceingestion.ProposalQueryResult
-	err                      error
-	canonicalErr             error
-	listErr                  error
-	searchInput              evidenceingestion.ProposalSearchInput
-	searchResult             []evidenceingestion.ProposalSearchResult
-	searchErr                error
-	canonicalRelationResult  evidenceingestion.CanonicalRelationQueryResult
-	canonicalRelationErr     error
-	contradictionProposalID  string
-	contradictionResult      evidenceingestion.CanonicalContradictionQueryResult
-	contradictionErr         error
-	supersessionProposalID   string
-	supersessionResult       evidenceingestion.CanonicalSupersessionQueryResult
-	supersessionErr          error
-	canonicalNeighborInput   evidenceingestion.CanonicalNeighborInput
-	canonicalNeighborResult  []evidenceingestion.CanonicalNeighborResult
-	canonicalNeighborErr     error
-	repositoryNeighborInput  evidenceingestion.RepositoryRelationNeighborInput
-	repositoryNeighborResult []evidenceingestion.RepositoryRelationNeighborResult
-	repositoryNeighborErr    error
-	briefInput               evidenceingestion.GroundedEvidenceBriefInput
-	briefResult              evidenceingestion.GroundedEvidenceBriefQueryResult
-	briefErr                 error
-	sourceStateInput         evidenceingestion.MCPReadSourceStateQueryInput
-	sourceStateResult        evidenceingestion.MCPReadSourceStateQueryResult
-	sourceStateErr           error
-	canonicalReadInput       evidenceingestion.CanonicalReadInput
-	canonicalReadResult      evidenceingestion.CanonicalReadView
-	canonicalReadErr         error
-	canonicalReadCalls       int
+	calls                             int
+	canonicalCalls                    int
+	listCalls                         int
+	occurrenceID                      string
+	canonicalID                       string
+	result                            evidenceingestion.ProposalQueryResult
+	canonicalResult                   evidenceingestion.CanonicalQueryResult
+	listInput                         evidenceingestion.ProposalListInput
+	listResult                        []evidenceingestion.ProposalQueryResult
+	err                               error
+	canonicalErr                      error
+	listErr                           error
+	searchInput                       evidenceingestion.ProposalSearchInput
+	searchResult                      []evidenceingestion.ProposalSearchResult
+	searchErr                         error
+	canonicalRelationResult           evidenceingestion.CanonicalRelationQueryResult
+	canonicalRelationErr              error
+	contradictionProposalID           string
+	contradictionResult               evidenceingestion.CanonicalContradictionQueryResult
+	contradictionErr                  error
+	supersessionHeadCalls             int
+	supersessionHeadResult            evidenceingestion.CanonicalSupersessionHead
+	supersessionHeadErr               error
+	supersessionCurrentnessCalls      int
+	supersessionCurrentnessLineageKey string
+	supersessionCurrentnessResult     evidenceingestion.CanonicalSupersessionCurrentness
+	supersessionCurrentnessErr        error
+	canonicalNeighborInput            evidenceingestion.CanonicalNeighborInput
+	canonicalNeighborResult           []evidenceingestion.CanonicalNeighborResult
+	canonicalNeighborErr              error
+	repositoryNeighborInput           evidenceingestion.RepositoryRelationNeighborInput
+	repositoryNeighborResult          []evidenceingestion.RepositoryRelationNeighborResult
+	repositoryNeighborErr             error
+	briefInput                        evidenceingestion.GroundedEvidenceBriefInput
+	briefResult                       evidenceingestion.GroundedEvidenceBriefQueryResult
+	briefErr                          error
+	sourceStateInput                  evidenceingestion.MCPReadSourceStateQueryInput
+	sourceStateResult                 evidenceingestion.MCPReadSourceStateQueryResult
+	sourceStateErr                    error
+	canonicalReadInput                evidenceingestion.CanonicalReadInput
+	canonicalReadResult               evidenceingestion.CanonicalReadView
+	canonicalReadErr                  error
+	canonicalReadCalls                int
 }
 
 func (c *fakeQueryCore) ReadCanonicalGraphView(_ context.Context, input evidenceingestion.CanonicalReadInput) (evidenceingestion.CanonicalReadView, error) {
@@ -2513,12 +2622,21 @@ func (c *fakeQueryCore) GetCanonicalContradictionProposal(_ context.Context, pro
 	return c.contradictionResult, nil
 }
 
-func (c *fakeQueryCore) GetCanonicalSupersessionProposal(_ context.Context, proposalID string) (evidenceingestion.CanonicalSupersessionQueryResult, error) {
-	c.supersessionProposalID = proposalID
-	if c.supersessionErr != nil {
-		return evidenceingestion.CanonicalSupersessionQueryResult{}, c.supersessionErr
+func (c *fakeQueryCore) GetCanonicalSupersessionHead(_ context.Context) (evidenceingestion.CanonicalSupersessionHead, error) {
+	c.supersessionHeadCalls++
+	if c.supersessionHeadErr != nil {
+		return evidenceingestion.CanonicalSupersessionHead{}, c.supersessionHeadErr
 	}
-	return c.supersessionResult, nil
+	return c.supersessionHeadResult, nil
+}
+
+func (c *fakeQueryCore) GetCanonicalSupersessionCurrentness(_ context.Context, lineageKey string) (evidenceingestion.CanonicalSupersessionCurrentness, error) {
+	c.supersessionCurrentnessCalls++
+	c.supersessionCurrentnessLineageKey = lineageKey
+	if c.supersessionCurrentnessErr != nil {
+		return evidenceingestion.CanonicalSupersessionCurrentness{}, c.supersessionCurrentnessErr
+	}
+	return c.supersessionCurrentnessResult, nil
 }
 
 func (c *fakeQueryCore) GetCanonicalEvidenceByID(_ context.Context, canonicalID string) (evidenceingestion.CanonicalQueryResult, error) {

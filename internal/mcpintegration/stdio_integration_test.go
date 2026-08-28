@@ -85,9 +85,7 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		evidenceingestionmcp.ToolSubmitCanonicalContradictionProposal,
 		evidenceingestionmcp.ToolAdmitPendingCanonicalContradiction,
 		evidenceingestionmcp.ToolRecordPendingCanonicalContradictionDisposition,
-		evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal,
-		evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession,
-		evidenceingestionmcp.ToolRecordPendingCanonicalSupersessionDisposition,
+		evidenceingestionmcp.ToolAdmitPendingSupersession,
 		evidenceingestionmcp.ToolClassifyFailedGitRepositoryExtractionWork,
 		evidenceingestionmcp.ToolListDueGitRepositoryExtractionWorkRetryDecisions,
 		evidenceingestionmcp.ToolConsumeDueGitRepositoryExtractionWorkRetryDecision,
@@ -107,7 +105,8 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		evidencequerymcp.ToolFindCanonicalPath,
 		evidencequerymcp.ToolGetCanonicalTopologyDiagnostics,
 		evidencequerymcp.ToolGetCanonicalContradictionProposal,
-		evidencequerymcp.ToolGetCanonicalSupersessionProposal,
+		evidencequerymcp.ToolGetCanonicalSupersessionHead,
+		evidencequerymcp.ToolGetCanonicalSupersessionCurrentness,
 	})
 
 	gitRoot := t.TempDir()
@@ -831,43 +830,142 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		t.Fatalf("contradiction topology diagnostics = %+v", contradictionDiagnostics)
 	}
 
-	supersessionProposal := stdioCallTool[evidenceingestionmcp.SubmitCanonicalSupersessionProposalResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitCanonicalSupersessionProposal, map[string]any{
-		"request_id":           "stdio-canonical-supersession",
-		"from_node_id":         contradictionEndpoint.CanonicalRef,
-		"to_node_id":           admission.CanonicalRef,
-		"proposal_sentence":    "The current refund claim supersedes the historical refund claim.",
-		"rationale":            "The reviewed current revision explicitly replaces the historical revision.",
-		"version_difference":   "The current revision changes the refund period from 60 days to 30 days.",
-		"limitations":          []string{"Only the supplied fixture scope was compared."},
-		"producer_name":        "stdio-agent",
-		"producer_version":     "workflow-v1",
-		"producer_session_ref": "session:stdio-supersession",
-	})
-	if supersessionProposal.AdmissionOutcome != "pending" || supersessionProposal.Relation != "supersedes" || supersessionProposal.FromNodeID != contradictionEndpoint.CanonicalRef || supersessionProposal.ToNodeID != admission.CanonicalRef {
-		t.Fatalf("supersession proposal = %+v", supersessionProposal)
+	externalEnvelope := func(requestID, revision, content, observedAt string) map[string]any {
+		return map[string]any{
+			"schema_version":   evidenceingestion.ExternalSourceEnvelopeSchemaV1,
+			"request_id":       requestID,
+			"source_system":    "jira",
+			"source_namespace": "stdio-site",
+			"object_type":      "issue",
+			"object_id":        "AHE-42",
+			"revision":         revision,
+			"source_location":  "https://jira.example.invalid/browse/AHE-42",
+			"content_format":   evidenceingestion.ExternalSourceContentFormatPlainText,
+			"content_fidelity": evidenceingestion.ExternalSourceContentFidelityVerbatim,
+			"content":          content,
+			"coverage":         evidenceingestion.ExternalSourceCoverageFullDocument,
+			"limitations":      []string{},
+			"collector_id":     "stdio-agent",
+			"connector_id":     "stdio-jira-connector",
+			"observed_at":      observedAt,
+		}
 	}
-	supersessionReview := stdioCallTool[evidencequerymcp.CanonicalSupersessionProposalResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalSupersessionProposal, map[string]any{
-		"canonical_supersession_proposal_id": supersessionProposal.CanonicalSupersessionProposalID,
-	})
-	if supersessionReview.Proposal.AdmissionOutcome != "pending" || supersessionReview.Decision != nil || supersessionReview.Proposal.ProposalSentence == "" || supersessionReview.Proposal.VersionDifference == "" || len(supersessionReview.Proposal.Limitations) != 1 || len(supersessionReview.From.SourceRefs) == 0 || len(supersessionReview.To.SourceRefs) == 0 {
-		t.Fatalf("pending supersession review card = %+v", supersessionReview)
+	extractorOutput := func(statement string) map[string]any {
+		return map[string]any{
+			"proposals": []map[string]any{{
+				"proposal_local_id": "refund-window",
+				"statement_text":    statement,
+				"evidence_refs":     []string{"span:S1"},
+			}},
+		}
 	}
-	supersessionAdmission := stdioCallTool[evidenceingestionmcp.CanonicalSupersessionDecisionResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingCanonicalSupersession, map[string]any{
-		"canonical_supersession_proposal_id": supersessionProposal.CanonicalSupersessionProposalID,
-		"decision_by":                        "stdio-integration-test",
-		"decision_reason":                    "reviewed the proposal sentence, both grounded versions, version difference, and limitations",
+
+	oldStatement := "Refund requests are accepted for 60 days."
+	oldSource := stdioCallTool[evidenceingestionmcp.SubmitExternalSourceResponse](
+		t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitExternalSource,
+		externalEnvelope("stdio-supersession-source-v1", "1", oldStatement, "2026-08-28T01:00:00Z"),
+	)
+	oldProposal := stdioCallTool[evidenceingestionmcp.SubmitExtractorOutputResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitExtractorOutput, map[string]any{
+		"request_id":         "stdio-supersession-extractor-v1",
+		"source_snapshot_id": oldSource.SourceSnapshotID,
+		"extraction_view_id": oldSource.ExtractionViewID,
+		"extractor_definition": map[string]any{
+			"name":    "stdio-agent",
+			"version": "supersession-workflow-v2",
+			"config":  map[string]string{},
+		},
+		"extractor_output": extractorOutput(oldStatement),
 	})
-	if supersessionAdmission.AdmissionOutcome != "admitted" || supersessionAdmission.CanonicalEdgeID == "" {
+	oldAdmission := stdioCallTool[evidenceingestionmcp.AdmitPendingProposalResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingProposal, map[string]any{
+		"proposal_occurrence_id": oldProposal.ProposalOccurrenceID,
+		"decision_by":            "stdio-integration-test",
+		"decision_reason":        "reviewed the grounded historical external claim",
+	})
+
+	newStatement := "Refund requests are accepted for 30 days."
+	newSource := stdioCallTool[evidenceingestionmcp.SubmitExternalSourceResponse](
+		t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitExternalSource,
+		externalEnvelope("stdio-supersession-source-v2", "2", newStatement, "2026-08-28T02:00:00Z"),
+	)
+	newProposal := stdioCallTool[evidenceingestionmcp.SubmitExtractorOutputResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolSubmitExtractorOutput, map[string]any{
+		"request_id":         "stdio-supersession-extractor-v2",
+		"source_snapshot_id": newSource.SourceSnapshotID,
+		"extraction_view_id": newSource.ExtractionViewID,
+		"extractor_definition": map[string]any{
+			"name":    "stdio-agent",
+			"version": "supersession-workflow-v2",
+			"config":  map[string]string{},
+		},
+		"extractor_output": extractorOutput(newStatement),
+	})
+	newReview := stdioCallTool[evidencequerymcp.GetEvidenceRecordResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetEvidenceRecord, map[string]any{
+		"proposal_occurrence_id": newProposal.ProposalOccurrenceID,
+	})
+	oldReview := stdioCallTool[evidencequerymcp.GetEvidenceRecordResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetEvidenceRecord, map[string]any{
+		"canonical_id": oldAdmission.CanonicalRef,
+	})
+	if newReview.AdmissionOutcome != "pending" || newReview.StatementText != newStatement || len(newReview.SourceRefs) != 1 ||
+		oldReview.AdmissionOutcome != "admitted" || oldReview.Canonical == nil || oldReview.Canonical.Payload.Claim != oldStatement {
+		t.Fatalf("supersession review material = new %+v old %+v", newReview, oldReview)
+	}
+
+	supersessionHead := stdioCallTool[evidencequerymcp.CanonicalSupersessionHeadResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalSupersessionHead, map[string]any{})
+	if supersessionHead.Revision != 0 || supersessionHead.HeadEventID != "" || supersessionHead.ChainKey == "" {
+		t.Fatalf("initial supersession head = %+v", supersessionHead)
+	}
+	supersessionInput := map[string]any{
+		"proposal_occurrence_id": newProposal.ProposalOccurrenceID,
+		"decision_by":            "stdio-integration-test",
+		"decision_reason":        "reviewed both exact source revisions, the 60-to-30-day difference, full coverage, empty limitations, and the complete replacement target set",
+		"basis": map[string]any{
+			"source_system":    "jira",
+			"source_namespace": "stdio-site",
+			"object_type":      "issue",
+			"object_id":        "AHE-42",
+			"slot_kind":        "policy_field",
+			"slot_id":          "refund_window",
+		},
+		"target_node_ids":        []string{oldAdmission.CanonicalRef},
+		"expected_revision":      supersessionHead.Revision,
+		"expected_head_event_id": supersessionHead.HeadEventID,
+	}
+	supersessionAdmission := stdioCallTool[evidenceingestionmcp.AdmitPendingSupersessionResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingSupersession, supersessionInput)
+	if supersessionAdmission.AdmissionOutcome != "admitted" || supersessionAdmission.CanonicalRef == "" ||
+		len(supersessionAdmission.SupersedesEdgeIDs) != 1 || supersessionAdmission.EventRevision != 1 ||
+		supersessionAdmission.AdmissionEventID == "" || supersessionAdmission.LineageKey == "" {
 		t.Fatalf("supersession admission = %+v", supersessionAdmission)
 	}
-	supersessionRelation := stdioCallTool[evidencequerymcp.RelationProvenanceResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetRelationProvenance, map[string]any{
-		"canonical_edge_id": supersessionAdmission.CanonicalEdgeID,
+	supersessionReplay := stdioCallTool[evidenceingestionmcp.AdmitPendingSupersessionResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolAdmitPendingSupersession, supersessionInput)
+	if !supersessionReplay.Replayed || supersessionReplay.AdmissionEventID != supersessionAdmission.AdmissionEventID ||
+		supersessionReplay.CanonicalRef != supersessionAdmission.CanonicalRef {
+		t.Fatalf("supersession replay = %+v, want %+v", supersessionReplay, supersessionAdmission)
+	}
+
+	currentness := stdioCallTool[evidencequerymcp.CanonicalSupersessionCurrentnessResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalSupersessionCurrentness, map[string]any{
+		"lineage_key": supersessionAdmission.LineageKey,
 	})
-	if supersessionRelation.RelationKind != "supersedes" || supersessionRelation.OriginRecord != nil || supersessionRelation.OriginContradictionProposal != nil || supersessionRelation.OriginSupersessionProposal == nil {
+	if !currentness.Projection.ClosureAvailable || currentness.Projection.Witness == nil ||
+		len(currentness.Projection.FrontierNodeIDs) != 1 || currentness.Projection.FrontierNodeIDs[0] != supersessionAdmission.CanonicalRef ||
+		len(currentness.Projection.Nodes) != 2 || len(currentness.Limitations) != 1 {
+		t.Fatalf("supersession currentness = %+v", currentness)
+	}
+	statuses := make(map[string]string, len(currentness.Projection.Nodes))
+	for _, node := range currentness.Projection.Nodes {
+		statuses[node.NodeID] = string(node.Status)
+	}
+	if statuses[supersessionAdmission.CanonicalRef] != "current" || statuses[oldAdmission.CanonicalRef] != "superseded" {
+		t.Fatalf("supersession statuses = %+v", statuses)
+	}
+
+	supersessionRelation := stdioCallTool[evidencequerymcp.RelationProvenanceResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetRelationProvenance, map[string]any{
+		"canonical_edge_id": supersessionAdmission.SupersedesEdgeIDs[0],
+	})
+	if supersessionRelation.RelationKind != "supersedes" || supersessionRelation.OriginRecord == nil ||
+		supersessionRelation.OriginRecord.RecordRef.ID != newProposal.ProposalOccurrenceID || supersessionRelation.OriginContradictionProposal != nil {
 		t.Fatalf("supersession relation provenance = %+v", supersessionRelation)
 	}
 	supersessionView := stdioCallTool[evidencequerymcp.OpenCanonicalReadViewResponse](t, ctx, queryMCP, evidencequerymcp.ToolOpenCanonicalReadView, map[string]any{
-		"root_node_ids": []string{contradictionEndpoint.CanonicalRef},
+		"root_node_ids": []string{supersessionAdmission.CanonicalRef},
 		"relations":     []string{"supersedes"},
 		"max_depth":     1,
 		"max_nodes":     4,
@@ -875,11 +973,11 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 	})
 	supersessionPath := stdioCallTool[evidencequerymcp.FindCanonicalPathResponse](t, ctx, queryMCP, evidencequerymcp.ToolFindCanonicalPath, map[string]any{
 		"handle":       supersessionView.View.Handle,
-		"from_node_id": contradictionEndpoint.CanonicalRef,
-		"to_node_id":   admission.CanonicalRef,
+		"from_node_id": supersessionAdmission.CanonicalRef,
+		"to_node_id":   oldAdmission.CanonicalRef,
 		"relations":    []string{"supersedes"},
 	})
-	if !supersessionPath.Witness.Found || len(supersessionPath.Witness.EdgeIDs) != 1 || supersessionPath.Witness.EdgeIDs[0] != supersessionAdmission.CanonicalEdgeID {
+	if !supersessionPath.Witness.Found || len(supersessionPath.Witness.EdgeIDs) != 1 || supersessionPath.Witness.EdgeIDs[0] != supersessionAdmission.SupersedesEdgeIDs[0] {
 		t.Fatalf("supersession path = %+v", supersessionPath)
 	}
 	supersessionDiagnostics := stdioCallTool[evidencequerymcp.GetCanonicalTopologyDiagnosticsResponse](t, ctx, queryMCP, evidencequerymcp.ToolGetCanonicalTopologyDiagnostics, map[string]any{
@@ -963,16 +1061,19 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		t.Fatalf("conflicting disposition error = %+v", conflictingDispositionErr)
 	}
 
-	stdioAssertTableCount(t, ctx, pool, "source_snapshots", 3)
-	stdioAssertTableCount(t, ctx, pool, "extraction_attempts", 3)
-	stdioAssertTableCount(t, ctx, pool, "proposal_occurrences", 3)
-	stdioAssertTableCount(t, ctx, pool, "admission_decisions", 3)
+	stdioAssertTableCount(t, ctx, pool, "source_snapshots", 5)
+	stdioAssertTableCount(t, ctx, pool, "extraction_attempts", 5)
+	stdioAssertTableCount(t, ctx, pool, "proposal_occurrences", 5)
+	stdioAssertTableCount(t, ctx, pool, "admission_decisions", 5)
 	stdioAssertTableCount(t, ctx, pool, "canonical_contradiction_proposals", 1)
 	stdioAssertTableCount(t, ctx, pool, "canonical_contradiction_admission_decisions", 1)
-	stdioAssertTableCount(t, ctx, pool, "canonical_supersession_proposals", 1)
-	stdioAssertTableCount(t, ctx, pool, "canonical_supersession_admission_decisions", 1)
-	stdioAssertTableCount(t, ctx, pool, "canonical_graph_nodes", 4)
-	stdioAssertTableCount(t, ctx, pool, "canonical_graph_edges", 4)
+	stdioAssertTableCount(t, ctx, pool, "canonical_supersession_lineages", 1)
+	stdioAssertTableCount(t, ctx, pool, "canonical_supersession_admission_events", 1)
+	stdioAssertTableCount(t, ctx, pool, "canonical_supersession_admission_head", 1)
+	stdioAssertTableCount(t, ctx, pool, "canonical_supersession_members", 2)
+	stdioAssertTableCount(t, ctx, pool, "canonical_supersession_replacement_targets", 1)
+	stdioAssertTableCount(t, ctx, pool, "canonical_graph_nodes", 8)
+	stdioAssertTableCount(t, ctx, pool, "canonical_graph_edges", 6)
 
 	retriedThirdWork := stdioCallTool[evidenceingestionmcp.RetryFailedGitRepositoryExtractionWorkResponse](t, ctx, ingestMCP, evidenceingestionmcp.ToolRetryFailedGitRepositoryExtractionWork, map[string]any{
 		"request_id":     "stdio-clean-work-third-retry",

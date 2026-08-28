@@ -197,12 +197,6 @@ func getCanonicalRelationByID(ctx context.Context, db sqlQueryer, canonicalEdgeI
 			return CanonicalRelationQueryResult{}, err
 		}
 		result.OriginContradictionProposal = &origin
-	case edge.OriginSupersessionProposalID != "":
-		origin, err := hydrateCanonicalSupersessionProposal(ctx, db, edge.OriginSupersessionProposalID)
-		if err != nil {
-			return CanonicalRelationQueryResult{}, err
-		}
-		result.OriginSupersessionProposal = &origin
 	default:
 		return CanonicalRelationQueryResult{}, newDomainError(
 			ErrorAdmissionStateConflict,
@@ -224,8 +218,7 @@ func loadCanonicalEdge(ctx context.Context, db sqlQueryer, canonicalEdgeID strin
 			relation,
 			provenance,
 			COALESCE(origin_proposal_occurrence_id, ''),
-			COALESCE(origin_canonical_contradiction_proposal_id, ''),
-			COALESCE(origin_canonical_supersession_proposal_id, '')
+			COALESCE(origin_canonical_contradiction_proposal_id, '')
 		FROM canonical_graph_edges
 		WHERE canonical_edge_id = $1
 	`, canonicalEdgeID).Scan(
@@ -236,7 +229,6 @@ func loadCanonicalEdge(ctx context.Context, db sqlQueryer, canonicalEdgeID strin
 		&provenanceData,
 		&edge.OriginProposalOccurrenceID,
 		&edge.OriginContradictionProposalID,
-		&edge.OriginSupersessionProposalID,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

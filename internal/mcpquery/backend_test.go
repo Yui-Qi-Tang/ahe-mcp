@@ -41,7 +41,8 @@ func TestBackendExposesOnlyShippingQueryToolsAndDelegatesCalls(t *testing.T) {
 		evidencequerymcp.ToolFindCanonicalPath,
 		evidencequerymcp.ToolGetCanonicalTopologyDiagnostics,
 		evidencequerymcp.ToolGetCanonicalContradictionProposal,
-		evidencequerymcp.ToolGetCanonicalSupersessionProposal,
+		evidencequerymcp.ToolGetCanonicalSupersessionHead,
+		evidencequerymcp.ToolGetCanonicalSupersessionCurrentness,
 	}
 	if !reflect.DeepEqual(gotNames, wantNames) {
 		t.Fatalf("query tools = %v, want %v", gotNames, wantNames)
@@ -113,13 +114,17 @@ func TestCanonicalTopologyToolMetadataStatesBoundedStructuralSemantics(t *testin
 			"canonical nodes",
 			"pending or terminal",
 		},
-		evidencequerymcp.ToolGetCanonicalSupersessionProposal: {
-			"pending or terminal",
-			"proposal sentence",
-			"from=current",
-			"to=replaced",
-			"version difference",
-			"coverage/limitations",
+		evidencequerymcp.ToolGetCanonicalSupersessionHead: {
+			"compare-and-swap coordinate",
+			"subsequent governed write",
+			"does not identify a current node",
+			"prove source freshness",
+		},
+		evidencequerymcp.ToolGetCanonicalSupersessionCurrentness: {
+			"snapshot-bound",
+			"current, superseded, ambiguous, or unknown",
+			"authoritative repeatable-read cut",
+			"callers supply only lineage_key",
 		},
 	}
 	for name, fragments := range wants {
@@ -151,6 +156,32 @@ func TestCanonicalTopologyToolSchemasExposeBoundedContracts(t *testing.T) {
 		"handle", "from_node_id", "to_node_id", "relations",
 	)
 	assertRequiredFields(t, toolsByName[evidencequerymcp.ToolGetCanonicalTopologyDiagnostics], "handle")
+
+	headSchema := toolsByName[evidencequerymcp.ToolGetCanonicalSupersessionHead]
+	if headSchema["additionalProperties"] != false {
+		t.Fatalf("supersession head additionalProperties = %#v, want false", headSchema["additionalProperties"])
+	}
+	if _, ok := headSchema["properties"]; ok {
+		t.Fatalf("supersession head schema accepts caller properties: %#v", headSchema["properties"])
+	}
+	if _, ok := headSchema["required"]; ok {
+		t.Fatalf("supersession head schema requires caller fields: %#v", headSchema["required"])
+	}
+
+	currentnessSchema := toolsByName[evidencequerymcp.ToolGetCanonicalSupersessionCurrentness]
+	assertRequiredFields(t, currentnessSchema, "lineage_key")
+	currentnessProperties := schemaProperties(t, currentnessSchema)
+	if len(currentnessProperties) != 1 {
+		t.Fatalf("supersession currentness properties = %#v, want only lineage_key", currentnessProperties)
+	}
+	if _, ok := currentnessProperties["lineage_key"]; !ok {
+		t.Fatalf("supersession currentness schema lacks lineage_key: %#v", currentnessProperties)
+	}
+	for _, forbidden := range []string{"complete", "current", "members", "winner", "status", "head", "hash"} {
+		if _, ok := currentnessProperties[forbidden]; ok {
+			t.Errorf("supersession currentness schema exposes caller authority field %q", forbidden)
+		}
+	}
 
 	openProperties := schemaProperties(t, toolsByName[evidencequerymcp.ToolOpenCanonicalReadView])
 	assertIntegerBounds(t, openProperties, "max_depth", 0, 8)

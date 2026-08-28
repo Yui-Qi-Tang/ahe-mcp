@@ -82,23 +82,6 @@ const (
 	CanonicalContradictionRequestIDMaxBytes = 200
 	// CanonicalContradictionRationaleMaxBytes caps one human-reviewable contradiction rationale.
 	CanonicalContradictionRationaleMaxBytes = 4000
-	// CanonicalSupersessionProposalFingerprintV1 identifies one directed canonical supersession proposal.
-	CanonicalSupersessionProposalFingerprintV1 = "canonical-supersession-v1"
-	// CanonicalSupersessionProposalIDPrefix identifies canonical supersession proposal records.
-	CanonicalSupersessionProposalIDPrefix = "supersession-proposal:"
-	// CanonicalSupersessionRequestIDMaxBytes caps one directed relation proposal request identity.
-	CanonicalSupersessionRequestIDMaxBytes = 200
-	// CanonicalSupersessionProposalSentenceMaxBytes caps one human-reviewable proposal sentence.
-	CanonicalSupersessionProposalSentenceMaxBytes = 4000
-	// CanonicalSupersessionRationaleMaxBytes caps one human-reviewable supersession rationale.
-	CanonicalSupersessionRationaleMaxBytes = 4000
-	// CanonicalSupersessionVersionDifferenceMaxBytes caps one human-reviewable version summary.
-	CanonicalSupersessionVersionDifferenceMaxBytes = 4000
-	// CanonicalSupersessionLimitationsMaxEntries caps review limitations on one proposal.
-	CanonicalSupersessionLimitationsMaxEntries = 32
-	// CanonicalSupersessionLimitationMaxBytes caps one review limitation.
-	CanonicalSupersessionLimitationMaxBytes = 2000
-
 	// CodeFactSchemaV1 is the first controller-verified code fact transport contract.
 	CodeFactSchemaV1 = "code-fact-v1"
 	// CodeFactKindDeclaration identifies a parser-grounded Go declaration.
@@ -911,7 +894,6 @@ type CanonicalRelationQueryResult struct {
 	To                          CanonicalQueryResult
 	OriginProposal              *ProposalQueryResult
 	OriginContradictionProposal *CanonicalContradictionQueryResult
-	OriginSupersessionProposal  *CanonicalSupersessionQueryResult
 }
 
 // CanonicalNeighborInput bounds one-hop canonical graph lookup.
@@ -1062,77 +1044,51 @@ type CanonicalContradictionDecisionResult struct {
 	Replayed bool
 }
 
-// CanonicalSupersessionProposalInput proposes that FromNodeID is the current
-// claim replacing the historical claim at ToNodeID.
-type CanonicalSupersessionProposalInput struct {
-	RequestID          string
-	FromNodeID         string
-	ToNodeID           string
-	ProposalSentence   string
-	Rationale          string
-	VersionDifference  string
-	Limitations        []string
-	ProducerName       string
-	ProducerVersion    string
-	ProducerSessionRef string
+// SupersessionLineageBasis identifies one stable source-object slot. Source
+// revision, content, extractor, model, and agent session are deliberately not
+// part of lineage identity.
+type SupersessionLineageBasis struct {
+	SourceSystem    string `json:"source_system"`
+	SourceNamespace string `json:"source_namespace"`
+	ObjectType      string `json:"object_type"`
+	ObjectID        string `json:"object_id"`
+	SlotKind        string `json:"slot_kind"`
+	SlotID          string `json:"slot_id"`
 }
 
-// CanonicalSupersessionProposal is one durable directed relation proposal.
-// FromNodeID is the current claim and ToNodeID is the replaced historical claim.
-type CanonicalSupersessionProposal struct {
-	ID                  string
-	RequestID           string
-	RequestPayloadHash  string
-	ProposalFingerprint string
-	FromNodeID          string
-	ToNodeID            string
-	Relation            evidencegraph.CanonicalEdgeRelation
-	ProposalSentence    string
-	Rationale           string
-	VersionDifference   string
-	Limitations         []string
-	ProducerName        string
-	ProducerVersion     string
-	ProducerSessionRef  string
-	AdmissionOutcome    string
-	CanonicalEdgeID     string
+// SupersessionAdmissionInput admits one fresh source-backed claim together
+// with the complete reviewed set of older claims that it replaces.
+type SupersessionAdmissionInput struct {
+	ProposalOccurrenceID string                   `json:"proposal_occurrence_id"`
+	DecisionBy           string                   `json:"decision_by"`
+	DecisionReason       string                   `json:"decision_reason"`
+	Basis                SupersessionLineageBasis `json:"basis"`
+	TargetNodeIDs        []string                 `json:"target_node_ids"`
+	ExpectedRevision     int64                    `json:"expected_revision"`
+	ExpectedHeadEventID  string                   `json:"expected_head_event_id,omitempty"`
 }
 
-// CanonicalSupersessionProposalResult reports proposal persistence or replay.
-type CanonicalSupersessionProposalResult struct {
-	Proposal CanonicalSupersessionProposal
-	Replayed bool
+// SupersessionAdmissionResult records the atomic source-backed admission,
+// exact replacement set, and append-only event coordinate.
+type SupersessionAdmissionResult struct {
+	AdmissionResult
+	LineageKey                string   `json:"lineage_key"`
+	TargetNodeIDs             []string `json:"target_node_ids"`
+	BootstrappedTargetNodeIDs []string `json:"bootstrapped_target_node_ids"`
+	SupersedesEdgeIDs         []string `json:"supersedes_edge_ids"`
+	AdmissionEventID          string   `json:"admission_event_id"`
+	EventRevision             int64    `json:"event_revision"`
+	PreviousHeadEventID       string   `json:"previous_head_event_id,omitempty"`
+	DecisionBy                string   `json:"decision_by"`
+	DecisionReason            string   `json:"decision_reason"`
 }
 
-// CanonicalSupersessionDecision records one human admission or disposition.
-type CanonicalSupersessionDecision struct {
-	ID              string
-	ProposalID      string
-	Outcome         string
-	CanonicalEdgeID string
-	DecisionBy      string
-	DecisionReason  string
-}
-
-// CanonicalSupersessionAdmissionInput admits one pending supersession proposal.
-type CanonicalSupersessionAdmissionInput struct {
-	ProposalID     string
-	DecisionBy     string
-	DecisionReason string
-}
-
-// CanonicalSupersessionDispositionInput records a rejected or audit-only outcome.
-type CanonicalSupersessionDispositionInput struct {
-	ProposalID     string
-	Outcome        string
-	DecisionBy     string
-	DecisionReason string
-}
-
-// CanonicalSupersessionDecisionResult reports an admitted or disposed proposal.
-type CanonicalSupersessionDecisionResult struct {
-	Decision CanonicalSupersessionDecision
-	Replayed bool
+// CanonicalSupersessionHead is the current compare-and-swap coordinate for
+// the governed supersession admission chain.
+type CanonicalSupersessionHead struct {
+	ChainKey    string `json:"chain_key"`
+	Revision    int64  `json:"revision"`
+	HeadEventID string `json:"head_event_id,omitempty"`
 }
 
 // CanonicalGraphNode is the DB-facing persisted form of an evidencegraph canonical node.
@@ -1167,15 +1123,6 @@ type CanonicalContradictionQueryResult struct {
 	Decision *CanonicalContradictionDecision
 }
 
-// CanonicalSupersessionQueryResult returns one directed proposal, both grounded
-// canonical endpoints, and its optional terminal decision.
-type CanonicalSupersessionQueryResult struct {
-	Proposal CanonicalSupersessionProposal
-	From     CanonicalQueryResult
-	To       CanonicalQueryResult
-	Decision *CanonicalSupersessionDecision
-}
-
 // CanonicalGraphEdge is the DB-facing persisted form of an evidencegraph canonical edge.
 type CanonicalGraphEdge struct {
 	ID                            string
@@ -1185,5 +1132,4 @@ type CanonicalGraphEdge struct {
 	Provenance                    evidencegraph.ProvenanceRecord
 	OriginProposalOccurrenceID    string
 	OriginContradictionProposalID string
-	OriginSupersessionProposalID  string
 }

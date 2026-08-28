@@ -543,6 +543,7 @@ type mockSQLDB struct {
 	canonicalDerivations  map[string]evidencegraph.DerivationRecord
 	derivationParentEdges map[string]map[string]string
 	admissionDecisions    map[string]mockAdmissionDecision
+	supersessionEvents    map[string]struct{}
 	boundedViewPreflights int
 	sourceViewLoads       int
 }
@@ -640,6 +641,7 @@ func newMockSQLDB() *mockSQLDB {
 		canonicalDerivations:  map[string]evidencegraph.DerivationRecord{},
 		derivationParentEdges: map[string]map[string]string{},
 		admissionDecisions:    map[string]mockAdmissionDecision{},
+		supersessionEvents:    map[string]struct{}{},
 	}
 }
 
@@ -1204,6 +1206,9 @@ func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sql
 
 func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) sqlRow {
 	switch {
+	case strings.Contains(query, "SELECT EXISTS") && strings.Contains(query, "canonical_supersession_admission_events"):
+		_, found := db.supersessionEvents[args[0].(string)]
+		return mockRow{values: []any{found}}
 	case strings.Contains(query, "WITH RECURSIVE descendants"):
 		return mockRow{err: pgx.ErrNoRows}
 	case strings.Contains(query, "SELECT derivation_id") && strings.Contains(query, "FROM canonical_derivations"):

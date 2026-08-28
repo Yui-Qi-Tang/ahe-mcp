@@ -179,12 +179,23 @@ func queryTools() []mcpstdio.Tool {
 			},
 		},
 		{
-			Name:        evidencequerymcp.ToolGetCanonicalSupersessionProposal,
-			Title:       "Get Canonical Supersession Proposal",
-			Description: "Read one pending or terminal supersession proposal with its proposal sentence, both complete grounded canonical nodes (from=current, to=replaced), version difference, coverage/limitations, producer metadata, and any human review decision.",
+			Name:        evidencequerymcp.ToolGetCanonicalSupersessionHead,
+			Title:       "Get Canonical Supersession Head",
+			Description: "Read the global supersession writer compare-and-swap coordinate (chain key, revision, and head event). This coordinate is for a subsequent governed write; it does not identify a current node or prove source freshness.",
+			InputSchema: objectSchema(map[string]any{}, nil),
+			Annotations: mcpstdio.Annotations{
+				ReadOnlyHint:    &readOnly,
+				DestructiveHint: &destructive,
+				IdempotentHint:  &idempotent,
+			},
+		},
+		{
+			Name:        evidencequerymcp.ToolGetCanonicalSupersessionCurrentness,
+			Title:       "Get Canonical Supersession Currentness",
+			Description: "Derive snapshot-bound current, superseded, ambiguous, or unknown status for one governed lineage from an authoritative repeatable-read cut. The server derives completeness, membership, frontier, hashes, and witness; callers supply only lineage_key.",
 			InputSchema: objectSchema(map[string]any{
-				"canonical_supersession_proposal_id": stringSchema("Supersession proposal ID with supersession-proposal: prefix."),
-			}, []string{"canonical_supersession_proposal_id"}),
+				"lineage_key": stringSchema("Deterministic lineage key returned by an admitted fresh-v2 supersession."),
+			}, []string{"lineage_key"}),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &readOnly,
 				DestructiveHint: &destructive,

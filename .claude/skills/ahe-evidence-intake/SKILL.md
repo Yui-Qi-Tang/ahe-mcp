@@ -164,18 +164,20 @@ node IDs and therefore a different pair.
 AHE records the reviewer fields but does not prove that the agent showed the
 card or that the conversation occurred.
 
-## Relate Replaced Canonical Nodes
+## Admit a Fresh Supersession
 
-Use this only when the supplied records explicitly establish that one admitted
-claim replaces another. Call `submit_canonical_supersession_proposal` with
-`from_node_id=current` and `to_node_id=replaced`, then read
-`get_canonical_supersession_proposal`. Show both grounded records, the proposal
-sentence, version difference, coverage, limitations, producer metadata, and any
-decision. Stop and wait for explicit approval before admission; otherwise record
-an explicit `rejected` or `audit_only` disposition. A directed pair is single-use
-in v1. The reverse pair is distinct, but AHE rejects admissions that would create
-a `supersedes` cycle. Do not infer replacement from revision order or source
-generation lifecycle, and do not submit when the semantic link is uncertain.
+Use this only when the records explicitly establish that a fresh pending claim
+replaces exact older admitted claims. Read the pending proposal, every target,
+and `get_canonical_supersession_head`. Show the sentences, exact source context,
+version differences, coverage/limitations, complete target set, six-field
+source-object/slot basis, and observed head. Stop for explicit approval.
+Then call `admit_pending_supersession` with the proposal, reviewer and reason,
+basis, exact targets, expected revision, and expected head event ID. It
+atomically admits the fresh immutable claim and `new -> old` edges. Rejection or
+`audit_only` uses `record_pending_proposal_disposition`. Read currentness with
+the returned lineage key. Never infer replacement or stable slot identity from
+revision order, supply caller-defined completeness/currentness, or submit when
+the semantic link or complete target set is uncertain.
 
 ## Completion Report
 
@@ -189,8 +191,8 @@ Report results per provider object and proposal:
 - coverage, limitations, and any missing readback capability.
 - contradiction proposal and edge IDs plus the reviewer outcome when a
   cross-node contradiction was considered.
-- supersession proposal and edge IDs plus the reviewer outcome when a version
-  replacement was considered.
+- supersession lineage, event, edge, head, and currentness plus the reviewer
+  outcome when a version replacement was considered.
 
 Do not claim that AHE cryptographically or independently verified the human
 review conversation. The cooperating agent is responsible for showing the
