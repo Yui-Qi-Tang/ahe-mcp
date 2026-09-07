@@ -71,7 +71,7 @@ func TestIntegrationCanonicalSupersessionAuthorityRejectsPostAdmissionMutation(t
 		},
 		{
 			name:       "member node",
-			wantDetail: "canonical supersession member node is immutable",
+			wantDetail: "canonical_graph_nodes is append-only",
 			mutate: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) error {
 				_, err := pool.Exec(ctx, `
 					UPDATE canonical_graph_nodes
@@ -83,7 +83,7 @@ func TestIntegrationCanonicalSupersessionAuthorityRejectsPostAdmissionMutation(t
 		},
 		{
 			name:       "decision",
-			wantDetail: "canonical supersession admission decision is immutable",
+			wantDetail: "admission_decisions is append-only",
 			mutate: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) error {
 				_, err := pool.Exec(ctx, `
 					UPDATE admission_decisions
@@ -95,7 +95,7 @@ func TestIntegrationCanonicalSupersessionAuthorityRejectsPostAdmissionMutation(t
 		},
 		{
 			name:       "proposal",
-			wantDetail: "canonical supersession proposal binding is immutable",
+			wantDetail: "terminal proposal occurrence is immutable",
 			mutate: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) error {
 				_, err := pool.Exec(ctx, `
 					UPDATE proposal_occurrences
@@ -107,7 +107,7 @@ func TestIntegrationCanonicalSupersessionAuthorityRejectsPostAdmissionMutation(t
 		},
 		{
 			name:       "supersedes edge",
-			wantDetail: "canonical supersession admission edge is immutable",
+			wantDetail: "canonical_graph_edges is append-only",
 			mutate: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) error {
 				_, err := pool.Exec(ctx, `
 					UPDATE canonical_graph_edges
@@ -119,7 +119,7 @@ func TestIntegrationCanonicalSupersessionAuthorityRejectsPostAdmissionMutation(t
 		},
 		{
 			name:       "supports claim edge",
-			wantDetail: "canonical supersession admission edge is immutable",
+			wantDetail: "canonical_graph_edges is append-only",
 			mutate: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) error {
 				_, err := pool.Exec(ctx, `
 					UPDATE canonical_graph_edges
@@ -131,7 +131,7 @@ func TestIntegrationCanonicalSupersessionAuthorityRejectsPostAdmissionMutation(t
 		},
 		{
 			name:       "generic edge promoted to supersedes",
-			wantDetail: "canonical supersession edge is append-only",
+			wantDetail: "canonical_graph_edges is append-only",
 			mutate: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) error {
 				_, err := pool.Exec(ctx, `
 					UPDATE canonical_graph_edges
@@ -205,14 +205,16 @@ func TestIntegrationCanonicalSupersessionAuthorityRejectsCoordinatedEdgeTargetDe
 	`, result.AdmissionEventID); err != nil {
 		t.Fatalf("delete target inside coordinated mutation: %v", err)
 	}
-	if _, err := tx.Exec(ctx, `
+	_, err = tx.Exec(ctx, `
 		DELETE FROM canonical_graph_edges
 		WHERE canonical_edge_id = $1
-	`, result.SupersedesEdgeIDs[0]); err != nil {
-		t.Fatalf("delete edge inside coordinated mutation: %v", err)
+	`, result.SupersedesEdgeIDs[0])
+	// The shared immutable-graph guard now rejects the second mutation before
+	// deferred supersession validation at COMMIT. The first DELETE must roll back.
+	validationAdmissionAssertAuthorityRejected(t, err, "canonical_graph_edges is append-only")
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatalf("roll back rejected coordinated mutation: %v", err)
 	}
-	err = tx.Commit(ctx)
-	validationAdmissionAssertAuthorityRejected(t, err, "append-only")
 	validationAdmissionAssertAuthorityUnchanged(t, ctx, pool, wantCounts, wantHead)
 	gotCurrentness := integrationClosureCurrentnessReadOnly(t, ctx, pool, lineageKey)
 	if !reflect.DeepEqual(gotCurrentness, wantCurrentness) {

@@ -32,7 +32,13 @@ import (
 )
 
 func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
+	// Retained in-process typed compatibility, not the public CLI profile set.
+	// The new reviewer writer still requires its separate bound constructor.
 	ctx, pool := stdioIntegrationPool(t)
+	ctx, err := evidencequerymcp.BindCanonicalReadViewOwner(ctx, "shipping-stdio-regression")
+	if err != nil {
+		t.Fatal(err)
+	}
 	ingestCore, err := evidenceingestionmcp.NewServer(pool)
 	if err != nil {
 		t.Fatalf("ingest NewServer() error = %v", err)
@@ -92,6 +98,8 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		evidenceingestionmcp.ToolRunDueGitRepositoryExtractionWorkRetryControllerTick,
 		evidenceingestionmcp.ToolRunExpiredGitRepositoryExtractionWorkMaintenanceTick,
 		evidenceingestionmcp.ToolSubmitExternalSource,
+		evidenceingestionmcp.ToolGetSourceClaimReview,
+		evidenceingestionmcp.ToolAdmitReviewedSourceClaim,
 	})
 	assertStdioToolNames(t, ctx, queryMCP, []string{
 		evidencequerymcp.ToolGetEvidenceRecord,

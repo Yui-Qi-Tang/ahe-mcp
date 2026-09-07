@@ -170,6 +170,15 @@ var requiredTablesByMigration = map[string][]string{
 		"canonical_supersession_members",
 		"canonical_supersession_replacement_targets",
 	},
+	"000043_evidence_ingestion_source_run_request_identity.up.sql": {},
+	"000044_evidence_ingestion_ordinary_admission_integrity.up.sql": {
+		"canonical_ordinary_admission_manifests",
+		"canonical_ordinary_admission_node_bindings",
+		"canonical_ordinary_admission_edge_bindings",
+	},
+	"000045_evidence_ingestion_source_claim_review_binding.up.sql": {
+		"canonical_source_claim_review_bindings",
+	},
 }
 
 var requiredTables = []string{
@@ -245,6 +254,203 @@ var requiredTables = []string{
 	"canonical_supersession_admission_head",
 	"canonical_supersession_members",
 	"canonical_supersession_replacement_targets",
+	"canonical_ordinary_admission_manifests",
+	"canonical_ordinary_admission_node_bindings",
+	"canonical_ordinary_admission_edge_bindings",
+	"canonical_source_claim_review_bindings",
+}
+
+type requiredAdmissionFunction struct {
+	Name            string
+	Arguments       string
+	Result          string
+	SourceSHA256    string
+	SecurityDefiner bool
+	SearchPath      string
+	OwnerTable      string
+}
+
+var requiredAdmissionFunctions = []requiredAdmissionFunction{
+	{
+		Name:            "canonical_admission_forbid_mutation_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:6f8dc655ad49d21b54d0588049ec6241aace2cb9bdcc18afaa898bf35ec201dc",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:            "canonical_admission_guard_proposal_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:2aac324a0600e1c3007adec93b4621ba9b5673652f5af7645e271bf7be8c3075",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:         "canonical_ordinary_admission_assert_decision_v1",
+		Arguments:    "text",
+		Result:       "void",
+		SourceSHA256: "sha256:d288459a62116f9d2ae18daa152cf5b05179fa3a1a00cab5f3483b398b7fb60e",
+		OwnerTable:   "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:         "canonical_ordinary_admission_assert_node_v1",
+		Arguments:    "text",
+		Result:       "void",
+		SourceSHA256: "sha256:32889104f911e14aff9aa3ddeefa1c5262d9bf963c0d009eee24af93df286883",
+		OwnerTable:   "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:         "canonical_ordinary_admission_assert_edge_v1",
+		Arguments:    "text",
+		Result:       "void",
+		SourceSHA256: "sha256:8997cf90ddeb950488b67f19e6d3a48c101628d994dcab3b8a59736151bd8826",
+		OwnerTable:   "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:            "canonical_ordinary_admission_decision_trigger_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:3727452cfd41faa605b09a583b866fd532ccd1dbdb39ad932e691539b66b3fd5",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:            "canonical_ordinary_admission_manifest_trigger_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:98792e01e40b9571ebaeed06c538e8e62e6f408ba33698145fb23f761f11b4d5",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:            "canonical_ordinary_admission_node_trigger_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:71c3f03e178de1372b32a14f7da1db2edf05ccdf753b3ae16691f2f6775a179a",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:            "canonical_ordinary_admission_edge_trigger_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:6dc0a30f77345d7b8a4c8637cd9ffc211d4033ab2e90bf2d727dc44ba8fad8a2",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:            "canonical_ordinary_admission_proposal_trigger_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:930f2e384056fad9d54ccff8b7cb0fc72090d95dc09d4a82b137c6ee921e852e",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:            "canonical_ordinary_admission_derivation_trigger_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:1376d6495b53d16aa1020a77141644b1e513ee9773725766d7b7d8edcc7ec30d",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:            "canonical_supersession_edge_authority_dispatch_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:fc46b2b754def60cd2d6dca37453d33ceb7a93915ad964062cc392302b3682d7",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_ordinary_admission_manifests",
+	},
+	{
+		Name:         "canonical_source_claim_review_binding_assert_v1",
+		Arguments:    "text",
+		Result:       "void",
+		SourceSHA256: "sha256:ab1061047a89ef005505209098907a5d271309d2a3059feabe006217ee2a4365",
+		OwnerTable:   "canonical_source_claim_review_bindings",
+	},
+	{
+		Name:            "canonical_source_claim_review_binding_trigger_v1",
+		Result:          "trigger",
+		SourceSHA256:    "sha256:4093d8587b4c24d13739f794eba4e0773b2d374f8e8b9e927c0e098fb88befad",
+		SecurityDefiner: true,
+		SearchPath:      "search_path=pg_catalog",
+		OwnerTable:      "canonical_source_claim_review_bindings",
+	},
+}
+
+type requiredAdmissionTrigger struct {
+	Name              string
+	Table             string
+	Function          string
+	TriggerType       int
+	Constraint        bool
+	Deferrable        bool
+	InitiallyDeferred bool
+}
+
+const (
+	beforeRowUpdateDelete      = 1 | 2 | 8 | 16
+	beforeStatementTruncate    = 2 | 32
+	afterRowInsertUpdateDelete = 1 | 4 | 8 | 16
+)
+
+var requiredAdmissionTriggers = []requiredAdmissionTrigger{
+	{Name: "canonical_graph_nodes_append_only", Table: "canonical_graph_nodes", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "canonical_graph_nodes_forbid_truncate", Table: "canonical_graph_nodes", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "canonical_graph_edges_append_only", Table: "canonical_graph_edges", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "canonical_graph_edges_forbid_truncate", Table: "canonical_graph_edges", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "admission_decisions_append_only", Table: "admission_decisions", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "admission_decisions_forbid_truncate", Table: "admission_decisions", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "canonical_derivations_append_only", Table: "canonical_derivations", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "canonical_derivations_forbid_truncate", Table: "canonical_derivations", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "canonical_derivation_parents_append_only", Table: "canonical_derivation_parents", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "canonical_derivation_parents_forbid_truncate", Table: "canonical_derivation_parents", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "canonical_ordinary_admission_manifests_append_only", Table: "canonical_ordinary_admission_manifests", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "canonical_ordinary_admission_manifests_forbid_truncate", Table: "canonical_ordinary_admission_manifests", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "canonical_ordinary_admission_node_bindings_append_only", Table: "canonical_ordinary_admission_node_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "canonical_ordinary_admission_node_bindings_forbid_truncate", Table: "canonical_ordinary_admission_node_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "canonical_ordinary_admission_edge_bindings_append_only", Table: "canonical_ordinary_admission_edge_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "canonical_ordinary_admission_edge_bindings_forbid_truncate", Table: "canonical_ordinary_admission_edge_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "proposal_occurrences_terminal_guard", Table: "proposal_occurrences", Function: "canonical_admission_guard_proposal_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "proposal_occurrences_forbid_truncate", Table: "proposal_occurrences", Function: "canonical_admission_guard_proposal_v1", TriggerType: beforeStatementTruncate},
+	{Name: "canonical_ordinary_admission_decisions_authority", Table: "admission_decisions", Function: "canonical_ordinary_admission_decision_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_ordinary_admission_manifests_authority", Table: "canonical_ordinary_admission_manifests", Function: "canonical_ordinary_admission_manifest_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_ordinary_admission_node_bindings_authority", Table: "canonical_ordinary_admission_node_bindings", Function: "canonical_ordinary_admission_manifest_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_ordinary_admission_edge_bindings_authority", Table: "canonical_ordinary_admission_edge_bindings", Function: "canonical_ordinary_admission_manifest_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_ordinary_admission_nodes_authority", Table: "canonical_graph_nodes", Function: "canonical_ordinary_admission_node_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_ordinary_admission_edges_authority", Table: "canonical_graph_edges", Function: "canonical_ordinary_admission_edge_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_ordinary_admission_proposals_authority", Table: "proposal_occurrences", Function: "canonical_ordinary_admission_proposal_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_ordinary_admission_derivations_authority", Table: "canonical_derivations", Function: "canonical_ordinary_admission_derivation_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_ordinary_admission_derivation_parents_authority", Table: "canonical_derivation_parents", Function: "canonical_ordinary_admission_derivation_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_source_claim_review_bindings_append_only", Table: "canonical_source_claim_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "canonical_source_claim_review_bindings_forbid_truncate", Table: "canonical_source_claim_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "canonical_source_claim_review_bindings_authority", Table: "canonical_source_claim_review_bindings", Function: "canonical_source_claim_review_binding_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "admission_decisions_source_claim_review_authority", Table: "admission_decisions", Function: "canonical_source_claim_review_binding_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+}
+
+type requiredAdmissionIndex struct {
+	Name      string
+	Table     string
+	KeyColumn string
+	Predicate string
+}
+
+var requiredAdmissionIndexes = []requiredAdmissionIndex{
+	{
+		Name:      "canonical_ordinary_admission_node_materializer_uq",
+		Table:     "canonical_ordinary_admission_node_bindings",
+		KeyColumn: "canonical_node_id",
+		Predicate: "materialization = 'materialized'::text",
+	},
+	{
+		Name:      "canonical_ordinary_admission_edge_materializer_uq",
+		Table:     "canonical_ordinary_admission_edge_bindings",
+		KeyColumn: "canonical_edge_id",
+		Predicate: "materialization = 'materialized'::text",
+	},
 }
 
 type requiredCanonicalSupersessionTrigger struct {
@@ -292,7 +498,7 @@ var requiredCanonicalSupersessionTriggers = []requiredCanonicalSupersessionTrigg
 	{
 		Name:     "canonical_supersession_edges_authority_trigger",
 		Table:    "canonical_graph_edges",
-		Function: "canonical_supersession_edge_authority_trigger",
+		Function: "canonical_supersession_edge_authority_dispatch_v1",
 	},
 	{
 		Name:     "canonical_supersession_targets_authority_trigger",
@@ -599,6 +805,256 @@ var requiredCanonicalSupersessionConstraints = []requiredCanonicalSupersessionCo
 	},
 }
 
+var requiredAdmissionConstraints = []requiredCanonicalSupersessionConstraint{
+	{
+		Name:       "canonical_ordinary_admission_manifests_pkey",
+		Table:      "canonical_ordinary_admission_manifests",
+		Type:       "p",
+		Definition: "PRIMARY KEY (admission_decision_id)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_manifests_proposal_uq",
+		Table:      "canonical_ordinary_admission_manifests",
+		Type:       "u",
+		Definition: "UNIQUE (proposal_occurrence_id)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_manifests_contract_ck",
+		Table:      "canonical_ordinary_admission_manifests",
+		Type:       "c",
+		Definition: "CHECK ((contract_version = 'ordinary-admission/v1'::text))",
+	},
+	{
+		Name:       "canonical_ordinary_admission_manifests_kind_ck",
+		Table:      "canonical_ordinary_admission_manifests",
+		Type:       "c",
+		Definition: "CHECK ((mutation_kind = ANY (ARRAY['source_backed_claim'::text, 'derived_claim'::text])))",
+	},
+	{
+		Name:       "canonical_ordinary_admission_manifests_outcome_ck",
+		Table:      "canonical_ordinary_admission_manifests",
+		Type:       "c",
+		Definition: "CHECK ((admission_outcome = 'admitted'::text))",
+	},
+	{
+		Name:  "canonical_ordinary_admission_manifests_decision_binding_fk",
+		Table: "canonical_ordinary_admission_manifests",
+		Type:  "f",
+		Definition: "FOREIGN KEY (admission_decision_id, proposal_occurrence_id, canonical_ref, admission_outcome) " +
+			"REFERENCES admission_decisions(admission_decision_id, proposal_occurrence_id, canonical_ref, outcome)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_node_bindings_pkey",
+		Table:      "canonical_ordinary_admission_node_bindings",
+		Type:       "p",
+		Definition: "PRIMARY KEY (admission_decision_id, binding_role, binding_position)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_node_bindings_decision_node_uq",
+		Table:      "canonical_ordinary_admission_node_bindings",
+		Type:       "u",
+		Definition: "UNIQUE (admission_decision_id, canonical_node_id)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_node_bindings_role_ck",
+		Table:      "canonical_ordinary_admission_node_bindings",
+		Type:       "c",
+		Definition: "CHECK ((binding_role = ANY (ARRAY['canonical_ref'::text, 'raw_evidence'::text])))",
+	},
+	{
+		Name:       "canonical_ordinary_admission_node_bindings_position_ck",
+		Table:      "canonical_ordinary_admission_node_bindings",
+		Type:       "c",
+		Definition: "CHECK ((binding_position >= 0))",
+	},
+	{
+		Name:       "canonical_ordinary_admission_node_bindings_materialization_ck",
+		Table:      "canonical_ordinary_admission_node_bindings",
+		Type:       "c",
+		Definition: "CHECK ((materialization = ANY (ARRAY['materialized'::text, 'reused'::text])))",
+	},
+	{
+		Name:       "canonical_ordinary_admission_node_bindings_manifest_fk",
+		Table:      "canonical_ordinary_admission_node_bindings",
+		Type:       "f",
+		Definition: "FOREIGN KEY (admission_decision_id) REFERENCES canonical_ordinary_admission_manifests(admission_decision_id)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_node_bindings_node_fk",
+		Table:      "canonical_ordinary_admission_node_bindings",
+		Type:       "f",
+		Definition: "FOREIGN KEY (canonical_node_id) REFERENCES canonical_graph_nodes(canonical_node_id)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_edge_bindings_pkey",
+		Table:      "canonical_ordinary_admission_edge_bindings",
+		Type:       "p",
+		Definition: "PRIMARY KEY (admission_decision_id, binding_position)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_edge_bindings_decision_edge_uq",
+		Table:      "canonical_ordinary_admission_edge_bindings",
+		Type:       "u",
+		Definition: "UNIQUE (admission_decision_id, canonical_edge_id)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_edge_bindings_role_ck",
+		Table:      "canonical_ordinary_admission_edge_bindings",
+		Type:       "c",
+		Definition: "CHECK ((binding_role = ANY (ARRAY['supports_claim'::text, 'derived_from'::text])))",
+	},
+	{
+		Name:       "canonical_ordinary_admission_edge_bindings_position_ck",
+		Table:      "canonical_ordinary_admission_edge_bindings",
+		Type:       "c",
+		Definition: "CHECK ((binding_position >= 0))",
+	},
+	{
+		Name:       "canonical_ordinary_admission_edge_bindings_materialization_ck",
+		Table:      "canonical_ordinary_admission_edge_bindings",
+		Type:       "c",
+		Definition: "CHECK ((materialization = ANY (ARRAY['materialized'::text, 'reused'::text])))",
+	},
+	{
+		Name:       "canonical_ordinary_admission_edge_bindings_manifest_fk",
+		Table:      "canonical_ordinary_admission_edge_bindings",
+		Type:       "f",
+		Definition: "FOREIGN KEY (admission_decision_id) REFERENCES canonical_ordinary_admission_manifests(admission_decision_id)",
+	},
+	{
+		Name:       "canonical_ordinary_admission_edge_bindings_edge_fk",
+		Table:      "canonical_ordinary_admission_edge_bindings",
+		Type:       "f",
+		Definition: "FOREIGN KEY (canonical_edge_id) REFERENCES canonical_graph_edges(canonical_edge_id)",
+	},
+	{
+		Name:       "admission_decisions_review_binding_contract_ck",
+		Table:      "admission_decisions",
+		Type:       "c",
+		Definition: "CHECK (((review_binding_contract_version IS NULL) OR (review_binding_contract_version = 'reviewed-source-claim-admission/v1'::text)))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_pkey",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "p",
+		Definition: "PRIMARY KEY (admission_decision_id)",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_proposal_uq",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "u",
+		Definition: "UNIQUE (proposal_occurrence_id)",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_contract_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((contract_version = 'reviewed-source-claim-admission/v1'::text))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_review_contract_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((review_contract_version = 'reviewable-ingestion/v1'::text))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_effect_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((proposed_effect = 'admit-source-backed-statement/v1'::text))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_receipt_id_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((submission_receipt_id ~ '^submission-receipt:v1:sha256:[0-9a-f]{64}$'::text))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_manifest_id_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((proposal_manifest_id ~ '^proposal-manifest:v1:sha256:[0-9a-f]{64}$'::text))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_basis_id_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((proposal_basis_id ~ '^proposal-basis:v1:sha256:[0-9a-f]{64}$'::text))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_package_id_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((review_package_id ~ '^review-package:v1:sha256:[0-9a-f]{64}$'::text))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_display_uq",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "u",
+		Definition: "UNIQUE (review_display_artifact_id)",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_display_id_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((review_display_artifact_id ~ '^review-display:v1:sha256:[0-9a-f]{64}$'::text))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_media_type_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((review_display_media_type = 'application/vnd.ahe.review-package.v1+json'::text))",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_payload_size_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK (((octet_length(review_display_payload_utf8) > 0) AND (octet_length(review_display_payload_utf8) <= 131072)))",
+	},
+	{
+		Name:              "canonical_source_claim_review_bindings_decision_fk",
+		Table:             "canonical_source_claim_review_bindings",
+		Type:              "f",
+		Deferrable:        true,
+		InitiallyDeferred: true,
+		Definition: "FOREIGN KEY (admission_decision_id) REFERENCES admission_decisions(admission_decision_id) " +
+			"DEFERRABLE INITIALLY DEFERRED",
+	},
+	{
+		Name:              "canonical_source_claim_review_bindings_proposal_fk",
+		Table:             "canonical_source_claim_review_bindings",
+		Type:              "f",
+		Deferrable:        true,
+		InitiallyDeferred: true,
+		Definition: "FOREIGN KEY (proposal_occurrence_id) REFERENCES proposal_occurrences(proposal_occurrence_id) " +
+			"DEFERRABLE INITIALLY DEFERRED",
+	},
+	{
+		Name:              "canonical_source_claim_review_bindings_attempt_fk",
+		Table:             "canonical_source_claim_review_bindings",
+		Type:              "f",
+		Deferrable:        true,
+		InitiallyDeferred: true,
+		Definition: "FOREIGN KEY (extraction_attempt_id) REFERENCES extraction_attempts(extraction_attempt_id) " +
+			"DEFERRABLE INITIALLY DEFERRED",
+	},
+	{
+		Name:              "canonical_source_claim_review_bindings_ordinary_manifest_fk",
+		Table:             "canonical_source_claim_review_bindings",
+		Type:              "f",
+		Deferrable:        true,
+		InitiallyDeferred: true,
+		Definition: "FOREIGN KEY (admission_decision_id) REFERENCES canonical_ordinary_admission_manifests(admission_decision_id) " +
+			"DEFERRABLE INITIALLY DEFERRED",
+	},
+	{
+		Name:       "canonical_source_claim_review_bindings_attempt_id_ck",
+		Table:      "canonical_source_claim_review_bindings",
+		Type:       "c",
+		Definition: "CHECK ((btrim(extraction_attempt_id) <> ''::text))",
+	},
+}
+
 // ErrSchemaNotCurrent indicates that the database cannot satisfy the embedded
 // migration contract.
 var ErrSchemaNotCurrent = errors.New("database schema is not current; run ahe-migrate")
@@ -631,6 +1087,21 @@ func UpSQL() (string, error) {
 
 // ApplyUp applies missing migrations and records immutable checksums.
 func ApplyUp(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
+	return applyUp(ctx, pool, "")
+}
+
+// ApplyUpInSchema applies missing migrations only after binding the migration
+// transaction to one explicit pre-existing private schema. The pool must
+// already expose exactly that schema, optionally followed by pg_catalog; a
+// fallback user schema is rejected before any migration write occurs.
+func ApplyUpInSchema(ctx context.Context, pool *pgxpool.Pool, schema string) (bool, error) {
+	if err := ValidateTargetSchema(schema); err != nil {
+		return false, err
+	}
+	return applyUp(ctx, pool, schema)
+}
+
+func applyUp(ctx context.Context, pool *pgxpool.Pool, schema string) (bool, error) {
 	if pool == nil {
 		return false, errors.New("postgres pool is required")
 	}
@@ -644,6 +1115,12 @@ func ApplyUp(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
 	}
 	rollback := func() {
 		_ = tx.Rollback(context.Background())
+	}
+	if schema != "" {
+		if err := bindMigrationSchema(ctx, tx, schema, true); err != nil {
+			rollback()
+			return false, err
+		}
 	}
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('ahe-wrap:evidence-migrations'))`); err != nil {
 		rollback()
@@ -711,7 +1188,15 @@ func ApplyUp(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
 		rollback()
 		return false, fmt.Errorf("evidence ingestion schema is incomplete after migrations: %d/%d required tables exist", existing, len(requiredTables))
 	}
+	if err := verifySourceRunRequestIdentityIndex(ctx, tx); err != nil {
+		rollback()
+		return false, fmt.Errorf("evidence ingestion schema is incomplete after migrations: %w", err)
+	}
 	if err := verifyCanonicalSupersessionSchemaObjects(ctx, tx); err != nil {
+		rollback()
+		return false, fmt.Errorf("evidence ingestion schema is incomplete after migrations: %w", err)
+	}
+	if err := verifyAdmissionSchemaObjects(ctx, tx); err != nil {
 		rollback()
 		return false, fmt.Errorf("evidence ingestion schema is incomplete after migrations: %w", err)
 	}
@@ -724,6 +1209,20 @@ func ApplyUp(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
 // VerifyCurrent checks the migration ledger and required tables without
 // changing the database.
 func VerifyCurrent(ctx context.Context, pool *pgxpool.Pool) (SchemaStatus, error) {
+	return verifyCurrent(ctx, pool, "")
+}
+
+// VerifyCurrentInSchema verifies only one explicit pre-existing private
+// schema. It rejects fallback search paths before reading the migration ledger
+// or required relations.
+func VerifyCurrentInSchema(ctx context.Context, pool *pgxpool.Pool, schema string) (SchemaStatus, error) {
+	if err := ValidateTargetSchema(schema); err != nil {
+		return SchemaStatus{}, err
+	}
+	return verifyCurrent(ctx, pool, schema)
+}
+
+func verifyCurrent(ctx context.Context, pool *pgxpool.Pool, schema string) (SchemaStatus, error) {
 	if pool == nil {
 		return SchemaStatus{}, errors.New("postgres pool is required")
 	}
@@ -741,6 +1240,11 @@ func VerifyCurrent(ctx context.Context, pool *pgxpool.Pool) (SchemaStatus, error
 	defer func() {
 		_ = tx.Rollback(context.Background())
 	}()
+	if schema != "" {
+		if err := bindMigrationSchema(ctx, tx, schema, false); err != nil {
+			return SchemaStatus{}, err
+		}
+	}
 
 	migrationTableCount, err := existingTableCount(ctx, tx, []string{"schema_migrations"})
 	if err != nil {
@@ -778,7 +1282,13 @@ func VerifyCurrent(ctx context.Context, pool *pgxpool.Pool) (SchemaStatus, error
 			len(requiredTables),
 		)
 	}
+	if err := verifySourceRunRequestIdentityIndex(ctx, tx); err != nil {
+		return SchemaStatus{}, fmt.Errorf("%w: %v", ErrSchemaNotCurrent, err)
+	}
 	if err := verifyCanonicalSupersessionSchemaObjects(ctx, tx); err != nil {
+		return SchemaStatus{}, fmt.Errorf("%w: %v", ErrSchemaNotCurrent, err)
+	}
+	if err := verifyAdmissionSchemaObjects(ctx, tx); err != nil {
 		return SchemaStatus{}, fmt.Errorf("%w: %v", ErrSchemaNotCurrent, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -788,6 +1298,134 @@ func VerifyCurrent(ctx context.Context, pool *pgxpool.Pool) (SchemaStatus, error
 		AppliedMigrations: len(applied),
 		LatestMigration:   migrationSet[len(migrationSet)-1].name,
 	}, nil
+}
+
+// ValidateTargetSchema accepts only exact ordinary PostgreSQL identifiers and
+// excludes shared and system namespaces. Keeping this deployment coordinate
+// deliberately narrow also prevents a schema value from being interpreted as
+// a search_path expression.
+func ValidateTargetSchema(schema string) error {
+	if schema == "" {
+		return errors.New("AHE_DATABASE_SCHEMA is required")
+	}
+	if len(schema) > 63 {
+		return errors.New("AHE_DATABASE_SCHEMA must be at most 63 bytes")
+	}
+	for index := 0; index < len(schema); index++ {
+		character := schema[index]
+		letter := character >= 'a' && character <= 'z' || character >= 'A' && character <= 'Z'
+		if index == 0 {
+			if !letter && character != '_' {
+				return errors.New("AHE_DATABASE_SCHEMA must be one exact PostgreSQL identifier")
+			}
+			continue
+		}
+		if !letter && (character < '0' || character > '9') && character != '_' {
+			return errors.New("AHE_DATABASE_SCHEMA must be one exact PostgreSQL identifier")
+		}
+	}
+	lower := strings.ToLower(schema)
+	if lower == "public" || lower == "information_schema" || strings.HasPrefix(lower, "pg_") {
+		return errors.New("AHE_DATABASE_SCHEMA must identify a private non-system schema")
+	}
+	return nil
+}
+
+func bindMigrationSchema(ctx context.Context, tx pgx.Tx, schema string, requireCreate bool) error {
+	var hasTemporarySchema bool
+	if err := tx.QueryRow(ctx, `
+		SELECT pg_catalog.pg_my_temp_schema() <> 0
+	`).Scan(&hasTemporarySchema); err != nil {
+		return fmt.Errorf("checking migration temporary schema: %w", err)
+	}
+	if hasTemporarySchema {
+		return errors.New("migration session has an active temporary schema")
+	}
+
+	var namespaceOID uint32
+	if err := tx.QueryRow(ctx, `
+		SELECT oid
+		FROM pg_catalog.pg_namespace
+		WHERE nspname = $1
+	`, schema).Scan(&namespaceOID); errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("migration target schema %q does not exist", schema)
+	} else if err != nil {
+		return fmt.Errorf("loading migration target schema: %w", err)
+	}
+
+	var hasUsage, hasCreate, hasPublicPrivilege bool
+	if err := tx.QueryRow(ctx, `
+		SELECT
+			pg_catalog.has_schema_privilege(current_user, $1::oid, 'USAGE'),
+			pg_catalog.has_schema_privilege(current_user, $1::oid, 'CREATE'),
+			EXISTS (
+				SELECT 1
+				FROM pg_catalog.pg_namespace AS namespace
+				CROSS JOIN LATERAL pg_catalog.aclexplode(
+					COALESCE(
+						namespace.nspacl,
+						pg_catalog.acldefault('n', namespace.nspowner)
+					)
+				) AS acl
+				WHERE namespace.oid = $1::oid
+				  AND acl.grantee = 0
+				  AND acl.privilege_type IN ('USAGE', 'CREATE')
+			)
+	`, namespaceOID).Scan(&hasUsage, &hasCreate, &hasPublicPrivilege); err != nil {
+		return fmt.Errorf("checking migration target schema privileges: %w", err)
+	}
+	if !hasUsage {
+		return fmt.Errorf("current PostgreSQL role lacks USAGE on migration target schema %q", schema)
+	}
+	if requireCreate && !hasCreate {
+		return fmt.Errorf("current PostgreSQL role lacks CREATE on migration target schema %q", schema)
+	}
+	if hasPublicPrivilege {
+		return fmt.Errorf("migration target schema %q grants USAGE or CREATE to PUBLIC", schema)
+	}
+
+	var currentSchema, currentSearchPath string
+	if err := tx.QueryRow(ctx, `
+		SELECT
+			COALESCE(pg_catalog.current_schema(), ''),
+			pg_catalog.current_setting('search_path')
+	`).Scan(&currentSchema, &currentSearchPath); err != nil {
+		return fmt.Errorf("loading migration search path: %w", err)
+	}
+	if currentSchema != schema || !isExactMigrationSearchPath(currentSearchPath, schema) {
+		return fmt.Errorf(
+			"migration search_path must contain only target schema %q and optional pg_catalog",
+			schema,
+		)
+	}
+
+	exactSearchPath := pgx.Identifier{schema}.Sanitize() + ", pg_catalog"
+	if _, err := tx.Exec(ctx, `SELECT pg_catalog.set_config('search_path', $1, true)`, exactSearchPath); err != nil {
+		return fmt.Errorf("binding migration search path: %w", err)
+	}
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(pg_catalog.current_schema(), '')`).Scan(&currentSchema); err != nil {
+		return fmt.Errorf("verifying bound migration schema: %w", err)
+	}
+	if currentSchema != schema {
+		return fmt.Errorf("bound migration schema = %q, want %q", currentSchema, schema)
+	}
+	return nil
+}
+
+func isExactMigrationSearchPath(searchPath, schema string) bool {
+	parts := strings.Split(searchPath, ",")
+	if len(parts) < 1 || len(parts) > 2 {
+		return false
+	}
+	target := strings.TrimSpace(parts[0])
+	if target != schema && target != (pgx.Identifier{schema}).Sanitize() {
+		return false
+	}
+	if len(parts) == 1 {
+		return true
+	}
+	catalog := strings.TrimSpace(parts[1])
+	return catalog == "pg_catalog" || catalog == (pgx.Identifier{"pg_catalog"}).Sanitize()
 }
 
 func loadMigrations() ([]embeddedMigration, error) {
@@ -917,6 +1555,93 @@ func existingTableCount(ctx context.Context, db tableQueryer, tables []string) (
 		return 0, fmt.Errorf("checking evidence ingestion schema: %w", err)
 	}
 	return count, nil
+}
+
+func verifySourceRunRequestIdentityIndex(ctx context.Context, db tableQueryer) error {
+	const indexName = "extraction_runs_source_request_id_uq"
+	var (
+		unique           bool
+		valid            bool
+		ready            bool
+		immediate        bool
+		keyCount         int
+		attributeCount   int
+		tableName        string
+		accessMethod     string
+		keyColumn        string
+		keyIsExpression  bool
+		defaultOpclass   bool
+		defaultCollation bool
+		defaultOptions   bool
+		predicate        string
+	)
+	err := db.QueryRow(ctx, `
+		SELECT
+			index_row.indisunique,
+			index_row.indisvalid,
+			index_row.indisready,
+			index_row.indimmediate,
+			index_row.indnkeyatts,
+			index_row.indnatts,
+			table_relation.relname,
+			access_method.amname,
+			COALESCE(key_attribute.attname, ''),
+			index_row.indexprs IS NOT NULL,
+			operator_class.opcdefault,
+			COALESCE(index_row.indcollation[0] = key_attribute.attcollation, false),
+			index_row.indoption[0] = 0,
+			COALESCE(pg_catalog.pg_get_expr(index_row.indpred, index_row.indrelid), '')
+		FROM pg_catalog.pg_class AS index_relation
+		JOIN pg_catalog.pg_namespace AS index_namespace
+			ON index_namespace.oid = index_relation.relnamespace
+		JOIN pg_catalog.pg_index AS index_row
+			ON index_row.indexrelid = index_relation.oid
+		JOIN pg_catalog.pg_class AS table_relation
+			ON table_relation.oid = index_row.indrelid
+		JOIN pg_catalog.pg_namespace AS table_namespace
+			ON table_namespace.oid = table_relation.relnamespace
+		JOIN pg_catalog.pg_am AS access_method
+			ON access_method.oid = index_relation.relam
+		JOIN pg_catalog.pg_opclass AS operator_class
+			ON operator_class.oid = index_row.indclass[0]
+		LEFT JOIN pg_catalog.pg_attribute AS key_attribute
+			ON key_attribute.attrelid = table_relation.oid
+			AND key_attribute.attnum = index_row.indkey[0]
+		WHERE index_namespace.nspname = pg_catalog.current_schema()
+		  AND table_namespace.nspname = pg_catalog.current_schema()
+		  AND index_relation.relname = $1
+	`, indexName).Scan(
+		&unique,
+		&valid,
+		&ready,
+		&immediate,
+		&keyCount,
+		&attributeCount,
+		&tableName,
+		&accessMethod,
+		&keyColumn,
+		&keyIsExpression,
+		&defaultOpclass,
+		&defaultCollation,
+		&defaultOptions,
+		&predicate,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("required source run request identity index %s is missing", indexName)
+	}
+	if err != nil {
+		return fmt.Errorf("checking source run request identity index %s: %w", indexName, err)
+	}
+	predicate = strings.TrimSpace(predicate)
+	predicate = strings.TrimPrefix(predicate, "(")
+	predicate = strings.TrimSuffix(predicate, ")")
+	if !unique || !valid || !ready || !immediate || keyCount != 1 || attributeCount != 1 ||
+		tableName != "extraction_runs" || accessMethod != "btree" || keyColumn != "request_id" ||
+		keyIsExpression || !defaultOpclass || !defaultCollation || !defaultOptions ||
+		normalizeSchemaDefinition(predicate) != "repository_snapshot_id is null" {
+		return fmt.Errorf("required source run request identity index %s does not match its unique key and predicate contract", indexName)
+	}
+	return nil
 }
 
 func verifyCanonicalSupersessionSchemaObjects(ctx context.Context, db tableQueryer) error {
@@ -1069,6 +1794,389 @@ func verifyCanonicalSupersessionSchemaObjects(ctx context.Context, db tableQuery
 			!validated || normalizeSchemaDefinition(definition) != normalizeSchemaDefinition(required.Definition) {
 			return fmt.Errorf("required canonical supersession constraint %s does not match its definition contract", required.Name)
 		}
+	}
+	return nil
+}
+
+func verifyAdmissionSchemaObjects(ctx context.Context, db tableQueryer) error {
+	for _, required := range requiredAdmissionFunctions {
+		var (
+			language        string
+			arguments       string
+			result          string
+			kind            string
+			securityDefiner bool
+			volatility      string
+			strict          bool
+			source          string
+			searchPath      string
+			ownerMatches    bool
+			publicExecute   bool
+		)
+		err := db.QueryRow(ctx, `
+			SELECT
+				language_row.lanname,
+				pg_catalog.oidvectortypes(function_row.proargtypes),
+				pg_catalog.pg_get_function_result(function_row.oid),
+				function_row.prokind::TEXT,
+				function_row.prosecdef,
+				function_row.provolatile::TEXT,
+				function_row.proisstrict,
+				function_row.prosrc,
+				COALESCE(
+					pg_catalog.array_to_string(function_row.proconfig, E'\n'),
+					''
+				),
+				function_row.proowner = owner_table.relowner,
+				EXISTS (
+					SELECT 1
+					FROM pg_catalog.aclexplode(
+						COALESCE(
+							function_row.proacl,
+							pg_catalog.acldefault('f', function_row.proowner)
+						)
+					) AS acl
+					WHERE acl.grantee = 0
+					  AND acl.privilege_type = 'EXECUTE'
+				)
+			FROM pg_catalog.pg_proc AS function_row
+			JOIN pg_catalog.pg_namespace AS function_ns
+				ON function_ns.oid = function_row.pronamespace
+			JOIN pg_catalog.pg_language AS language_row
+				ON language_row.oid = function_row.prolang
+			JOIN pg_catalog.pg_class AS owner_table
+				ON owner_table.relname = $3
+			JOIN pg_catalog.pg_namespace AS owner_ns
+				ON owner_ns.oid = owner_table.relnamespace
+			   AND owner_ns.oid = function_ns.oid
+			WHERE function_ns.nspname = pg_catalog.current_schema()
+			  AND function_row.proname = $1
+			  AND pg_catalog.oidvectortypes(function_row.proargtypes) = $2
+		`, required.Name, required.Arguments, required.OwnerTable).Scan(
+			&language,
+			&arguments,
+			&result,
+			&kind,
+			&securityDefiner,
+			&volatility,
+			&strict,
+			&source,
+			&searchPath,
+			&ownerMatches,
+			&publicExecute,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf(
+				"required canonical admission function %s(%s) is missing",
+				required.Name,
+				required.Arguments,
+			)
+		}
+		if err != nil {
+			return fmt.Errorf(
+				"checking canonical admission function %s: %w",
+				required.Name,
+				err,
+			)
+		}
+		if language != "plpgsql" || arguments != required.Arguments ||
+			result != required.Result || kind != "f" || volatility != "v" ||
+			strict || securityDefiner != required.SecurityDefiner {
+			return fmt.Errorf(
+				"required canonical admission function %s does not match its signature and execution contract",
+				required.Name,
+			)
+		}
+		if searchPath != required.SearchPath || !ownerMatches || publicExecute {
+			return fmt.Errorf(
+				"required canonical admission function %s does not match its owner, search_path, and privilege contract",
+				required.Name,
+			)
+		}
+		sourceSum := sha256.Sum256([]byte(source))
+		if "sha256:"+hex.EncodeToString(sourceSum[:]) != required.SourceSHA256 {
+			return fmt.Errorf(
+				"required canonical admission function %s does not match its definition contract",
+				required.Name,
+			)
+		}
+	}
+
+	for _, required := range requiredAdmissionTriggers {
+		var (
+			tableName         string
+			functionName      string
+			triggerType       int
+			enabled           string
+			constraintTrigger bool
+			deferrable        bool
+			initiallyDeferred bool
+			argumentBytes     int
+			hasWhen           bool
+		)
+		err := db.QueryRow(ctx, `
+			SELECT
+				table_relation.relname,
+				function_row.proname,
+				trigger_row.tgtype::INTEGER,
+				trigger_row.tgenabled::TEXT,
+				trigger_row.tgconstraint <> 0,
+				trigger_row.tgdeferrable,
+				trigger_row.tginitdeferred,
+				pg_catalog.octet_length(trigger_row.tgargs),
+				trigger_row.tgqual IS NOT NULL
+			FROM pg_catalog.pg_trigger AS trigger_row
+			JOIN pg_catalog.pg_class AS table_relation
+				ON table_relation.oid = trigger_row.tgrelid
+			JOIN pg_catalog.pg_namespace AS table_ns
+				ON table_ns.oid = table_relation.relnamespace
+			JOIN pg_catalog.pg_proc AS function_row
+				ON function_row.oid = trigger_row.tgfoid
+			JOIN pg_catalog.pg_namespace AS function_ns
+				ON function_ns.oid = function_row.pronamespace
+			WHERE table_ns.nspname = pg_catalog.current_schema()
+			  AND function_ns.oid = table_ns.oid
+			  AND trigger_row.tgname = $1
+			  AND NOT trigger_row.tgisinternal
+		`, required.Name).Scan(
+			&tableName,
+			&functionName,
+			&triggerType,
+			&enabled,
+			&constraintTrigger,
+			&deferrable,
+			&initiallyDeferred,
+			&argumentBytes,
+			&hasWhen,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf(
+				"required canonical admission trigger %s is missing",
+				required.Name,
+			)
+		}
+		if err != nil {
+			return fmt.Errorf(
+				"checking canonical admission trigger %s: %w",
+				required.Name,
+				err,
+			)
+		}
+		if tableName != required.Table || functionName != required.Function ||
+			triggerType != required.TriggerType || enabled != "O" ||
+			constraintTrigger != required.Constraint ||
+			deferrable != required.Deferrable ||
+			initiallyDeferred != required.InitiallyDeferred ||
+			argumentBytes != 0 || hasWhen {
+			return fmt.Errorf(
+				"required canonical admission trigger %s does not match its execution contract",
+				required.Name,
+			)
+		}
+	}
+
+	for _, required := range requiredAdmissionIndexes {
+		var (
+			unique           bool
+			valid            bool
+			ready            bool
+			immediate        bool
+			keyCount         int
+			attributeCount   int
+			tableName        string
+			accessMethod     string
+			keyColumn        string
+			keyIsExpression  bool
+			defaultOpclass   bool
+			defaultCollation bool
+			defaultOptions   bool
+			predicate        string
+		)
+		err := db.QueryRow(ctx, `
+			SELECT
+				index_row.indisunique,
+				index_row.indisvalid,
+				index_row.indisready,
+				index_row.indimmediate,
+				index_row.indnkeyatts,
+				index_row.indnatts,
+				table_relation.relname,
+				access_method.amname,
+				COALESCE(key_attribute.attname, ''),
+				index_row.indexprs IS NOT NULL,
+				operator_class.opcdefault,
+				COALESCE(
+					index_row.indcollation[0] = key_attribute.attcollation,
+					false
+				),
+				index_row.indoption[0] = 0,
+				COALESCE(
+					pg_catalog.pg_get_expr(
+						index_row.indpred,
+						index_row.indrelid
+					),
+					''
+				)
+			FROM pg_catalog.pg_class AS index_relation
+			JOIN pg_catalog.pg_namespace AS index_ns
+				ON index_ns.oid = index_relation.relnamespace
+			JOIN pg_catalog.pg_index AS index_row
+				ON index_row.indexrelid = index_relation.oid
+			JOIN pg_catalog.pg_class AS table_relation
+				ON table_relation.oid = index_row.indrelid
+			JOIN pg_catalog.pg_namespace AS table_ns
+				ON table_ns.oid = table_relation.relnamespace
+			JOIN pg_catalog.pg_am AS access_method
+				ON access_method.oid = index_relation.relam
+			JOIN pg_catalog.pg_opclass AS operator_class
+				ON operator_class.oid = index_row.indclass[0]
+			LEFT JOIN pg_catalog.pg_attribute AS key_attribute
+				ON key_attribute.attrelid = table_relation.oid
+			   AND key_attribute.attnum = index_row.indkey[0]
+			WHERE index_ns.nspname = pg_catalog.current_schema()
+			  AND table_ns.oid = index_ns.oid
+			  AND index_relation.relname = $1
+		`, required.Name).Scan(
+			&unique,
+			&valid,
+			&ready,
+			&immediate,
+			&keyCount,
+			&attributeCount,
+			&tableName,
+			&accessMethod,
+			&keyColumn,
+			&keyIsExpression,
+			&defaultOpclass,
+			&defaultCollation,
+			&defaultOptions,
+			&predicate,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf(
+				"required canonical admission index %s is missing",
+				required.Name,
+			)
+		}
+		if err != nil {
+			return fmt.Errorf(
+				"checking canonical admission index %s: %w",
+				required.Name,
+				err,
+			)
+		}
+		predicate = strings.TrimSpace(predicate)
+		predicate = strings.TrimPrefix(predicate, "(")
+		predicate = strings.TrimSuffix(predicate, ")")
+		if !unique || !valid || !ready || !immediate ||
+			keyCount != 1 || attributeCount != 1 ||
+			tableName != required.Table || accessMethod != "btree" ||
+			keyColumn != required.KeyColumn || keyIsExpression ||
+			!defaultOpclass || !defaultCollation || !defaultOptions ||
+			normalizeSchemaDefinition(predicate) !=
+				normalizeSchemaDefinition(required.Predicate) {
+			return fmt.Errorf(
+				"required canonical admission index %s does not match its unique materializer contract",
+				required.Name,
+			)
+		}
+	}
+
+	for _, required := range requiredAdmissionConstraints {
+		var (
+			tableName         string
+			constraintType    string
+			deferrable        bool
+			initiallyDeferred bool
+			validated         bool
+			definition        string
+		)
+		err := db.QueryRow(ctx, `
+			SELECT
+				table_relation.relname,
+				constraint_row.contype::TEXT,
+				constraint_row.condeferrable,
+				constraint_row.condeferred,
+				constraint_row.convalidated,
+				pg_catalog.pg_get_constraintdef(constraint_row.oid)
+			FROM pg_catalog.pg_constraint AS constraint_row
+			JOIN pg_catalog.pg_class AS table_relation
+				ON table_relation.oid = constraint_row.conrelid
+			JOIN pg_catalog.pg_namespace AS table_ns
+				ON table_ns.oid = table_relation.relnamespace
+			WHERE table_ns.nspname = pg_catalog.current_schema()
+			  AND constraint_row.conname = $1
+		`, required.Name).Scan(
+			&tableName,
+			&constraintType,
+			&deferrable,
+			&initiallyDeferred,
+			&validated,
+			&definition,
+		)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf(
+				"required canonical admission constraint %s is missing",
+				required.Name,
+			)
+		}
+		if err != nil {
+			return fmt.Errorf(
+				"checking canonical admission constraint %s: %w",
+				required.Name,
+				err,
+			)
+		}
+		if tableName != required.Table ||
+			constraintType != required.Type ||
+			deferrable != required.Deferrable ||
+			initiallyDeferred != required.InitiallyDeferred ||
+			!validated ||
+			normalizeSchemaDefinition(definition) !=
+				normalizeSchemaDefinition(required.Definition) {
+			return fmt.Errorf(
+				"required canonical admission constraint %s does not match its definition contract",
+				required.Name,
+			)
+		}
+	}
+
+	var (
+		columnType string
+		notNull    bool
+		hasDefault bool
+	)
+	err := db.QueryRow(ctx, `
+		SELECT
+			pg_catalog.format_type(attribute.atttypid, attribute.atttypmod),
+			attribute.attnotnull,
+			attribute.atthasdef
+		FROM pg_catalog.pg_attribute AS attribute
+		JOIN pg_catalog.pg_class AS relation
+			ON relation.oid = attribute.attrelid
+		JOIN pg_catalog.pg_namespace AS namespace
+			ON namespace.oid = relation.relnamespace
+		WHERE namespace.nspname = pg_catalog.current_schema()
+		  AND relation.relname = 'admission_decisions'
+		  AND attribute.attname = 'review_binding_contract_version'
+		  AND attribute.attnum > 0
+		  AND NOT attribute.attisdropped
+	`).Scan(&columnType, &notNull, &hasDefault)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errors.New(
+			"required admission_decisions.review_binding_contract_version column is missing",
+		)
+	}
+	if err != nil {
+		return fmt.Errorf(
+			"checking admission_decisions.review_binding_contract_version: %w",
+			err,
+		)
+	}
+	if columnType != "text" || notNull || hasDefault {
+		return errors.New(
+			"required admission_decisions.review_binding_contract_version column does not match its nullable text contract",
+		)
 	}
 	return nil
 }

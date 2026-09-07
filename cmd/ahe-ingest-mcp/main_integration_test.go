@@ -13,20 +13,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Yui-Qi-Tang/ahe-mcp/migrations"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/dbrole"
 
 	"github.com/jackc/pgx/v5"
 )
 
-func TestIntegrationRunRejectsUnmigratedSchema(t *testing.T) {
+func TestIntegrationRunRejectsUnmigratedOwnerBeforeServing(t *testing.T) {
 	t.Setenv("DATABASE_DNS", ingestCommandEmptySchemaURL(t))
+	t.Setenv("AHE_RUNTIME_PRINCIPAL_ID", "intake-fixture")
+	t.Setenv("AHE_RUNTIME_PROFILE", "intake")
 
+	// Runtime authority now precedes schema verification. An owner credential
+	// cannot serve even when its unmigrated schema was explicitly selected.
 	err := run(t.Context(), nil)
-	if !errors.Is(err, migrations.ErrSchemaNotCurrent) {
-		t.Fatalf("run() error = %v, want ErrSchemaNotCurrent", err)
+	if !errors.Is(err, dbrole.ErrPolicyViolation) {
+		t.Fatalf("run() error = %v, want ErrPolicyViolation", err)
 	}
-	if !strings.Contains(err.Error(), "run ahe-migrate") {
-		t.Fatalf("run() error = %v, want migration action", err)
+	if !strings.Contains(err.Error(), "session user must be distinct") {
+		t.Fatalf("run() error = %v, want login/group separation failure", err)
 	}
 }
 
@@ -52,6 +56,8 @@ func ingestCommandEmptySchemaURL(t *testing.T) string {
 		t.Fatalf("random schema suffix: %v", err)
 	}
 	schema := "ahe_ingest_command_test_" + hex.EncodeToString(suffix)
+	t.Setenv("AHE_DATABASE_SCHEMA", schema)
+	t.Setenv("AHE_DATABASE_ROLE", admin.Config().User)
 	if _, err := admin.Exec(ctx, `CREATE SCHEMA `+schema); err != nil {
 		t.Fatalf("create temp schema: %v", err)
 	}

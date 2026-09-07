@@ -237,13 +237,16 @@ func insertOrReadConnectorDelivery(
 	request connectorDeliveryRequest,
 ) (persistedConnectorDelivery, bool, error) {
 	var receivedAt time.Time
+	// Different request IDs can insert the same delivery concurrently. Every
+	// unique index must arbitrate, including the derived-ID primary key. A
+	// skipped insert still requires the full identity and payload readback below.
 	err := tx.QueryRow(ctx, `
 		INSERT INTO detective_connector_inbox_deliveries (
 			connector_delivery_id, connector_id, external_delivery_id,
 			content_type, payload_hash, payload_bytes, byte_length
 		)
 		VALUES ($1,$2,$3,$4,$5,$6,$7)
-		ON CONFLICT (connector_id, external_delivery_id) DO NOTHING
+		ON CONFLICT DO NOTHING
 		RETURNING received_at
 	`, request.connectorDeliveryID, request.input.ConnectorID, request.input.ExternalDeliveryID,
 		request.input.ContentType, request.payloadHash, request.input.Payload, len(request.input.Payload),

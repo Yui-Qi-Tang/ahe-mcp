@@ -371,6 +371,8 @@ func TestIntegrationAdmitPendingProposalRoundTrip(t *testing.T) {
 
 	replay := callAdmitPendingProposal(t, ctx, server, AdmitPendingProposalRequest{
 		ProposalOccurrenceID: submit.ProposalOccurrenceID,
+		DecisionBy:           "integration-test",
+		DecisionReason:       "fixture statement accepted",
 	})
 	if !replay.Replayed || replay.AdmissionDecisionID != admission.AdmissionDecisionID || replay.CanonicalRef != admission.CanonicalRef {
 		t.Fatalf("replay admission = %+v, want replay of %+v", replay, admission)

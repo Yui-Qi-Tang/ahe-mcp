@@ -838,7 +838,7 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 		if err := decodeStrict(payload, &req); err != nil {
 			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
 		}
-		resp, err := s.FindCanonicalPath(req)
+		resp, err := s.FindCanonicalPath(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -852,7 +852,7 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 		if err := decodeStrict(payload, &req); err != nil {
 			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
 		}
-		resp, err := s.GetCanonicalTopologyDiagnostics(req)
+		resp, err := s.GetCanonicalTopologyDiagnostics(ctx, req)
 		if err != nil {
 			return nil, err
 		}

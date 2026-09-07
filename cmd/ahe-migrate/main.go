@@ -10,6 +10,7 @@ import (
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/migrations"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -39,7 +40,19 @@ func run(
 	if databaseURL == "" {
 		return errors.New("DATABASE_DNS is required")
 	}
-	pool, err := pgxpool.New(ctx, databaseURL)
+	schema := getenv("AHE_DATABASE_SCHEMA")
+	if err := migrations.ValidateTargetSchema(schema); err != nil {
+		return err
+	}
+	config, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		// Parse errors can include the original connection string.
+		return errors.New("invalid postgres configuration")
+	}
+	if _, configured := config.ConnConfig.RuntimeParams["search_path"]; !configured {
+		config.ConnConfig.RuntimeParams["search_path"] = pgx.Identifier{schema}.Sanitize()
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return fmt.Errorf("opening postgres pool: %w", err)
 	}
@@ -48,16 +61,17 @@ func run(
 		return fmt.Errorf("pinging postgres: %w", err)
 	}
 
-	changed, err := migrations.ApplyUp(ctx, pool)
+	changed, err := migrations.ApplyUpInSchema(ctx, pool, schema)
 	if err != nil {
 		return err
 	}
-	status, err := migrations.VerifyCurrent(ctx, pool)
+	status, err := migrations.VerifyCurrentInSchema(ctx, pool, schema)
 	if err != nil {
 		return fmt.Errorf("verifying applied migrations: %w", err)
 	}
 	result := migrationResult{
 		SchemaVersion:     resultSchemaVersion,
+		Schema:            schema,
 		Changed:           changed,
 		AppliedMigrations: status.AppliedMigrations,
 		LatestMigration:   status.LatestMigration,
@@ -72,15 +86,17 @@ func usage() string {
 	return `Usage: ahe-migrate
 
 Environment:
-  DATABASE_DNS  PostgreSQL DSN for the authoritative AHE store
+  DATABASE_DNS         PostgreSQL DSN for the authoritative AHE store
+  AHE_DATABASE_SCHEMA  Existing private schema to migrate; no fallback schema is allowed
 
 The command acquires the migration advisory lock, applies missing embedded
-migrations in one transaction, verifies the migration ledger and required
-tables, then returns a credential-free JSON result.`
+migrations in one schema-bound transaction, verifies the migration ledger and
+required tables, then returns a credential-free JSON result.`
 }
 
 type migrationResult struct {
 	SchemaVersion     string `json:"schema_version"`
+	Schema            string `json:"schema"`
 	Changed           bool   `json:"changed"`
 	AppliedMigrations int    `json:"applied_migrations"`
 	LatestMigration   string `json:"latest_migration"`

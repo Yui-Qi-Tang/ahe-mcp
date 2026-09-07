@@ -44,7 +44,8 @@ func TestBackendExposesAdminToolsAndDelegatesCalls(t *testing.T) {
 	if _, ok := names[evidenceingestionmcp.ToolSubmitTextSource]; !ok {
 		t.Fatalf("admin tools do not contain %q", evidenceingestionmcp.ToolSubmitTextSource)
 	}
-	externalTool := tools[len(tools)-1]
+	// The retained external-source tool is followed by the new review tools.
+	externalTool := tools[len(legacyIngestionTools())-1]
 	if externalTool.Name != evidenceingestionmcp.ToolSubmitExternalSource {
 		t.Fatalf("last admin tool = %q, want %q", externalTool.Name, evidenceingestionmcp.ToolSubmitExternalSource)
 	}

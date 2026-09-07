@@ -173,6 +173,34 @@ func TestCanonicalAdmissionMutationReusesCanonicalIdentityForExactDuplicate(t *t
 	if len(db.admissionDecisions) != 2 || len(db.canonicalGraphNodes) != 2 || len(db.canonicalGraphEdges) != 1 {
 		t.Fatalf("counts = decisions %d nodes %d edges %d, want 2/2/1", len(db.admissionDecisions), len(db.canonicalGraphNodes), len(db.canonicalGraphEdges))
 	}
+	if len(db.ordinaryManifests) != 2 {
+		t.Fatalf("ordinary manifest count = %d, want 2", len(db.ordinaryManifests))
+	}
+	for _, decision := range []struct {
+		id   string
+		want canonicalRowMaterialization
+	}{
+		{firstAdmission.AdmissionDecisionID, canonicalRowMaterialized},
+		{secondAdmission.AdmissionDecisionID, canonicalRowReused},
+	} {
+		for _, binding := range db.ordinaryNodeBindings[decision.id] {
+			if binding.Materialization != decision.want {
+				t.Fatalf("node binding = %+v, want %s", binding, decision.want)
+			}
+		}
+		for _, binding := range db.ordinaryEdgeBindings[decision.id] {
+			if binding.Materialization != decision.want {
+				t.Fatalf("edge binding = %+v, want %s", binding, decision.want)
+			}
+		}
+	}
+	replay, err := admitPendingProposal(ctx, db, AdmissionInput{ProposalOccurrenceID: second.ProposalOccurrenceID})
+	if err != nil || !replay.Replayed {
+		t.Fatalf("duplicate proposal exact replay: result=%+v error=%v", replay, err)
+	}
+	delete(db.ordinaryManifests, firstAdmission.AdmissionDecisionID)
+	_, err = admitPendingProposal(ctx, db, AdmissionInput{ProposalOccurrenceID: second.ProposalOccurrenceID})
+	assertKind(t, err, ErrorAdmissionReplayConflict)
 }
 
 func TestMockSQLAdmitPendingProposalPersistsDerivation(t *testing.T) {
@@ -216,7 +244,7 @@ func TestMockSQLAdmitPendingProposalPersistsDerivation(t *testing.T) {
 		t.Fatalf("derived edge = %+v", edge)
 	}
 
-	replay, err := admitPendingProposal(ctx, db, AdmissionInput{ProposalOccurrenceID: proposal.ProposalOccurrenceID})
+	replay, err := admitPendingProposal(ctx, db, input)
 	if err != nil {
 		t.Fatalf("replay admitPendingProposal() error = %v", err)
 	}

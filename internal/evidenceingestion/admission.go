@@ -49,7 +49,7 @@ func admitPendingProposal(ctx context.Context, db sqlDB, input AdmissionInput) (
 		switch proposal.AdmissionOutcome {
 		case admissionOutcomePending:
 		case admissionOutcomeAdmitted:
-			replay, _, err := loadAdmissionDecisionResult(ctx, tx, input.ProposalOccurrenceID)
+			replay, metadata, err := loadAdmissionDecisionResult(ctx, tx, input.ProposalOccurrenceID)
 			if err != nil {
 				return err
 			}
@@ -67,6 +67,22 @@ func admitPendingProposal(ctx context.Context, db sqlDB, input AdmissionInput) (
 					"proposal %s was admitted through the supersession writer; use AdmitPendingSupersession for exact replay",
 					input.ProposalOccurrenceID,
 				)
+			}
+			if metadata.ReviewBindingContractVersion != "" {
+				return newDomainError(ErrorAdmissionStateConflict, "proposal %s was admitted through the reviewed source-claim writer; use AdmitReviewedSourceClaim for exact replay", input.ProposalOccurrenceID)
+			}
+			wasReviewedSourceClaim, err := proposalHasSourceClaimReviewBinding(ctx, tx, input.ProposalOccurrenceID)
+			if err != nil {
+				return err
+			}
+			if wasReviewedSourceClaim {
+				return newDomainError(ErrorAdmissionStateConflict, "proposal %s was admitted through the reviewed source-claim writer; use AdmitReviewedSourceClaim for exact replay", input.ProposalOccurrenceID)
+			}
+			if err := validateAdmissionReplay(proposal, input, replay, metadata); err != nil {
+				return err
+			}
+			if err := validatePersistedOrdinaryAdmissionMutation(ctx, tx, proposal, input); err != nil {
+				return err
 			}
 			replay.Replayed = true
 			result = replay
@@ -91,15 +107,9 @@ func admitPendingProposal(ctx context.Context, db sqlDB, input AdmissionInput) (
 				return err
 			}
 		}
-		for _, node := range mutation.nodes {
-			if err := insertCanonicalNode(ctx, tx, node, mutation.derivation != nil); err != nil {
-				return err
-			}
-		}
-		for _, edge := range mutation.edges {
-			if err := insertCanonicalEdge(ctx, tx, edge, mutation.derivation != nil); err != nil {
-				return err
-			}
+		write, err := persistOrdinaryCanonicalMutation(ctx, tx, mutation)
+		if err != nil {
+			return err
 		}
 		if mutation.derivation != nil {
 			if err := insertCanonicalDerivation(ctx, tx, *mutation.derivation, mutation.derivationParentEdges, proposal.ProposalOccurrenceID); err != nil {
@@ -110,6 +120,9 @@ func admitPendingProposal(ctx context.Context, db sqlDB, input AdmissionInput) (
 			DecisionBy:     input.DecisionBy,
 			DecisionReason: input.DecisionReason,
 		}); err != nil {
+			return err
+		}
+		if err := insertOrdinaryAdmissionAuthority(ctx, tx, mutation, write); err != nil {
 			return err
 		}
 		if err := markProposalAdmitted(ctx, tx, proposal.ProposalOccurrenceID, mutation.result.CanonicalRef); err != nil {
@@ -205,8 +218,12 @@ type admissionDecision struct {
 }
 
 type admissionDecisionMetadata struct {
-	DecisionBy     string
-	DecisionReason string
+	DecisionBy                           string
+	DecisionReason                       string
+	ReviewBindingContractVersion         string
+	Derivation                           *evidencegraph.DerivationRecord
+	DerivationParentEdges                map[string]string
+	DerivationOriginProposalOccurrenceID string
 }
 
 func buildCanonicalAdmissionMutation(proposal ProposalQueryResult, input AdmissionInput) (canonicalAdmissionMutation, error) {
@@ -685,6 +702,21 @@ func canonicalOriginRefs(proposal ProposalQueryResult) []string {
 }
 
 func loadProposalForAdmission(ctx context.Context, tx sqlTx, occurrenceID string) (ProposalQueryResult, error) {
+	// Acquire the proposal lock before loading its joined provenance. A waiter
+	// then reads the completed predecessor's state in a fresh statement.
+	var lockedID string
+	err := tx.queryRow(ctx, `
+		SELECT proposal_occurrence_id
+		FROM proposal_occurrences
+		WHERE proposal_occurrence_id = $1
+		FOR UPDATE
+	`, occurrenceID).Scan(&lockedID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ProposalQueryResult{}, newDomainError(ErrorMissingSourceViewAttempt, "proposal occurrence %s not found", occurrenceID)
+	}
+	if err != nil {
+		return ProposalQueryResult{}, fmt.Errorf("locking proposal occurrence: %w", err)
+	}
 	row := tx.queryRow(ctx, `
 		SELECT
 			po.proposal_occurrence_id,
@@ -764,7 +796,6 @@ func loadProposalForAdmission(ctx context.Context, tx sqlTx, occurrenceID string
 		LEFT JOIN repository_generation_reconciliations rgr
 			ON rgr.source_generation_id = rgpr.source_generation_id
 		WHERE po.proposal_occurrence_id = $1
-		FOR UPDATE OF po
 	`, occurrenceID)
 	return scanProposalQueryRow(row, occurrenceID)
 }
@@ -777,6 +808,7 @@ func loadAdmissionDecisionResult(
 	var result AdmissionResult
 	var metadata admissionDecisionMetadata
 	var canonicalRef sql.NullString
+	var reviewBindingContractVersion sql.NullString
 	var rawNodeIDsData, edgeIDsData []byte
 	err := tx.queryRow(ctx, `
 		SELECT
@@ -786,7 +818,8 @@ func loadAdmissionDecisionResult(
 			raw_evidence_node_ids,
 			canonical_edge_ids,
 			decision_by,
-			decision_reason
+			decision_reason,
+			review_binding_contract_version
 		FROM admission_decisions
 		WHERE proposal_occurrence_id = $1
 	`, occurrenceID).Scan(
@@ -797,6 +830,7 @@ func loadAdmissionDecisionResult(
 		&edgeIDsData,
 		&metadata.DecisionBy,
 		&metadata.DecisionReason,
+		&reviewBindingContractVersion,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -809,6 +843,9 @@ func loadAdmissionDecisionResult(
 		return AdmissionResult{}, admissionDecisionMetadata{}, fmt.Errorf("loading admission decision: %w", err)
 	}
 	result.ProposalOccurrenceID = occurrenceID
+	if reviewBindingContractVersion.Valid {
+		metadata.ReviewBindingContractVersion = reviewBindingContractVersion.String
+	}
 	if canonicalRef.Valid {
 		result.CanonicalRef = canonicalRef.String
 	}
@@ -818,22 +855,43 @@ func loadAdmissionDecisionResult(
 	if err := json.Unmarshal(edgeIDsData, &result.CanonicalEdgeIDs); err != nil {
 		return AdmissionResult{}, admissionDecisionMetadata{}, fmt.Errorf("decoding canonical edge IDs: %w", err)
 	}
-	if err := loadAdmissionDerivationResult(ctx, tx, &result); err != nil {
+	if err := loadAdmissionDerivationResult(ctx, tx, &result, &metadata); err != nil {
 		return AdmissionResult{}, admissionDecisionMetadata{}, err
 	}
 	return result, metadata, nil
 }
 
-func loadAdmissionDerivationResult(ctx context.Context, tx sqlTx, result *AdmissionResult) error {
+func loadAdmissionDerivationResult(
+	ctx context.Context,
+	tx sqlTx,
+	result *AdmissionResult,
+	metadata *admissionDecisionMetadata,
+) error {
 	if result.CanonicalRef == "" {
 		return nil
 	}
-	var derivationID string
+	var derivation evidencegraph.DerivationRecord
+	var originProposalOccurrenceID string
 	err := tx.queryRow(ctx, `
-		SELECT derivation_id
+		SELECT
+			derivation_id,
+			node_id,
+			method,
+			producer,
+			trace_ref,
+			provenance_ref,
+			origin_proposal_occurrence_id
 		FROM canonical_derivations
 		WHERE node_id = $1
-	`, result.CanonicalRef).Scan(&derivationID)
+	`, result.CanonicalRef).Scan(
+		&derivation.ID,
+		&derivation.NodeID,
+		&derivation.Method,
+		&derivation.Producer,
+		&derivation.TraceRef,
+		&derivation.ProvenanceRef,
+		&originProposalOccurrenceID,
+	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
@@ -841,29 +899,35 @@ func loadAdmissionDerivationResult(ctx context.Context, tx sqlTx, result *Admiss
 		return fmt.Errorf("loading admission derivation: %w", err)
 	}
 	rows, err := tx.query(ctx, `
-		SELECT parent_node_id
+		SELECT parent_node_id, canonical_edge_id
 		FROM canonical_derivation_parents
 		WHERE derivation_id = $1
 		ORDER BY parent_node_id
-	`, derivationID)
+	`, derivation.ID)
 	if err != nil {
 		return fmt.Errorf("loading admission derivation parents: %w", err)
 	}
 	defer rows.Close()
+	parentEdges := make(map[string]string)
 	for rows.Next() {
-		var parentID string
-		if err := rows.Scan(&parentID); err != nil {
+		var parentID, edgeID string
+		if err := rows.Scan(&parentID, &edgeID); err != nil {
 			return fmt.Errorf("scanning admission derivation parent: %w", err)
 		}
-		result.ParentNodeIDs = append(result.ParentNodeIDs, parentID)
+		derivation.Parents = append(derivation.Parents, parentID)
+		parentEdges[parentID] = edgeID
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("iterating admission derivation parents: %w", err)
 	}
-	if len(result.ParentNodeIDs) == 0 {
-		return fmt.Errorf("persisted derivation %q has no parents", derivationID)
+	if len(derivation.Parents) == 0 {
+		return fmt.Errorf("persisted derivation %q has no parents", derivation.ID)
 	}
-	result.DerivationID = derivationID
+	result.DerivationID = derivation.ID
+	result.ParentNodeIDs = append(result.ParentNodeIDs, derivation.Parents...)
+	metadata.Derivation = &derivation
+	metadata.DerivationParentEdges = parentEdges
+	metadata.DerivationOriginProposalOccurrenceID = originProposalOccurrenceID
 	return nil
 }
 
@@ -1153,17 +1217,29 @@ func insertAdmissionDecision(
 	decision admissionDecision,
 	metadata admissionDecisionMetadata,
 ) error {
-	rawNodeIDs, err := jsonBytes(decision.RawEvidenceNodeIDs)
+	rawEvidenceNodeIDs := decision.RawEvidenceNodeIDs
+	if rawEvidenceNodeIDs == nil {
+		rawEvidenceNodeIDs = []string{}
+	}
+	canonicalEdgeIDs := decision.CanonicalEdgeIDs
+	if canonicalEdgeIDs == nil {
+		canonicalEdgeIDs = []string{}
+	}
+	rawNodeIDs, err := jsonBytes(rawEvidenceNodeIDs)
 	if err != nil {
 		return err
 	}
-	edgeIDs, err := jsonBytes(decision.CanonicalEdgeIDs)
+	edgeIDs, err := jsonBytes(canonicalEdgeIDs)
 	if err != nil {
 		return err
 	}
 	var canonicalRef any
 	if decision.CanonicalRef != "" {
 		canonicalRef = decision.CanonicalRef
+	}
+	var reviewBindingContractVersion any
+	if metadata.ReviewBindingContractVersion != "" {
+		reviewBindingContractVersion = metadata.ReviewBindingContractVersion
 	}
 	_, err = tx.exec(ctx, `
 		INSERT INTO admission_decisions (
@@ -1174,9 +1250,10 @@ func insertAdmissionDecision(
 			raw_evidence_node_ids,
 			canonical_edge_ids,
 			decision_by,
-			decision_reason
+			decision_reason,
+			review_binding_contract_version
 		)
-		VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8)
+		VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9)
 	`,
 		decision.ID,
 		decision.ProposalOccurrence,
@@ -1186,6 +1263,7 @@ func insertAdmissionDecision(
 		string(edgeIDs),
 		metadata.DecisionBy,
 		metadata.DecisionReason,
+		reviewBindingContractVersion,
 	)
 	if err != nil {
 		return fmt.Errorf("inserting admission decision %s: %w", decision.ID, err)
