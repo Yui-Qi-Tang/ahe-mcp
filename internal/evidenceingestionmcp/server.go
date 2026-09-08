@@ -685,6 +685,7 @@ func (s *Server) Tools() []ToolDefinition {
 	return []ToolDefinition{
 		{Name: ToolGetSourceClaimReview, Description: GetSourceClaimReviewDescription, Write: false},
 		{Name: ToolAdmitReviewedSourceClaim, Description: AdmitReviewedSourceClaimDescription, Write: true},
+		{Name: ToolRecordReviewedSourceClaimDisposition, Description: RecordReviewedSourceClaimDispositionDescription, Write: true},
 		{
 			Name:        ToolSubmitManualEvidence,
 			Description: "Submit bounded manual text evidence through the Slice 1 ingestion core.",
@@ -1361,6 +1362,8 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 		return data, nil
 	case ToolGetSourceClaimReview, ToolAdmitReviewedSourceClaim:
 		return s.callSourceReviewTool(ctx, name, payload)
+	case ToolRecordReviewedSourceClaimDisposition:
+		return s.callSourceReviewDispositionTool(ctx, payload)
 	case ToolAdmitPendingProposal:
 		var req AdmitPendingProposalRequest
 		if err := decodeStrict(payload, &req); err != nil {

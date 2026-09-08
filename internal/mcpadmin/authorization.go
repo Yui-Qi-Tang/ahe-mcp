@@ -73,7 +73,7 @@ func NewAuthorizedBackend(backend mcpstdio.Backend, principal runtimeauth.Princi
 		}
 	}
 	native, incoming := ingestionTools(), backend.Tools()
-	if len(native) != 42 || len(incoming) != len(native) {
+	if len(native) != 43 || len(incoming) != len(native) {
 		return nil, errors.New("ingestion tool inventory differs from the reviewed contract")
 	}
 	expected := make(map[string][]byte, len(native))
@@ -281,7 +281,7 @@ func profileAllows(profile RuntimeProfile, class ingestionAuthorityClass) bool {
 
 func ingestionAuthorityForTool(name string) ingestionAuthorityClass {
 	switch name {
-	case evidenceingestionmcp.ToolGetSourceClaimReview, evidenceingestionmcp.ToolAdmitReviewedSourceClaim:
+	case evidenceingestionmcp.ToolGetSourceClaimReview, evidenceingestionmcp.ToolAdmitReviewedSourceClaim, evidenceingestionmcp.ToolRecordReviewedSourceClaimDisposition:
 		return authoritySourceClaimReview
 	case evidenceingestionmcp.ToolSubmitManualEvidence, evidenceingestionmcp.ToolSubmitTextSource,
 		evidenceingestionmcp.ToolSubmitExternalSource, evidenceingestionmcp.ToolSubmitExtractorOutput,

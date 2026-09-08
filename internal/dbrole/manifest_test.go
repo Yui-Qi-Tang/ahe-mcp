@@ -56,7 +56,7 @@ func TestQueryManifestMatchesShippingMigrationInventory(t *testing.T) {
 			t.Fatalf("query privileges on %s = %v", rule.Table, rule.Privileges)
 		}
 	}
-	if len(got) != 77 || !slices.Equal(got, want) {
+	if len(got) != 78 || !slices.Equal(got, want) {
 		t.Fatalf("shipping migration manifest = %v, want %v", got, want)
 	}
 	if len(slices.Compact(slices.Clone(got))) != len(got) {
@@ -108,7 +108,7 @@ func TestIntakeManifestHasOnlySourceAndPendingWrites(t *testing.T) {
 		"proposal_batches":                {PrivilegeInsert, PrivilegeUpdate},
 		"proposal_occurrences":            {PrivilegeInsert},
 	}
-	if !manifest.TrustedRawDML || len(manifest.Tables) != 77 {
+	if !manifest.TrustedRawDML || len(manifest.Tables) != 78 {
 		t.Fatalf("unexpected intake manifest: %+v", manifest)
 	}
 	for _, rule := range manifest.Tables {
@@ -128,7 +128,7 @@ func TestIntakeManifestHasOnlySourceAndPendingWrites(t *testing.T) {
 	}
 }
 
-func TestSourceClaimReviewerManifestHasOnlyOrdinaryAdmissionWrites(t *testing.T) {
+func TestSourceClaimReviewerManifestHasOnlyExactReviewedWrites(t *testing.T) {
 	manifest, err := BuildManifest(ProfileSourceClaimReviewer)
 	if err != nil {
 		t.Fatal(err)
@@ -141,10 +141,11 @@ func TestSourceClaimReviewerManifestHasOnlyOrdinaryAdmissionWrites(t *testing.T)
 		"canonical_ordinary_admission_node_bindings": {PrivilegeInsert},
 		"canonical_ordinary_admission_edge_bindings": {PrivilegeInsert},
 		"canonical_source_claim_review_bindings":     {PrivilegeInsert},
+		"source_claim_disposition_review_bindings":   {PrivilegeInsert},
 		"proposal_occurrences":                       {PrivilegeUpdate},
 	}
 	// The profile narrows tables, not human authentication or all possible raw DML.
-	if !manifest.TrustedRawDML || len(manifest.Tables) != 77 {
+	if !manifest.TrustedRawDML || len(manifest.Tables) != 78 {
 		t.Fatal("reviewer trust boundary or table inventory changed")
 	}
 	for _, rule := range manifest.Tables {

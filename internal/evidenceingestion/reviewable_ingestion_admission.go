@@ -322,10 +322,14 @@ func validatePersistedSourceClaimReviewBinding(
 	result AdmissionResult,
 	input ReviewedSourceClaimAdmissionInput,
 ) error {
+	return validatePersistedSourceClaimReviewBindingContract(binding, result, input, ReviewedSourceClaimAdmissionV1)
+}
+
+func validatePersistedSourceClaimReviewBindingContract(binding sourceClaimReviewBinding, result AdmissionResult, input ReviewedSourceClaimAdmissionInput, contract string) error {
 	subject := input.ExpectedSubject.ReviewSubject
 	if binding.AdmissionDecisionID != result.AdmissionDecisionID ||
 		binding.ProposalOccurrenceID != result.ProposalOccurrenceID ||
-		binding.ContractVersion != ReviewedSourceClaimAdmissionV1 ||
+		binding.ContractVersion != contract ||
 		binding.ReviewContractVersion != ReviewableIngestionContractV1 ||
 		binding.ProposedEffect != SourceClaimProposedEffectV1 ||
 		binding.ExtractionAttemptID != input.ExtractionAttemptID ||
@@ -374,8 +378,19 @@ func validatePersistedSourceClaimReviewBinding(
 }
 
 func insertSourceClaimReviewBinding(ctx context.Context, tx sqlTx, binding sourceClaimReviewBinding) error {
-	if _, err := tx.exec(ctx, `
-		INSERT INTO canonical_source_claim_review_bindings (
+	return insertSourceClaimReviewBindingTable(ctx, tx, binding, false)
+}
+
+func sourceClaimReviewBindingTable(disposition bool) string {
+	if disposition {
+		return "source_claim_disposition_review_bindings"
+	}
+	return "canonical_source_claim_review_bindings"
+}
+
+func insertSourceClaimReviewBindingTable(ctx context.Context, tx sqlTx, binding sourceClaimReviewBinding, disposition bool) error {
+	if _, err := tx.exec(ctx, fmt.Sprintf(`
+		INSERT INTO %s (
 			admission_decision_id,
 			proposal_occurrence_id,
 			contract_version,
@@ -391,7 +406,7 @@ func insertSourceClaimReviewBinding(ctx context.Context, tx sqlTx, binding sourc
 			review_display_payload_utf8
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-	`,
+	`, sourceClaimReviewBindingTable(disposition)),
 		binding.AdmissionDecisionID,
 		binding.ProposalOccurrenceID,
 		binding.ContractVersion,
@@ -412,8 +427,12 @@ func insertSourceClaimReviewBinding(ctx context.Context, tx sqlTx, binding sourc
 }
 
 func loadSourceClaimReviewBinding(ctx context.Context, tx sqlTx, decisionID string) (sourceClaimReviewBinding, error) {
+	return loadSourceClaimReviewBindingTable(ctx, tx, decisionID, false)
+}
+
+func loadSourceClaimReviewBindingTable(ctx context.Context, tx sqlTx, decisionID string, disposition bool) (sourceClaimReviewBinding, error) {
 	var binding sourceClaimReviewBinding
-	err := tx.queryRow(ctx, `
+	err := tx.queryRow(ctx, fmt.Sprintf(`
 		SELECT
 			admission_decision_id,
 			proposal_occurrence_id,
@@ -428,9 +447,9 @@ func loadSourceClaimReviewBinding(ctx context.Context, tx sqlTx, decisionID stri
 			review_display_artifact_id,
 			review_display_media_type,
 			review_display_payload_utf8
-		FROM canonical_source_claim_review_bindings
+		FROM %s
 		WHERE admission_decision_id = $1
-	`, decisionID).Scan(
+	`, sourceClaimReviewBindingTable(disposition)), decisionID).Scan(
 		&binding.AdmissionDecisionID,
 		&binding.ProposalOccurrenceID,
 		&binding.ContractVersion,

@@ -1464,6 +1464,8 @@ func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) s
 		return mockRow{values: []any{id}}
 	case strings.Contains(query, "SELECT EXISTS") && strings.Contains(query, "canonical_source_claim_review_bindings"):
 		return mockRow{values: []any{false}}
+	case strings.Contains(query, "SELECT EXISTS") && strings.Contains(query, "source_claim_disposition_review_bindings"):
+		return mockRow{values: []any{false}}
 	case strings.Contains(query, "FROM extraction_runs") && strings.Contains(query, "WHERE request_id = $1"):
 		for id, run := range db.extractionRuns {
 			if run.requestID == args[0].(string) {

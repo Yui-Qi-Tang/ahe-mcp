@@ -26,7 +26,7 @@ const (
 	// GetSourceClaimReviewDescription is shared by typed and stdio registries.
 	GetSourceClaimReviewDescription = "Read one pending source-backed statement review from one PostgreSQL snapshot. Returns its submission receipt, complete batch manifest (at most 205 entries; no pagination or truncation), exact display bytes, and subject. Show the complete proposal sentence, exact source quotations, source title/location/revision, coverage and limitations; preserve the subject unchanged. Other manifest entries are discovery coordinates, not an approval of the batch. No write or approval occurs. Responses exceeding 1 MiB fail closed. Display is cooperating-agent behavior, not proof that a human read it."
 	// AdmitReviewedSourceClaimDescription is shared by typed and stdio registries.
-	AdmitReviewedSourceClaimDescription = "After explicit approval of the complete get_source_claim_review display, admit exactly its source-backed statement using decision=approved and the unchanged expected_subject. Reviewer identity comes only from the authorized launcher. The native writer reconstructs and compares display identity atomically with canonical writes; exact subject, reviewer and reason replay only. Do not send a caller receipt, reviewer, request/session ID, graph, derivation, or complete flag. This profile cannot reject, mark audit-only, use legacy admission or write independent relations. Legacy typed APIs remain separately governed and are not enabled by this CLI. This is not authenticated human review or universal database cutover."
+	AdmitReviewedSourceClaimDescription = "After explicit approval of the complete get_source_claim_review display, admit exactly its source-backed statement using decision=approved and the unchanged expected_subject. Reviewer identity comes only from the authorized launcher. The native writer reconstructs and compares display identity atomically with canonical writes; exact subject, reviewer and reason replay only. Do not send a caller receipt, reviewer, request/session ID, graph, derivation, or complete flag. Reject and audit-only use the separate exact-reviewed disposition writer. Legacy admission and independent relation writers remain disabled in this profile. This is not authenticated human review or universal database cutover."
 )
 
 // GetSourceClaimReviewRequest identifies one pending member of an exact batch.
@@ -136,7 +136,7 @@ func (s *Server) AdmitReviewedSourceClaim(ctx context.Context, req AdmitReviewed
 
 func validateSourceClaimAdmissionRequest(req AdmitReviewedSourceClaimRequest) error {
 	if req.Decision != "approved" {
-		return invalidSourceReviewRequest("decision must be explicitly approved; disposition is unavailable in this profile")
+		return invalidSourceReviewRequest("decision must be explicitly approved; noncanonical outcomes use the reviewed disposition writer")
 	}
 	if strings.TrimSpace(req.DecisionReason) != req.DecisionReason || req.DecisionReason == "" || !utf8.ValidString(req.DecisionReason) || strings.ContainsRune(req.DecisionReason, '\x00') || len(req.DecisionReason) > evidenceingestion.ProposalDispositionDecisionReasonMaxBytes {
 		return invalidSourceReviewRequest("decision_reason must contain 1 to 2000 normalized UTF-8 bytes without NUL")

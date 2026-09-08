@@ -32,9 +32,18 @@ func admitReviewedSourceClaimSchema() map[string]any {
 			}, []string{"submission_receipt_id", "proposal_manifest_id", "proposal_occurrence_id", "proposal_basis_id", "review_package_id"}),
 			"review_display_artifact_id": sourceReviewIDSchema("review-display:v1:sha256:", "Unchanged exact display-byte identity; the writer reconstructs and compares this atomically."),
 		}, []string{"review_subject", "review_display_artifact_id"}),
-		"decision":        enumStringSchema("Only explicit approval invokes this writer. This profile does not expose disposition tools.", "approved"),
+		"decision":        enumStringSchema("Only explicit approval invokes this admission writer; rejection and audit-only use the separate reviewed disposition writer.", "approved"),
 		"decision_reason": reason,
 	}, []string{"extraction_attempt_id", "expected_subject", "decision", "decision_reason"})
+}
+
+func recordReviewedSourceClaimDispositionSchema() map[string]any {
+	schema := admitReviewedSourceClaimSchema()
+	properties := schema["properties"].(map[string]any)
+	properties["decision"] = enumStringSchema("Explicit noncanonical outcome after reviewing the complete unchanged display.", "reject", "audit_only")
+	properties["decision_reason"] = boundedStringSchema("Explicit nonempty already-trimmed reason; identical subject, outcome, reviewer and reason are required for replay.", evidenceingestion.ProposalDispositionDecisionReasonMaxBytes)
+	properties["decision_reason"].(map[string]any)["minLength"] = 1
+	return schema
 }
 
 func sourceReviewIDSchema(prefix, description string) map[string]any {
@@ -60,5 +69,7 @@ func ingestionTools() []mcpstdio.Tool {
 			InputSchema: getSourceClaimReviewSchema(), Annotations: mcpstdio.Annotations{ReadOnlyHint: &readOnly, DestructiveHint: &no, IdempotentHint: &idempotent}},
 		mcpstdio.Tool{Name: evidenceingestionmcp.ToolAdmitReviewedSourceClaim, Title: "Admit Reviewed Source Claim", Description: evidenceingestionmcp.AdmitReviewedSourceClaimDescription,
 			InputSchema: admitReviewedSourceClaimSchema(), Annotations: mcpstdio.Annotations{ReadOnlyHint: &write, DestructiveHint: &terminal, IdempotentHint: &idempotent}},
+		mcpstdio.Tool{Name: evidenceingestionmcp.ToolRecordReviewedSourceClaimDisposition, Title: "Record Reviewed Source Claim Disposition", Description: evidenceingestionmcp.RecordReviewedSourceClaimDispositionDescription,
+			InputSchema: recordReviewedSourceClaimDispositionSchema(), Annotations: mcpstdio.Annotations{ReadOnlyHint: &write, DestructiveHint: &terminal, IdempotentHint: &idempotent}},
 	)
 }

@@ -33,14 +33,14 @@ func TestSourceClaimReviewerRequiresSameInnerLauncherPrincipal(t *testing.T) {
 	}
 }
 
-func TestSourceClaimReviewerListsOnlyTwoAndPreservesExactPayload(t *testing.T) {
+func TestSourceClaimReviewerListsOnlyThreeAndPreservesExactPayload(t *testing.T) {
 	principal := runtimeauth.Principal{ID: "reviewer:test"}
 	recorder := &reviewAuthorityRecorder{&authorityRecorder{tools: ingestionTools()}, principal}
 	backend, err := NewAuthorizedBackend(recorder, principal, RuntimeProfileSourceClaimReviewer)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{evidenceingestionmcp.ToolGetSourceClaimReview, evidenceingestionmcp.ToolAdmitReviewedSourceClaim}
+	want := []string{evidenceingestionmcp.ToolGetSourceClaimReview, evidenceingestionmcp.ToolAdmitReviewedSourceClaim, evidenceingestionmcp.ToolRecordReviewedSourceClaimDisposition}
 	if !reflect.DeepEqual(toolNames(backend.Tools()), want) {
 		t.Fatalf("unexpected reviewer inventory: %v", toolNames(backend.Tools()))
 	}
@@ -74,4 +74,27 @@ func TestSourceClaimReviewerListsOnlyTwoAndPreservesExactPayload(t *testing.T) {
 	if string(after) != string(original) {
 		t.Fatal("review tool metadata was not detached")
 	}
+}
+
+func TestReviewedDispositionSchemaIsExactAndNoncanonical(t *testing.T) {
+	principal := runtimeauth.Principal{ID: "reviewer:test"}
+	backend, err := NewAuthorizedBackend(&reviewAuthorityRecorder{&authorityRecorder{tools: ingestionTools()}, principal}, principal, RuntimeProfileSourceClaimReviewer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range backend.Tools() {
+		if tool.Name != evidenceingestionmcp.ToolRecordReviewedSourceClaimDisposition {
+			continue
+		}
+		properties := tool.InputSchema["properties"].(map[string]any)
+		decision := properties["decision"].(map[string]any)
+		choices, _ := json.Marshal(decision["enum"])
+		required, _ := json.Marshal(tool.InputSchema["required"])
+		if string(choices) != `["reject","audit_only"]` || len(properties) != 4 ||
+			string(required) != `["extraction_attempt_id","expected_subject","decision","decision_reason"]` {
+			t.Fatalf("disposition schema does not require the exact explicit decision: %+v", tool.InputSchema)
+		}
+		return
+	}
+	t.Fatal("reviewed disposition tool is missing")
 }

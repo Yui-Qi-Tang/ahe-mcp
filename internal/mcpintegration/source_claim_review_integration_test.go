@@ -30,7 +30,7 @@ func TestIntegrationSourceClaimReviewSubprocessExactAdmission(t *testing.T) {
 	intake := startAuthorityProcess(t, ctx, "ahe-ingest-mcp", fixture.intake, fixture.schema, "intake")
 	reviewer := startAuthorityProcess(t, ctx, "ahe-ingest-mcp", fixture.reviewer, fixture.schema, "source-claim-reviewer")
 	query := startAuthorityProcess(t, ctx, "ahe-query-mcp", fixture.query, fixture.schema, "")
-	reviewer.assertTools(t, []string{"get_source_claim_review", "admit_reviewed_source_claim"})
+	reviewer.assertTools(t, []string{"get_source_claim_review", "admit_reviewed_source_claim", "record_reviewed_source_claim_disposition"})
 	intake.assertTools(t, []string{"submit_manual_evidence", "submit_text_source", "submit_external_source", "submit_extractor_output", "get_extractor_input"})
 	query.assertTools(t, []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness"})
 	const statement = "合成退款應於七日內完成，並保留原始證據。"

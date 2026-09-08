@@ -420,7 +420,7 @@ func decodeDetectiveCheckpoint(t *testing.T, body []byte, inputPath, sourceID, s
 	}
 	if json.Unmarshal(checkpoint.Batch, &batch) != nil || batch.SchemaVersion != "lab-status-row-batch/v0" ||
 		batch.Source.Path != inputPath || batch.Source.SHA256 != strings.TrimPrefix(stdioContentHash([]byte(sourceText)), "sha256:") ||
-		batch.Extractor.Name != "lab-status-extractor" || batch.Extractor.Version != "0.1.0" || batch.Extractor.Model != "mock-detective-model" ||
+		batch.Extractor.Name != "lab-status-extractor" || batch.Extractor.Version != "0.1.1" || batch.Extractor.Model != "mock-detective-model" ||
 		len(batch.Rows) != 1 || batch.Rows[0].Status != "validated" || batch.Rows[0].Result == nil || batch.Rows[0].Result.Outcome != "extracted" ||
 		len(batch.Rows[0].Result.Records) != 1 || batch.Rows[0].Result.Records[0].Statement != statement || batch.Rows[0].Result.Records[0].Citation.ExactQuote != row {
 		t.Fatal("prepared checkpoint lost the one exact validated candidate")

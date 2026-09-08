@@ -120,7 +120,7 @@ func TestIntegrationRuntimeProvisioningLauncherRoundTrip(t *testing.T) {
 	reviewer := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], paths[dbrole.ProfileSourceClaimReviewer], "ahe-ingest-mcp")
 	query := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], paths[dbrole.ProfileQuery], "ahe-query-mcp")
 	intake.assertTools(t, []string{"submit_manual_evidence", "submit_text_source", "submit_external_source", "submit_extractor_output", "get_extractor_input"})
-	reviewer.assertTools(t, []string{"get_source_claim_review", "admit_reviewed_source_claim"})
+	reviewer.assertTools(t, []string{"get_source_claim_review", "admit_reviewed_source_claim", "record_reviewed_source_claim_disposition"})
 	query.assertTools(t, []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness"})
 	const statement = "合成啟動器測試：退款應於七日內完成。"
 	source := authorityProcessTool[evidenceingestionmcp.SubmitTextSourceResponse](t, intake, "submit_text_source", map[string]any{
@@ -398,7 +398,7 @@ func runProvisioningAdmin(t *testing.T, ctx context.Context, command, operation,
 		return provisioningAdminResult{}
 	}
 	var result provisioningAdminResult
-	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.SessionUser != identity.login || result.AppliedMigrations != 45 || result.LatestMigration != "000045_evidence_ingestion_source_claim_review_binding.up.sql" {
+	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.SessionUser != identity.login || result.AppliedMigrations != 46 || result.LatestMigration != "000046_evidence_ingestion_reviewed_disposition.up.sql" {
 		t.Fatalf("compiled runtime admin %s did not return its exact credential-free receipt (output suppressed)", operation)
 	}
 	if strings.Contains(stdout.String(), dsn) {

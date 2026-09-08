@@ -179,9 +179,13 @@ var requiredTablesByMigration = map[string][]string{
 	"000045_evidence_ingestion_source_claim_review_binding.up.sql": {
 		"canonical_source_claim_review_bindings",
 	},
+	"000046_evidence_ingestion_reviewed_disposition.up.sql": {
+		"source_claim_disposition_review_bindings",
+	},
 }
 
 var requiredTables = []string{
+	"source_claim_disposition_review_bindings",
 	"source_blobs",
 	"source_snapshots",
 	"extraction_views",

@@ -10,7 +10,7 @@ import (
 )
 
 // PolicyVersion identifies the native ordinary/review authority policy, not Core's policy.
-const PolicyVersion = "ahe-mcp-database-role-policy/v2"
+const PolicyVersion = "ahe-mcp-database-role-policy/v3"
 
 // Profile identifies an implemented database capability set.
 type Profile string
@@ -141,6 +141,7 @@ var queryTables = []string{
 	"repository_source_streams",
 	"schema_migrations",
 	"source_blobs",
+	"source_claim_disposition_review_bindings",
 	"source_file_snapshots",
 	"source_intake_requests",
 	"source_snapshots",
@@ -183,7 +184,7 @@ func sourceClaimReviewerWrites(table string) []Privilege {
 	switch table {
 	case "canonical_graph_nodes", "canonical_graph_edges", "admission_decisions",
 		"canonical_ordinary_admission_manifests", "canonical_ordinary_admission_node_bindings",
-		"canonical_ordinary_admission_edge_bindings", "canonical_source_claim_review_bindings":
+		"canonical_ordinary_admission_edge_bindings", "canonical_source_claim_review_bindings", "source_claim_disposition_review_bindings":
 		return []Privilege{PrivilegeInsert}
 	case "proposal_occurrences":
 		return []Privilege{PrivilegeUpdate}

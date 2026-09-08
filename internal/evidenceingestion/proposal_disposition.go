@@ -40,6 +40,13 @@ func recordPendingProposalDisposition(
 		switch proposal.AdmissionOutcome {
 		case admissionOutcomePending:
 		case input.Outcome:
+			reviewed, err := proposalHasSourceClaimDispositionReviewBinding(ctx, tx, input.ProposalOccurrenceID)
+			if err != nil {
+				return err
+			}
+			if reviewed {
+				return newDomainError(ErrorAdmissionStateConflict, "exact-reviewed disposition must replay through its reviewed writer")
+			}
 			replay, metadata, err := loadAdmissionDecisionResult(ctx, tx, input.ProposalOccurrenceID)
 			if err != nil {
 				return err

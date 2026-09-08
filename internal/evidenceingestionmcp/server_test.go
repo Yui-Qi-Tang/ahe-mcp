@@ -15,8 +15,8 @@ import (
 func TestToolsExposeIngestAndExtractorInputTools(t *testing.T) {
 	server := newServer(&fakeCore{})
 	tools := server.Tools()
-	if len(tools) != 42 {
-		t.Fatalf("len(Tools()) = %d, want 42", len(tools))
+	if len(tools) != 43 {
+		t.Fatalf("len(Tools()) = %d, want 43", len(tools))
 	}
 	got := map[string]bool{}
 	for _, tool := range tools {
