@@ -232,6 +232,10 @@ func TestIntegrationGetEvidenceRecordAfterAdmissionReadOnly(t *testing.T) {
 
 func TestIntegrationCanonicalReadViewHandlePathAndDiagnosticsReadOnly(t *testing.T) {
 	ctx, pool := integrationPool(t)
+	ctx, err := BindCanonicalReadViewOwner(ctx, "integration-query-consumer")
+	if err != nil {
+		t.Fatal(err)
+	}
 	ingestServer, err := evidenceingestionmcp.NewServer(pool)
 	if err != nil {
 		t.Fatalf("ingest NewServer() error = %v", err)
@@ -266,7 +270,7 @@ func TestIntegrationCanonicalReadViewHandlePathAndDiagnosticsReadOnly(t *testing
 		t.Fatalf("opened canonical read view = %+v", opened.View)
 	}
 
-	path, err := queryServer.FindCanonicalPath(FindCanonicalPathRequest{
+	path, err := queryServer.FindCanonicalPath(ctx, FindCanonicalPathRequest{
 		Handle:     opened.View.Handle,
 		FromNodeID: admission.RawEvidenceNodeIDs[0],
 		ToNodeID:   admission.CanonicalRef,
@@ -279,7 +283,7 @@ func TestIntegrationCanonicalReadViewHandlePathAndDiagnosticsReadOnly(t *testing
 		t.Fatalf("path witness = %+v", path.Witness)
 	}
 
-	diagnostics, err := queryServer.GetCanonicalTopologyDiagnostics(GetCanonicalTopologyDiagnosticsRequest{Handle: opened.View.Handle})
+	diagnostics, err := queryServer.GetCanonicalTopologyDiagnostics(ctx, GetCanonicalTopologyDiagnosticsRequest{Handle: opened.View.Handle})
 	if err != nil {
 		t.Fatalf("GetCanonicalTopologyDiagnostics() error = %v", err)
 	}

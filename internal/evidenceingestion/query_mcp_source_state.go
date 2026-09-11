@@ -129,7 +129,7 @@ type preparedMCPReadSourceStateQuery struct {
 	limit           int
 }
 
-// QueryMCPReadSourceStates reads one bounded source history in a read-only transaction.
+// QueryMCPReadSourceStates reads one bounded source history from a single read-only snapshot.
 func QueryMCPReadSourceStates(
 	ctx context.Context,
 	pool *pgxpool.Pool,
@@ -142,7 +142,12 @@ func QueryMCPReadSourceStates(
 	if err != nil {
 		return MCPReadSourceStateQueryResult{}, err
 	}
-	tx, err := pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	// The latest-cycle marker and every later mode-specific read must share a
+	// snapshot, even if a collection completes between their SQL statements.
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel:   pgx.RepeatableRead,
+		AccessMode: pgx.ReadOnly,
+	})
 	if err != nil {
 		return MCPReadSourceStateQueryResult{}, fmt.Errorf("beginning MCP source-state query: %w", err)
 	}

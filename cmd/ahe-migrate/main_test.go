@@ -23,6 +23,50 @@ func TestRunRequiresDatabaseDNS(t *testing.T) {
 	}
 }
 
+func TestRunRequiresDatabaseSchema(t *testing.T) {
+	err := run(t.Context(), nil, func(key string) string {
+		if key == "DATABASE_DNS" {
+			return "postgresql://fixture@localhost/fixture"
+		}
+		return ""
+	}, &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "AHE_DATABASE_SCHEMA is required") {
+		t.Fatalf("run() error = %v, want AHE_DATABASE_SCHEMA required", err)
+	}
+}
+
+func TestRunRejectsSearchPathExpressionAsDatabaseSchema(t *testing.T) {
+	err := run(t.Context(), nil, func(key string) string {
+		switch key {
+		case "DATABASE_DNS":
+			return "postgresql://fixture@localhost/fixture"
+		case "AHE_DATABASE_SCHEMA":
+			return "ahe_mcp_v1, public"
+		default:
+			return ""
+		}
+	}, &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "one exact PostgreSQL identifier") {
+		t.Fatalf("run() error = %v, want exact identifier rejection", err)
+	}
+}
+
+func TestRunRejectsPublicDatabaseSchema(t *testing.T) {
+	err := run(t.Context(), nil, func(key string) string {
+		switch key {
+		case "DATABASE_DNS":
+			return "postgresql://fixture@localhost/fixture"
+		case "AHE_DATABASE_SCHEMA":
+			return "public"
+		default:
+			return ""
+		}
+	}, &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "private non-system schema") {
+		t.Fatalf("run() error = %v, want private schema rejection", err)
+	}
+}
+
 func TestRunRejectsUnexpectedArguments(t *testing.T) {
 	err := run(t.Context(), []string{"up"}, func(string) string { return "" }, &bytes.Buffer{})
 	if err == nil || !strings.Contains(err.Error(), `unknown argument "up"`) {

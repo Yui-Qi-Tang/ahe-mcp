@@ -289,21 +289,18 @@ func TestIntegrationCanonicalSupersessionCurrentnessRejectsTamperedDecisionEdgeI
 	ctx, pool := integrationPool(t)
 	lineageKey, event := prepareIntegrationClosurePair(t, ctx, pool, "closure-tampered-decision-edges")
 
-	// Bypass one guard in this isolated schema to prove the independent closure
-	// validator still fails closed against privileged storage corruption.
-	if _, err := pool.Exec(ctx, `
-		ALTER TABLE admission_decisions
-		DISABLE TRIGGER canonical_supersession_decisions_authority_trigger
-	`); err != nil {
-		t.Fatalf("disable isolated decision authority trigger: %v", err)
-	}
-	if _, err := pool.Exec(ctx, `
-		UPDATE admission_decisions
-		SET canonical_edge_ids = '[]'::jsonb
-		WHERE admission_decision_id = $1
-	`, event.AdmissionDecisionID); err != nil {
-		t.Fatalf("tamper admission decision edge IDs: %v", err)
-	}
+	// This owner-only malformed fixture is not a legal public mutation. Named
+	// guards are restored before the independent closure validator reads it.
+	guards := validationAuditCorruptionGuards("admission_decisions", "canonical_supersession_decisions_authority_trigger")
+	validationAuditCorruptFixture(t, ctx, pool, guards, func(tx validationAuditExecutor) {
+		if _, err := tx.Exec(ctx, `
+			UPDATE admission_decisions
+			SET canonical_edge_ids = '[]'::jsonb
+			WHERE admission_decision_id = $1
+		`, event.AdmissionDecisionID); err != nil {
+			t.Fatalf("tamper admission decision edge IDs: %v", err)
+		}
+	})
 	assertIntegrationClosureCurrentnessFailsReadOnly(t, ctx, pool, lineageKey)
 }
 

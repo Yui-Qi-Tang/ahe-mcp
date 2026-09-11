@@ -50,6 +50,10 @@ const (
 	ErrorUnsupportedAdmission ErrorKind = "unsupported_admission"
 	// ErrorAdmissionStateConflict means a proposal is not in a legal state for the requested admission mutation.
 	ErrorAdmissionStateConflict ErrorKind = "admission_state_conflict"
+	// ErrorAdmissionReplayConflict means a repeated admission differs from its exact decision or mutation.
+	ErrorAdmissionReplayConflict ErrorKind = "admission_replay_conflict"
+	// ErrorCanonicalAdmissionInvariant means a canonical admission body or materialization authority is inconsistent.
+	ErrorCanonicalAdmissionInvariant ErrorKind = "canonical_admission_invariant"
 	// ErrorDerivationInvariant means a derived admission would violate canonical derivation invariants.
 	ErrorDerivationInvariant ErrorKind = "derivation_invariant"
 	// ErrorSupersessionInvariant means a supersession mutation violates lineage or endpoint invariants.

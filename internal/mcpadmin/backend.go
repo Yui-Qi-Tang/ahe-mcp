@@ -9,19 +9,22 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestionmcp"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpstdio"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/runtimeauth"
 )
 
 // Backend adapts existing MCP-shaped packages to the generic stdio transport.
 type Backend struct {
-	tools []mcpstdio.Tool
-	call  func(context.Context, string, []byte) ([]byte, error)
+	tools           []mcpstdio.Tool
+	call            func(context.Context, string, []byte) ([]byte, error)
+	reviewPrincipal runtimeauth.Principal
 }
 
 // NewBackend exposes the trusted write-capable ingestion tools.
 func NewBackend(server *evidenceingestionmcp.Server) *Backend {
 	return &Backend{
-		tools: ingestionTools(),
-		call:  server.CallTool,
+		tools:           ingestionTools(),
+		call:            server.CallTool,
+		reviewPrincipal: server.SourceClaimReviewerPrincipal(),
 	}
 }
 
@@ -39,7 +42,7 @@ func (b *Backend) CallTool(ctx context.Context, name string, arguments json.RawM
 	return json.RawMessage(data), nil
 }
 
-func ingestionTools() []mcpstdio.Tool {
+func legacyIngestionTools() []mcpstdio.Tool {
 	readOnly := true
 	write := false
 	destructive := false

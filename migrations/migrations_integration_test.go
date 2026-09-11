@@ -41,10 +41,10 @@ func TestIntegrationVerifyCurrentAcceptsAppliedSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 42 {
-		t.Fatalf("AppliedMigrations = %d, want 42", status.AppliedMigrations)
+	if status.AppliedMigrations != 46 {
+		t.Fatalf("AppliedMigrations = %d, want 46", status.AppliedMigrations)
 	}
-	if status.LatestMigration != "000042_evidence_ingestion_canonical_supersession_v2.up.sql" {
+	if status.LatestMigration != "000046_evidence_ingestion_reviewed_disposition.up.sql" {
 		t.Fatalf("LatestMigration = %q", status.LatestMigration)
 	}
 }
@@ -143,7 +143,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	}
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM schema_migrations
-		WHERE migration_name = '000042_evidence_ingestion_canonical_supersession_v2.up.sql'
+		WHERE migration_name = '000046_evidence_ingestion_reviewed_disposition.up.sql'
 	`); err != nil {
 		t.Fatalf("delete latest migration row: %v", err)
 	}
@@ -152,8 +152,307 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	if !errors.Is(err, ErrSchemaNotCurrent) {
 		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
 	}
-	if !strings.Contains(err.Error(), "41/42 embedded migrations are applied") {
+	if !strings.Contains(err.Error(), "45/46 embedded migrations are applied") {
 		t.Fatalf("VerifyCurrent() error = %v, want migration count detail", err)
+	}
+}
+
+func TestIntegrationApplyUpRejectsDuplicateSourceRunRequestIDsWithoutChangingExistingState(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	applyMigrationsThrough(
+		t,
+		ctx,
+		pool,
+		"000042_evidence_ingestion_canonical_supersession_v2.up.sql",
+	)
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO source_blobs (raw_content_hash, raw_content, byte_length)
+		VALUES ('sha256:migration-source-request-duplicate', 'x', 1);
+		INSERT INTO source_snapshots (
+			source_snapshot_id, source_system, source_id, source_version, raw_content_hash
+		)
+		VALUES (
+			'srcsnap:migration-source-request-duplicate', 'manual_text',
+			'migration-source-request-duplicate', 'v1',
+			'sha256:migration-source-request-duplicate'
+		);
+		INSERT INTO extraction_views (
+			extraction_view_id, source_snapshot_id, renderer_name, renderer_version,
+			rendered_content, rendered_content_hash
+		)
+		VALUES (
+			'view:migration-source-request-duplicate',
+			'srcsnap:migration-source-request-duplicate',
+			'manual-text-identity', 'v1', 'x',
+			'sha256:migration-source-request-duplicate'
+		);
+		INSERT INTO extractor_definitions (
+			extractor_definition_id, extractor_name, extractor_version,
+			extractor_config_hash, extractor_config
+		)
+		VALUES (
+			'extractor:migration-source-request-duplicate',
+			'migration-source-request-duplicate', 'v1',
+			'sha256:migration-source-request-duplicate', '{}'::jsonb
+		);
+		INSERT INTO extraction_runs (
+			extraction_run_id, extractor_definition_id, source_snapshot_id,
+			extraction_view_id, request_id
+		)
+		VALUES
+			(
+				'run:migration-source-request-duplicate-a',
+				'extractor:migration-source-request-duplicate',
+				'srcsnap:migration-source-request-duplicate',
+				'view:migration-source-request-duplicate',
+				'migration-source-request-duplicate'
+			),
+			(
+				'run:migration-source-request-duplicate-b',
+				'extractor:migration-source-request-duplicate',
+				'srcsnap:migration-source-request-duplicate',
+				'view:migration-source-request-duplicate',
+				'migration-source-request-duplicate'
+			);
+	`); err != nil {
+		t.Fatalf("prepare duplicate source runs: %v", err)
+	}
+
+	changed, err := ApplyUp(ctx, pool)
+	if err == nil {
+		t.Fatal("ApplyUp() error = nil, want duplicate request rejection")
+	}
+	if changed {
+		t.Fatal("ApplyUp() changed = true after failed migration")
+	}
+	if !strings.Contains(err.Error(), "000043_evidence_ingestion_source_run_request_identity.up.sql") {
+		t.Fatalf("ApplyUp() error = %v, want migration 000043 context", err)
+	}
+	assertMigrationCount(t, ctx, pool, 42)
+	assertMigrationIndexMissing(t, ctx, pool, "extraction_runs_source_request_id_uq")
+	var runs int
+	if err := pool.QueryRow(ctx, `
+		SELECT count(*)
+		FROM extraction_runs
+		WHERE request_id = 'migration-source-request-duplicate'
+	`).Scan(&runs); err != nil {
+		t.Fatalf("count duplicate source runs after rejected migration: %v", err)
+	}
+	if runs != 2 {
+		t.Fatalf("duplicate source runs after rejected migration = %d, want 2", runs)
+	}
+}
+
+func TestIntegrationApplyUpAllowsRepositoryRunRequestReuseAndOneSourceRun(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	applyMigrationsThrough(
+		t,
+		ctx,
+		pool,
+		"000042_evidence_ingestion_canonical_supersession_v2.up.sql",
+	)
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO source_blobs (raw_content_hash, raw_content, byte_length)
+		VALUES ('sha256:migration-request-reuse', 'x', 1);
+		INSERT INTO source_snapshots (
+			source_snapshot_id, source_system, source_id, source_version, raw_content_hash
+		)
+		VALUES (
+			'srcsnap:migration-request-reuse', 'manual_text',
+			'migration-request-reuse', 'v1', 'sha256:migration-request-reuse'
+		);
+		INSERT INTO extraction_views (
+			extraction_view_id, source_snapshot_id, renderer_name, renderer_version,
+			rendered_content, rendered_content_hash
+		)
+		VALUES (
+			'view:migration-request-reuse', 'srcsnap:migration-request-reuse',
+			'manual-text-identity', 'v1', 'x', 'sha256:migration-request-reuse'
+		);
+		INSERT INTO repository_snapshots (
+			repository_snapshot_id, repo_id, commit_sha, manifest_hash,
+			manifest_entry_count, revision_verification_method, manifest_contract,
+			file_selection_contract, selected_file_count
+		)
+		VALUES (
+			'repo-snapshot:migration-request-reuse', 'migration-request-reuse',
+			'migration-request-reuse-commit', 'sha256:migration-request-reuse-manifest',
+			0, 'test', 'test', 'test', 0
+		);
+		INSERT INTO extractor_definitions (
+			extractor_definition_id, extractor_name, extractor_version,
+			extractor_config_hash, extractor_config
+		)
+		VALUES (
+			'extractor:migration-request-reuse', 'migration-request-reuse', 'v1',
+			'sha256:migration-request-reuse', '{}'::jsonb
+		);
+		INSERT INTO extraction_runs (
+			extraction_run_id, extractor_definition_id, repository_snapshot_id, request_id
+		)
+		VALUES
+			(
+				'run:migration-repository-request-reuse-a',
+				'extractor:migration-request-reuse',
+				'repo-snapshot:migration-request-reuse', 'migration-shared-request'
+			),
+			(
+				'run:migration-repository-request-reuse-b',
+				'extractor:migration-request-reuse',
+				'repo-snapshot:migration-request-reuse', 'migration-shared-request'
+			);
+		INSERT INTO extraction_runs (
+			extraction_run_id, extractor_definition_id, source_snapshot_id,
+			extraction_view_id, request_id
+		)
+		VALUES (
+			'run:migration-source-request-reuse', 'extractor:migration-request-reuse',
+			'srcsnap:migration-request-reuse', 'view:migration-request-reuse',
+			'migration-shared-request'
+		);
+	`); err != nil {
+		t.Fatalf("prepare repository and source runs: %v", err)
+	}
+
+	changed, err := ApplyUp(ctx, pool)
+	if err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+	if !changed {
+		t.Fatal("ApplyUp() changed = false, want migration 000043 applied")
+	}
+	assertMigrationCount(t, ctx, pool, 46)
+	assertMigrationIndexExists(t, ctx, pool, "extraction_runs_source_request_id_uq")
+	if _, err := VerifyCurrent(ctx, pool); err != nil {
+		t.Fatalf("VerifyCurrent() error = %v", err)
+	}
+
+	var repositoryRuns, sourceRuns int
+	if err := pool.QueryRow(ctx, `
+		SELECT
+			count(*) FILTER (WHERE repository_snapshot_id IS NOT NULL),
+			count(*) FILTER (WHERE repository_snapshot_id IS NULL)
+		FROM extraction_runs
+		WHERE request_id = 'migration-shared-request'
+	`).Scan(&repositoryRuns, &sourceRuns); err != nil {
+		t.Fatalf("count request reuse rows: %v", err)
+	}
+	if repositoryRuns != 2 || sourceRuns != 1 {
+		t.Fatalf("request reuse rows = repository %d source %d, want 2/1", repositoryRuns, sourceRuns)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO extraction_runs (
+			extraction_run_id, extractor_definition_id, source_snapshot_id,
+			extraction_view_id, request_id
+		)
+		VALUES (
+			'run:migration-source-request-reuse-conflict',
+			'extractor:migration-request-reuse', 'srcsnap:migration-request-reuse',
+			'view:migration-request-reuse', 'migration-shared-request'
+		)
+	`); err == nil {
+		t.Fatal("migration 000043 accepted a second source-bound run for one request")
+	}
+}
+
+func TestIntegrationSchemaVerificationRejectsMissingSourceRunRequestIdentityIndex(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatalf("ApplyUp() error = %v", err)
+	}
+	if _, err := pool.Exec(ctx, `DROP INDEX extraction_runs_source_request_id_uq`); err != nil {
+		t.Fatalf("drop source run request identity index: %v", err)
+	}
+
+	if _, err := VerifyCurrent(ctx, pool); !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), "source run request identity index") {
+		t.Fatalf("VerifyCurrent() error = %v, want missing source run request identity index", err)
+	}
+	if changed, err := ApplyUp(ctx, pool); err == nil || changed || !strings.Contains(err.Error(), "source run request identity index") {
+		t.Fatalf("ApplyUp() after dropped index = changed %t error %v, want fail closed", changed, err)
+	}
+}
+
+func TestIntegrationVerifyCurrentRejectsMalformedSourceRunRequestIdentityIndex(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		sql  string
+	}{
+		{
+			name: "non-unique",
+			sql: `CREATE INDEX extraction_runs_source_request_id_uq
+				ON extraction_runs (request_id)
+				WHERE repository_snapshot_id IS NULL`,
+		},
+		{
+			name: "wrong predicate",
+			sql: `CREATE UNIQUE INDEX extraction_runs_source_request_id_uq
+				ON extraction_runs (request_id)
+				WHERE repository_snapshot_id IS NOT NULL`,
+		},
+		{
+			name: "expression key",
+			sql: `CREATE UNIQUE INDEX extraction_runs_source_request_id_uq
+				ON extraction_runs ((lower(request_id)))
+				WHERE repository_snapshot_id IS NULL`,
+		},
+		{
+			name: "non-default operator class",
+			sql: `CREATE UNIQUE INDEX extraction_runs_source_request_id_uq
+				ON extraction_runs (request_id text_pattern_ops)
+				WHERE repository_snapshot_id IS NULL`,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, pool := migrationTestPool(t)
+			if _, err := ApplyUp(ctx, pool); err != nil {
+				t.Fatalf("ApplyUp() error = %v", err)
+			}
+			if _, err := pool.Exec(ctx, `DROP INDEX extraction_runs_source_request_id_uq`); err != nil {
+				t.Fatalf("drop source run request identity index: %v", err)
+			}
+			if _, err := pool.Exec(ctx, test.sql); err != nil {
+				t.Fatalf("create malformed source run request identity index: %v", err)
+			}
+
+			_, err := VerifyCurrent(ctx, pool)
+			if !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), "unique key and predicate contract") {
+				t.Fatalf("VerifyCurrent() error = %v, want malformed source run request identity index", err)
+			}
+		})
+	}
+}
+
+func TestIntegrationVerifyCurrentDoesNotUseSourceRunRequestIdentityIndexFromAnotherSchema(t *testing.T) {
+	ctx, pool, schema := migrationTestPoolWithMaxConns(t, 0)
+	if _, err := ApplyUpInSchema(ctx, pool, schema); err != nil {
+		t.Fatalf("ApplyUpInSchema() error = %v", err)
+	}
+	if _, err := pool.Exec(ctx, `DROP INDEX extraction_runs_source_request_id_uq`); err != nil {
+		t.Fatalf("drop target source run request identity index: %v", err)
+	}
+	otherSchema := "ahe_migrations_other_" + migrationRandomHex(t, 8)
+	otherID := pgx.Identifier{otherSchema}.Sanitize()
+	if _, err := pool.Exec(ctx, `
+		CREATE SCHEMA `+otherID+`;
+		CREATE TABLE `+otherID+`.extraction_runs (
+			request_id TEXT NOT NULL,
+			repository_snapshot_id TEXT
+		);
+		CREATE UNIQUE INDEX extraction_runs_source_request_id_uq
+			ON `+otherID+`.extraction_runs (request_id)
+			WHERE repository_snapshot_id IS NULL;
+	`); err != nil {
+		t.Fatalf("create other-schema source run request identity index: %v", err)
+	}
+	t.Cleanup(func() {
+		dropCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, _ = pool.Exec(dropCtx, `DROP SCHEMA IF EXISTS `+otherID+` CASCADE`)
+	})
+
+	_, err := VerifyCurrentInSchema(ctx, pool, schema)
+	if !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), "source run request identity index") {
+		t.Fatalf("VerifyCurrentInSchema() error = %v, want target-schema index missing", err)
 	}
 }
 
@@ -177,36 +476,14 @@ func TestIntegrationCanonicalSupersessionMigrationRejectsLegacyEdges(t *testing.
 		t.Fatal("canonical supersession migration was not loaded")
 	}
 
-	raw := []byte("Refunds must be completed within 7 days.\nThis rule applies only to overseas orders.\n")
-	ingested, err := evidenceingestion.IngestManualText(
-		ctx,
-		pool,
-		evidenceingestion.ManualTextInput{
-			SourceID:      "migration-legacy-supersedes",
-			SourceVersion: "v1",
-			Raw:           raw,
-			RequestID:     "migration-legacy-supersedes-request",
-			AttemptNumber: 1,
-		},
-		evidenceingestion.FrozenExtractorOutput{Proposals: []evidenceingestion.ExtractorProposalOutput{{
-			ProposalLocalID: "stmt-1",
-			StatementText:   "Refunds must be completed within 7 days.",
-			EvidenceRefs:    []string{"span:S1"},
-		}}},
-	)
-	if err != nil {
-		t.Fatalf("ingest legacy supersedes fixture: %v", err)
-	}
-	admitted, err := evidenceingestion.AdmitPendingProposal(ctx, pool, evidenceingestion.AdmissionInput{
-		ProposalOccurrenceID: ingested.ProposalOccurrenceID,
-		DecisionBy:           "migration-test",
-		DecisionReason:       "create canonical endpoints before migration 41",
-	})
-	if err != nil {
-		t.Fatalf("admit legacy supersedes fixture: %v", err)
-	}
-	if len(admitted.RawEvidenceNodeIDs) != 1 {
-		t.Fatalf("raw evidence nodes = %+v", admitted.RawEvidenceNodeIDs)
+	fromNodeID, toNodeID := createLegacyCanonicalSupersessionEndpoints(t, ctx, pool)
+	var originProposalID string
+	if err := pool.QueryRow(ctx, `
+		SELECT origin_proposal_occurrence_id
+		FROM canonical_graph_nodes
+		WHERE canonical_node_id = $1
+	`, fromNodeID).Scan(&originProposalID); err != nil {
+		t.Fatalf("read legacy supersedes origin proposal: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `
 		INSERT INTO canonical_graph_edges (
@@ -221,7 +498,7 @@ func TestIntegrationCanonicalSupersessionMigrationRejectsLegacyEdges(t *testing.
 		VALUES (
 			'canon-edge:legacy-supersedes', $1, $2, 'supersedes', '{}'::jsonb, $3, NULL
 		)
-	`, admitted.CanonicalRef, admitted.RawEvidenceNodeIDs[0], ingested.ProposalOccurrenceID); err != nil {
+	`, fromNodeID, toNodeID, originProposalID); err != nil {
 		t.Fatalf("insert legacy supersedes edge: %v", err)
 	}
 
@@ -336,7 +613,7 @@ func TestIntegrationCanonicalSupersessionV2MigrationFailsClosedOnPairV1State(t *
 		t.Run(test.name, func(t *testing.T) {
 			ctx, pool := migrationTestPool(t)
 			migration42 := applyThroughCanonicalSupersessionV1(t, ctx, pool)
-			fromNodeID, toNodeID := createCanonicalSupersessionEndpoints(t, ctx, pool)
+			fromNodeID, toNodeID := createLegacyCanonicalSupersessionEndpoints(t, ctx, pool)
 			const proposalID = "supersession-proposal:migration-42-preflight"
 			if err := test.prepare(ctx, pool, proposalID, fromNodeID, toNodeID); err != nil {
 				t.Fatalf("prepare pair-v1 %s state: %v", test.name, err)
@@ -377,6 +654,135 @@ func applyThroughCanonicalSupersessionV1(
 	}
 	t.Fatal("canonical supersession v2 migration was not loaded")
 	return embeddedMigration{}
+}
+
+func applyMigrationsThrough(
+	t *testing.T,
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	lastMigration string,
+) {
+	t.Helper()
+	migrationSet, err := loadMigrations()
+	if err != nil {
+		t.Fatalf("loadMigrations() error = %v", err)
+	}
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin migration fixture transaction: %v", err)
+	}
+	defer func() {
+		_ = tx.Rollback(context.Background())
+	}()
+	if _, err := tx.Exec(ctx, `
+		CREATE TABLE schema_migrations (
+			migration_name TEXT PRIMARY KEY,
+			migration_checksum TEXT NOT NULL,
+			applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		)
+	`); err != nil {
+		t.Fatalf("create migration ledger: %v", err)
+	}
+	for _, migration := range migrationSet {
+		if _, err := tx.Exec(ctx, migration.sql); err != nil {
+			t.Fatalf("applying migration %s: %v", migration.name, err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO schema_migrations (migration_name, migration_checksum)
+			VALUES ($1, $2)
+		`, migration.name, migration.checksum); err != nil {
+			t.Fatalf("recording migration %s: %v", migration.name, err)
+		}
+		if migration.name == lastMigration {
+			if err := tx.Commit(ctx); err != nil {
+				t.Fatalf("commit migration fixture transaction: %v", err)
+			}
+			return
+		}
+	}
+	t.Fatalf("migration %s was not loaded", lastMigration)
+}
+
+func createLegacyCanonicalSupersessionEndpoints(
+	t *testing.T,
+	ctx context.Context,
+	pool *pgxpool.Pool,
+) (string, string) {
+	t.Helper()
+	endpoints := make([]string, 0, 2)
+	for index := 1; index <= 2; index++ {
+		ingested, err := evidenceingestion.IngestManualText(
+			ctx,
+			pool,
+			evidenceingestion.ManualTextInput{
+				SourceID:      fmt.Sprintf("migration-legacy-endpoint-%d", index),
+				SourceVersion: "v1",
+				Raw:           []byte(fmt.Sprintf("Legacy canonical endpoint %d.\n", index)),
+				RequestID:     fmt.Sprintf("migration-legacy-endpoint-request-%d", index),
+				AttemptNumber: 1,
+			},
+			evidenceingestion.FrozenExtractorOutput{
+				Proposals: []evidenceingestion.ExtractorProposalOutput{{
+					ProposalLocalID: "stmt-1",
+					StatementText:   fmt.Sprintf("Legacy canonical endpoint %d.", index),
+					EvidenceRefs:    []string{"span:S1"},
+				}},
+			},
+		)
+		if err != nil {
+			t.Fatalf("ingest legacy canonical endpoint %d: %v", index, err)
+		}
+		nodeID := fmt.Sprintf("canon-node:migration-legacy-endpoint-%d", index)
+		decisionID := fmt.Sprintf("adm:migration-legacy-endpoint-%d", index)
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatalf("begin legacy canonical endpoint %d: %v", index, err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO canonical_graph_nodes (
+				canonical_node_id,
+				node_kind,
+				payload,
+				provenance,
+				temporal,
+				integrity,
+				origin_proposal_occurrence_id
+			)
+			VALUES ($1, 'source_claim', '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb, $2)
+		`, nodeID, ingested.ProposalOccurrenceID); err != nil {
+			_ = tx.Rollback(context.Background())
+			t.Fatalf("write legacy canonical node %d: %v", index, err)
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE proposal_occurrences
+			SET admission_outcome = 'admitted', canonical_ref = $1
+			WHERE proposal_occurrence_id = $2
+		`, nodeID, ingested.ProposalOccurrenceID); err != nil {
+			_ = tx.Rollback(context.Background())
+			t.Fatalf("write legacy terminal proposal %d: %v", index, err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO admission_decisions (
+				admission_decision_id,
+				proposal_occurrence_id,
+				outcome,
+				canonical_ref,
+				raw_evidence_node_ids,
+				canonical_edge_ids,
+				decision_by,
+				decision_reason
+			)
+			VALUES ($1, $2, 'admitted', $3, '[]'::jsonb, '[]'::jsonb, 'migration-test', 'legacy migration fixture')
+		`, decisionID, ingested.ProposalOccurrenceID, nodeID); err != nil {
+			_ = tx.Rollback(context.Background())
+			t.Fatalf("write legacy canonical endpoint %d: %v", index, err)
+		}
+		if err := tx.Commit(ctx); err != nil {
+			t.Fatalf("commit legacy canonical endpoint %d: %v", index, err)
+		}
+		endpoints = append(endpoints, nodeID)
+	}
+	return endpoints[0], endpoints[1]
 }
 
 func createCanonicalSupersessionEndpoints(
@@ -616,6 +1022,103 @@ func TestIntegrationVerifyCurrentRejectsMalformedCanonicalSupersessionConstraint
 	}
 }
 
+func TestIntegrationVerifyCurrentRejectsCanonicalAdmissionObjectDrift(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		mutateSQL  string
+		wantDetail string
+	}{
+		{
+			name: "function definition",
+			mutateSQL: `
+				CREATE OR REPLACE FUNCTION canonical_ordinary_admission_assert_node_v1(
+					checked_node_id TEXT
+				)
+				RETURNS VOID
+				LANGUAGE plpgsql
+				AS 'BEGIN RETURN; END'
+			`,
+			wantDetail: "canonical_ordinary_admission_assert_node_v1 does not match its definition contract",
+		},
+		{
+			name: "security definer search path",
+			mutateSQL: `
+				ALTER FUNCTION canonical_ordinary_admission_edge_trigger_v1()
+				RESET ALL
+			`,
+			wantDetail: "canonical_ordinary_admission_edge_trigger_v1 does not match its owner, search_path, and privilege contract",
+		},
+		{
+			name: "public function execute",
+			mutateSQL: `
+				GRANT EXECUTE
+				ON FUNCTION canonical_admission_guard_proposal_v1()
+				TO PUBLIC
+			`,
+			wantDetail: "canonical_admission_guard_proposal_v1 does not match its owner, search_path, and privilege contract",
+		},
+		{
+			name: "deferred authority trigger",
+			mutateSQL: `
+				DROP TRIGGER canonical_ordinary_admission_edges_authority
+				ON canonical_graph_edges
+			`,
+			wantDetail: "canonical_ordinary_admission_edges_authority is missing",
+		},
+		{
+			name: "materializer index",
+			mutateSQL: `
+				DROP INDEX canonical_ordinary_admission_node_materializer_uq
+			`,
+			wantDetail: "canonical_ordinary_admission_node_materializer_uq is missing",
+		},
+		{
+			name: "ordinary check constraint",
+			mutateSQL: `
+				ALTER TABLE canonical_ordinary_admission_manifests
+				DROP CONSTRAINT canonical_ordinary_admission_manifests_kind_ck
+			`,
+			wantDetail: "canonical_ordinary_admission_manifests_kind_ck is missing",
+		},
+		{
+			name: "review foreign key",
+			mutateSQL: `
+				ALTER TABLE canonical_source_claim_review_bindings
+				DROP CONSTRAINT canonical_source_claim_review_bindings_attempt_fk
+			`,
+			wantDetail: "canonical_source_claim_review_bindings_attempt_fk is missing",
+		},
+		{
+			name: "review discriminator column",
+			mutateSQL: `
+				ALTER TABLE admission_decisions
+				ALTER COLUMN review_binding_contract_version SET NOT NULL
+			`,
+			wantDetail: "review_binding_contract_version column does not match its nullable text contract",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, pool := migrationTestPool(t)
+			if _, err := ApplyUp(ctx, pool); err != nil {
+				t.Fatalf("ApplyUp() error = %v", err)
+			}
+			if _, err := pool.Exec(ctx, test.mutateSQL); err != nil {
+				t.Fatalf("mutate canonical admission schema: %v", err)
+			}
+
+			_, err := VerifyCurrent(ctx, pool)
+			if !errors.Is(err, ErrSchemaNotCurrent) ||
+				!strings.Contains(err.Error(), test.wantDetail) {
+				t.Fatalf(
+					"VerifyCurrent() error = %v, want %q",
+					err,
+					test.wantDetail,
+				)
+			}
+		})
+	}
+}
+
 func TestIntegrationVerifyCurrentRejectsMissingCanonicalSupersessionHeadConstraint(t *testing.T) {
 	ctx, pool := migrationTestPool(t)
 	if _, err := ApplyUp(ctx, pool); err != nil {
@@ -702,7 +1205,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want true")
 	}
-	assertMigrationCount(t, ctx, pool, 42)
+	assertMigrationCount(t, ctx, pool, 46)
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "source_file_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshot_intake_requests")
@@ -784,6 +1287,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	assertMigrationIndexExists(t, ctx, pool, "canonical_graph_edges_contradiction_origin_idx")
 	assertMigrationIndexExists(t, ctx, pool, "canonical_supersession_events_lineage_revision_idx")
 	assertMigrationIndexExists(t, ctx, pool, "canonical_supersession_targets_target_idx")
+	assertMigrationIndexExists(t, ctx, pool, "extraction_runs_source_request_id_uq")
 	assertMigrationColumnExists(t, ctx, pool, "canonical_graph_edges", "origin_canonical_contradiction_proposal_id")
 	assertMigrationColumnMissing(t, ctx, pool, "canonical_graph_edges", "origin_canonical_supersession_proposal_id")
 	assertMigrationColumnExists(t, ctx, pool, "repository_extraction_work_claim_attempts", "lease_duration_milliseconds")
@@ -1825,7 +2329,111 @@ func TestIntegrationApplyUpRejectsPartialLegacyMigration(t *testing.T) {
 	}
 }
 
+func TestIntegrationSchemaBoundAPIsRejectTemporaryRelationShadowing(t *testing.T) {
+	ctx, pool, schema := migrationTestPoolWithMaxConns(t, 1)
+	createEmptyTemporaryMigrationShadows(t, ctx, pool)
+
+	if _, err := ApplyUpInSchema(ctx, pool, schema); err == nil || !strings.Contains(err.Error(), "active temporary schema") {
+		t.Fatalf("ApplyUpInSchema() error = %v, want active temporary schema rejection", err)
+	}
+	assertQualifiedMigrationTableMissing(t, ctx, pool, schema, "schema_migrations")
+
+	pool.Reset()
+	if changed, err := ApplyUpInSchema(ctx, pool, schema); err != nil {
+		t.Fatalf("ApplyUpInSchema() after connection reset error = %v", err)
+	} else if !changed {
+		t.Fatal("ApplyUpInSchema() after connection reset changed = false, want true")
+	}
+	if _, err := VerifyCurrentInSchema(ctx, pool, schema); err != nil {
+		t.Fatalf("VerifyCurrentInSchema() after clean apply error = %v", err)
+	}
+
+	createValidTemporaryMigrationShadows(t, ctx, pool, schema)
+	qualifiedLedger := pgx.Identifier{schema, "schema_migrations"}.Sanitize()
+	if _, err := pool.Exec(ctx, `
+		DELETE FROM `+qualifiedLedger+`
+		WHERE migration_name = '000046_evidence_ingestion_reviewed_disposition.up.sql'
+	`); err != nil {
+		t.Fatalf("make target migration ledger incomplete: %v", err)
+	}
+	// This preserves the pre-guard failure witness: the legacy verifier reads the
+	// complete pg_temp ledger and mistakes the incomplete target schema for a
+	// current one. The strict verifier must reject the same physical session.
+	if _, err := VerifyCurrent(ctx, pool); err != nil {
+		t.Fatalf("legacy VerifyCurrent() did not reproduce temporary-ledger shadowing: %v", err)
+	}
+	if _, err := VerifyCurrentInSchema(ctx, pool, schema); err == nil || !strings.Contains(err.Error(), "active temporary schema") {
+		t.Fatalf("VerifyCurrentInSchema() error = %v, want active temporary schema rejection", err)
+	}
+
+	pool.Reset()
+	if _, err := VerifyCurrentInSchema(ctx, pool, schema); !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), "45/46") {
+		t.Fatalf("VerifyCurrentInSchema() after reset error = %v, want incomplete target ledger", err)
+	}
+}
+
+func createEmptyTemporaryMigrationShadows(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
+	t.Helper()
+	if _, err := pool.Exec(ctx, `
+		CREATE TEMPORARY TABLE schema_migrations (
+			migration_name TEXT PRIMARY KEY,
+			migration_checksum TEXT NOT NULL,
+			applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+		);
+		CREATE TEMPORARY TABLE source_snapshots (
+			source_snapshot_id TEXT PRIMARY KEY
+		)
+	`); err != nil {
+		t.Fatalf("create temporary migration relation shadows: %v", err)
+	}
+}
+
+func createValidTemporaryMigrationShadows(
+	t *testing.T,
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	schema string,
+) {
+	t.Helper()
+	qualifiedLedger := pgx.Identifier{schema, "schema_migrations"}.Sanitize()
+	qualifiedSnapshots := pgx.Identifier{schema, "source_snapshots"}.Sanitize()
+	if _, err := pool.Exec(ctx, `
+		CREATE TEMPORARY TABLE schema_migrations
+			(LIKE `+qualifiedLedger+` INCLUDING ALL);
+		INSERT INTO pg_temp.schema_migrations
+			SELECT * FROM `+qualifiedLedger+`;
+		CREATE TEMPORARY TABLE source_snapshots
+			(LIKE `+qualifiedSnapshots+` INCLUDING ALL)
+	`); err != nil {
+		t.Fatalf("create valid temporary migration relation shadows: %v", err)
+	}
+}
+
+func assertQualifiedMigrationTableMissing(
+	t *testing.T,
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	schema string,
+	table string,
+) {
+	t.Helper()
+	var relation *string
+	qualified := pgx.Identifier{schema, table}.Sanitize()
+	if err := pool.QueryRow(ctx, `SELECT pg_catalog.to_regclass($1)::text`, qualified).Scan(&relation); err != nil {
+		t.Fatalf("check qualified migration table %s: %v", table, err)
+	}
+	if relation != nil {
+		t.Fatalf("qualified migration table %s survived rejected migration: %q", table, *relation)
+	}
+}
+
 func migrationTestPool(t *testing.T) (context.Context, *pgxpool.Pool) {
+	t.Helper()
+	ctx, pool, _ := migrationTestPoolWithMaxConns(t, 0)
+	return ctx, pool
+}
+
+func migrationTestPoolWithMaxConns(t *testing.T, maxConns int32) (context.Context, *pgxpool.Pool, string) {
 	t.Helper()
 	databaseURL := os.Getenv("DATABASE_DNS")
 	if databaseURL == "" {
@@ -1857,12 +2465,15 @@ func migrationTestPool(t *testing.T) (context.Context, *pgxpool.Pool) {
 		t.Fatalf("parse database URL: %v", err)
 	}
 	config.ConnConfig.RuntimeParams["search_path"] = schema
+	if maxConns > 0 {
+		config.MaxConns = maxConns
+	}
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		t.Fatalf("new pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
-	return ctx, pool
+	return ctx, pool, schema
 }
 
 func assertMigrationCount(t *testing.T, ctx context.Context, pool *pgxpool.Pool, want int) {
@@ -1906,6 +2517,17 @@ func assertMigrationIndexExists(t *testing.T, ctx context.Context, pool *pgxpool
 	}
 	if got == nil || *got != index {
 		t.Fatalf("migration index %s = %v, want present", index, got)
+	}
+}
+
+func assertMigrationIndexMissing(t *testing.T, ctx context.Context, pool *pgxpool.Pool, index string) {
+	t.Helper()
+	var got *string
+	if err := pool.QueryRow(ctx, `SELECT to_regclass($1)::text`, index).Scan(&got); err != nil {
+		t.Fatalf("checking missing migration index %s: %v", index, err)
+	}
+	if got != nil && *got != "" {
+		t.Fatalf("migration index %s still exists", index)
 	}
 }
 

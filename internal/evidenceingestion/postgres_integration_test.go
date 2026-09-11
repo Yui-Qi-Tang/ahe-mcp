@@ -1019,7 +1019,11 @@ func TestIntegrationAdmitPendingProposalCreatesCanonicalGraph(t *testing.T) {
 		t.Fatalf("canonical graph edge = %s -%s-> %s, want raw_evidence -supports_claim-> source_claim", fromKind, relation, toKind)
 	}
 
-	replay, err := AdmitPendingProposal(ctx, pool, AdmissionInput{ProposalOccurrenceID: ingested.ProposalOccurrenceID})
+	replay, err := AdmitPendingProposal(ctx, pool, AdmissionInput{
+		ProposalOccurrenceID: ingested.ProposalOccurrenceID,
+		DecisionBy:           "integration-test",
+		DecisionReason:       "fixture statement accepted",
+	})
 	if err != nil {
 		t.Fatalf("replay AdmitPendingProposal() error = %v", err)
 	}

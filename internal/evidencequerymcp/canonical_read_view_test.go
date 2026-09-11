@@ -28,7 +28,7 @@ func TestCanonicalReadViewToolsReuseOneMaterializedView(t *testing.T) {
 	}
 	server := newServer(core)
 
-	openData, err := server.CallTool(context.Background(), ToolOpenCanonicalReadView, []byte(`{
+	openData, err := server.CallTool(queryOwnerContext(t, "consumer-a"), ToolOpenCanonicalReadView, []byte(`{
 		"root_node_ids":["canon-node:raw"],
 		"relations":["supports_claim","contradicts"],
 		"max_depth":1,
@@ -76,7 +76,7 @@ func TestCanonicalReadViewToolsReuseOneMaterializedView(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pathData, err := server.CallTool(context.Background(), ToolFindCanonicalPath, pathPayload)
+	pathData, err := server.CallTool(queryOwnerContext(t, "consumer-a"), ToolFindCanonicalPath, pathPayload)
 	if err != nil {
 		t.Fatalf("find canonical path: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestCanonicalReadViewToolsReuseOneMaterializedView(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	diagnosticsData, err := server.CallTool(context.Background(), ToolGetCanonicalTopologyDiagnostics, diagnosticsPayload)
+	diagnosticsData, err := server.CallTool(queryOwnerContext(t, "consumer-a"), ToolGetCanonicalTopologyDiagnostics, diagnosticsPayload)
 	if err != nil {
 		t.Fatalf("get topology diagnostics: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestCanonicalReadViewToolsReuseOneMaterializedView(t *testing.T) {
 
 func TestCanonicalReadViewMissingHandleRequiresReopen(t *testing.T) {
 	server := newServer(&fakeQueryCore{})
-	_, err := server.FindCanonicalPath(FindCanonicalPathRequest{
+	_, err := server.FindCanonicalPath(queryOwnerContext(t, "consumer-a"), FindCanonicalPathRequest{
 		Handle:     "canonical-read-view:missing",
 		FromNodeID: "canon-node:raw",
 		ToNodeID:   "canon-node:claim",
@@ -131,19 +131,19 @@ func TestCanonicalReadViewMissingHandleRequiresReopen(t *testing.T) {
 
 func TestCanonicalReadViewCacheIsBoundedLRU(t *testing.T) {
 	cache := newCanonicalReadViewCache(2)
-	cache.put(&cachedCanonicalReadView{handle: "a"})
-	cache.put(&cachedCanonicalReadView{handle: "b"})
-	if _, ok := cache.get("a"); !ok {
+	cache.put(&cachedCanonicalReadView{owner: "consumer-a", handle: "a"})
+	cache.put(&cachedCanonicalReadView{owner: "consumer-a", handle: "b"})
+	if _, ok := cache.get("consumer-a", "a"); !ok {
 		t.Fatal("cache.get(a) = missing")
 	}
-	cache.put(&cachedCanonicalReadView{handle: "c"})
-	if _, ok := cache.get("b"); ok {
+	cache.put(&cachedCanonicalReadView{owner: "consumer-a", handle: "c"})
+	if _, ok := cache.get("consumer-a", "b"); ok {
 		t.Fatal("cache.get(b) = present after LRU eviction")
 	}
-	if _, ok := cache.get("a"); !ok {
+	if _, ok := cache.get("consumer-a", "a"); !ok {
 		t.Fatal("cache.get(a) = missing after refresh")
 	}
-	if _, ok := cache.get("c"); !ok {
+	if _, ok := cache.get("consumer-a", "c"); !ok {
 		t.Fatal("cache.get(c) = missing")
 	}
 }
@@ -158,11 +158,11 @@ func TestCanonicalReadViewHandleIncludesScope(t *testing.T) {
 		MaxNodes:    8,
 		MaxEdges:    16,
 	}
-	first, err := canonicalReadViewHandle(base)
+	first, err := canonicalReadViewHandle("consumer-a", base)
 	if err != nil {
 		t.Fatal(err)
 	}
-	replayed, err := canonicalReadViewHandle(base)
+	replayed, err := canonicalReadViewHandle("consumer-a", base)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,12 +170,72 @@ func TestCanonicalReadViewHandleIncludesScope(t *testing.T) {
 		t.Fatalf("replayed handle = %q, want %q", replayed, first)
 	}
 	base.MaxDepth = 2
-	second, err := canonicalReadViewHandle(base)
+	second, err := canonicalReadViewHandle("consumer-a", base)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if second == first {
 		t.Fatal("different scope produced the same handle")
+	}
+}
+
+func queryOwnerContext(t *testing.T, owner string) context.Context {
+	t.Helper()
+	ctx, err := BindCanonicalReadViewOwner(t.Context(), owner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ctx
+}
+
+func TestCanonicalReadViewRequiresOwnerBeforeReading(t *testing.T) {
+	core := &fakeQueryCore{}
+	server := newServer(core)
+	if _, err := server.OpenCanonicalReadView(t.Context(), OpenCanonicalReadViewRequest{}); err == nil {
+		t.Fatal("unbound open accepted")
+	}
+	if core.canonicalReadCalls != 0 {
+		t.Fatal("unbound request reached storage")
+	}
+	if _, err := server.FindCanonicalPath(t.Context(), FindCanonicalPathRequest{Handle: "known"}); err == nil {
+		t.Fatal("unbound cached path accepted")
+	}
+	if _, err := server.GetCanonicalTopologyDiagnostics(t.Context(), GetCanonicalTopologyDiagnosticsRequest{Handle: "known"}); err == nil {
+		t.Fatal("unbound cached diagnostics accepted")
+	}
+}
+
+func TestCanonicalReadViewOwnerIsolation(t *testing.T) {
+	view := evidenceingestion.CanonicalReadView{
+		Artifact:    queryCanonicalReadArtifact(t),
+		RootNodeIDs: []string{"canon-node:raw"},
+		Relations:   []evidencegraph.CanonicalEdgeRelation{evidencegraph.CanonicalSupportsClaim},
+		MaxDepth:    1, MaxNodes: 8, MaxEdges: 16,
+	}
+	server := newServer(&fakeQueryCore{canonicalReadResult: view})
+	openedA, err := server.OpenCanonicalReadView(queryOwnerContext(t, "consumer-a"), OpenCanonicalReadViewRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	openedB, err := server.OpenCanonicalReadView(queryOwnerContext(t, "consumer-b"), OpenCanonicalReadViewRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if openedA.View.Handle == openedB.View.Handle {
+		t.Fatal("owners share a handle")
+	}
+	for _, tc := range []struct{ owner, handle string }{
+		{"consumer-a", openedB.View.Handle}, {"consumer-b", openedA.View.Handle},
+		{"consumer-a", "not-present"},
+	} {
+		_, err := server.GetCanonicalTopologyDiagnostics(queryOwnerContext(t, tc.owner), GetCanonicalTopologyDiagnosticsRequest{Handle: tc.handle})
+		var toolErr *ToolError
+		if !errors.As(err, &toolErr) || toolErr.Code != toolErrorReadViewMissing {
+			t.Fatalf("cross-owner or missing handle error = %v", err)
+		}
+	}
+	if _, err := server.GetCanonicalTopologyDiagnostics(queryOwnerContext(t, "consumer-a"), GetCanonicalTopologyDiagnosticsRequest{Handle: openedA.View.Handle}); err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -16,14 +17,14 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 		relationSpecificClosure bool
 		disableTable            string
 		disableTrigger          string
-		tamper                  func(context.Context, *pgxpool.Pool, SupersessionAdmissionResult)
+		tamper                  func(*testing.T, context.Context, validationAuditExecutor, SupersessionAdmissionResult)
 	}{
 		{
 			name:                    "extra decision edge",
 			relationSpecificClosure: true,
 			disableTable:            "admission_decisions",
 			disableTrigger:          "canonical_supersession_decisions_authority_trigger",
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				if _, err := pool.Exec(ctx, `
 					UPDATE admission_decisions
@@ -39,7 +40,7 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 			relationSpecificClosure: true,
 			disableTable:            "canonical_graph_edges",
 			disableTrigger:          "canonical_supersession_edges_authority_trigger",
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				supportEdgeID := validationAuditSupportEdgeID(t, result)
 				if _, err := pool.Exec(ctx, `
@@ -55,7 +56,7 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 			relationSpecificClosure: true,
 			disableTable:            "admission_decisions",
 			disableTrigger:          "canonical_supersession_decisions_authority_trigger",
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				if _, err := pool.Exec(ctx, `
 					UPDATE admission_decisions
@@ -71,7 +72,7 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 			relationSpecificClosure: true,
 			disableTable:            "proposal_occurrences",
 			disableTrigger:          "canonical_supersession_proposals_authority_trigger",
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				if _, err := pool.Exec(ctx, `
 					UPDATE proposal_occurrences
@@ -85,7 +86,7 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 		{
 			name:                    "forged derivation metadata",
 			relationSpecificClosure: true,
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				const derivationID = "derivation:audit-forged"
 				if _, err := pool.Exec(ctx, `
@@ -119,7 +120,7 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 			relationSpecificClosure: true,
 			disableTable:            "canonical_graph_nodes",
 			disableTrigger:          "canonical_supersession_nodes_authority_trigger",
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				if _, err := pool.Exec(ctx, `
 					UPDATE canonical_graph_nodes
@@ -141,7 +142,7 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 			relationSpecificClosure: true,
 			disableTable:            "canonical_graph_edges",
 			disableTrigger:          "canonical_supersession_edges_authority_trigger",
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				supportEdgeID := validationAuditSupportEdgeID(t, result)
 				if _, err := pool.Exec(ctx, `
@@ -163,7 +164,7 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 			relationSpecificClosure: true,
 			disableTable:            "canonical_graph_edges",
 			disableTrigger:          "canonical_supersession_edges_authority_trigger",
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				supportEdgeID := validationAuditSupportEdgeID(t, result)
 				if _, err := pool.Exec(ctx, `
@@ -191,7 +192,7 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 		},
 		{
 			name: "unexpected proposal-attributed node",
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				if _, err := pool.Exec(ctx, `
 					INSERT INTO canonical_graph_nodes (
@@ -222,7 +223,7 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 			name:           "unexpected event member",
 			disableTable:   "canonical_supersession_members",
 			disableTrigger: "canonical_supersession_members_authority_trigger",
-			tamper: func(ctx context.Context, pool *pgxpool.Pool, result SupersessionAdmissionResult) {
+			tamper: func(t *testing.T, ctx context.Context, pool validationAuditExecutor, result SupersessionAdmissionResult) {
 				t.Helper()
 				if _, err := pool.Exec(ctx, `
 					INSERT INTO canonical_supersession_members (
@@ -243,16 +244,24 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 		t.Run(test.name, func(t *testing.T) {
 			ctx, pool := integrationPool(t)
 			input, result := validationAuditAdmitPair(t, ctx, pool, test.name)
-			if test.disableTrigger != "" {
-				validationAuditDisableAuthorityTrigger(
-					t,
-					ctx,
-					pool,
-					test.disableTable,
-					test.disableTrigger,
+			guards := validationAuditCorruptionGuards(test.disableTable, test.disableTrigger)
+			switch test.name {
+			case "forged derivation metadata":
+				guards = append(guards,
+					validationAuditTrigger{"canonical_derivations", "canonical_ordinary_admission_derivations_authority"},
+					validationAuditTrigger{"canonical_derivation_parents", "canonical_ordinary_admission_derivation_parents_authority"},
 				)
+			case "unexpected proposal-attributed node":
+				guards = append(guards, validationAuditTrigger{"canonical_graph_nodes", "canonical_ordinary_admission_nodes_authority"})
 			}
-			test.tamper(ctx, pool, result)
+			validationAuditCorruptFixture(t, ctx, pool, guards, func(tx validationAuditExecutor) {
+				test.tamper(t, ctx, tx, result)
+			})
+			wantCounts := supersessionAuthorityCounts(t, ctx, pool)
+			wantHead, err := GetCanonicalSupersessionHead(ctx, pool)
+			if err != nil {
+				t.Fatalf("load head after privileged fixture corruption: %v", err)
+			}
 
 			if test.relationSpecificClosure {
 				// Closure is deliberately relation-specific. Non-supersession audit
@@ -267,26 +276,86 @@ func TestIntegrationSupersessionReplayRejectsCompleteAdmissionAuditDrift(t *test
 				}
 			}
 
-			_, err := AdmitPendingSupersession(ctx, pool, input)
+			_, err = AdmitPendingSupersession(ctx, pool, input)
 			assertKind(t, err, ErrorSupersessionReplayConflict)
+			validationAdmissionAssertAuthorityUnchanged(t, ctx, pool, wantCounts, wantHead)
 		})
 	}
 }
 
-func validationAuditDisableAuthorityTrigger(
+type validationAuditExecutor interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
+type validationAuditTrigger struct {
+	table   string
+	trigger string
+}
+
+func validationAuditCorruptionGuards(table, trigger string) []validationAuditTrigger {
+	if trigger == "" {
+		return nil
+	}
+	guards := []validationAuditTrigger{{table, trigger}}
+	switch table {
+	case "admission_decisions":
+		guards = append(guards,
+			validationAuditTrigger{table, "admission_decisions_append_only"},
+			validationAuditTrigger{table, "canonical_ordinary_admission_decisions_authority"},
+		)
+	case "canonical_graph_nodes":
+		guards = append(guards,
+			validationAuditTrigger{table, "canonical_graph_nodes_append_only"},
+			validationAuditTrigger{table, "canonical_ordinary_admission_nodes_authority"},
+		)
+	case "canonical_graph_edges":
+		guards = append(guards,
+			validationAuditTrigger{table, "canonical_graph_edges_append_only"},
+			validationAuditTrigger{table, "canonical_ordinary_admission_edges_authority"},
+		)
+	case "proposal_occurrences":
+		guards = append(guards,
+			validationAuditTrigger{table, "proposal_occurrences_terminal_guard"},
+			validationAuditTrigger{table, "canonical_ordinary_admission_proposals_authority"},
+		)
+	}
+	return guards
+}
+
+func validationAuditCorruptFixture(
 	t *testing.T,
 	ctx context.Context,
 	pool *pgxpool.Pool,
-	table string,
-	trigger string,
+	guards []validationAuditTrigger,
+	tamper func(validationAuditExecutor),
 ) {
 	t.Helper()
-	// integrationPool gives each subtest an isolated schema that is dropped at
-	// cleanup. Disable only the named guard to create a committed privileged-
-	// corruption fixture for the independent replay validator.
-	query := fmt.Sprintf("ALTER TABLE %s DISABLE TRIGGER %s", table, trigger)
-	if _, err := pool.Exec(ctx, query); err != nil {
-		t.Fatalf("disable isolated %s authority trigger: %v", trigger, err)
+	// This owner-only malformed-database fixture is not reachable through a
+	// valid public writer. Disable named guards only in the disposable schema,
+	// restore them in the same transaction, then test the independent reader.
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin isolated corruption fixture: %v", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	for _, guard := range guards {
+		query := fmt.Sprintf("ALTER TABLE %s DISABLE TRIGGER %s", guard.table, guard.trigger)
+		if _, err := tx.Exec(ctx, query); err != nil {
+			t.Fatalf("disable isolated %s authority trigger: %v", guard.trigger, err)
+		}
+	}
+	tamper(tx)
+	if _, err := tx.Exec(ctx, "SET CONSTRAINTS ALL IMMEDIATE"); err != nil {
+		t.Fatalf("flush remaining fixture constraints: %v", err)
+	}
+	for _, guard := range guards {
+		query := fmt.Sprintf("ALTER TABLE %s ENABLE TRIGGER %s", guard.table, guard.trigger)
+		if _, err := tx.Exec(ctx, query); err != nil {
+			t.Fatalf("restore isolated %s authority trigger: %v", guard.trigger, err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatalf("commit isolated corruption fixture: %v", err)
 	}
 }
 

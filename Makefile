@@ -3,6 +3,8 @@ BIN_DIR ?= bin
 
 CORE_COMMANDS := \
 	ahe-migrate \
+	ahe-runtime-admin \
+	ahe-mcp-launch \
 	ahe-detective \
 	ahe-query-mcp \
 	ahe-ingest-mcp

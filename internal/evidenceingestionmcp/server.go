@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/runtimeauth"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -657,6 +658,8 @@ type goplsWorkspaceInventoryCollector func(context.Context, evidenceingestion.Go
 // Server exposes the internal ingestion capability surface.
 type Server struct {
 	core                           ingestionCore
+	sourceReview                   sourceReviewCore
+	reviewPrincipal                runtimeauth.Principal
 	collectGoplsWorkspaceInventory goplsWorkspaceInventoryCollector
 }
 
@@ -669,8 +672,10 @@ func NewServer(pool *pgxpool.Pool) (*Server, error) {
 }
 
 func newServer(core ingestionCore) *Server {
+	review, _ := core.(sourceReviewCore)
 	return &Server{
 		core:                           core,
+		sourceReview:                   review,
 		collectGoplsWorkspaceInventory: evidenceingestion.CollectGoplsWorkspaceInventory,
 	}
 }
@@ -678,6 +683,9 @@ func newServer(core ingestionCore) *Server {
 // Tools returns ingestion and grounded discovery tools, but no external evidence query tools.
 func (s *Server) Tools() []ToolDefinition {
 	return []ToolDefinition{
+		{Name: ToolGetSourceClaimReview, Description: GetSourceClaimReviewDescription, Write: false},
+		{Name: ToolAdmitReviewedSourceClaim, Description: AdmitReviewedSourceClaimDescription, Write: true},
+		{Name: ToolRecordReviewedSourceClaimDisposition, Description: RecordReviewedSourceClaimDispositionDescription, Write: true},
 		{
 			Name:        ToolSubmitManualEvidence,
 			Description: "Submit bounded manual text evidence through the Slice 1 ingestion core.",
@@ -1352,6 +1360,10 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 			return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
 		}
 		return data, nil
+	case ToolGetSourceClaimReview, ToolAdmitReviewedSourceClaim:
+		return s.callSourceReviewTool(ctx, name, payload)
+	case ToolRecordReviewedSourceClaimDisposition:
+		return s.callSourceReviewDispositionTool(ctx, payload)
 	case ToolAdmitPendingProposal:
 		var req AdmitPendingProposalRequest
 		if err := decodeStrict(payload, &req); err != nil {

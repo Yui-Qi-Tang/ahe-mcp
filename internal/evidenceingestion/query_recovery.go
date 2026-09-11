@@ -22,7 +22,7 @@ func normalizeEvidenceQueryMode(mode string) (string, error) {
 		return EvidenceQueryModeDeterministicLexicalRecovery, nil
 	}
 	switch mode {
-	case EvidenceQueryModeExactLexical, EvidenceQueryModeDeterministicLexicalRecovery:
+	case EvidenceQueryModeExactLexical, EvidenceQueryModeDeterministicLexicalRecovery, EvidenceQueryModeExperimentalHanRecoveryV1, EvidenceQueryModeExperimentalMultisurfaceV1, EvidenceQueryModePracticalMultisurfaceV1:
 		return mode, nil
 	default:
 		return "", newDomainError(ErrorInvalidInput, "query_mode %q is not supported", mode)
@@ -84,6 +84,12 @@ func executeGroundedEvidenceQuery(
 	db sqlQueryer,
 	input GroundedEvidenceBriefInput,
 ) ([]ProposalSearchResult, EvidenceQueryExecution, error) {
+	if input.QueryMode == EvidenceQueryModeExperimentalMultisurfaceV1 || input.QueryMode == EvidenceQueryModePracticalMultisurfaceV1 {
+		return executeMultisurfaceEvidenceQuery(ctx, db, input)
+	}
+	if input.QueryMode == EvidenceQueryModeExperimentalHanRecoveryV1 {
+		return executeExperimentalHanEvidenceQuery(ctx, db, input)
+	}
 	compiled, err := compileEvidenceQuery(ctx, db, input.Query)
 	if err != nil {
 		return nil, EvidenceQueryExecution{}, err
@@ -316,6 +322,9 @@ func newEvidenceQueryExecution(query, mode string, filters ProposalListInput) Ev
 	if mode == EvidenceQueryModeExactLexical {
 		planVersion = EvidenceQueryPlanExactV1
 		normalizerVersion = EvidenceQueryNormalizerSimpleV1
+	} else if mode == EvidenceQueryModeExperimentalHanRecoveryV1 {
+		planVersion = EvidenceQueryPlanExperimentalHanRecoveryV1
+		normalizerVersion = EvidenceQueryNormalizerExperimentalHanV1
 	}
 	return EvidenceQueryExecution{
 		OriginalQuery:              query,

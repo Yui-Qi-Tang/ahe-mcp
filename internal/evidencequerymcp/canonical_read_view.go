@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
@@ -91,8 +92,40 @@ type GetCanonicalTopologyDiagnosticsResponse struct {
 
 type cachedCanonicalReadView struct {
 	handle   string
+	owner    string
 	view     evidenceingestion.CanonicalReadView
 	topology *evidenceprojection.PreparedTopology
+}
+
+type canonicalReadViewOwnerContextKey struct{}
+
+// BindCanonicalReadViewOwner fixes the owner supplied by the trusted runtime,
+// replacing any inbound context value. Tool payloads must never supply it.
+func BindCanonicalReadViewOwner(ctx context.Context, owner string) (context.Context, error) {
+	if ctx == nil || owner == "" || owner != strings.TrimSpace(owner) || !utf8.ValidString(owner) || len(owner) > 512 {
+		return nil, errors.New("canonical read view requires a context and a normalized owner of 1 to 512 UTF-8 bytes")
+	}
+	return context.WithValue(ctx, canonicalReadViewOwnerContextKey{}, owner), nil
+}
+
+func canonicalReadViewOwner(ctx context.Context) (string, error) {
+	if ctx != nil {
+		if owner, ok := ctx.Value(canonicalReadViewOwnerContextKey{}).(string); ok && owner != "" {
+			return owner, nil
+		}
+	}
+	return "", errors.New("canonical read view owner is not bound by the query runtime")
+}
+
+// CanonicalReadViewOwnerMatches checks a trusted owner without exposing it.
+func CanonicalReadViewOwnerMatches(ctx context.Context, owner string) bool {
+	bound, err := canonicalReadViewOwner(ctx)
+	return err == nil && bound == owner
+}
+
+type canonicalReadViewCacheKey struct {
+	owner  string
+	handle string
 }
 
 type canonicalReadViewCacheEntry struct {
@@ -102,7 +135,7 @@ type canonicalReadViewCacheEntry struct {
 type canonicalReadViewCache struct {
 	mu       sync.Mutex
 	capacity int
-	entries  map[string]*list.Element
+	entries  map[canonicalReadViewCacheKey]*list.Element
 	order    *list.List
 }
 
@@ -112,7 +145,7 @@ func newCanonicalReadViewCache(capacity int) *canonicalReadViewCache {
 	}
 	return &canonicalReadViewCache{
 		capacity: capacity,
-		entries:  make(map[string]*list.Element, capacity),
+		entries:  make(map[canonicalReadViewCacheKey]*list.Element, capacity),
 		order:    list.New(),
 	}
 }
@@ -120,25 +153,27 @@ func newCanonicalReadViewCache(capacity int) *canonicalReadViewCache {
 func (c *canonicalReadViewCache) put(view *cachedCanonicalReadView) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if existing, ok := c.entries[view.handle]; ok {
+	key := canonicalReadViewCacheKey{owner: view.owner, handle: view.handle}
+	if existing, ok := c.entries[key]; ok {
 		existing.Value.(*canonicalReadViewCacheEntry).view = view
 		c.order.MoveToFront(existing)
 		return
 	}
 	element := c.order.PushFront(&canonicalReadViewCacheEntry{view: view})
-	c.entries[view.handle] = element
+	c.entries[key] = element
 	if c.order.Len() <= c.capacity {
 		return
 	}
 	evicted := c.order.Back()
-	delete(c.entries, evicted.Value.(*canonicalReadViewCacheEntry).view.handle)
+	evictedView := evicted.Value.(*canonicalReadViewCacheEntry).view
+	delete(c.entries, canonicalReadViewCacheKey{owner: evictedView.owner, handle: evictedView.handle})
 	c.order.Remove(evicted)
 }
 
-func (c *canonicalReadViewCache) get(handle string) (*cachedCanonicalReadView, bool) {
+func (c *canonicalReadViewCache) get(owner, handle string) (*cachedCanonicalReadView, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	element, ok := c.entries[handle]
+	element, ok := c.entries[canonicalReadViewCacheKey{owner: owner, handle: handle}]
 	if !ok {
 		return nil, false
 	}
@@ -152,6 +187,10 @@ func (s *Server) OpenCanonicalReadView(
 	ctx context.Context,
 	req OpenCanonicalReadViewRequest,
 ) (OpenCanonicalReadViewResponse, error) {
+	owner, err := canonicalReadViewOwner(ctx)
+	if err != nil {
+		return OpenCanonicalReadViewResponse{}, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
+	}
 	view, err := s.core.ReadCanonicalGraphView(ctx, evidenceingestion.CanonicalReadInput{
 		RootNodeIDs: req.RootNodeIDs,
 		Relations:   req.Relations,
@@ -170,7 +209,7 @@ func (s *Server) OpenCanonicalReadView(
 			cause:   err,
 		}
 	}
-	handle, err := canonicalReadViewHandle(view)
+	handle, err := canonicalReadViewHandle(owner, view)
 	if err != nil {
 		return OpenCanonicalReadViewResponse{}, &ToolError{
 			Code:    toolErrorInternal,
@@ -180,6 +219,7 @@ func (s *Server) OpenCanonicalReadView(
 	}
 	cached := &cachedCanonicalReadView{
 		handle:   handle,
+		owner:    owner,
 		view:     view,
 		topology: topology,
 	}
@@ -193,8 +233,8 @@ func (s *Server) OpenCanonicalReadView(
 
 // FindCanonicalPath reads an already-materialized immutable view without
 // another PostgreSQL round trip.
-func (s *Server) FindCanonicalPath(req FindCanonicalPathRequest) (FindCanonicalPathResponse, error) {
-	cached, err := s.cachedCanonicalReadView(req.Handle)
+func (s *Server) FindCanonicalPath(ctx context.Context, req FindCanonicalPathRequest) (FindCanonicalPathResponse, error) {
+	cached, err := s.cachedCanonicalReadView(ctx, req.Handle)
 	if err != nil {
 		return FindCanonicalPathResponse{}, err
 	}
@@ -221,9 +261,10 @@ func (s *Server) FindCanonicalPath(req FindCanonicalPathRequest) (FindCanonicalP
 // GetCanonicalTopologyDiagnostics reads cached structural diagnostics without
 // another PostgreSQL round trip.
 func (s *Server) GetCanonicalTopologyDiagnostics(
+	ctx context.Context,
 	req GetCanonicalTopologyDiagnosticsRequest,
 ) (GetCanonicalTopologyDiagnosticsResponse, error) {
-	cached, err := s.cachedCanonicalReadView(req.Handle)
+	cached, err := s.cachedCanonicalReadView(ctx, req.Handle)
 	if err != nil {
 		return GetCanonicalTopologyDiagnosticsResponse{}, err
 	}
@@ -235,12 +276,16 @@ func (s *Server) GetCanonicalTopologyDiagnostics(
 	}, nil
 }
 
-func (s *Server) cachedCanonicalReadView(handle string) (*cachedCanonicalReadView, error) {
+func (s *Server) cachedCanonicalReadView(ctx context.Context, handle string) (*cachedCanonicalReadView, error) {
+	owner, err := canonicalReadViewOwner(ctx)
+	if err != nil {
+		return nil, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
+	}
 	handle = strings.TrimSpace(handle)
 	if handle == "" {
 		return nil, &ToolError{Code: toolErrorInvalidRequest, Message: "handle is required"}
 	}
-	cached, ok := s.readViews.get(handle)
+	cached, ok := s.readViews.get(owner, handle)
 	if !ok {
 		return nil, &ToolError{
 			Code:    toolErrorReadViewMissing,
@@ -266,8 +311,12 @@ func canonicalReadViewDescriptor(cached *cachedCanonicalReadView) CanonicalReadV
 	}
 }
 
-func canonicalReadViewHandle(view evidenceingestion.CanonicalReadView) (string, error) {
+func canonicalReadViewHandle(owner string, view evidenceingestion.CanonicalReadView) (string, error) {
+	if owner == "" {
+		return "", errors.New("canonical read view owner is required")
+	}
 	identity := struct {
+		Owner       string                                `json:"owner"`
 		SnapshotID  string                                `json:"snapshot_id"`
 		RootNodeIDs []string                              `json:"root_node_ids"`
 		Relations   []evidencegraph.CanonicalEdgeRelation `json:"relations"`
@@ -276,6 +325,7 @@ func canonicalReadViewHandle(view evidenceingestion.CanonicalReadView) (string, 
 		MaxEdges    int                                   `json:"max_edges"`
 		Truncated   bool                                  `json:"truncated"`
 	}{
+		Owner:       owner,
 		SnapshotID:  view.Artifact.SnapshotID,
 		RootNodeIDs: view.RootNodeIDs,
 		Relations:   view.Relations,

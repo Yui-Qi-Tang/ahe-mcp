@@ -373,7 +373,7 @@ func persistSourceAuthorityTx(ctx context.Context, tx sqlTx, sourceCtx manualSou
 				origin_metadata
 			)
 			VALUES ($1, $2, $3, $4, $5, $6::jsonb)
-			ON CONFLICT (source_snapshot_id) DO NOTHING
+			ON CONFLICT DO NOTHING
 		`,
 		sourceCtx.SourceSnapshot.ID,
 		sourceCtx.SourceSnapshot.SourceSystem,
@@ -386,8 +386,10 @@ func persistSourceAuthorityTx(ctx context.Context, tx sqlTx, sourceCtx manualSou
 		return false, fmt.Errorf("upserting source snapshot: %w", err)
 	}
 	snapshotChanged := tag.RowsAffected() > 0
-	if !snapshotChanged && sourceCtx.SourceSnapshot.SourceSystem == SourceSystemExternalDocument {
-		if err := verifyExternalSourceSnapshotReplay(ctx, tx, sourceCtx.SourceSnapshot); err != nil {
+	if !snapshotChanged {
+		// Either unique key can report a conflict. Read the expected ID in a
+		// fresh statement after any wait; a skipped insert alone is not a replay.
+		if err := verifySourceSnapshotReplay(ctx, tx, sourceCtx.SourceSnapshot); err != nil {
 			return false, err
 		}
 	}
@@ -395,7 +397,7 @@ func persistSourceAuthorityTx(ctx context.Context, tx sqlTx, sourceCtx manualSou
 	return changed, nil
 }
 
-func verifyExternalSourceSnapshotReplay(ctx context.Context, tx sqlTx, expected SourceSnapshot) error {
+func verifySourceSnapshotReplay(ctx context.Context, tx sqlTx, expected SourceSnapshot) error {
 	var sourceSystem, sourceID, sourceVersion, rawContentHash string
 	var originJSON []byte
 	err := tx.queryRow(ctx, `
@@ -403,21 +405,27 @@ func verifyExternalSourceSnapshotReplay(ctx context.Context, tx sqlTx, expected 
 		FROM source_snapshots
 		WHERE source_snapshot_id = $1
 	`, expected.ID).Scan(&sourceSystem, &sourceID, &sourceVersion, &rawContentHash, &originJSON)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return newDomainError(ErrorOccurrenceConflict, "source snapshot natural identity conflicts with a different snapshot ID")
+	}
 	if err != nil {
-		return fmt.Errorf("reading external source snapshot %s: %w", expected.ID, err)
+		return fmt.Errorf("reading source snapshot %s: %w", expected.ID, err)
 	}
 	var origin map[string]string
 	if err := json.Unmarshal(originJSON, &origin); err != nil {
-		return fmt.Errorf("decoding external source snapshot %s origin metadata: %w", expected.ID, err)
+		return fmt.Errorf("decoding source snapshot %s origin metadata: %w", expected.ID, err)
 	}
+	// Manual metadata is first-writer audit context, not snapshot identity.
+	// Same-request changes are still rejected by the intake payload hash.
+	// External source identity additionally requires exact origin metadata.
 	if sourceSystem != expected.SourceSystem ||
 		sourceID != expected.SourceID ||
 		sourceVersion != expected.SourceVersion ||
 		rawContentHash != expected.RawContentHash ||
-		!maps.Equal(origin, expected.OriginMetadata) {
+		(expected.SourceSystem == SourceSystemExternalDocument && !maps.Equal(origin, expected.OriginMetadata)) {
 		return newDomainError(
 			ErrorOccurrenceConflict,
-			"external source %s revision %s already exists with different content or provenance",
+			"source %s revision %s already exists with different content or provenance",
 			expected.SourceID,
 			expected.SourceVersion,
 		)
@@ -572,7 +580,7 @@ func persistAttemptStartWithOptions(ctx context.Context, db sqlDB, attemptCtx at
 		if err != nil {
 			return fmt.Errorf("upserting extractor definition: %w", err)
 		}
-		_, err = tx.exec(ctx, `
+		runInsert, err := tx.exec(ctx, `
 			INSERT INTO extraction_runs (
 				extraction_run_id,
 				extractor_definition_id,
@@ -582,7 +590,7 @@ func persistAttemptStartWithOptions(ctx context.Context, db sqlDB, attemptCtx at
 				producer_session_ref
 			)
 			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (extraction_run_id) DO NOTHING
+			ON CONFLICT DO NOTHING
 		`,
 			attemptCtx.ExtractionRun.ID,
 			attemptCtx.ExtractionRun.ExtractorDefinitionID,
@@ -593,6 +601,31 @@ func persistAttemptStartWithOptions(ctx context.Context, db sqlDB, attemptCtx at
 		)
 		if err != nil {
 			return fmt.Errorf("upserting extraction run: %w", err)
+		}
+		if runInsert.RowsAffected() == 0 {
+			// Use a fresh statement after a conflicting writer commits. The
+			// session reference is first-created audit metadata, not identity.
+			var stored ExtractionRun
+			err := tx.queryRow(ctx, `
+				SELECT extraction_run_id, request_id, extractor_definition_id,
+					COALESCE(source_snapshot_id, ''), COALESCE(extraction_view_id, '')
+				FROM extraction_runs
+				WHERE request_id = $1 AND repository_snapshot_id IS NULL
+			`, attemptCtx.ExtractionRun.RequestID).Scan(
+				&stored.ID, &stored.RequestID, &stored.ExtractorDefinitionID,
+				&stored.SourceSnapshotID, &stored.ExtractionViewID,
+			)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("reading extraction run after conflict: %w", err)
+			}
+			expected := attemptCtx.ExtractionRun
+			if errors.Is(err, pgx.ErrNoRows) || stored.ID != expected.ID ||
+				stored.RequestID != expected.RequestID ||
+				stored.ExtractorDefinitionID != expected.ExtractorDefinitionID ||
+				stored.SourceSnapshotID != expected.SourceSnapshotID ||
+				stored.ExtractionViewID != expected.ExtractionViewID {
+				return newDomainError(ErrorIdempotencyKeyReused, "request_id %s is already bound to different source extraction inputs", expected.RequestID)
+			}
 		}
 		_, err = tx.exec(ctx, `
 			INSERT INTO extraction_attempts (
@@ -1066,6 +1099,7 @@ func persistAttemptFailureRecord(ctx context.Context, db sqlDB, attemptCtx attem
 				failure_metadata = $5::jsonb,
 				completed_at = now()
 			WHERE extraction_attempt_id = $1
+			  AND status = 'started'
 		`,
 			attemptCtx.ExtractionAttempt.ID,
 			outputHashArg,

@@ -290,19 +290,66 @@ func groundedEvidenceBriefSchema() map[string]any {
 	properties := listEvidenceRecordsSchema()["properties"].(map[string]any)
 	properties["query"] = stringSchema("Required information need; Query Core applies the selected deterministic lexical plan. At most 256 characters and 16 terms.")
 	properties["query_mode"] = enumStringSchema(
-		"Optional query plan. Defaults to deterministic_lexical_recovery; exact_lexical preserves the low-level all-term mode.",
+		"Optional query plan. Defaults to deterministic_lexical_recovery; exact_lexical preserves the low-level all-term mode. experimental_han_lexical_recovery_v1 opts into a statement-only Han fallback after zero baseline results. experimental_multisurface_lexical_v1 requires response_schema grounded-evidence-brief-v6 and supplements even partial results using Han bigrams and English lexical overlap across statements and bounded manual identity source text; it does not translate or establish support. practical_multisurface_lexical_v1 requires v7 and adds one single-English-term recovery only after a complete empty first pass, never after errors or excluded sources.",
 		evidenceingestion.EvidenceQueryModeDeterministicLexicalRecovery,
 		evidenceingestion.EvidenceQueryModeExactLexical,
+		evidenceingestion.EvidenceQueryModeExperimentalHanRecoveryV1,
+		evidenceingestion.EvidenceQueryModeExperimentalMultisurfaceV1,
+		evidenceingestion.EvidenceQueryModePracticalMultisurfaceV1,
 	)
 	properties["response_schema"] = enumStringSchema(
-		"Optional response contract. Defaults to grounded-evidence-brief-v2; v3 adds bounded post-retrieval manual source context; v4 adds typed repository context while retaining manual source context; v5 adds compact per-match authority, lifecycle, and source revision without hydrated context.",
+		"Optional response contract. Defaults to grounded-evidence-brief-v2; v3 adds bounded post-retrieval manual source context; v4 adds typed repository context while retaining manual source context; v5 adds compact per-match authority, lifecycle, and source revision without hydrated context; v6 requires query_mode experimental_multisurface_lexical_v1, retains compact record state and separates retrieval_basis source matches from original source_refs; v7 requires practical_multisurface_lexical_v1 and adds explicit practical_recovery metadata without changing evidence or citations.",
 		evidencequerymcp.GroundedEvidenceBriefSchemaV2,
 		evidencequerymcp.GroundedEvidenceBriefSchemaV3,
 		evidencequerymcp.GroundedEvidenceBriefSchemaV4,
 		evidencequerymcp.GroundedEvidenceBriefSchemaV5,
+		evidencequerymcp.GroundedEvidenceBriefSchemaV6,
+		evidencequerymcp.GroundedEvidenceBriefSchemaV7,
 	)
 	schema := objectSchema(properties, []string{"query"})
 	schema["not"] = map[string]any{"required": []string{"source_snapshot_id", "repository_snapshot_id"}}
+	schema["allOf"] = []map[string]any{
+		{
+			"if": map[string]any{
+				"required":   []string{"query_mode"},
+				"properties": map[string]any{"query_mode": map[string]any{"const": evidenceingestion.EvidenceQueryModeExperimentalMultisurfaceV1}},
+			},
+			"then": map[string]any{
+				"required":   []string{"response_schema"},
+				"properties": map[string]any{"response_schema": map[string]any{"const": evidencequerymcp.GroundedEvidenceBriefSchemaV6}},
+			},
+		},
+		{
+			"if": map[string]any{
+				"required":   []string{"response_schema"},
+				"properties": map[string]any{"response_schema": map[string]any{"const": evidencequerymcp.GroundedEvidenceBriefSchemaV6}},
+			},
+			"then": map[string]any{
+				"required":   []string{"query_mode"},
+				"properties": map[string]any{"query_mode": map[string]any{"const": evidenceingestion.EvidenceQueryModeExperimentalMultisurfaceV1}},
+			},
+		},
+		{
+			"if": map[string]any{
+				"required":   []string{"query_mode"},
+				"properties": map[string]any{"query_mode": map[string]any{"const": evidenceingestion.EvidenceQueryModePracticalMultisurfaceV1}},
+			},
+			"then": map[string]any{
+				"required":   []string{"response_schema"},
+				"properties": map[string]any{"response_schema": map[string]any{"const": evidencequerymcp.GroundedEvidenceBriefSchemaV7}},
+			},
+		},
+		{
+			"if": map[string]any{
+				"required":   []string{"response_schema"},
+				"properties": map[string]any{"response_schema": map[string]any{"const": evidencequerymcp.GroundedEvidenceBriefSchemaV7}},
+			},
+			"then": map[string]any{
+				"required":   []string{"query_mode"},
+				"properties": map[string]any{"query_mode": map[string]any{"const": evidenceingestion.EvidenceQueryModePracticalMultisurfaceV1}},
+			},
+		},
+	}
 	return schema
 }
 

@@ -541,8 +541,12 @@ type mockSQLDB struct {
 	canonicalGraphNodes   map[string]CanonicalGraphNode
 	canonicalGraphEdges   map[string]CanonicalGraphEdge
 	canonicalDerivations  map[string]evidencegraph.DerivationRecord
+	derivationOrigins     map[string]string
 	derivationParentEdges map[string]map[string]string
 	admissionDecisions    map[string]mockAdmissionDecision
+	ordinaryManifests     map[string]mockOrdinaryAdmissionManifest
+	ordinaryNodeBindings  map[string][]canonicalAdmissionNodeBinding
+	ordinaryEdgeBindings  map[string][]canonicalAdmissionEdgeBinding
 	supersessionEvents    map[string]struct{}
 	boundedViewPreflights int
 	sourceViewLoads       int
@@ -619,6 +623,15 @@ type mockAdmissionDecision struct {
 	canonicalEdgeIDs   []string
 	decisionBy         string
 	decisionReason     string
+	reviewContract     string
+}
+
+type mockOrdinaryAdmissionManifest struct {
+	proposalID      string
+	contractVersion string
+	mutationKind    string
+	canonicalRef    string
+	outcome         string
 }
 
 func newMockSQLDB() *mockSQLDB {
@@ -639,8 +652,12 @@ func newMockSQLDB() *mockSQLDB {
 		canonicalGraphNodes:   map[string]CanonicalGraphNode{},
 		canonicalGraphEdges:   map[string]CanonicalGraphEdge{},
 		canonicalDerivations:  map[string]evidencegraph.DerivationRecord{},
+		derivationOrigins:     map[string]string{},
 		derivationParentEdges: map[string]map[string]string{},
 		admissionDecisions:    map[string]mockAdmissionDecision{},
+		ordinaryManifests:     map[string]mockOrdinaryAdmissionManifest{},
+		ordinaryNodeBindings:  map[string][]canonicalAdmissionNodeBinding{},
+		ordinaryEdgeBindings:  map[string][]canonicalAdmissionEdgeBinding{},
 		supersessionEvents:    map[string]struct{}{},
 	}
 }
@@ -689,6 +706,39 @@ func (r mockExecResult) RowsAffected() int64 {
 
 func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 	switch {
+	case strings.Contains(query, "INSERT INTO canonical_ordinary_admission_manifests"):
+		decisionID := args[0].(string)
+		if _, exists := db.ordinaryManifests[decisionID]; exists {
+			return nil, fmt.Errorf("duplicate ordinary admission manifest %s", decisionID)
+		}
+		db.ordinaryManifests[decisionID] = mockOrdinaryAdmissionManifest{
+			proposalID:      args[1].(string),
+			contractVersion: args[2].(string),
+			mutationKind:    args[3].(string),
+			canonicalRef:    args[4].(string),
+			outcome:         args[5].(string),
+		}
+		return mockExecResult(1), nil
+	case strings.Contains(query, "INSERT INTO canonical_ordinary_admission_node_bindings"):
+		decisionID := args[0].(string)
+		binding := canonicalAdmissionNodeBinding{
+			Role:            args[1].(string),
+			Position:        args[2].(int),
+			NodeID:          args[3].(string),
+			Materialization: canonicalRowMaterialization(args[4].(string)),
+		}
+		db.ordinaryNodeBindings[decisionID] = append(db.ordinaryNodeBindings[decisionID], binding)
+		return mockExecResult(1), nil
+	case strings.Contains(query, "INSERT INTO canonical_ordinary_admission_edge_bindings"):
+		decisionID := args[0].(string)
+		binding := canonicalAdmissionEdgeBinding{
+			Role:            args[1].(string),
+			Position:        args[2].(int),
+			EdgeID:          args[3].(string),
+			Materialization: canonicalRowMaterialization(args[4].(string)),
+		}
+		db.ordinaryEdgeBindings[decisionID] = append(db.ordinaryEdgeBindings[decisionID], binding)
+		return mockExecResult(1), nil
 	case strings.Contains(query, "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"):
 		return mockExecResult(0), nil
 	case strings.Contains(query, "pg_advisory_xact_lock"):
@@ -782,6 +832,11 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 		if _, ok := db.extractionRuns[id]; ok {
 			return mockExecResult(0), nil
 		}
+		for _, run := range db.extractionRuns {
+			if run.requestID == args[4].(string) {
+				return mockExecResult(0), nil
+			}
+		}
 		db.extractionRuns[id] = mockExtractionRun{
 			extractorDefinitionID: args[1].(string),
 			sourceSnapshotID:      args[2].(string),
@@ -814,7 +869,10 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 		return mockExecResult(1), nil
 	case strings.Contains(query, "UPDATE extraction_attempts") && strings.Contains(query, "status = 'failed'"):
 		id := args[0].(string)
-		attempt := db.extractionAttempts[id]
+		attempt, ok := db.extractionAttempts[id]
+		if !ok || attempt.status != attemptStatusStarted {
+			return mockExecResult(0), nil
+		}
 		attempt.status = attemptStatusFailed
 		if args[1] != nil {
 			attempt.outputHash = args[1].(string)
@@ -902,6 +960,11 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 		if _, ok := db.canonicalGraphEdges[id]; ok {
 			return mockExecResult(0), nil
 		}
+		for _, edge := range db.canonicalGraphEdges {
+			if edge.From == args[1].(string) && edge.To == args[2].(string) && string(edge.Relation) == args[3].(string) {
+				return mockExecResult(0), nil
+			}
+		}
 		var provenance evidencegraph.ProvenanceRecord
 		if err := json.Unmarshal([]byte(args[4].(string)), &provenance); err != nil {
 			return nil, fmt.Errorf("decode canonical edge provenance: %w", err)
@@ -945,6 +1008,7 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 			TraceRef:      args[4].(string),
 			ProvenanceRef: args[5].(string),
 		}
+		db.derivationOrigins[derivationID] = args[6].(string)
 		return mockExecResult(1), nil
 	case strings.Contains(query, "INSERT INTO admission_decisions"):
 		id := args[0].(string)
@@ -963,6 +1027,10 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 		if args[3] != nil {
 			canonicalRef = args[3].(string)
 		}
+		var reviewContract string
+		if args[8] != nil {
+			reviewContract = args[8].(string)
+		}
 		db.admissionDecisions[id] = mockAdmissionDecision{
 			proposalOccurrence: args[1].(string),
 			outcome:            args[2].(string),
@@ -971,6 +1039,7 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 			canonicalEdgeIDs:   edgeIDs,
 			decisionBy:         args[6].(string),
 			decisionReason:     args[7].(string),
+			reviewContract:     reviewContract,
 		}
 		return mockExecResult(1), nil
 	case strings.Contains(query, "UPDATE proposal_occurrences") && strings.Contains(query, "admission_outcome = $2"):
@@ -1000,6 +1069,96 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 
 func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sqlRows, error) {
 	switch {
+	case strings.Contains(query, "FROM canonical_graph_edges") && strings.Contains(query, "WHERE canonical_edge_id = $1"):
+		edgeID := args[0].(string)
+		from := args[1].(string)
+		to := args[2].(string)
+		relation := args[3].(string)
+		var edges []CanonicalGraphEdge
+		for _, edge := range db.canonicalGraphEdges {
+			if edge.ID == edgeID ||
+				(edge.From == from && edge.To == to && string(edge.Relation) == relation) {
+				edges = append(edges, edge)
+			}
+		}
+		sort.Slice(edges, func(i, j int) bool { return edges[i].ID < edges[j].ID })
+		rows := make([]mockRow, 0, len(edges))
+		for _, edge := range edges {
+			provenance, err := jsonBytes(edge.Provenance)
+			if err != nil {
+				return nil, err
+			}
+			rows = append(rows, mockRow{values: []any{
+				edge.ID,
+				edge.From,
+				edge.To,
+				string(edge.Relation),
+				provenance,
+				edge.OriginProposalOccurrenceID,
+			}})
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+	case strings.Contains(query, "FROM canonical_ordinary_admission_node_bindings"):
+		bindings := append([]canonicalAdmissionNodeBinding(nil), db.ordinaryNodeBindings[args[0].(string)]...)
+		sort.Slice(bindings, func(i, j int) bool {
+			if bindings[i].Role != bindings[j].Role {
+				return bindings[i].Role == canonicalAdmissionRoleCanonicalRef
+			}
+			return bindings[i].Position < bindings[j].Position
+		})
+		rows := make([]mockRow, 0, len(bindings))
+		for _, binding := range bindings {
+			rows = append(rows, mockRow{values: []any{
+				binding.Position,
+				binding.Role,
+				binding.NodeID,
+				string(binding.Materialization),
+			}})
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+	case strings.Contains(query, "FROM canonical_ordinary_admission_edge_bindings"):
+		bindings := append([]canonicalAdmissionEdgeBinding(nil), db.ordinaryEdgeBindings[args[0].(string)]...)
+		sort.Slice(bindings, func(i, j int) bool { return bindings[i].Position < bindings[j].Position })
+		rows := make([]mockRow, 0, len(bindings))
+		for _, binding := range bindings {
+			rows = append(rows, mockRow{values: []any{
+				binding.Position,
+				binding.Role,
+				binding.EdgeID,
+				string(binding.Materialization),
+			}})
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+	case strings.Contains(query, "SELECT canonical_node_id") &&
+		strings.Contains(query, "WHERE origin_proposal_occurrence_id = $1"):
+		proposalID := args[0].(string)
+		var ids []string
+		for _, node := range db.canonicalGraphNodes {
+			if node.OriginProposalOccurrenceID == proposalID {
+				ids = append(ids, node.ID)
+			}
+		}
+		sort.Strings(ids)
+		rows := make([]mockRow, 0, len(ids))
+		for _, id := range ids {
+			rows = append(rows, mockRow{values: []any{id}})
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+	case strings.Contains(query, "SELECT canonical_edge_id") &&
+		strings.Contains(query, "WHERE origin_proposal_occurrence_id = $1"):
+		proposalID := args[0].(string)
+		var ids []string
+		for _, edge := range db.canonicalGraphEdges {
+			if edge.OriginProposalOccurrenceID == proposalID {
+				ids = append(ids, edge.ID)
+			}
+		}
+		sort.Strings(ids)
+		rows := make([]mockRow, 0, len(ids))
+		for _, id := range ids {
+			rows = append(rows, mockRow{values: []any{id}})
+		}
+		return &mockRows{rows: rows, index: -1}, nil
 	case strings.Contains(query, "FROM canonical_derivations d"):
 		selectedValues := args[0].([]string)
 		selected := make(map[string]struct{}, len(selectedValues))
@@ -1041,7 +1200,7 @@ func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sql
 		sort.Strings(parents)
 		rows := make([]mockRow, 0, len(parents))
 		for _, parentID := range parents {
-			rows = append(rows, mockRow{values: []any{parentID}})
+			rows = append(rows, mockRow{values: []any{parentID, db.derivationParentEdges[derivationID][parentID]}})
 		}
 		return &mockRows{rows: rows, index: -1}, nil
 	case strings.Contains(query, "FROM canonical_graph_edges") && strings.Contains(query, "ANY($1::text[])"):
@@ -1206,16 +1365,124 @@ func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sql
 
 func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) sqlRow {
 	switch {
+	case strings.Contains(query, "canonical-node-exact-semantic-row"):
+		node, exists := db.canonicalGraphNodes[args[0].(string)]
+		if !exists {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		payload, payloadErr := jsonBytes(node.Payload)
+		provenance, provenanceErr := jsonBytes(node.Provenance)
+		temporal, temporalErr := jsonBytes(node.Temporal)
+		integrity, integrityErr := jsonBytes(node.Integrity)
+		for _, err := range []error{payloadErr, provenanceErr, temporalErr, integrityErr} {
+			if err != nil {
+				return mockRow{err: err}
+			}
+		}
+		matches := string(node.Kind) == args[1].(string) &&
+			mockJSONEqual(payload, []byte(args[2].(string))) &&
+			mockJSONEqual(provenance, []byte(args[3].(string))) &&
+			mockJSONEqual(temporal, []byte(args[4].(string))) &&
+			mockJSONEqual(integrity, []byte(args[5].(string)))
+		return mockRow{values: []any{matches, node.OriginProposalOccurrenceID}}
+	case strings.Contains(query, "canonical-edge-exact-semantic-row"):
+		edge, exists := db.canonicalGraphEdges[args[0].(string)]
+		if !exists {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		provenance, err := jsonBytes(edge.Provenance)
+		if err != nil {
+			return mockRow{err: err}
+		}
+		matches := edge.From == args[1].(string) &&
+			edge.To == args[2].(string) &&
+			string(edge.Relation) == args[3].(string) &&
+			edge.OriginContradictionProposalID == "" &&
+			mockJSONEqual(provenance, []byte(args[4].(string)))
+		return mockRow{values: []any{matches, edge.OriginProposalOccurrenceID}}
+	case strings.Contains(query, "canonical-node-first-materializer-authority"):
+		nodeID := args[0].(string)
+		originProposalID := args[1].(string)
+		var count int64
+		for decisionID, manifest := range db.ordinaryManifests {
+			decision, decisionExists := db.admissionDecisions[decisionID]
+			proposal, proposalExists := db.proposalOccurrences[manifest.proposalID]
+			if !decisionExists || !proposalExists ||
+				manifest.proposalID != originProposalID ||
+				decision.proposalOccurrence != manifest.proposalID ||
+				decision.outcome != admissionOutcomeAdmitted ||
+				proposal.AdmissionOutcome != decision.outcome ||
+				proposal.CanonicalRef != decision.canonicalRef {
+				continue
+			}
+			for _, binding := range db.ordinaryNodeBindings[decisionID] {
+				if binding.NodeID == nodeID && binding.Materialization == canonicalRowMaterialized {
+					count++
+				}
+			}
+		}
+		return mockRow{values: []any{count}}
+	case strings.Contains(query, "canonical-edge-first-materializer-authority"):
+		edgeID := args[0].(string)
+		originProposalID := args[1].(string)
+		var count int64
+		for decisionID, manifest := range db.ordinaryManifests {
+			decision, decisionExists := db.admissionDecisions[decisionID]
+			proposal, proposalExists := db.proposalOccurrences[manifest.proposalID]
+			if !decisionExists || !proposalExists ||
+				manifest.proposalID != originProposalID ||
+				decision.proposalOccurrence != manifest.proposalID ||
+				decision.outcome != admissionOutcomeAdmitted ||
+				proposal.AdmissionOutcome != decision.outcome ||
+				proposal.CanonicalRef != decision.canonicalRef {
+				continue
+			}
+			for _, binding := range db.ordinaryEdgeBindings[decisionID] {
+				if binding.EdgeID == edgeID && binding.Materialization == canonicalRowMaterialized {
+					count++
+				}
+			}
+		}
+		return mockRow{values: []any{count}}
+	case strings.Contains(query, "FROM canonical_ordinary_admission_manifests"):
+		manifest, exists := db.ordinaryManifests[args[0].(string)]
+		if !exists {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		return mockRow{values: []any{
+			manifest.contractVersion,
+			manifest.mutationKind,
+			manifest.proposalID,
+			manifest.canonicalRef,
+			manifest.outcome,
+		}}
+	case strings.Contains(query, "SELECT proposal_occurrence_id") && strings.Contains(query, "FROM proposal_occurrences") && strings.Contains(query, "FOR UPDATE"):
+		id := args[0].(string)
+		if _, ok := db.proposalOccurrences[id]; !ok {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		return mockRow{values: []any{id}}
+	case strings.Contains(query, "SELECT EXISTS") && strings.Contains(query, "canonical_source_claim_review_bindings"):
+		return mockRow{values: []any{false}}
+	case strings.Contains(query, "SELECT EXISTS") && strings.Contains(query, "source_claim_disposition_review_bindings"):
+		return mockRow{values: []any{false}}
+	case strings.Contains(query, "FROM extraction_runs") && strings.Contains(query, "WHERE request_id = $1"):
+		for id, run := range db.extractionRuns {
+			if run.requestID == args[0].(string) {
+				return mockRow{values: []any{id, run.requestID, run.extractorDefinitionID, run.sourceSnapshotID, run.extractionViewID}}
+			}
+		}
+		return mockRow{err: pgx.ErrNoRows}
 	case strings.Contains(query, "SELECT EXISTS") && strings.Contains(query, "canonical_supersession_admission_events"):
 		_, found := db.supersessionEvents[args[0].(string)]
 		return mockRow{values: []any{found}}
 	case strings.Contains(query, "WITH RECURSIVE descendants"):
 		return mockRow{err: pgx.ErrNoRows}
-	case strings.Contains(query, "SELECT derivation_id") && strings.Contains(query, "FROM canonical_derivations"):
+	case strings.Contains(query, "FROM canonical_derivations") && strings.Contains(query, "WHERE node_id = $1"):
 		nodeID := args[0].(string)
 		for _, derivation := range db.canonicalDerivations {
 			if derivation.NodeID == nodeID {
-				return mockRow{values: []any{derivation.ID}}
+				return mockRow{values: []any{derivation.ID, derivation.NodeID, derivation.Method, derivation.Producer, derivation.TraceRef, derivation.ProvenanceRef, db.derivationOrigins[derivation.ID]}}
 			}
 		}
 		return mockRow{err: pgx.ErrNoRows}
@@ -1449,12 +1716,24 @@ func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) s
 				edgeIDs,
 				decision.decisionBy,
 				decision.decisionReason,
+				decision.reviewContract,
 			}}
 		}
 		return mockRow{err: pgx.ErrNoRows}
 	default:
 		return mockRow{err: fmt.Errorf("unsupported mock query row: %s", compactSQL(query))}
 	}
+}
+
+func mockJSONEqual(first, second []byte) bool {
+	var firstValue, secondValue any
+	if err := json.Unmarshal(first, &firstValue); err != nil {
+		return false
+	}
+	if err := json.Unmarshal(second, &secondValue); err != nil {
+		return false
+	}
+	return reflect.DeepEqual(firstValue, secondValue)
 }
 
 func mockProposalQueryValues(db *mockSQLDB, occurrence ProposalOccurrence) ([]any, error) {

@@ -69,7 +69,7 @@ func TestIntegrationDerivedAdmissionRoundTripsThroughPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatalf("IngestManualText(derived) error = %v", err)
 	}
-	derived, err := AdmitPendingProposal(ctx, pool, AdmissionInput{
+	admissionInput := AdmissionInput{
 		ProposalOccurrenceID: derivedIngest.ProposalOccurrenceID,
 		DecisionBy:           "integration-test",
 		DecisionReason:       "persist exact AND derivation parents",
@@ -79,7 +79,8 @@ func TestIntegrationDerivedAdmissionRoundTripsThroughPostgres(t *testing.T) {
 			Producer:      "integration-test",
 			TraceRef:      "trace:postgres-derived-admission",
 		},
-	})
+	}
+	derived, err := AdmitPendingProposal(ctx, pool, admissionInput)
 	if err != nil {
 		t.Fatalf("AdmitPendingProposal(derived) error = %v", err)
 	}
@@ -106,7 +107,7 @@ func TestIntegrationDerivedAdmissionRoundTripsThroughPostgres(t *testing.T) {
 		t.Fatalf("persisted derivation parents = %v, want %v", view.Artifact.Derivations[0].Parents, wantParents)
 	}
 
-	replay, err := AdmitPendingProposal(ctx, pool, AdmissionInput{ProposalOccurrenceID: derivedIngest.ProposalOccurrenceID})
+	replay, err := AdmitPendingProposal(ctx, pool, admissionInput)
 	if err != nil {
 		t.Fatalf("replay AdmitPendingProposal(derived) error = %v", err)
 	}
