@@ -1,0 +1,18 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "AHE Detective",
+  "outputfilename": "AHE Detective",
+  "frontend:dir": "../../frontend",
+  "frontend:install": "npm ci --ignore-scripts",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "wailsjsdir": "../../frontend/wailsjs",
+  "build:dir": "../../build",
+  "info": {
+    "companyName": "AHE",
+    "productName": "AHE Detective",
+    "productVersion": "0.1.0",
+    "comments": "Local desktop preview; explicit pending intake and governed human review through AHE MCP"
+  }
+}

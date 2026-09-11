@@ -23,7 +23,7 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencequerymcp"
 )
 
-// This witness builds the separately selected Detective checkout instead of
+// This witness builds Detective from the explicitly selected shared checkout instead of
 // importing its internal packages or replacing its CLI with a test helper.
 // Only synthetic local text and an in-process HTTP model fixture are used.
 // The shared fixture provisions a reviewer identity, but this test never starts
@@ -167,16 +167,9 @@ func detectivePendingSourceRoot(t *testing.T) string {
 	if root == "" {
 		t.Skip("AHE_DETECTIVE_SOURCE_ROOT is not set")
 	}
-	if !filepath.IsAbs(root) || filepath.Clean(root) != root {
-		t.Fatal("AHE_DETECTIVE_SOURCE_ROOT must be an explicit clean absolute checkout path")
-	}
-	module, err := os.ReadFile(filepath.Join(root, "go.mod"))
-	if err != nil || !strings.HasPrefix(string(module), "module yuki.tang/agents/detective\n") {
-		t.Fatal("selected Detective checkout does not contain its expected Go module")
-	}
-	info, err := os.Stat(filepath.Join(root, "cmd", "detective", "main.go"))
-	if err != nil || !info.Mode().IsRegular() {
-		t.Fatal("selected Detective checkout has no regular CLI source")
+	root, err := detectiveSharedSourceRoot(root)
+	if err != nil {
+		t.Fatal(err)
 	}
 	return root
 }
@@ -184,7 +177,7 @@ func detectivePendingSourceRoot(t *testing.T) string {
 func buildDetectivePendingCommand(t *testing.T, ctx context.Context, root, directory string) string {
 	t.Helper()
 	binary := filepath.Join(directory, "detective")
-	build := exec.CommandContext(ctx, "go", "build", "-o", binary, "./cmd/detective")
+	build := exec.CommandContext(ctx, "go", "build", "-mod=readonly", "-o", binary, "./apps/detective/cmd/detective")
 	build.Dir = root
 	// As with the native command fixture, GOFLAGS=-race covers this real child.
 	if output, err := build.CombinedOutput(); err != nil {

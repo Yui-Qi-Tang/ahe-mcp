@@ -1,0 +1,15 @@
+.brief-workspace { padding: 24px; }
+.topbar { min-height: 64px; height: auto; flex-wrap: wrap; gap: 10px; padding-top: 10px; padding-bottom: 10px; }
+.topbar-actions { flex-wrap: wrap; justify-content: flex-end; }
+.brief-comparison { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.brief-section { min-width: 0; padding: 20px; margin-bottom: 20px; }
+.brief-section h2 { margin-top: 24px; font-size: 18px; }
+.brief-section h2:first-child { margin-top: 0; }
+.brief-section .code { max-height: 460px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; -webkit-user-select: text; }
+.brief-section label { display: block; margin: 12px 0; }
+.brief-section textarea, .brief-section input[type="number"] { display: block; width: 100%; margin-top: 6px; }
+.brief-source-lines { padding-left: 3em; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.brief-source-lines li { padding: 3px 0 3px 8px; }
+.brief-actions, .brief-outcomes { display: flex; flex-wrap: wrap; gap: 12px; }
+.brief-outcomes input { margin-right: 6px; }
+@media (max-width: 1100px) { .brief-comparison { grid-template-columns: minmax(0, 1fr); } }
