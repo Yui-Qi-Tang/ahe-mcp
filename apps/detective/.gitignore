@@ -1,0 +1,12 @@
+/build/*
+!/build/darwin/
+/build/darwin/*
+!/build/darwin/Info.plist
+/frontend/node_modules/
+/frontend/dist/
+/frontend/wailsjs/
+/frontend/package.json.md5
+/.desktop-state/
+/.desktop-cache/
+/detective-desktop
+/.DS_Store

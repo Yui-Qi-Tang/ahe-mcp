@@ -1,0 +1,10 @@
+{
+  "version": "detective-brief-source/v1",
+  "source_id": "synthetic-observatory-audit-control",
+  "source_revision": "fixture-v1",
+  "source_url": "https://example.invalid/synthetic-observatory-audit-control",
+  "observed_at": "2026-09-11T00:00:00Z",
+  "coverage": "full_document",
+  "limitations": [],
+  "body": "The synthetic observatory reported a preliminary magnitude 4.2 earthquake near Sample Island.\nThe location and depth remain under review. This bulletin does not report damage or casualties."
+}

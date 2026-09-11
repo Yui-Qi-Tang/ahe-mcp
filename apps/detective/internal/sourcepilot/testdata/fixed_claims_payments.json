@@ -1,0 +1,19 @@
+{
+  "version": "detective-fixed-claims/v1",
+  "source": {
+    "version": "detective-summary-source/v1",
+    "source_id": "synthetic-payments-readable-review",
+    "source_revision": "fixture-v1",
+    "source_url": "https://example.invalid/synthetic-payments",
+    "observed_at": "2026-09-10T09:00:00Z",
+    "summary_origin": "synthetic author-provided summary; not publisher data",
+    "coverage": "full_document",
+    "limitations": [],
+    "summary": "Payment API and Refund API recovered at 14:20 UTC.",
+    "body": "Payment API reported elevated errors at 14:00 UTC.\nThe team reverted a deployment at 14:12 UTC.\nPayment API returned to its normal success rate at 14:20 UTC.\nRefund API still has delayed requests at 14:20 UTC.\nThe cause remains unconfirmed."
+  },
+  "claims": [
+    "Payment API 已在 14:20 UTC 恢復。",
+    "Refund API 已在 14:20 UTC 恢復。"
+  ]
+}

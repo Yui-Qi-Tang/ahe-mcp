@@ -1,5 +1,10 @@
 GO ?= go
 BIN_DIR ?= bin
+DETECTIVE_DIR := apps/detective
+WAILS_VERSION := v2.15.0
+DARWIN_CGO_FLAGS := -mmacosx-version-min=13.0
+DETECTIVE_COMMANDS := detective detective-source-demo detective-news-source
+DETECTIVE_BINARIES := $(addprefix $(BIN_DIR)/,$(DETECTIVE_COMMANDS))
 
 CORE_COMMANDS := \
 	ahe-migrate \
@@ -17,21 +22,46 @@ CORE_BINARIES := $(addprefix $(BIN_DIR)/,$(CORE_COMMANDS))
 ADAPTER_BINARIES := $(addprefix $(BIN_DIR)/,$(ADAPTER_COMMANDS))
 ALL_BINARIES := $(CORE_BINARIES) $(ADAPTER_BINARIES)
 
-.PHONY: build adapters build-all test verify force
+.PHONY: build adapters build-all detective frontend test verify desktop desktop-test desktop-startup-test desktop-dev desktop-trial force
 
 build: $(CORE_BINARIES)
 
 adapters: $(ADAPTER_BINARIES)
 
-build-all: $(ALL_BINARIES)
+build-all: $(ALL_BINARIES) detective
 
-test:
-	$(GO) test -count=1 ./...
+detective: $(DETECTIVE_BINARIES)
 
-verify:
-	$(GO) test -count=1 ./...
-	$(GO) build ./...
-	$(GO) vet ./...
+# Clean checkouts need the real frontend assets before Go loads its embed.
+frontend:
+	npm --prefix $(DETECTIVE_DIR)/frontend ci --ignore-scripts
+	npm --prefix $(DETECTIVE_DIR)/frontend run build
+
+test: frontend
+	$(GO) test -mod=readonly -count=1 ./...
+
+verify: frontend
+	npm --prefix $(DETECTIVE_DIR)/frontend test
+	$(GO) test -mod=readonly -count=1 ./...
+	$(GO) build -mod=readonly ./...
+	$(GO) vet -mod=readonly ./...
+
+desktop:
+	cd $(DETECTIVE_DIR)/cmd/detective-desktop && CGO_CFLAGS='$(DARWIN_CGO_FLAGS)' CGO_LDFLAGS='$(DARWIN_CGO_FLAGS)' $(GO) run github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION) build -platform darwin/arm64 -skipbindings -nosyncgomod -m
+	$(GO) build -mod=readonly -o '$(DETECTIVE_DIR)/build/bin/detective-source-demo' ./$(DETECTIVE_DIR)/cmd/detective-source-demo
+	install -m 0700 $(DETECTIVE_DIR)/scripts/preview/Start.command '$(DETECTIVE_DIR)/build/bin/Start.command'
+
+desktop-trial: desktop
+	/bin/sh $(DETECTIVE_DIR)/scripts/desktop-trial.sh
+
+desktop-startup-test: desktop
+	DETECTIVE_DESKTOP_TEST_BINARY='$(CURDIR)/$(DETECTIVE_DIR)/build/bin/AHE Detective.app/Contents/MacOS/AHE Detective' $(GO) test -mod=readonly -count=1 -run '^TestNativeDesktopStartup$$' -v ./$(DETECTIVE_DIR)/cmd/detective-desktop
+
+desktop-test: verify
+	$(GO) test -mod=readonly -race -count=1 ./...
+
+desktop-dev:
+	cd $(DETECTIVE_DIR)/cmd/detective-desktop && CGO_CFLAGS='$(DARWIN_CGO_FLAGS)' CGO_LDFLAGS='$(DARWIN_CGO_FLAGS)' $(GO) run github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION) dev
 
 force:
 
@@ -39,5 +69,9 @@ $(BIN_DIR):
 	mkdir -p "$@"
 
 $(ALL_BINARIES): force | $(BIN_DIR)
-	$(GO) build -trimpath -o "$@" "./cmd/$(notdir $@)"
+	$(GO) build -mod=readonly -trimpath -o "$@" "./cmd/$(notdir $@)"
+	chmod 0700 "$@"
+
+$(DETECTIVE_BINARIES): force | $(BIN_DIR)
+	$(GO) build -mod=readonly -trimpath -o "$@" "./$(DETECTIVE_DIR)/cmd/$(notdir $@)"
 	chmod 0700 "$@"

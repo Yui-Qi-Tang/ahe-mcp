@@ -1,0 +1,10 @@
+{
+  "version": "detective-brief-source/v1",
+  "source_id": "synthetic-orion-reject-control",
+  "source_revision": "fixture-v1",
+  "source_url": "https://example.invalid/synthetic-orion-reject-control",
+  "observed_at": "2026-09-11T00:00:00Z",
+  "coverage": "full_document",
+  "limitations": [],
+  "body": "Orion Search is experiencing degraded performance. Other Orion services are not affected.\nThe team is investigating; no recovery has been reported.\nView history. Notification preferences. Contact support."
+}
