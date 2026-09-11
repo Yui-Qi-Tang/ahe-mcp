@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Synthetic NASA news-release fixture; not a real NASA statement</title>
+    <link>https://www.nasa.gov/news-release/</link>
+    <item>
+      <title>Synthetic mission briefing scheduled</title>
+      <description><![CDATA[<p>Synthetic NASA feed summary; no actual mission or event is asserted.</p>]]></description>
+      <link>https://www.nasa.gov/news-release/synthetic-mission-briefing/</link>
+      <pubDate>Thu, 10 Sep 2026 02:00:00 +0000</pubDate>
+      <content:encoded><![CDATA[Ignored extended content must not enter the item description.]]></content:encoded>
+    </item>
+    <item>
+      <title>Second synthetic release</title>
+      <description>Original summary &amp; retained source boundary.</description>
+      <link>https://www.nasa.gov/news-release/synthetic-second-release/</link>
+    </item>
+  </channel>
+</rss>
