@@ -310,16 +310,17 @@ type authorityProcessResponse struct {
 }
 
 type authorityProcess struct {
-	ctx         context.Context
-	input       *json.Encoder
-	stdin       io.WriteCloser
-	responses   <-chan []byte
-	processDone chan struct{}
-	scannerDone chan struct{}
-	waitErr     error // Read only after processDone closes.
-	scanErr     error // Read only after scannerDone closes.
-	raceOutput  *authorityRaceOutput
-	nextID      int
+	ctx             context.Context
+	input           *json.Encoder
+	stdin           io.WriteCloser
+	responses       <-chan []byte
+	processDone     chan struct{}
+	scannerDone     chan struct{}
+	waitErr         error // Read only after processDone closes.
+	scanErr         error // Read only after scannerDone closes.
+	raceOutput      *authorityRaceOutput
+	nextID          int
+	lastToolContent json.RawMessage // Latest bounded structured tool response for exact wire-level regression checks.
 }
 
 // authorityRaceOutput retains only a bounded pattern-matcher state, never
@@ -528,6 +529,7 @@ func authorityProcessTool[T any](t *testing.T, process *authorityProcess, tool s
 	if response.Error != nil || json.Unmarshal(response.Result, &envelope) != nil || envelope.IsError {
 		t.Fatalf("authority tool %s failed (payload intentionally suppressed)", tool)
 	}
+	process.lastToolContent = slices.Clone(envelope.StructuredContent)
 	var result T
 	if err := json.Unmarshal(envelope.StructuredContent, &result); err != nil {
 		t.Fatalf("authority tool %s returned an invalid typed result", tool)

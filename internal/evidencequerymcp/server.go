@@ -68,6 +68,10 @@ const (
 	GroundedEvidenceBriefSchemaV4 = "grounded-evidence-brief-v4"
 	// GroundedEvidenceBriefSchemaV5 adds compact per-match authority and source state.
 	GroundedEvidenceBriefSchemaV5 = "grounded-evidence-brief-v5"
+	// GroundedEvidenceBriefSchemaV6 pairs explicit multisurface search with retrieval provenance.
+	GroundedEvidenceBriefSchemaV6 = "grounded-evidence-brief-v6"
+	// GroundedEvidenceBriefSchemaV7 exposes the practical empty-result recovery boundary.
+	GroundedEvidenceBriefSchemaV7 = "grounded-evidence-brief-v7"
 
 	groundedEvidenceBriefSchemaV2 = GroundedEvidenceBriefSchemaV2
 
@@ -203,25 +207,27 @@ type GroundedEvidenceQueryAttempt struct {
 
 // GroundedEvidenceQueryExecution is the authoritative bounded query trace.
 type GroundedEvidenceQueryExecution struct {
-	OriginalQuery                 string                         `json:"original_query"`
-	QueryMode                     string                         `json:"query_mode"`
-	PlanVersion                   string                         `json:"plan_version"`
-	NormalizerVersion             string                         `json:"normalizer_version"`
-	SearchSurface                 string                         `json:"search_surface"`
-	SearchedFields                []string                       `json:"searched_fields"`
-	SearchedRecordKinds           []string                       `json:"searched_record_kinds"`
-	EligibleSourceBindingKinds    []string                       `json:"eligible_source_binding_kinds"`
-	Filters                       GroundedEvidenceQueryFilters   `json:"filters"`
-	Limit                         int                            `json:"limit"`
-	QueryCount                    int                            `json:"query_count"`
-	CandidateCount                int                            `json:"candidate_count"`
-	Truncated                     bool                           `json:"truncated"`
-	SearchCompleteWithinSurface   bool                           `json:"search_complete_within_surface"`
-	CompletionReason              string                         `json:"completion_reason"`
-	GlobalAbsenceInferenceAllowed bool                           `json:"global_absence_inference_allowed"`
-	Attempts                      []GroundedEvidenceQueryAttempt `json:"attempts"`
-	FallbackStatus                string                         `json:"fallback_status,omitempty"`
-	RankingPolicy                 string                         `json:"ranking_policy,omitempty"`
+	OriginalQuery                 string                                 `json:"original_query"`
+	QueryMode                     string                                 `json:"query_mode"`
+	PlanVersion                   string                                 `json:"plan_version"`
+	NormalizerVersion             string                                 `json:"normalizer_version"`
+	SearchSurface                 string                                 `json:"search_surface"`
+	SearchedFields                []string                               `json:"searched_fields"`
+	SearchedRecordKinds           []string                               `json:"searched_record_kinds"`
+	EligibleSourceBindingKinds    []string                               `json:"eligible_source_binding_kinds"`
+	Filters                       GroundedEvidenceQueryFilters           `json:"filters"`
+	Limit                         int                                    `json:"limit"`
+	QueryCount                    int                                    `json:"query_count"`
+	CandidateCount                int                                    `json:"candidate_count"`
+	Truncated                     bool                                   `json:"truncated"`
+	SearchCompleteWithinSurface   bool                                   `json:"search_complete_within_surface"`
+	CompletionReason              string                                 `json:"completion_reason"`
+	GlobalAbsenceInferenceAllowed bool                                   `json:"global_absence_inference_allowed"`
+	Attempts                      []GroundedEvidenceQueryAttempt         `json:"attempts"`
+	FallbackStatus                string                                 `json:"fallback_status,omitempty"`
+	RankingPolicy                 string                                 `json:"ranking_policy,omitempty"`
+	Multisurface                  *GroundedEvidenceMultisurfaceExecution `json:"multisurface,omitempty"`
+	PracticalRecovery             *GroundedEvidencePracticalRecovery     `json:"practical_recovery,omitempty"`
 }
 
 // GroundedEvidenceBriefMatch preserves exact statement and provenance references.
@@ -240,6 +246,7 @@ type GroundedEvidenceBriefMatch struct {
 	RelationRef       *RecordRef                                           `json:"relation_ref,omitempty"`
 	SymbolRefs        []RecordRef                                          `json:"symbol_refs,omitempty"`
 	RecordState       *GroundedEvidenceBriefRecordState                    `json:"record_state,omitempty"`
+	RetrievalBasis    *GroundedEvidenceRetrievalBasis                      `json:"retrieval_basis,omitempty"`
 }
 
 // GroundedEvidenceBriefRecordState is a compact deterministic projection of
@@ -894,16 +901,20 @@ func (s *Server) GetGroundedEvidenceBrief(ctx context.Context, req GetGroundedEv
 	case GroundedEvidenceBriefSchemaV2,
 		GroundedEvidenceBriefSchemaV3,
 		GroundedEvidenceBriefSchemaV4,
-		GroundedEvidenceBriefSchemaV5:
+		GroundedEvidenceBriefSchemaV5,
+		GroundedEvidenceBriefSchemaV6,
+		GroundedEvidenceBriefSchemaV7:
 	default:
 		return GroundedEvidenceBriefResponse{}, &ToolError{
 			Code: toolErrorInvalidRequest,
 			Message: fmt.Sprintf(
-				"response_schema must be %s, %s, %s, or %s",
+				"response_schema must be %s, %s, %s, %s, %s, or %s",
 				GroundedEvidenceBriefSchemaV2,
 				GroundedEvidenceBriefSchemaV3,
 				GroundedEvidenceBriefSchemaV4,
 				GroundedEvidenceBriefSchemaV5,
+				GroundedEvidenceBriefSchemaV6,
+				GroundedEvidenceBriefSchemaV7,
 			),
 		}
 	}
@@ -911,11 +922,27 @@ func (s *Server) GetGroundedEvidenceBrief(ctx context.Context, req GetGroundedEv
 	switch queryMode {
 	case "", evidenceingestion.EvidenceQueryModeExactLexical,
 		evidenceingestion.EvidenceQueryModeDeterministicLexicalRecovery,
-		evidenceingestion.EvidenceQueryModeExperimentalHanRecoveryV1:
+		evidenceingestion.EvidenceQueryModeExperimentalHanRecoveryV1,
+		evidenceingestion.EvidenceQueryModeExperimentalMultisurfaceV1,
+		evidenceingestion.EvidenceQueryModePracticalMultisurfaceV1:
 	default:
 		return GroundedEvidenceBriefResponse{}, &ToolError{
 			Code:    toolErrorInvalidRequest,
-			Message: "query_mode must be exact_lexical, deterministic_lexical_recovery, or experimental_han_lexical_recovery_v1",
+			Message: "query_mode must be exact_lexical, deterministic_lexical_recovery, experimental_han_lexical_recovery_v1, experimental_multisurface_lexical_v1, or practical_multisurface_lexical_v1",
+		}
+	}
+	if (queryMode == evidenceingestion.EvidenceQueryModeExperimentalMultisurfaceV1) !=
+		(responseSchema == GroundedEvidenceBriefSchemaV6) {
+		return GroundedEvidenceBriefResponse{}, &ToolError{
+			Code:    toolErrorInvalidRequest,
+			Message: "experimental_multisurface_lexical_v1 and grounded-evidence-brief-v6 must be explicitly selected together",
+		}
+	}
+	if (queryMode == evidenceingestion.EvidenceQueryModePracticalMultisurfaceV1) !=
+		(responseSchema == GroundedEvidenceBriefSchemaV7) {
+		return GroundedEvidenceBriefResponse{}, &ToolError{
+			Code:    toolErrorInvalidRequest,
+			Message: "practical_multisurface_lexical_v1 and grounded-evidence-brief-v7 must be explicitly selected together",
 		}
 	}
 	listInput, err := proposalListInput(ListEvidenceRecordsRequest{
@@ -1524,6 +1551,9 @@ func mapGroundedEvidenceBrief(
 	result evidenceingestion.GroundedEvidenceBriefQueryResult,
 	responseSchema string,
 ) (GroundedEvidenceBriefResponse, error) {
+	if err := validateMultisurfaceBriefExecution(result, responseSchema); err != nil {
+		return GroundedEvidenceBriefResponse{}, err
+	}
 	queryExecution := mapGroundedEvidenceQueryExecution(result.Execution)
 	response := GroundedEvidenceBriefResponse{
 		SchemaVersion:  responseSchema,
@@ -1632,12 +1662,18 @@ func mapGroundedEvidenceBrief(
 			ref := RecordRef{Kind: "proposal_relation", ID: record.ProposalOccurrenceID}
 			mapped.RelationRef = &ref
 		}
-		if responseSchema == GroundedEvidenceBriefSchemaV5 {
+		if responseSchema == GroundedEvidenceBriefSchemaV5 || responseSchema == GroundedEvidenceBriefSchemaV6 || responseSchema == GroundedEvidenceBriefSchemaV7 {
 			recordState, err := groundedEvidenceBriefRecordState(record)
 			if err != nil {
 				return GroundedEvidenceBriefResponse{}, err
 			}
 			mapped.RecordState = &recordState
+		}
+		if responseSchema == GroundedEvidenceBriefSchemaV6 || responseSchema == GroundedEvidenceBriefSchemaV7 {
+			mapped.RetrievalBasis, err = mapGroundedEvidenceRetrievalBasis(record, match.RetrievalBasis)
+			if err != nil {
+				return GroundedEvidenceBriefResponse{}, err
+			}
 		}
 		response.Matches = append(response.Matches, mapped)
 		incrementBriefCounts(&response.Counts, record)
@@ -1677,7 +1713,7 @@ func mapGroundedEvidenceBrief(
 			groundedEvidenceRepositoryCoverageObservationCodes(result.Coverage)...,
 		)
 	}
-	if responseSchema == GroundedEvidenceBriefSchemaV5 {
+	if responseSchema == GroundedEvidenceBriefSchemaV5 || responseSchema == GroundedEvidenceBriefSchemaV6 || responseSchema == GroundedEvidenceBriefSchemaV7 {
 		response.Limitations = append(
 			response.Limitations,
 			"external_source_freshness_not_evaluated",
@@ -2337,6 +2373,8 @@ func mapGroundedEvidenceQueryExecution(execution evidenceingestion.EvidenceQuery
 		Attempts:                      attempts,
 		FallbackStatus:                execution.FallbackStatus,
 		RankingPolicy:                 execution.RankingPolicy,
+		Multisurface:                  mapGroundedEvidenceMultisurfaceExecution(execution.Multisurface),
+		PracticalRecovery:             mapGroundedEvidencePracticalRecovery(execution.PracticalRecovery),
 	}
 }
 
@@ -2354,14 +2392,36 @@ func groundedEvidenceBriefObservationCodes(execution evidenceingestion.EvidenceQ
 		codes = append(codes, "related_candidates_found")
 	case evidenceingestion.EvidenceQueryCompletionHanCandidates:
 		codes = append(codes, "experimental_han_literal_candidates_found")
+	case evidenceingestion.EvidenceQueryCompletionMultisurfaceCandidates:
+		codes = append(codes, "experimental_multisurface_lexical_candidates_found")
+	case evidenceingestion.EvidenceQueryCompletionPracticalFirstCandidates, evidenceingestion.EvidenceQueryCompletionPracticalCandidates, evidenceingestion.EvidenceQueryCompletionPracticalNoMatch:
+		codes = append(codes, execution.CompletionReason)
 	case evidenceingestion.EvidenceQueryCompletionBoundedNoMatch:
 		codes = append(codes, "bounded_retrieval_no_match")
+	}
+	if execution.Multisurface != nil && execution.Multisurface.ExcludedSourceViews > 0 {
+		codes = append(codes, "source_views_excluded_over_budget")
 	}
 	return codes
 }
 
 func groundedEvidenceBriefLimitations(execution evidenceingestion.EvidenceQueryExecution) []string {
 	limitations := []string{"persisted_proposal_statement_text_only"}
+	if execution.QueryMode == evidenceingestion.EvidenceQueryModeExperimentalMultisurfaceV1 || execution.QueryMode == evidenceingestion.EvidenceQueryModePracticalMultisurfaceV1 {
+		limitations = []string{
+			"experimental_statement_and_bounded_manual_identity_source_search",
+			"han_bigrams_are_literal_overlap_not_semantic_segmentation",
+			"source_text_match_does_not_establish_proposal_support",
+			"source_refs_are_original_proposal_citations_not_new_search_hits",
+			"matched_term_count_is_not_confidence_or_admission_priority",
+			"cross_language_requires_shared_text_no_translation",
+			"source_match_spans_are_bounded_excerpts_not_complete_source",
+		}
+	}
+	if execution.QueryMode == evidenceingestion.EvidenceQueryModePracticalMultisurfaceV1 {
+		limitations[0] = "practical_statement_and_bounded_manual_identity_source_search"
+		limitations = append(limitations, "single_english_term_recovery_only_after_complete_empty_first_pass")
+	}
 	if execution.QueryMode == evidenceingestion.EvidenceQueryModeExperimentalHanRecoveryV1 {
 		limitations = append(limitations,
 			"experimental_han_literal_fallback_without_semantic_segmentation",

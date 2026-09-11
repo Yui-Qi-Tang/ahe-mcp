@@ -859,8 +859,9 @@ type ProposalSearchInput struct {
 
 // ProposalSearchResult preserves the grounded proposal record and its PostgreSQL text rank.
 type ProposalSearchResult struct {
-	Record ProposalQueryResult
-	Rank   float64
+	Record         ProposalQueryResult
+	Rank           float64
+	RetrievalBasis *EvidenceRetrievalBasis
 }
 
 // GroundedEvidenceBriefInput bounds one deterministic brief over persisted proposal statements.
