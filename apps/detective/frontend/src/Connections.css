@@ -1,0 +1,83 @@
+.settings-page .settings-apply-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  border-color: #aaccc5;
+  box-shadow: 0 4px 18px #173f3620;
+}
+
+.settings-page .settings-apply-summary {
+  min-width: 0;
+}
+
+.settings-page .settings-apply-summary p,
+.settings-page .settings-apply-action p {
+  margin: 8px 0 0;
+}
+
+.settings-page .settings-apply-action {
+  flex: 0 0 190px;
+}
+
+.settings-page .settings-apply-action .button {
+  width: 100%;
+}
+
+.settings-page .settings-apply-action .button + .button {
+  margin-top: 8px;
+}
+
+.settings-page .draft-pending {
+  color: #815411;
+  font-weight: 650;
+}
+
+.settings-page .connection-id-value {
+  display: block;
+  margin-top: 5px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.settings-page .connection-tool-steps {
+  margin: 18px 0;
+  padding: 14px 20px 14px 38px;
+  border-radius: 10px;
+  background: #edf5f2;
+  line-height: 1.8;
+}
+
+.settings-page .connection-parameters {
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid #cbded8;
+  border-radius: 10px;
+  background: #f9fcfa;
+}
+
+.settings-page .connection-call-action {
+  margin-top: 18px;
+}
+
+.settings-page input[aria-invalid="true"] {
+  border-color: #a5433a;
+}
+
+@media (max-width: 760px) {
+  .settings-page .settings-apply-bar {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .settings-page .settings-apply-action {
+    flex: none;
+    width: 100%;
+  }
+}

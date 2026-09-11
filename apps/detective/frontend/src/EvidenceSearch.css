@@ -1,0 +1,18 @@
+.evidence-search-page { max-width: 1180px; margin: 0 auto; padding: 32px 34px 70px; }
+.evidence-search-page .surface, .search-request { padding: 22px; margin-bottom: 22px; }
+.evidence-search-page h2 { font-size: 20px; }
+.evidence-search-page h3 { font-size: 16px; }
+.evidence-search-page h4 { font-size: 14px; }
+.evidence-search-page p, .evidence-search-page dd { overflow-wrap: anywhere; }
+.evidence-search-page .code { white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.search-actions, .search-heading { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.search-actions { margin-top: 18px; }
+.search-heading { justify-content: space-between; }
+.search-form details .form-grid { margin-top: 18px; }
+.search-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+.search-columns > section { min-width: 0; }
+.search-request { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; }
+.search-quote, .search-surface { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 14px; }
+.search-raw { margin-top: 24px; }
+@media (max-width: 1100px) { .search-columns { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) { .evidence-search-page { padding: 20px 14px 50px; } .evidence-search-page .surface, .search-request { padding: 16px; } }

@@ -9,8 +9,10 @@ permissions:
 
 jobs:
   test:
-    name: Race tests
+    name: MCP and Detective verification
     runs-on: ubuntu-latest
+    env:
+      GOFLAGS: -tags=webkit2_41
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -21,5 +23,18 @@ jobs:
           go-version: "1.27.x"
           cache: true
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/detective/frontend/package-lock.json
+
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config
+
+      - name: Verify shared module and frontend
+        run: make verify
+
       - name: Run race tests
-        run: go test -race ./...
+        run: go test -mod=readonly -p 2 -race -count=1 ./...

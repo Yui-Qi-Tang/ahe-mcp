@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Synthetic BBC World fixture, not a real report</title>
+    <item>
+      <title><![CDATA[Synthetic headline & source boundary]]></title>
+      <description><![CDATA[<p>Synthetic feed summary only; not the full article.</p>]]></description>
+      <link>https://www.bbc.com/news/articles/synthetic-first?x=1&amp;y=2</link>
+      <pubDate>Thu, 10 Sep 2026 01:00:00 GMT</pubDate>
+      <media:thumbnail url="https://example.invalid/not-followed.png"/>
+    </item>
+    <item>
+      <title>Second synthetic item</title>
+      <description>Characters &#38; XML &lt;escaping&gt; stay readable.</description>
+      <link>https://www.bbc.com/news/articles/synthetic-second</link>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,10 @@
+{
+  "version": "detective-brief-source/v1",
+  "source_id": "synthetic-orion-maintenance-audit-only",
+  "source_revision": "fixture-v1",
+  "source_url": "https://example.invalid/synthetic-orion-maintenance-audit-only",
+  "observed_at": "2026-09-11T00:00:00Z",
+  "coverage": "full_document",
+  "limitations": [],
+  "body": "The synthetic Orion bulletin announces a planned Search index rebuild.\nThe rebuild has not started. This bulletin reports a plan, not an observed service incident."
+}
