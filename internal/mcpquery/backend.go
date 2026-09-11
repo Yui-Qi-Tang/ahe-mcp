@@ -290,9 +290,10 @@ func groundedEvidenceBriefSchema() map[string]any {
 	properties := listEvidenceRecordsSchema()["properties"].(map[string]any)
 	properties["query"] = stringSchema("Required information need; Query Core applies the selected deterministic lexical plan. At most 256 characters and 16 terms.")
 	properties["query_mode"] = enumStringSchema(
-		"Optional query plan. Defaults to deterministic_lexical_recovery; exact_lexical preserves the low-level all-term mode.",
+		"Optional query plan. Defaults to deterministic_lexical_recovery; exact_lexical preserves the low-level all-term mode. experimental_han_lexical_recovery_v1 explicitly opts into a statement-only Han literal fallback after zero baseline results; it does not infer support or provide semantic segmentation.",
 		evidenceingestion.EvidenceQueryModeDeterministicLexicalRecovery,
 		evidenceingestion.EvidenceQueryModeExactLexical,
+		evidenceingestion.EvidenceQueryModeExperimentalHanRecoveryV1,
 	)
 	properties["response_schema"] = enumStringSchema(
 		"Optional response contract. Defaults to grounded-evidence-brief-v2; v3 adds bounded post-retrieval manual source context; v4 adds typed repository context while retaining manual source context; v5 adds compact per-match authority, lifecycle, and source revision without hydrated context.",

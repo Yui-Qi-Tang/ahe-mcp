@@ -220,6 +220,8 @@ type GroundedEvidenceQueryExecution struct {
 	CompletionReason              string                         `json:"completion_reason"`
 	GlobalAbsenceInferenceAllowed bool                           `json:"global_absence_inference_allowed"`
 	Attempts                      []GroundedEvidenceQueryAttempt `json:"attempts"`
+	FallbackStatus                string                         `json:"fallback_status,omitempty"`
+	RankingPolicy                 string                         `json:"ranking_policy,omitempty"`
 }
 
 // GroundedEvidenceBriefMatch preserves exact statement and provenance references.
@@ -907,11 +909,13 @@ func (s *Server) GetGroundedEvidenceBrief(ctx context.Context, req GetGroundedEv
 	}
 	queryMode := strings.TrimSpace(req.QueryMode)
 	switch queryMode {
-	case "", evidenceingestion.EvidenceQueryModeExactLexical, evidenceingestion.EvidenceQueryModeDeterministicLexicalRecovery:
+	case "", evidenceingestion.EvidenceQueryModeExactLexical,
+		evidenceingestion.EvidenceQueryModeDeterministicLexicalRecovery,
+		evidenceingestion.EvidenceQueryModeExperimentalHanRecoveryV1:
 	default:
 		return GroundedEvidenceBriefResponse{}, &ToolError{
 			Code:    toolErrorInvalidRequest,
-			Message: "query_mode must be exact_lexical or deterministic_lexical_recovery",
+			Message: "query_mode must be exact_lexical, deterministic_lexical_recovery, or experimental_han_lexical_recovery_v1",
 		}
 	}
 	listInput, err := proposalListInput(ListEvidenceRecordsRequest{
@@ -2331,6 +2335,8 @@ func mapGroundedEvidenceQueryExecution(execution evidenceingestion.EvidenceQuery
 		CompletionReason:              execution.CompletionReason,
 		GlobalAbsenceInferenceAllowed: execution.GlobalAbsenceInferenceAllowed,
 		Attempts:                      attempts,
+		FallbackStatus:                execution.FallbackStatus,
+		RankingPolicy:                 execution.RankingPolicy,
 	}
 }
 
@@ -2346,6 +2352,8 @@ func groundedEvidenceBriefObservationCodes(execution evidenceingestion.EvidenceQ
 		codes = append(codes, "morphology_candidates_found")
 	case evidenceingestion.EvidenceQueryCompletionRelatedCandidates:
 		codes = append(codes, "related_candidates_found")
+	case evidenceingestion.EvidenceQueryCompletionHanCandidates:
+		codes = append(codes, "experimental_han_literal_candidates_found")
 	case evidenceingestion.EvidenceQueryCompletionBoundedNoMatch:
 		codes = append(codes, "bounded_retrieval_no_match")
 	}
@@ -2354,6 +2362,12 @@ func groundedEvidenceBriefObservationCodes(execution evidenceingestion.EvidenceQ
 
 func groundedEvidenceBriefLimitations(execution evidenceingestion.EvidenceQueryExecution) []string {
 	limitations := []string{"persisted_proposal_statement_text_only"}
+	if execution.QueryMode == evidenceingestion.EvidenceQueryModeExperimentalHanRecoveryV1 {
+		limitations = append(limitations,
+			"experimental_han_literal_fallback_without_semantic_segmentation",
+			"han_fallback_zero_rank_is_unscored_not_confidence",
+		)
+	}
 	if execution.QueryMode == evidenceingestion.EvidenceQueryModeExactLexical {
 		limitations = append(limitations, "exact_simple_fts_without_query_recovery")
 	} else {
