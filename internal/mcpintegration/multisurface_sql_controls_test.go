@@ -260,13 +260,14 @@ func runSelectedMultisurfaceSQLControls(t *testing.T, gate string, controls []mu
 	if n, e := strconv.ParseUint(identity, 10, 64); e != nil || n == 0 || slices.Contains([]string{"7683988729274717512", "7684171091801649800"}, identity) {
 		t.Fatal("SQL controls need the new pinned clone identity")
 	}
-	root := filepath.Dir(os.Getenv("AHE_MULTISURFACE_LAB_REPORT"))
+	reportPath := os.Getenv("AHE_MULTISURFACE_LAB_REPORT")
+	root := filepath.Dir(reportPath)
 	rootPrefix := "multisurface-lab."
 	wantDataDirectory := filepath.Join(root, "pgdata")
 	if gate == "AHE_PRACTICAL_ANCHOR_SQL_CONTROLS" {
-		rootPrefix, wantDataDirectory = "practical-han-lab.", practicalAnchorPGData
+		rootPrefix, wantDataDirectory = "practical-han-lab.", practicalAnchorPGData(t)
 	}
-	if filepath.Dir(root) != "/redacted/ahe-mcp/bin" || !strings.HasPrefix(filepath.Base(root), rootPrefix) {
+	if !multisurfaceReportCoordinate(reportPath, multisurfaceLabBin(t), rootPrefix) {
 		t.Fatal("SQL controls require the private clone root")
 	}
 	for _, dir := range []string{socket, root} {

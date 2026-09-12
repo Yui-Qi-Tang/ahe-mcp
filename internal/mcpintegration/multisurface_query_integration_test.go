@@ -232,7 +232,7 @@ func runMultisurfaceReadOnlyLab(t *testing.T, practical, anchors bool) {
 	if anchors {
 		rootPrefix = "practical-han-lab."
 	}
-	if !filepath.IsAbs(reportPath) || filepath.Clean(reportPath) != reportPath || !strings.HasPrefix(filepath.Base(filepath.Dir(reportPath)), rootPrefix) || filepath.Dir(filepath.Dir(reportPath)) != "/redacted/ahe-mcp/bin" {
+	if !multisurfaceReportCoordinate(reportPath, multisurfaceLabBin(t), rootPrefix) {
 		t.Fatal("outcome lab requires an absolute private report path")
 	}
 	for _, directory := range []string{socket, filepath.Dir(reportPath)} {
@@ -278,7 +278,7 @@ func runMultisurfaceReadOnlyLab(t *testing.T, practical, anchors bool) {
 	if err != nil {
 		t.Fatal("cannot read frozen outcome plan")
 	}
-	originalData, originalErr := os.ReadFile("/redacted/ahe-mcp/bin/han-outcome-lab.oTBR2P/plan-v1.json")
+	originalData, originalErr := os.ReadFile(multisurfaceOriginalPlanPath(t))
 	if originalErr != nil {
 		t.Fatal("cannot read frozen original question plan")
 	}
@@ -331,7 +331,7 @@ func runMultisurfaceReadOnlyLab(t *testing.T, practical, anchors bool) {
 	report.SocketOnly = listen == "" && sockets == socket
 	wantDataDirectory := filepath.Join(filepath.Dir(reportPath), "pgdata")
 	if anchors {
-		wantDataDirectory = practicalAnchorPGData
+		wantDataDirectory = practicalAnchorPGData(t)
 	}
 	if dataDirectory != wantDataDirectory {
 		t.Fatal("multisurface lab PGDATA is outside its isolated root")
@@ -720,7 +720,7 @@ func TestMultisurfaceFrozenPlan(t *testing.T) {
 	if err != nil {
 		t.Fatal("cannot read offline plan")
 	}
-	original, err := os.ReadFile("/redacted/ahe-mcp/bin/han-outcome-lab.oTBR2P/plan-v1.json")
+	original, err := os.ReadFile(multisurfaceOriginalPlanPath(t))
 	if err != nil {
 		t.Fatal("cannot read frozen baseline plan")
 	}

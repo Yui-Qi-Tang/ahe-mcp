@@ -19,7 +19,13 @@ import (
 
 const practicalPreviousResultSHA = "a26c4b0269c3f90de5af789dd12526909fe272a73d38620b6fb0b26e3341cb43"
 const practicalAnchorPolicyVersion = "han-auxiliary-anchor-v1"
-const practicalAnchorPGData = "/redacted/ahe-mcp/bin/multisurface-lab.pi2AGw/pgdata"
+
+// Anchor replay still names the same qualified historical clone; relocating
+// the checkout must not turn an arbitrary report directory into accepted PGDATA.
+func practicalAnchorPGData(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(multisurfaceLabBin(t), "multisurface-lab.pi2AGw", "pgdata")
+}
 
 // This independent policy list is part of the regression plan, not imported
 // from the implementation under test. It is not a language-complete stop list.

@@ -30,6 +30,9 @@ jobs:
           cache: npm
           cache-dependency-path: apps/detective/frontend/package-lock.json
 
+      - name: Check public files for machine paths
+        run: node --test scripts/check-public-paths.test.mjs && node scripts/check-public-paths.mjs
+
       - name: Install native build dependencies
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev pkg-config
 

@@ -417,7 +417,7 @@ func TestReasonThinkingJSONSurrogatesPreserveDecodedBytes(t *testing.T) {
 	}
 }
 
-func TestReasonThinkingLoadsFrozenV1V5AssessmentsWithoutUpgrade(t *testing.T) {
+func TestReasonThinkingLoadsDeidentifiedV1V5AssessmentsWithoutUpgrade(t *testing.T) {
 	for _, name := range []string{"bounded-support", "citation-only", "praise-paraphrase", "audit-bounded", "reject-overclaim", "pending-scope"} {
 		t.Run(name, func(t *testing.T) {
 			frozen := filepath.Join("testdata", "frozen_reason_v1_v5", name+".assessment.json")
@@ -431,21 +431,21 @@ func TestReasonThinkingLoadsFrozenV1V5AssessmentsWithoutUpgrade(t *testing.T) {
 				t.Fatal(err)
 			}
 			if loaded.SchemaVersion != "detective-reason-assessment/v1" || loaded.PromptVersion != "detective-reason-adviser/v5" || loaded.Thinking != nil {
-				t.Fatal("historical assessment gained inferred thinking metadata or a new version")
+				t.Fatal("deidentified legacy-format assessment gained inferred thinking metadata or a new version")
 			}
 			var stored map[string]json.RawMessage
 			if json.Unmarshal(original, &stored) != nil || stored["thinking"] != nil {
-				t.Fatal("historical fixture is not the original metadata-free v1 contract")
+				t.Fatal("deidentified fixture does not preserve the metadata-free v1 contract")
 			}
 			if digest, err := reasonAssessmentHash(loaded); err != nil || digest != loaded.Digest {
-				t.Fatalf("historical digest changed after adding optional metadata: %v", err)
+				t.Fatalf("deidentified fixture digest changed after adding optional metadata: %v", err)
 			}
 			var display bytes.Buffer
 			if err := WriteReasonAssessmentText(&display, loaded); err != nil {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(original, thinkingReadFile(t, path)) || !bytes.Equal(original, thinkingReadFile(t, frozen)) {
-				t.Fatal("loading or displaying upgraded historical assessment bytes")
+				t.Fatal("loading or displaying upgraded deidentified legacy-format assessment bytes")
 			}
 		})
 	}
