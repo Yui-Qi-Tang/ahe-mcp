@@ -1,0 +1,7 @@
+{
+  "path": "/absolute/path/to/ahe-mcp/bin/ahe-mcp-atlassian-adapter",
+  "directory": "/absolute/private/ahe",
+  "environment": [
+    "AHE_MCP_ATLASSIAN_ADAPTER_CONFIG=/absolute/private/ahe/atlassian-adapter.json"
+  ]
+}
