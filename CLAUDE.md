@@ -56,6 +56,15 @@
 
 ## External Evidence Invariants
 
+- Engineering evidence intake must not be replaced by Brief, model highlights,
+  or summary chunks. Retained source bytes and individually grounded claims do
+  not compensate for omitted in-scope information. Preserve requirements,
+  conditions, exceptions and status details; disclose extraction omissions
+  separately from source coverage. No observed fabrication is not completeness.
+- Brief currently lacks an enforced source-type gate. This instruction is an
+  operational restriction, not a claim that runtime routing has been repaired.
+  Do not use its caller-declared `manual_text` route to bypass external-source
+  identity, provider revision or capability requirements.
 - Submit connector-observed text or JSON exactly. Never replace source content
   with a model summary or paraphrase.
 - Use provider identity and revision metadata from the connector. Never invent
@@ -70,9 +79,21 @@
 - Before admission, show the human the proposed sentence, exact excerpts,
   source title and location, coverage and limitations, provider revision, and
   the version difference when a comparable prior revision exists.
-- Do not call `admit_pending_proposal` until the human explicitly approves the
-  displayed proposal. AHE records the decision but does not prove that this
-  review conversation occurred.
+- Obtain `get_source_claim_review` for each exact attempt/occurrence and show
+  its complete native display. After an explicit decision and reason, use
+  `admit_reviewed_source_claim` (`approved`) or
+  `record_reviewed_source_claim_disposition` (`reject`/`audit_only`) with the
+  unchanged returned subject as `expected_subject`. The launcher supplies the
+  reviewer identity. Preserve the exact inputs for uncertain-outcome replay;
+  do not fall back to `admit_pending_proposal` or legacy disposition tools.
+  AHE records the binding but does not prove the human read the display.
+
+## Internal Relation Contracts (Not Standard MCP Operations)
+
+The following describes retained domain behavior, not an executable intake
+recipe. These writers are disabled in the standard installation; stop and
+report the missing capability rather than changing profiles or using SQL.
+
 - When two admitted canonical nodes appear incompatible, call
   `submit_canonical_contradiction_proposal`, then read
   `get_canonical_contradiction_proposal`. Show both grounded canonical records,
