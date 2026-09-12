@@ -57,7 +57,9 @@ The core AHE path is not macOS-only.
 | Included supervised-service packaging | Not included | `launchd` packaging included | Not included |
 | New Detective Desktop (`apps/detective`) | Not qualified | Apple silicon source-build preview | Not qualified |
 
-The macOS-only features require AHE's exact `sandbox-exec` loopback policy.
+The legacy macOS-only collectors and adapters require AHE's exact `sandbox-exec` loopback policy.
+Desktop also provides a separate [official Atlassian OAuth connection](apps/detective/INSTALL.md#connect-directly-to-atlassian-rovo-mcp-with-oauth)
+which connects directly to the remote MCP endpoint.
 They do not limit the external-agent intake path or the Query MCP. The CI
 configuration runs the shared-module race checks on Linux with the native build
 dependencies and test-package limit described below.
@@ -533,6 +535,10 @@ capabilities; these examples do not add them.
 non-production AHE PostgreSQL database provisioned with `ahe-migrate`, a local
 Ollama server with the chosen model already installed, and the adapter's pinned
 `sooperset/mcp-atlassian@v0.23.0` provider installed in a private environment.
+
+For official remote MCP with OAuth in Desktop, use the
+[direct connection workflow](apps/detective/INSTALL.md#connect-directly-to-atlassian-rovo-mcp-with-oauth).
+The following restrictions apply to the legacy local-provider walkthrough.
 
 **Network boundary: local fixtures, not a direct Cloud connection.** This
 preview restricts both the adapter and provider to loopback networking. There

@@ -56,6 +56,10 @@ model use, queries and writes require switching to actual mode and using their
 explicit controls. Each application restart returns to offline mode even when
 connection settings have been saved.
 
+Desktop can connect directly to the official Atlassian Rovo MCP with interactive
+OAuth. See [the login workflow](INSTALL.md#connect-directly-to-atlassian-rovo-mcp-with-oauth).
+Credentials remain in memory; each source tool call still needs confirmation.
+
 Source acquisition belongs to Detective. A shared module does not move provider
 connectors into Core, make model output authoritative, or remove the MCP process
 boundary. Models may help extract or explain evidence; humans must still judge

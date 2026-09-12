@@ -27,6 +27,7 @@ func (s *Service) LoadDemo() (State, error) {
 	}
 	s.mu.Lock()
 	s.state.Settings.Mode = "demo"
+	s.forgetAllSourceLoginsLocked()
 	s.state.Brief = nil
 	s.state.Source = &source
 	s.state.Candidates = []CandidateView{}

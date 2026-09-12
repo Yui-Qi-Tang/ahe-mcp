@@ -134,24 +134,25 @@ type CandidateView struct {
 
 // State is a detached UI projection, never an approval or admission receipt.
 type State struct {
-	Version     string               `json:"version"`
-	Busy        bool                 `json:"busy"`
-	Operation   string               `json:"operation"`
-	Error       string               `json:"error"`
-	Settings    Settings             `json:"settings"`
-	Messages    []Message            `json:"messages"`
-	Events      []Event              `json:"events"`
-	Source      *SourceView          `json:"source"`
-	Candidates  []CandidateView      `json:"candidates"`
-	Tools       []Tool               `json:"tools"`
-	ToolAdvice  *ToolAdvice          `json:"toolAdvice,omitempty"`
-	BatchPath   string               `json:"batchPath"`
-	BatchDigest string               `json:"batchDigest"`
-	DataDir     string               `json:"dataDir"`
-	Extraction  *labstatus.RowBatch  `json:"extraction"`
-	BatchResult *pending.BatchResult `json:"batchResult"`
-	Brief       *BriefWork           `json:"brief,omitempty"`
-	Search      *EvidenceSearchView  `json:"search,omitempty"`
+	SourceAuth  map[string]SourceAuthView `json:"sourceAuth,omitempty"`
+	Version     string                    `json:"version"`
+	Busy        bool                      `json:"busy"`
+	Operation   string                    `json:"operation"`
+	Error       string                    `json:"error"`
+	Settings    Settings                  `json:"settings"`
+	Messages    []Message                 `json:"messages"`
+	Events      []Event                   `json:"events"`
+	Source      *SourceView               `json:"source"`
+	Candidates  []CandidateView           `json:"candidates"`
+	Tools       []Tool                    `json:"tools"`
+	ToolAdvice  *ToolAdvice               `json:"toolAdvice,omitempty"`
+	BatchPath   string                    `json:"batchPath"`
+	BatchDigest string                    `json:"batchDigest"`
+	DataDir     string                    `json:"dataDir"`
+	Extraction  *labstatus.RowBatch       `json:"extraction"`
+	BatchResult *pending.BatchResult      `json:"batchResult"`
+	Brief       *BriefWork                `json:"brief,omitempty"`
+	Search      *EvidenceSearchView       `json:"search,omitempty"`
 	// WorkspaceID labels the validated path; it is not authority or a process ID.
 	WorkspaceID string `json:"workspaceID"`
 }
