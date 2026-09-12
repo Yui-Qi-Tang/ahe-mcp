@@ -524,6 +524,13 @@ collects a Git repository; it enables neither an Ollama planner nor model
 proposal extraction. A planner chooses work; it does not extract proposals.
 MCP read sources require the planner to remain disabled.
 
+The `ollama-local/v2` extractor sends a JSON Schema in Ollama's `format`
+field for both prompt modes. It restricts output to proposal objects and
+references to the current input's span IDs; bounded exact-quote mode also
+limits proposal count. An empty span catalogue permits only abstention.
+Schema-constrained generation does not prove grounding: strict decoding,
+reference validation and the bounded mode's exact-quote checks still apply.
+
 The worked configuration uses `ahe-mcp-atlassian-adapter` because its
 `read_atlassian_document` tool returns `ahe-mcp-read-document-v1`. CodeGraph's
 `query_codegraph_function` returns `ahe-codegraph-candidate-v1` instead and
