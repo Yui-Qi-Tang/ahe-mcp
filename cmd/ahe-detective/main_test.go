@@ -56,3 +56,22 @@ func TestRunRequiresDatabaseDNSAfterValidConfig(t *testing.T) {
 		t.Fatalf("run() error = %v", err)
 	}
 }
+
+func TestDiscoveryArguments(t *testing.T) {
+	for _, args := range [][]string{{"--discover-tools"}, {"--discover-tools", " "}, {"--discover-tools", "command.json", "--migrate"}, {"--discover-tools", "command.json", "--config", "host.json"}} {
+		if _, err := parseCommandArgs(args); err == nil {
+			t.Fatalf("accepted %q", args)
+		}
+	}
+	parsed, err := parseCommandArgs([]string{"--discover-tools", "command.json"})
+	if err != nil || parsed.discoveryPath != "command.json" {
+		t.Fatalf("parsed = %+v, error = %v", parsed, err)
+	}
+}
+
+func TestDiscoveryDoesNotReadDatabaseEnvironment(t *testing.T) {
+	err := run(context.Background(), []string{"--discover-tools", filepath.Join(t.TempDir(), "missing.json")}, &bytes.Buffer{}, &bytes.Buffer{}, func(string) string { t.Fatal("discovery accessed database environment"); return "" })
+	if err == nil || !strings.Contains(err.Error(), "opening discovery command config") {
+		t.Fatalf("error = %v", err)
+	}
+}
