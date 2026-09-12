@@ -319,3 +319,32 @@ describe("Connections settings and manual source workflow", () => {
     expect(onToolConfirm).not.toHaveBeenCalled();
   });
 });
+
+it("requires explicit Atlassian login before discovery and supports local logout", () => {
+  const state = fixture();
+  state.settings.connections[0] = { ...state.settings.connections[0], transport: "atlassian-oauth", command: "", url: "https://mcp.atlassian.com/v2/mcp" };
+  const app = setup(state);
+  fireEvent.change(screen.getByLabelText("已套用的伺服器"), { target: { value: "source-1" } });
+  expect(screen.getByRole("button", { name: "取得工具清單" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "登入 Atlassian" }));
+  expect(app.onAction).toHaveBeenCalledExactlyOnceWith("BeginAtlassianLogin", "source-1");
+  const waiting = { ...state, busy: true, sourceAuth: { "source-1": { status: "waiting", authorizationURL: "https://auth.atlassian.com/authorize?state=synthetic" } } };
+  app.rerender(waiting, true);
+  expect(screen.getByLabelText("Atlassian 授權連結（請複製並自行開啟）")).toHaveValue(waiting.sourceAuth["source-1"].authorizationURL);
+  expect(screen.getByRole("button", { name: "登入 Atlassian" })).toBeDisabled();
+  app.rerender({ ...state, sourceAuth: { "source-1": { status: "connected" } } });
+  expect(screen.queryByLabelText("Atlassian 授權連結（請複製並自行開啟）")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "取得工具清單" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "清除本次登入" }));
+  expect(app.onAction).toHaveBeenLastCalledWith("DisconnectAtlassian", "source-1");
+});
+
+it("restores the pending login link when returning to connections", () => {
+  const state = fixture();
+  state.settings.connections[0].transport = "atlassian-oauth";
+  state.settings.connections[0].command = "";
+  state.settings.connections[0].url = "https://mcp.atlassian.com/v2/mcp";
+  state.sourceAuth = { "source-1": { status: "waiting", authorizationURL: "https://auth.atlassian.com/authorize?state=synthetic" } };
+  setup(state, true);
+  expect(screen.getByLabelText("Atlassian 授權連結（請複製並自行開啟）")).toHaveValue(state.sourceAuth["source-1"].authorizationURL);
+});

@@ -50,11 +50,19 @@ func startSession(parent context.Context, c Config) (*session, error) {
 		transport := &http.Transport{Proxy: nil, DisableKeepAlives: true,
 			DialContext:           (&net.Dialer{Timeout: 5 * time.Second}).DialContext,
 			ResponseHeaderTimeout: 10 * time.Second, MaxResponseHeaderBytes: 16 << 10}
+		if c.Transport == "atlassian-oauth" && c.oauth == nil {
+			cancel()
+			return nil, ErrLoginRequired
+		}
 		s.http = &httpSession{endpoint: c.URL, transport: transport, client: &http.Client{
 			Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error {
 				return errors.New("source MCP redirects are not permitted")
 			},
 		}}
+		if c.oauth != nil {
+			s.http.oauth = c.oauth
+			s.http.client = c.oauth.client
+		}
 	}
 	return s, nil
 }
@@ -209,6 +217,7 @@ func (s *stdioSession) close(ctx context.Context, cancel context.CancelFunc) err
 }
 
 type httpSession struct {
+	oauth     *OAuthSession
 	endpoint  string
 	client    *http.Client
 	transport *http.Transport
@@ -226,6 +235,16 @@ func (h *httpSession) request(ctx context.Context, method string, body []byte) (
 	if h.sessionID != "" {
 		req.Header.Set("Mcp-Session-Id", h.sessionID)
 	}
+	if h.oauth != nil {
+		if h.endpoint != AtlassianEndpoint {
+			return nil, ErrLoginRequired
+		}
+		token, err := h.oauth.bearer(ctx)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	resp, err := h.client.Do(req)
 	if err != nil {
 		return nil, errors.New("source MCP HTTP transport failed; no retry was attempted")
@@ -239,6 +258,10 @@ func (h *httpSession) exchange(ctx context.Context, body []byte, notification, i
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized && h.oauth != nil {
+		h.oauth.Forget()
+		return nil, ErrLoginRequired
+	}
 	if resp.ContentLength > maxRPCBytes {
 		return nil, errors.New("source MCP HTTP body exceeds its bound")
 	}

@@ -193,3 +193,13 @@ func (a *App) SuggestSourceTool(id, question string) (desktop.State, error) {
 func (a *App) CallSourceTool(id, tool, argsJSON, confirmation string) (desktop.State, error) {
 	return a.service.CallSourceTool(a.ctx, id, tool, argsJSON, confirmation)
 }
+
+// BeginAtlassianLogin returns a consent link; it does not open a browser.
+func (a *App) BeginAtlassianLogin(id string) (desktop.State, error) {
+	return a.service.BeginAtlassianLogin(a.ctx, id)
+}
+
+// DisconnectAtlassian forgets the local login and discovered tools.
+func (a *App) DisconnectAtlassian(id string) (desktop.State, error) {
+	return a.service.DisconnectAtlassian(id)
+}

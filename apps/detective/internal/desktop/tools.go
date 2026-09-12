@@ -79,9 +79,19 @@ func (s *Service) DiscoverTools(ctx context.Context, id string) (State, error) {
 	}
 	s.state.Tools = retained
 	s.mu.Unlock()
-	tools, err := sourcemcp.Discover(ctx, config)
+	var tools []sourcemcp.Tool
+	if config.Transport == "atlassian-oauth" {
+		if login := s.sourceLogin(id); login != nil {
+			tools, err = login.Discover(ctx, config)
+		} else {
+			err = sourcemcp.ErrLoginRequired
+		}
+	} else {
+		tools, err = sourcemcp.Discover(ctx, config)
+	}
 	if err != nil {
-		return s.finish(done, err, "來源工具探索未完成；未執行工具，請確認 launcher、allowlist 或本機 gateway")
+		s.sourceAuthFailure(id, err)
+		return s.finish(done, err, "來源工具探索未完成；未執行工具，請確認登入狀態、allowlist 或連線設定")
 	}
 	s.mu.Lock()
 	for _, tool := range tools {
@@ -125,9 +135,19 @@ func (s *Service) CallSourceTool(ctx context.Context, id, name, argsJSON, confir
 	expected := sourcemcp.Tool{Name: selected.Name, Description: selected.Description,
 		InputSchemaJSON: selected.InputSchemaJSON, SchemaSHA256: selected.SchemaSHA256,
 		InventorySHA256: selected.InventorySHA256, ConfigSHA256: selected.ConfigSHA256}
-	result, err := sourcemcp.Call(ctx, config, expected, argsJSON)
+	var result sourcemcp.Result
+	if config.Transport == "atlassian-oauth" {
+		if login := s.sourceLogin(id); login != nil {
+			result, err = login.Call(ctx, config, expected, argsJSON)
+		} else {
+			err = sourcemcp.ErrLoginRequired
+		}
+	} else {
+		result, err = sourcemcp.Call(ctx, config, expected, argsJSON)
+	}
 	if err != nil {
-		return s.finish(done, err, "來源讀取未確認；可能是取消、逾時、工具變動或回覆超過限制。沒有送到 AHE")
+		s.sourceAuthFailure(id, err)
+		return s.finish(done, err, "來源讀取未確認；請檢查登入、取消、逾時、工具變動或回覆限制。沒有送到 AHE")
 	}
 	capturedAt := time.Now().UTC().Format(time.RFC3339Nano)
 	if err := ctx.Err(); err != nil {

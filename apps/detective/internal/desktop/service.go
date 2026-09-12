@@ -33,14 +33,16 @@ var ErrWorkspaceInUse = errors.New("desktop workspace is already in use")
 // Service owns one explicitly started desktop operation and its private files.
 // The UI projection, messages and local settings never grant AHE authority.
 type Service struct {
-	mu        sync.Mutex
-	state     State
-	dataDir   string
-	root      *os.Root
-	directory *os.File
-	cancel    context.CancelFunc
-	opDone    chan struct{}
-	closed    bool
+	oauthSessions  map[string]*sourcemcp.OAuthSession
+	beginAtlassian func(context.Context) (*sourcemcp.AtlassianAuthorization, error)
+	mu             sync.Mutex
+	state          State
+	dataDir        string
+	root           *os.Root
+	directory      *os.File
+	cancel         context.CancelFunc
+	opDone         chan struct{}
+	closed         bool
 }
 
 // New opens a private local workspace without connecting to a model or MCP.
@@ -87,7 +89,7 @@ func New(dataDir string) (*Service, error) {
 		}
 		return nil, errors.New("cannot lock private desktop directory")
 	}
-	s := &Service{dataDir: dataDir, root: root, directory: directory}
+	s := &Service{dataDir: dataDir, root: root, directory: directory, beginAtlassian: sourcemcp.BeginAtlassianOAuth}
 	workspaceDigest := sha256.Sum256([]byte(dataDir))
 	s.state = State{Version: Version, DataDir: dataDir, WorkspaceID: hex.EncodeToString(workspaceDigest[:6]), Settings: initialSettings(), Messages: []Message{}, Events: []Event{}, Candidates: []CandidateView{}, Tools: []Tool{}}
 	if body, err := s.readPrivate("settings.json", 64<<10); err == nil {
@@ -247,6 +249,9 @@ func (s *Service) Close() {
 	if done != nil {
 		<-done
 	}
+	s.mu.Lock()
+	s.forgetAllSourceLoginsLocked()
+	s.mu.Unlock()
 	_ = s.directory.Close()
 	_ = s.root.Close()
 }
@@ -275,6 +280,7 @@ func (s *Service) SaveSettings(settings Settings) (State, error) {
 	}
 	s.mu.Lock()
 	s.state.Settings = settings
+	s.forgetAllSourceLoginsLocked()
 	s.state.Tools = []Tool{}
 	s.mu.Unlock()
 	return s.finish(done, nil, "設定已保存；沒有自動連線，也沒有授予工具或寫入權限。")
@@ -318,6 +324,10 @@ func validateSettings(settings Settings, allowLegacyIDs bool) (Settings, error) 
 		if c.Transport == "stdio" {
 			if !safeText(c.Command, 4096) || !filepath.IsAbs(c.Command) || filepath.Clean(c.Command) != c.Command || c.URL != "" {
 				return Settings{}, errors.New("invalid source launcher")
+			}
+		} else if c.Transport == "atlassian-oauth" {
+			if err := sourcemcp.Validate(sourceConfig(*c)); err != nil {
+				return Settings{}, err
 			}
 		} else if c.Transport == "streamable-http" {
 			if c.Command != "" || !safeLocalSourceURL(c.URL) {
