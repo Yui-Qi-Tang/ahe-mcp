@@ -35,9 +35,10 @@ const (
 )
 
 // Config is trusted operator configuration, never model-generated authority.
-// Transport is "stdio" or "streamable-http". HTTP supports only unauthenticated
-// loopback literals; external services require a separately governed local gateway.
+// Transport is "stdio", local "streamable-http", or official "atlassian-oauth".
+// OAuth credentials are runtime-only and never part of serialized configuration.
 type Config struct {
+	oauth        *OAuthSession
 	ID           string   `json:"id"`
 	Name         string   `json:"name"`
 	Transport    string   `json:"transport"`
@@ -107,6 +108,10 @@ func validateConfig(c Config, inspectLauncher bool) error {
 		owner, ok := info.Sys().(*syscall.Stat_t)
 		if !ok || int(owner.Uid) != os.Getuid() {
 			return errors.New("source MCP launcher must be owned by the current operator")
+		}
+	case "atlassian-oauth":
+		if c.Command != "" || c.URL != AtlassianEndpoint {
+			return errors.New("Atlassian OAuth requires the exact official endpoint")
 		}
 	case "streamable-http":
 		if c.Command != "" || !validText(c.URL, 2048) {

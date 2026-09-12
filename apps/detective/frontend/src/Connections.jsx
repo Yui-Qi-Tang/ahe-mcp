@@ -33,7 +33,8 @@ export default function Connections({
   onToolConfirm,
 }) {
   const fingerprint = JSON.stringify(state.settings);
-  const [connectionID, setConnectionID] = useState("");
+  const [connectionID, setConnectionID] = useState(() =>
+    Object.entries(state.sourceAuth || {}).find(([, login]) => login.status === "waiting")?.[0] || "");
   const [toolName, setToolName] = useState("");
   const [argsJSON, setArgsJSON] = useState("{}");
   const changed = JSON.stringify(draft) !== fingerprint;
@@ -66,8 +67,10 @@ export default function Connections({
     (invalidIDs ? "連線 ID 不符合限制；請修正並套用設定後再操作工具。" : "") ||
     (changed ? "有未套用的草稿；請先套用設定，再操作來源工具。" : "") ||
     (!local ? "目前仍是離線演練；請先選擇實際模式並套用設定。" : "");
-  const discoveryReason =
-    toolPrerequisite || (!selectedConnection ? "請先選擇已套用的伺服器。" : "");
+  const login = state.sourceAuth?.[connectionID];
+  const atlassian = selectedConnection?.transport === "atlassian-oauth";
+  const loginReason = toolPrerequisite || (!selectedConnection ? "請先選擇已套用的伺服器。" : "");
+  const discoveryReason = loginReason || (atlassian && login?.status !== "connected" ? "請先完成 Atlassian OAuth 登入。" : "");
   const selectionReason =
     discoveryReason ||
     (tools.length === 0 ? "請先按「取得工具清單」，再選擇工具。" : "");
@@ -310,8 +313,7 @@ export default function Connections({
           </button>
         </div>
         <p className="muted">
-          HTTP 僅連本機 gateway，不會直接登入公司 SaaS；此版沒有
-          OAuth。allowlist 與工具描述都不是唯讀權限的證明。
+          Atlassian OAuth 可直連官方遠端 MCP；一般 HTTP 仍限本機 gateway。登入與工具呼叫是分開的操作。
         </p>
         <p className="field-help">
           共同試用可選用已建置的 detective-source-demo：stdio
@@ -320,8 +322,7 @@ export default function Connections({
         </p>
         {draft.connections.length === 0 && (
           <Empty title="還沒有來源連線">
-            新增 stdio launcher 或本機 Streamable HTTP
-            gateway，再明確列出允許工具。
+            新增 Atlassian OAuth、stdio launcher 或本機 Streamable HTTP 連線，再明確列出允許工具。
           </Empty>
         )}
         {draft.connections.map((connection, index) => (
@@ -393,20 +394,22 @@ export default function Connections({
                   updateConnection(index, {
                     transport: e.target.value,
                     command: "",
-                    url:
-                      e.target.value === "streamable-http"
-                        ? "http://127.0.0.1:3000/mcp"
-                        : "",
+                    url: e.target.value === "atlassian-oauth" ? "https://mcp.atlassian.com/v2/mcp"
+                      : e.target.value === "streamable-http" ? "http://127.0.0.1:3000/mcp" : "",
+                    ...(e.target.value === "atlassian-oauth" ? { allowedTools: ["getAccessibleAtlassianResources", "getJiraIssue", "getConfluenceContent"] } : {}),
                   })
                 }
               >
+                <option value="atlassian-oauth">Atlassian 官方 MCP · OAuth</option>
                 <option value="stdio">stdio · 單一 launcher</option>
                 <option value="streamable-http">
                   Streamable HTTP · 本機 gateway
                 </option>
               </select>
             </label>
-            {connection.transport === "stdio" ? (
+            {connection.transport === "atlassian-oauth" ? (
+              <p className="field-help">官方端點：https://mcp.atlassian.com/v2/mcp。套用後可登入；僅要求 Jira／Confluence 讀取與搜尋權限。</p>
+            ) : connection.transport === "stdio" ? (
               <label>
                 Launcher 絕對路徑
                 <input
@@ -505,6 +508,20 @@ export default function Connections({
             取得工具清單
           </button>
         </div>
+        {atlassian && <div className="notice" aria-label="Atlassian 登入">
+          <p>{login?.status === "connected" ? "已登入 Atlassian（僅本次程式執行期間）" : login?.status === "waiting" ? "等待 Atlassian 授權完成" : "尚未登入 Atlassian"}</p>
+          <button className="button secondary" disabled={Boolean(loginReason)}
+            onClick={() => { if (!loginReason) { setToolName(""); onAction("BeginAtlassianLogin", connectionID); } }}>
+            {login?.status === "connected" ? "重新登入 Atlassian" : "登入 Atlassian"}
+          </button>
+          {login?.status === "connected" && <button className="button secondary" disabled={Boolean(loginReason)}
+            onClick={() => { if (!loginReason) { setToolName(""); onAction("DisconnectAtlassian", connectionID); } }}>清除本次登入</button>}
+          {login?.status === "waiting" && login.authorizationURL && <label>
+            Atlassian 授權連結（請複製並自行開啟）
+            <textarea readOnly value={login.authorizationURL} rows={4} onFocus={(e) => e.target.select()} />
+          </label>}
+          <p className="field-help">登入連結約兩分鐘內有效，可用頁面上方的取消按鈕停止。Token 只留在記憶體；重新啟動、套用設定或切回離線演練後需重新登入。</p>
+        </div>}
         <p id="tool-discovery-reason" className="field-help">
           {discoveryReason ||
             "按「取得工具清單」才會連線探索；不會執行任何工具。"}

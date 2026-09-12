@@ -17,7 +17,7 @@ func TestNativeBridgeHasNoImplicitWriterOrShell(t *testing.T) {
 	for i := 0; i < bridge.NumMethod(); i++ {
 		got = append(got, bridge.Method(i).Name)
 	}
-	want := []string{"ApplyBriefReview", "CallSourceTool", "Cancel", "ChooseBatch", "ChooseBriefSource", "ChooseBriefWork", "ChooseSource", "ChooseSourceReceipt", "DiscoverTools", "Extract", "ExtractBrief", "LoadDemo", "LoadEvidenceSearchDemo", "PrepareBriefCandidate", "PrepareBriefReview", "QueryBriefPending", "QueryPending", "SaveSettings", "SearchEvidence", "SendMessage", "Snapshot", "SubmitBriefPending", "SubmitPending", "SuggestSourceTool"}
+	want := []string{"BeginAtlassianLogin", "DisconnectAtlassian", "ApplyBriefReview", "CallSourceTool", "Cancel", "ChooseBatch", "ChooseBriefSource", "ChooseBriefWork", "ChooseSource", "ChooseSourceReceipt", "DiscoverTools", "Extract", "ExtractBrief", "LoadDemo", "LoadEvidenceSearchDemo", "PrepareBriefCandidate", "PrepareBriefReview", "QueryBriefPending", "QueryPending", "SaveSettings", "SearchEvidence", "SendMessage", "Snapshot", "SubmitBriefPending", "SubmitPending", "SuggestSourceTool"}
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Fatalf("native authority surface changed: %v", got)
