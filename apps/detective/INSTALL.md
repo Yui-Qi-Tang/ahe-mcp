@@ -137,6 +137,64 @@ Merely saving connection settings does not call tools or the model. Tool
 suggestions also require human confirmation before execution. On every restart,
 the app returns to offline mode even if its connection settings were saved.
 
+## Connect directly to Atlassian Rovo MCP with OAuth
+
+Desktop supports the official `https://mcp.atlassian.com/v2/mcp` endpoint using
+Streamable HTTP. It does not require `mcp-remote`, a local provider, an adapter
+launcher, a gateway, or a DNS override. This is the Desktop source connection;
+the legacy `ahe-detective` collector and its pinned local adapter remain separate.
+
+1. In **資料源與連線**, choose **實際模式**, add a source connection and select
+   **Atlassian 官方 MCP · OAuth**. The endpoint is fixed. Review the proposed
+   allowlist (`getAccessibleAtlassianResources`, `getJiraIssue`,
+   `getConfluenceContent`) and apply settings.
+2. Select the saved server under **手動來源工具**, then press **登入 Atlassian**.
+   Copy the displayed authorization URL and open it yourself. Detective does not
+   inspect or automatically open a browser. Complete Atlassian consent before
+   the roughly two-minute operation deadline; the application's Cancel action
+   stops waiting and closes the loopback callback.
+3. After Detective reports login complete, press **取得工具清單**. Select a
+   discovered tool and inspect its live input schema. A separately confirmed
+   `getAccessibleAtlassianResources` call can obtain the `cloudId`; use the exact
+   returned site ID and the selected tool's schema for subsequent calls.
+4. Confirm the exact tool and arguments for each read. OAuth login alone does not
+   fetch Jira/Confluence content, run a model, or send anything to AHE. The raw
+   MCP result and its text projection follow the existing private source-receipt
+   flow; provider revisions remain unknown unless separately established.
+
+The client discovers protected-resource and authorization-server metadata,
+registers a public client, and uses authorization code + PKCE S256 with a random
+state and a `127.0.0.1` callback on an ephemeral port. It requests only account,
+Jira/Confluence read/search and offline-refresh scopes. Access and refresh tokens
+stay in backend memory and are excluded from settings, UI state, receipts and
+logs. Refresh occurs only when an explicit source operation needs it. A failed
+refresh or HTTP 401 requires login again; a source call is never replayed.
+
+**清除本次登入**, applying settings, starting offline rehearsal, or closing the
+app forgets local credentials and invalidates the associated tool inventory.
+This does not revoke the grant at Atlassian; use your Atlassian account controls
+for server-side revocation. Restart begins offline and requires a new login.
+
+Your organization must permit this MCP client, its localhost callback and the
+connecting IP. If metadata, registration or consent is refused, ask the site
+administrator to check those settings. The UI does not request broader scopes
+or switch to API-token authentication. General Streamable HTTP connections remain
+unauthenticated and loopback-only; arbitrary HTTPS endpoints are not enabled.
+
+Tool availability depends on granted scopes and site policy. The v2 endpoint
+advertises primary tools; this client does not automatically run `discover` or
+an execution wrapper to find deferred tools. Read/search primary tools can be
+added to the operator allowlist and must be discovered and confirmed normally.
+
+The implementation is covered by synthetic OAuth/MCP tests, including refresh,
+callback state validation, cancellation and credential boundaries. A successful
+real-tenant consent and read must be separately verified by the operator; local
+tests do not prove your organization's access policy allows the connection.
+
+References: [Atlassian OAuth configuration](https://developer.atlassian.com/cloud/rovo-mcp/guides/configuring-oauth-2-1/),
+[supported tools](https://developer.atlassian.com/cloud/rovo-mcp/guides/supported-tools/),
+and [MCP authorization](https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization).
+
 ## Connect to AHE MCP
 
 First complete the root [MCP installation](../../INSTALL.md), including the
