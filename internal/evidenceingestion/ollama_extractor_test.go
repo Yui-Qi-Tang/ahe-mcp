@@ -54,8 +54,8 @@ func TestOllamaExtractorRunnerCallsGenerateEndpoint(t *testing.T) {
 	if captured.Stream {
 		t.Fatalf("stream = true, want false")
 	}
-	if captured.Format != "json" {
-		t.Fatalf("format = %#v, want json", captured.Format)
+	if _, ok := captured.Format.(map[string]any); !ok {
+		t.Fatalf("format = %#v, want JSON schema object", captured.Format)
 	}
 	if captured.Think {
 		t.Fatalf("think = true, want false")
@@ -78,7 +78,10 @@ func TestOllamaExtractorRunnerCallsGenerateEndpoint(t *testing.T) {
 
 	definition := runner.ExtractorDefinition()
 	if definition.Name != ExtractorOllamaLocal || definition.Version != ExtractorOllamaLocalVersion {
-		t.Fatalf("definition = %+v, want ollama-local/v1", definition)
+		t.Fatalf("definition = %+v, want current ollama-local version", definition)
+	}
+	if definition.Version != "v2" || definition.Config["format"] != "json_schema" {
+		t.Fatalf("schema-constrained provenance = %+v", definition)
 	}
 	if definition.Config["model"] != "gemma4:12b" || definition.Config["prompt_version"] != ollamaExtractorPromptVersion {
 		t.Fatalf("definition config = %+v", definition.Config)
@@ -287,7 +290,7 @@ func TestMockSQLRunTrustedExtractorWithOllamaDefinition(t *testing.T) {
 		t.Fatalf("traceProposalProvenance() error = %v", err)
 	}
 	if got.ExtractorName != ExtractorOllamaLocal || got.ExtractorVersion != ExtractorOllamaLocalVersion {
-		t.Fatalf("extractor provenance = %s/%s, want ollama-local/v1", got.ExtractorName, got.ExtractorVersion)
+		t.Fatalf("extractor provenance = %s/%s, want current ollama-local version", got.ExtractorName, got.ExtractorVersion)
 	}
 	if len(db.extractorDefinitions) != 1 {
 		t.Fatalf("extractor definition count = %d, want 1", len(db.extractorDefinitions))

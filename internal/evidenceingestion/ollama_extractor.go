@@ -17,7 +17,7 @@ const (
 	// ExtractorOllamaLocal identifies the Slice 8 local Ollama extractor adapter.
 	ExtractorOllamaLocal = "ollama-local"
 	// ExtractorOllamaLocalVersion is the adapter/prompt contract version.
-	ExtractorOllamaLocalVersion = "v1"
+	ExtractorOllamaLocalVersion = "v2"
 	// DefaultOllamaExtractorURL is the local Ollama endpoint default.
 	DefaultOllamaExtractorURL = "http://127.0.0.1:11434"
 	// OllamaExtractorPromptBoundedExactQuote selects the source-quote-only prompt.
@@ -109,7 +109,7 @@ func (r *OllamaExtractorRunner) ExtractorDefinition() ExtractorDefinitionInput {
 		promptVersion = ollamaExactQuotePromptVersion
 	}
 	config := map[string]string{
-		"format":         "json",
+		"format":         "json_schema",
 		"model":          r.model,
 		"prompt_version": promptVersion,
 		"provider":       "ollama",
@@ -135,6 +135,10 @@ func (r *OllamaExtractorRunner) Run(ctx context.Context, input ExtractorInput) (
 	if r == nil {
 		return nil, newDomainError(ErrorInvalidInput, "ollama extractor runner is nil")
 	}
+	format, err := ollamaExtractorOutputSchema(input, r.maxProposals)
+	if err != nil {
+		return nil, err
+	}
 	prompt, err := buildOllamaExtractorPrompt(input, r.promptMode, r.maxProposals)
 	if err != nil {
 		return nil, err
@@ -149,7 +153,7 @@ func (r *OllamaExtractorRunner) Run(ctx context.Context, input ExtractorInput) (
 		Model:   r.model,
 		Prompt:  prompt,
 		Stream:  false,
-		Format:  "json",
+		Format:  format,
 		Think:   false,
 		Options: options,
 	}
