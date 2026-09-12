@@ -77,13 +77,14 @@ func TestStatementLegacyCheckpointPhraseRoundTrip(t *testing.T) {
 	}
 }
 
-func TestStatementHistoricalNativeReviewUnchanged(t *testing.T) {
+func TestStatementDeidentifiedLegacyNativeReviewUnchanged(t *testing.T) {
 	body, err := os.ReadFile("testdata/source_review.json")
 	if err != nil {
 		t.Fatal(err)
 	}
+	// These hashes identify the path-deidentified copy, not the original run.
 	if checkpointHash(body) != "sha256:46711eaaf4be85f62b12d41e553ed9ea9e001a9549137f30f6f90a149a4e9ef6" {
-		t.Fatal("historical native review fixture changed")
+		t.Fatal("deidentified legacy-format review fixture changed")
 	}
 	var original ReviewBundle
 	if err := json.Unmarshal(body, &original); err != nil {
@@ -93,16 +94,16 @@ func TestStatementHistoricalNativeReviewUnchanged(t *testing.T) {
 	before := saveReviewTestJSON(t, path, original)
 	loaded, err := LoadReview(path)
 	if err != nil || !reflect.DeepEqual(loaded, original) {
-		t.Fatal("historical native review failed exact validation", err)
+		t.Fatal("deidentified legacy-format review failed exact validation", err)
 	}
 	if loaded.Digest != "sha256:4f6042af4c1896038c3f99db3466aec76e882206043878be88101bcddca84858" ||
 		loaded.Checkpoint.Digest != "sha256:c2df91ee235e913776cf4c2ce198f54c1510b9e31441f4b5963b5ae59b3cd974" ||
 		loaded.Review.SubmissionReceipt.RequestID != "detective-v1-0b5aed87b185b80efff011995c062ce48b9736ebf2fd1dee5ec416541bdcf0c5" {
-		t.Fatal("historical review, checkpoint or native request identity was rewritten")
+		t.Fatal("loading rewrote the deidentified review, checkpoint or preserved native request identity")
 	}
 	after, err := os.ReadFile(path)
 	if err != nil || !bytes.Equal(after, before) {
-		t.Fatal("loading a historical review changed its private file", err)
+		t.Fatal("loading a deidentified legacy-format review changed its private file", err)
 	}
 }
 
