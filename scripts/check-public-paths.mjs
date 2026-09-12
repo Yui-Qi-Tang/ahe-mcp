@@ -15,9 +15,11 @@ export function containsMachinePath(input) {
       .replace(/\\\//g, '/');
   }
   text = text.replace(/\\+/g, '/');
+  const temporaryPaths = [...text.matchAll(/[/](?:private[/])?tmp[/][^/\s"'<>\\()]+[.]([a-z0-9]{6})(?=[/\s"'<>\\()]|$)/gi)];
   return /[/]Users[/][^/\s]+/i.test(text)
     || /(?<![/]redacted)[/]home[/][^/\s]+/i.test(text)
-    || /[/](?:private[/])?var[/]folders[/][^/\s]+[/][^/\s]+/i.test(text);
+    || /[/](?:private[/])?var[/]folders[/][^/\s]+[/][^/\s]+/i.test(text)
+    || temporaryPaths.some(match => match[1] !== 'XXXXXX');
 }
 
 export function publicFailureLabel(name) {
