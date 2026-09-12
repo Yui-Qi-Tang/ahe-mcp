@@ -7,7 +7,8 @@ test('detects home and runtime paths without printing them', () => {
   const unix = ['', 'home', 'fixture-account', 'work'].join('/');
   const runtime = ['', 'private', 'var', 'folders', 'ab', 'fixture-runtime', 'T'].join('/');
   const windows = ['C:', 'Users', 'fixture-account', 'work'].join('\\');
-  for (const path of [home, unix, runtime, windows]) {
+  const temporary = ['', 'private', 'tmp', 'synthetic-lab.A1b2C3', 'report.json'].join('/');
+  for (const path of [home, unix, runtime, windows, temporary]) {
     assert.equal(containsMachinePath(path), true);
     assert.equal(containsMachinePath(JSON.stringify(path)), true);
     assert.equal(containsMachinePath(encodeURIComponent(path)), true);
