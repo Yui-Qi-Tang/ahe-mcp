@@ -1,0 +1,45 @@
+{
+  "schema_version": "ahe-detective-host-v4",
+  "host_id": "mcp-extraction-pilot",
+  "registration_request_id": "register-mcp-extraction-pilot-v1",
+  "workspace_id": "workspace:mcp-extraction-pilot-v1",
+  "workspace_root": "/absolute/private/ahe/workspace",
+  "sources": [],
+  "source_interval": "30s",
+  "max_steps": 1,
+  "repository_maintenance": {
+    "enabled": false
+  },
+  "mcp_read_sources": [
+    {
+      "source_id": "atlassian:jira:DEMO-1",
+      "connector_id": "atlassian-read",
+      "provider": "atlassian",
+      "logical_capability": "read_document",
+      "adapter_name": "ahe-mcp-atlassian-adapter",
+      "adapter_version": "mcp-atlassian-read-v2",
+      "provider_tool_name": "read_atlassian_document",
+      "provider_tool_input_schema_hash": "sha256:ade6d4c35cdf7d40a57cddcaf503b989859365992f1f64b08b25ba78c5de0159",
+      "arguments": {
+        "product": "jira",
+        "object_id": "DEMO-1"
+      },
+      "command": {
+        "path": "/absolute/path/to/ahe-mcp/bin/ahe-mcp-atlassian-adapter",
+        "directory": "/absolute/private/ahe",
+        "environment": [
+          "AHE_MCP_ATLASSIAN_ADAPTER_CONFIG=/absolute/private/ahe/atlassian-adapter.json"
+        ]
+      },
+      "proposal_conversion": false,
+      "proposal_extraction": {
+        "enabled": true,
+        "base_url": "http://127.0.0.1:11434/api/generate",
+        "model": "gemma4:e4b-it-qat",
+        "timeout": "120s",
+        "num_predict": 1024,
+        "max_proposals": 4
+      }
+    }
+  ]
+}

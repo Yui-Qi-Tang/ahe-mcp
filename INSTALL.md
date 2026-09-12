@@ -506,6 +506,103 @@ and local-model contracts are opt-in previews. On macOS, optional per-user
 [deploy/macos/README.md](deploy/macos/README.md). No Linux `systemd` unit or
 Windows service definition is currently included.
 
+### Legacy MCP read source with local Ollama extraction
+
+This macOS-only preview applies to `bin/ahe-detective`, not the included
+`apps/detective` CLI/Desktop. The original `configs/detective.example.json`
+collects a Git repository; it enables neither an Ollama planner nor model
+proposal extraction. A planner chooses work; it does not extract proposals.
+MCP read sources require the planner to remain disabled.
+
+The worked configuration uses `ahe-mcp-atlassian-adapter` because its
+`read_atlassian_document` tool returns `ahe-mcp-read-document-v1`. CodeGraph's
+`query_codegraph_function` returns `ahe-codegraph-candidate-v1` instead and
+cannot be used as this document source, even with the correct tool name/hash.
+Git-source model extraction and CodeGraph-to-document conversion are separate
+capabilities; these examples do not add them.
+
+**Prerequisites.** Build with `make build adapters`. Have an explicitly selected
+non-production AHE PostgreSQL database provisioned with `ahe-migrate`, a local
+Ollama server with the chosen model already installed, and the adapter's pinned
+`sooperset/mcp-atlassian@v0.23.0` provider installed in a private environment.
+This preview restricts both the adapter and provider to loopback networking:
+use an authorized local Jira/Confluence test service or a separately operated
+local gateway to the authorized service. Direct Atlassian Cloud URLs will not
+work through this sandbox. Preparing that service/gateway is a prerequisite,
+not something the collector installs or bypasses.
+
+1. Copy these three examples to a private directory and replace all absolute
+   placeholder paths:
+   - [adapter configuration](configs/atlassian-adapter.example.json) →
+     `atlassian-adapter.json`;
+   - [discovery command](configs/detective.mcp-command.example.json) →
+     `mcp-command.json`;
+   - [host-v4 extraction configuration](configs/detective.mcp-extraction.example.json)
+     → `detective-extraction.json`.
+   Create the configured workspace directory and keep private config files mode
+   `0600`. Give a new pilot its own host/workspace/registration identifiers.
+2. Supply `run-atlassian-provider`, a private executable launcher that loads
+   credentials from your external secret store, sets `JIRA_URL` or
+   `CONFLUENCE_URL` to the authorized loopback service, and `exec`s the absolute
+   installed `mcp-atlassian` executable. Preserve the fixed read-only environment
+   in the adapter example. Do not put credentials in the examples or shell
+   command arguments. Process environment is not inherited. The nested
+   `provider_command` is already sandbox-wrapped; the host and discovery command
+   configurations specify the **unwrapped** adapter executable because the CLI
+   wraps those automatically.
+3. Discover the actual adapter contract before starting collection:
+
+   ```sh
+   ./bin/ahe-detective --discover-tools /absolute/private/ahe/mcp-command.json
+   ```
+
+   This command needs no `DATABASE_DNS` or host configuration. It starts the
+   selected adapter, initializes MCP, follows `tools/list` pages, prints JSON,
+   and exits without `tools/call`, collection or model invocation. It does
+   execute the selected adapter's startup code. Child stderr is suppressed to
+   avoid exposing provider credentials. A timeout, duplicate tool name, missing
+   schema or repeated pagination cursor is an error.
+
+   Copy `provider_tool_name` and `provider_tool_input_schema_hash` from the
+   selected result into `mcp_read_sources[0]`. The example pin is checked against
+   the repository adapter schema in tests; discovery is the check for your
+   actual binary. The hash is `sha256:` plus SHA-256 of Go `json.Marshal` on the
+   decoded `inputSchema` map, exactly as `mcpstdio.ToolInputSchemaHash` computes
+   it. Do not hash pretty-printed JSON or use the upstream `jira_get_issue`
+   schema hash: the host calls the AHE adapter's tool. Annotations are provider
+   hints, not proof of safety or result-contract compatibility. Discovery does
+   not overwrite pins; a later schema mismatch still fails closed.
+4. In the host configuration, set `arguments.object_id` and `source_id` for an
+   authorized Jira issue (the example `DEMO-1` is a placeholder). For Confluence,
+   use `product: "confluence"` and its page ID. Set `proposal_extraction.model`
+   to the locally installed model; the example uses `gemma4:e4b-it-qat`.
+   `proposal_conversion` must remain false because it is mutually exclusive
+   with model extraction. The example disables repository maintenance and
+   requests at most four proposals using `bounded-exact-quote-v1`.
+5. With `DATABASE_DNS` supplied externally for the selected test database:
+
+   ```sh
+   ./bin/ahe-detective --config /absolute/private/ahe/detective-extraction.json
+   ```
+
+   This is a periodic collector; `max_steps` is not a one-shot exit flag. Stop
+   with Ctrl-C after observing a completed extraction. Inspect the structured
+   `mcp_read_proposal_extraction_completed` event: it records snapshot/view IDs,
+   extraction request/status, proposal occurrence/count and `model_invoked`.
+   A repeated snapshot may be replayed without a model call; zero proposals or
+   abstention is not evidence of extraction quality. Inspect failure events as
+   well as process status.
+
+The flow persists exact source and grounded candidate proposals for human
+review. It does not admit canonical nodes/edges. Use the read-only query MCP's
+live tools for supported readback and the trusted proposal-review workflow for
+pending cards. Compare grounded statements and excerpts before any explicit
+admission. A successful discovery only verifies advertised metadata; a complete
+runtime qualification additionally needs the actual provider, local model and
+selected test database. The existing host integration test uses a deterministic
+model response to verify proposal creation, replay and zero canonical nodes;
+it is not a Gemma quality benchmark.
+
 ## Upgrade
 
 For an MCP **binary-only** replacement against an already qualified schema 46

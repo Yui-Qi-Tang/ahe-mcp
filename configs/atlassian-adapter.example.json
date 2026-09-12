@@ -1,0 +1,23 @@
+{
+  "provider_release": "sooperset/mcp-atlassian@v0.23.0",
+  "provider_command": {
+    "Path": "/usr/bin/sandbox-exec",
+    "Args": [
+      "-p",
+      "(version 1) (allow default) (deny network*) (allow network-outbound (remote ip \"localhost:*\"))",
+      "/absolute/private/ahe/run-atlassian-provider"
+    ],
+    "Directory": "/absolute/private/ahe",
+    "Environment": [
+      "PYTHONHASHSEED=0",
+      "TZ=UTC",
+      "READ_ONLY_MODE=true",
+      "ENABLED_TOOLS=jira_get_issue,confluence_get_page",
+      "TRANSPORT=stdio",
+      "HTTP_PROXY=",
+      "HTTPS_PROXY=",
+      "ALL_PROXY=",
+      "ATLASSIAN_OAUTH_ENABLE="
+    ]
+  }
+}
