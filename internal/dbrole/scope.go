@@ -96,10 +96,21 @@ func loadUnmanifestedAuthorities(
 			SELECT 'LARGE OBJECT ' || large_object.oid::TEXT || ' ' || privilege.name
 			FROM pg_catalog.pg_largeobject_metadata AS large_object
 			CROSS JOIN large_object_privileges AS privilege
-			WHERE pg_catalog.has_largeobject_privilege(
-				$1,
-				large_object.oid,
-				privilege.name
+			-- has_largeobject_privilege exists only in PostgreSQL 18+.
+			-- Expand the effective ACL on every supported version instead:
+			-- NULL means owner defaults; PUBLIC and inherited grants also count.
+			WHERE EXISTS (
+				SELECT 1 FROM pg_catalog.pg_roles
+				WHERE rolname = $1 AND rolsuper
+			) OR EXISTS (
+				SELECT 1
+				FROM pg_catalog.aclexplode(COALESCE(
+					large_object.lomacl,
+					pg_catalog.acldefault('L', large_object.lomowner)
+				)) AS acl
+				WHERE acl.privilege_type = privilege.name
+				  AND CASE WHEN acl.grantee = 0 THEN TRUE
+				      ELSE pg_catalog.pg_has_role($1, acl.grantee, 'USAGE') END
 			)
 		) AS unmanifested
 		ORDER BY authority

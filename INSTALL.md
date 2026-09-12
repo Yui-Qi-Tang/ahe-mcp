@@ -277,6 +277,14 @@ role creation can introduce creator-admin memberships; this slice refuses that
 path instead of weakening the closed runtime policy. No serving process receives
 the provisioning identity or its credentials.
 
+Large-object authority is checked through PostgreSQL 16-compatible catalog ACLs,
+including PUBLIC, inherited grants and owner defaults. The check is not skipped
+on PostgreSQL 16/17 and does not require the PostgreSQL 18-only
+`has_largeobject_privilege()` function. The minimum remains PostgreSQL 16.
+Migration constraint verification also binds each constraint to its expected
+table, since `LIKE ... INCLUDING CONSTRAINTS` can copy a CHECK name to another
+table in the same schema.
+
 After separately preparing the dedicated database, private schema, migrations
 and database-wide prerequisites, an authorized operator may run this example
 with its separate protected operator credential file:
@@ -525,11 +533,36 @@ capabilities; these examples do not add them.
 non-production AHE PostgreSQL database provisioned with `ahe-migrate`, a local
 Ollama server with the chosen model already installed, and the adapter's pinned
 `sooperset/mcp-atlassian@v0.23.0` provider installed in a private environment.
-This preview restricts both the adapter and provider to loopback networking:
-use an authorized local Jira/Confluence test service or a separately operated
-local gateway to the authorized service. Direct Atlassian Cloud URLs will not
-work through this sandbox. Preparing that service/gateway is a prerequisite,
-not something the collector installs or bypasses.
+
+**Network boundary: local fixtures, not a direct Cloud connection.** This
+preview restricts both the adapter and provider to loopback networking. There
+is no supported config flag, environment variable or alternate outbound profile
+that enables direct Atlassian Cloud access. The exact sandbox profile is
+checked independently by the [Atlassian adapter](internal/atlassianmcp/adapter.go),
+[MCP read runtime](internal/detective/mcp_read_runtime.go), and
+[host configuration](internal/detectivehost/config.go), using
+[`IsMacOSLoopbackOnlyCommand`](internal/mcpstdio/sandbox.go). Editing the profile
+in the example will be rejected; the host also wraps its adapter command.
+
+An authorized local Jira/Confluence test service can run within this boundary.
+Reaching a real Cloud tenant requires **operator-built infrastructure outside
+AHE**, not a bundled or qualified AHE gateway. For transparent HTTPS forwarding,
+that typically means a hostname/DNS override that resolves the tenant to
+loopback inside the provider's environment, plus a separately operated TCP/TLS
+relay that forwards to the real tenant while preserving TLS SNI, the request
+hostname and certificate verification. Changing the URL to `localhost` alone
+does not preserve those properties. A purpose-built local HTTP API facade is
+another operator-owned design, with its own authentication, exact-response and
+revision-preservation requirements. Neither design is supplied or validated by
+this walkthrough. Avoid global DNS changes and do not disable TLS verification.
+
+The relay/facade itself must have authorized outbound access and enforce the
+intended tenant/destination and credential boundaries. A loopback connection to
+a relay does not make the remote destination loopback-only; the operator owns
+that additional trust boundary. Without such infrastructure, use a local fixture
+and treat real Cloud extraction as unavailable in this preview. A direct-Cloud
+opt-in profile would need a separate network-policy design and qualification;
+this release does not introduce one.
 
 1. Copy these three examples to a private directory and replace all absolute
    placeholder paths:
@@ -543,8 +576,10 @@ not something the collector installs or bypasses.
    `0600`. Give a new pilot its own host/workspace/registration identifiers.
 2. Supply `run-atlassian-provider`, a private executable launcher that loads
    credentials from your external secret store, sets `JIRA_URL` or
-   `CONFLUENCE_URL` to the authorized loopback service, and `exec`s the absolute
-   installed `mcp-atlassian` executable. Preserve the fixed read-only environment
+   `CONFLUENCE_URL` for the authorized fixture/facade, and `exec`s the absolute
+   installed `mcp-atlassian` executable. A transparent TLS relay instead retains
+   the original tenant hostname in that URL and uses the provider-scoped
+   loopback resolution described above. Preserve the fixed read-only environment
    in the adapter example. Do not put credentials in the examples or shell
    command arguments. Process environment is not inherited. The nested
    `provider_command` is already sandbox-wrapped; the host and discovery command
