@@ -196,6 +196,9 @@ func (b *clientHelperBackend) CallTool(
 	_ string,
 	arguments json.RawMessage,
 ) (json.RawMessage, error) {
+	if os.Getenv("AHE_MCP_CLIENT_HELPER") == "discovery" {
+		os.Exit(91)
+	}
 	if b.toolError {
 		return nil, errors.New("injected tool failure")
 	}

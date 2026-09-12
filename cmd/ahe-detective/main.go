@@ -27,6 +27,7 @@ func main() {
 
 type commandArgs struct {
 	configPath      string
+	discoveryPath   string
 	applyMigrations bool
 	help            bool
 }
@@ -45,6 +46,9 @@ func run(
 	if parsed.help {
 		fmt.Fprintln(stdout, usage())
 		return nil
+	}
+	if parsed.discoveryPath != "" {
+		return discoverTools(ctx, parsed.discoveryPath, stdout)
 	}
 	config, err := detectivehost.LoadConfig(parsed.configPath)
 	if err != nil {
@@ -71,6 +75,15 @@ func parseCommandArgs(args []string) (commandArgs, error) {
 		switch {
 		case arg == "-h" || arg == "--help":
 			parsed.help = true
+		case arg == "--discover-tools":
+			if index+1 >= len(args) || strings.HasPrefix(args[index+1], "-") {
+				return commandArgs{}, errors.New("--discover-tools requires a command config path")
+			}
+			index++
+			parsed.discoveryPath = strings.TrimSpace(args[index])
+			if parsed.discoveryPath == "" {
+				return commandArgs{}, errors.New("--discover-tools requires a command config path")
+			}
 		case arg == "--migrate":
 			parsed.applyMigrations = true
 		case strings.HasPrefix(arg, "--config="):
@@ -88,6 +101,12 @@ func parseCommandArgs(args []string) (commandArgs, error) {
 	if parsed.help {
 		return parsed, nil
 	}
+	if parsed.discoveryPath != "" {
+		if parsed.configPath != "" || parsed.applyMigrations {
+			return commandArgs{}, errors.New("--discover-tools cannot be combined with --config or --migrate")
+		}
+		return parsed, nil
+	}
 	if parsed.configPath == "" {
 		return commandArgs{}, errors.New("--config is required")
 	}
@@ -97,6 +116,10 @@ func parseCommandArgs(args []string) (commandArgs, error) {
 func usage() string {
 	return strings.Join([]string{
 		"Usage: ahe-detective --config PATH [--migrate]",
+		"",
+		"Discovery (macOS preview; no database required):",
+		"  ahe-detective --discover-tools COMMAND_CONFIG_PATH",
+		"  Starts the selected adapter and lists tool names/schema hashes; no tools/call.",
 		"",
 		"Options:",
 		"  --config PATH  Strict ahe-detective-host-v1/v2/v3/v4 JSON configuration",
