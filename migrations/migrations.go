@@ -2086,6 +2086,8 @@ func verifyAdmissionSchemaObjects(ctx context.Context, db tableQueryer) error {
 		}
 	}
 
+	// LIKE INCLUDING CONSTRAINTS can copy a CHECK name onto another table.
+	// Bind the lookup to its owning table; constraint names are not schema-unique.
 	for _, required := range requiredAdmissionConstraints {
 		var (
 			tableName         string
@@ -2110,7 +2112,8 @@ func verifyAdmissionSchemaObjects(ctx context.Context, db tableQueryer) error {
 				ON table_ns.oid = table_relation.relnamespace
 			WHERE table_ns.nspname = pg_catalog.current_schema()
 			  AND constraint_row.conname = $1
-		`, required.Name).Scan(
+			  AND table_relation.relname = $2
+		`, required.Name, required.Table).Scan(
 			&tableName,
 			&constraintType,
 			&deferrable,

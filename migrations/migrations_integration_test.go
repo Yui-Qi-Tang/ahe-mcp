@@ -2577,3 +2577,33 @@ func migrationRandomHex(t *testing.T, size int) string {
 	}
 	return hex.EncodeToString(data)
 }
+
+func TestIntegrationVerifyCurrentBindsConstraintToExpectedTable(t *testing.T) {
+	ctx, pool := migrationTestPool(t)
+	if _, err := ApplyUp(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	const name = "canonical_source_claim_review_bindings_manifest_id_ck"
+	var copies int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FROM pg_constraint c JOIN pg_namespace n ON n.oid=c.connamespace WHERE n.nspname=current_schema() AND c.conname=$1`, name).Scan(&copies); err != nil {
+		t.Fatal(err)
+	}
+	if copies != 2 {
+		t.Fatalf("expected original and LIKE-copied constraint, got %d", copies)
+	}
+	if _, err := VerifyCurrent(ctx, pool); err != nil {
+		t.Fatalf("valid copied constraint interfered with verification: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `ALTER TABLE canonical_source_claim_review_bindings DROP CONSTRAINT canonical_source_claim_review_bindings_manifest_id_ck`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyCurrent(ctx, pool); !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), name+" is missing") {
+		t.Fatalf("copied constraint masked missing original: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `ALTER TABLE canonical_source_claim_review_bindings ADD CONSTRAINT canonical_source_claim_review_bindings_manifest_id_ck CHECK (true)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyCurrent(ctx, pool); !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), name+" does not match its definition contract") {
+		t.Fatalf("copied constraint masked changed original: %v", err)
+	}
+}
