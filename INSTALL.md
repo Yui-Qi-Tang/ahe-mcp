@@ -1,10 +1,15 @@
 # Installing AHE
 
+> **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** Do not install, launch,
+> upgrade or accept Desktop as a working product using this guide. Desktop
+> procedures below are retained references only. MCP setup is unchanged;
+> Detective development returns to CLI-first validation. See [STATUS](STATUS.md).
+
 This guide installs the current controlled-pilot source tree, including the MCP
 programs and Detective CLI/Desktop in one Go module. AHE does not yet publish
 stable release binaries, packages, or a semantic-versioned release, so
-deployments should build and record a reviewed Git commit. The included Desktop
-is `0.1.0-preview.18`; its installation is detailed in
+deployments should build and record a reviewed Git commit. The frozen Desktop
+code is `0.1.0-preview.18`; its historical installation reference is in
 [apps/detective/INSTALL.md](apps/detective/INSTALL.md).
 
 For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DESIGN.md).
@@ -55,11 +60,11 @@ The core AHE path is not macOS-only.
 | Legacy Detective MCP-read sources | Not currently supported | Supported preview | Not qualified |
 | Atlassian and CodeGraph preview adapters | Not currently supported | Supported preview | Not qualified |
 | Included supervised-service packaging | Not included | `launchd` packaging included | Not included |
-| New Detective Desktop (`apps/detective`) | Not qualified | Apple silicon source-build preview | Not qualified |
+| New Detective Desktop (`apps/detective`) | Unavailable / frozen | Unavailable / frozen | Unavailable / frozen |
 
 The legacy macOS-only collectors and adapters require AHE's exact `sandbox-exec` loopback policy.
-Desktop also provides a separate [official Atlassian OAuth connection](apps/detective/INSTALL.md#connect-directly-to-atlassian-rovo-mcp-with-oauth)
-which connects directly to the remote MCP endpoint.
+The frozen Desktop code retains a separate [official Atlassian OAuth connection](apps/detective/INSTALL.md#connect-directly-to-atlassian-rovo-mcp-with-oauth),
+not a currently supported connection route.
 They do not limit the external-agent intake path or the Query MCP. The CI
 configuration runs the shared-module race checks on Linux with the native build
 dependencies and test-package limit described below.
@@ -142,20 +147,18 @@ To place binaries in a reviewed deployment directory:
 make BIN_DIR=/absolute/release/ahe/bin build
 ```
 
-From the same repository root, optionally build the new Detective application:
+From the same repository root, build the Detective CLI for development:
 
 ```sh
 make detective
-make desktop
 ```
 
-The first command produces `bin/detective`, `bin/detective-source-demo` and
-`bin/detective-news-source`. The second requires the supported macOS build
-host and produces `apps/detective/build/bin/AHE Detective.app` with an adjacent
-`Start.command` and synthetic source demo. All use the same root Go module;
+This produces `bin/detective`, `bin/detective-source-demo` and
+`bin/detective-news-source`. The Desktop build target remains in the tree but
+is outside the current installation/acceptance path. All share the root Go module;
 do not run `go mod init` or restore the former Detective `go.mod` beneath it.
-Follow [Desktop installation](apps/detective/INSTALL.md) for launch, workspace,
-signing limitations, and upgrade instructions.
+The [Desktop installation document](apps/detective/INSTALL.md) retains historical
+workspace and signing information, not instructions to resume its use.
 
 Before deployment, verify the checkout, including the frontend required by the
 shared module:
@@ -516,7 +519,7 @@ and local-model contracts are opt-in previews. On macOS, optional per-user
 [deploy/macos/README.md](deploy/macos/README.md). No Linux `systemd` unit or
 Windows service definition is currently included.
 
-### Legacy MCP read source with local Ollama extraction
+### Legacy MCP engineering source with whole-unit model selection
 
 This macOS-only preview applies to `bin/ahe-detective`, not the included
 `apps/detective` CLI/Desktop. The original `configs/detective.example.json`
@@ -524,12 +527,18 @@ collects a Git repository; it enables neither an Ollama planner nor model
 proposal extraction. A planner chooses work; it does not extract proposals.
 MCP read sources require the planner to remain disabled.
 
-The `ollama-local/v2` extractor sends a JSON Schema in Ollama's `format`
-field for both prompt modes. It restricts output to proposal objects and
-references to the current input's span IDs; bounded exact-quote mode also
-limits proposal count. An empty span catalogue permits only abstention.
-Schema-constrained generation does not prove grounding: strict decoding,
-reference validation and the bounded mode's exact-quote checks still apply.
+This walkthrough describes the retained whole-unit baseline, not the selected
+task-driven engineering workflow. Its wiring is still present; the replacement
+and compatibility requirements are tracked in [STATUS.md](STATUS.md).
+
+Opt-in `proposal_extraction` uses `whole-span-exact-quote-selection-v1`: the
+model selects complete supplied units, not summaries or shortened quotations.
+The controller independently checks complete text, the matching reference, and
+duplicates. Conditions and table rows cannot be dropped within a selected unit.
+Unselected units remain possible; this is not an all-facts completeness test.
+Provider names do not impose a blanket model ban. Explicit
+`proposal_conversion: true` remains a model-free alternative that copies every
+adapter-selected value. Collection-only configurations are not changed.
 
 The worked configuration uses `ahe-mcp-atlassian-adapter` because its
 `read_atlassian_document` tool returns `ahe-mcp-read-document-v1`. CodeGraph's
@@ -539,9 +548,9 @@ Git-source model extraction and CodeGraph-to-document conversion are separate
 capabilities; these examples do not add them.
 
 **Prerequisites.** Build with `make build adapters`. Have an explicitly selected
-non-production AHE PostgreSQL database provisioned with `ahe-migrate`, a local
-Ollama server with the chosen model already installed, and the adapter's pinned
-`sooperset/mcp-atlassian@v0.23.0` provider installed in a private environment.
+non-production AHE PostgreSQL database provisioned with `ahe-migrate` and the
+adapter's pinned `sooperset/mcp-atlassian@v0.23.0` provider installed in a private
+environment.
 
 For official remote MCP with OAuth in Desktop, use the
 [direct connection workflow](apps/detective/INSTALL.md#connect-directly-to-atlassian-rovo-mcp-with-oauth).
@@ -583,7 +592,7 @@ this release does not introduce one.
      `atlassian-adapter.json`;
    - [discovery command](configs/detective.mcp-command.example.json) →
      `mcp-command.json`;
-   - [host-v4 extraction configuration](configs/detective.mcp-extraction.example.json)
+   - [host-v4 model selection configuration](configs/detective.mcp-extraction.example.json)
      → `detective-extraction.json`.
    Create the configured workspace directory and keep private config files mode
    `0600`. Give a new pilot its own host/workspace/registration identifiers.
@@ -622,11 +631,21 @@ this release does not introduce one.
    not overwrite pins; a later schema mismatch still fails closed.
 4. In the host configuration, set `arguments.object_id` and `source_id` for an
    authorized Jira issue (the example `DEMO-1` is a placeholder). For Confluence,
-   use `product: "confluence"` and its page ID. Set `proposal_extraction.model`
-   to the locally installed model; the example uses `gemma4:e4b-it-qat`.
-   `proposal_conversion` must remain false because it is mutually exclusive
-   with model extraction. The example disables repository maintenance and
-   requests at most four proposals using `bounded-exact-quote-v1`.
+   use `product: "confluence"` and its page ID. The example explicitly enables
+   model extraction and disables conversion; choose a model already installed
+   at the selected loopback endpoint. No model is downloaded automatically.
+   By default a unit is a complete adapter-selected value. To process existing
+   heading-based sections individually, explicitly set `section_mode` to
+   `"heading_sections_v1"` and `max_sections`; the product of `max_sections`
+   and `max_proposals` must not exceed 32. A unit may contain several facts.
+   Each unit is limited to 64 KiB; oversized units and shortened model output
+   fail without truncation or repair. Ensure `num_predict` permits the chosen
+   unit size; the example's 1024-token budget is not sufficient for every unit.
+   The provider must report `done: true` and `done_reason: "stop"`; a token-limit
+   stop or missing completion metadata fails even if the text is valid JSON.
+   The adapter selects Jira description or Confluence content, not unselected
+   fields, comments, history, linked documents or descendants. Collection
+   coverage remains separate from selection and factual completeness.
 5. With `DATABASE_DNS` supplied externally for the selected test database:
 
    ```sh
@@ -635,21 +654,19 @@ this release does not introduce one.
 
    This is a periodic collector; `max_steps` is not a one-shot exit flag. Stop
    with Ctrl-C after observing a completed extraction. Inspect the structured
-   `mcp_read_proposal_extraction_completed` event: it records snapshot/view IDs,
-   extraction request/status, proposal occurrence/count and `model_invoked`.
-   A repeated snapshot may be replayed without a model call; zero proposals or
-   abstention is not evidence of extraction quality. Inspect failure events as
-   well as process status.
+   `mcp_read_proposal_extraction_completed` event and its selection counts,
+   attempt/status/reason, and proposal IDs. A repeated snapshot may be replayed
+   without a model call. Inspect failure events too; valid syntax or an exact
+   quotation alone is not a successful complete-unit selection.
 
 The flow persists exact source and grounded candidate proposals for human
 review. It does not admit canonical nodes/edges. Use the read-only query MCP's
 live tools for supported readback and the trusted proposal-review workflow for
 pending cards. Compare grounded statements and excerpts before any explicit
 admission. A successful discovery only verifies advertised metadata; a complete
-runtime qualification additionally needs the actual provider, local model and
-selected test database. The existing host integration test uses a deterministic
-model response to verify proposal creation, replay and zero canonical nodes;
-it is not a Gemma quality benchmark.
+runtime qualification additionally needs the actual provider and selected test
+database. Selection preserves selected source text; it does not establish
+semantic extraction completeness or the truth of source assertions.
 
 ## Upgrade
 

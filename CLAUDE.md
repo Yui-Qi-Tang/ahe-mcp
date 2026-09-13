@@ -2,8 +2,16 @@
 
 ## Read First
 
+- Detective Desktop is **frozen / unavailable (目前不工作)** as of 2026-09-14.
+  CLI stabilization comes first. Do not request UI acceptance, start the app,
+  extend Desktop or publish it unless the user explicitly unfreezes that work.
+  Keep existing code/tests/data; see `STATUS.md` for the CLI gaps and review order.
+
 - Treat this file as the operational summary. Do not read all of `README.md` by
   default.
+- For Detective extraction development, read `STATUS.md` for the selected
+  task-driven direction, current capability gaps and code disposition. Planned
+  behavior there is not an available runtime capability or permission to write.
 - For installation or operating-system support, read `INSTALL.md`. The
   `deploy/macos` directory is optional `launchd` packaging, not an AHE Core
   platform requirement.
@@ -61,10 +69,19 @@
   not compensate for omitted in-scope information. Preserve requirements,
   conditions, exceptions and status details; disclose extraction omissions
   separately from source coverage. No observed fabrication is not completeness.
-- Brief currently lacks an enforced source-type gate. This instruction is an
-  operational restriction, not a claim that runtime routing has been repaired.
-  Do not use its caller-declared `manual_text` route to bypass external-source
-  identity, provider revision or capability requirements.
+- New Brief operations require `detective-brief-source/v2` with `source_kind`
+  equal to `news` or `public_event`. The declaration is not automatic content
+  classification; do not relabel engineering sources or use `manual_text` to
+  bypass external-source identity, provider revision or capability requirements.
+- The retained legacy host's small-model engineering path selects complete
+  verbatim source units, then independently checks text and span identity.
+  This whole-span mode is still wired in the working draft; it is a comparison
+  baseline, not the selected task-driven end state or a Desktop capability. It does not
+  replace engineering content with Brief summaries. Explicit section processing
+  describes the supplied input, not semantic completeness or uncollected fields.
+  Model extraction, deterministic conversion and collection-only are separate
+  operator choices; do not silently enable proposal writing or categorically
+  prohibit a model because the provider is Atlassian/Codegraph.
 - Submit connector-observed text or JSON exactly. Never replace source content
   with a model summary or paraphrase.
 - Use provider identity and revision metadata from the connector. Never invent

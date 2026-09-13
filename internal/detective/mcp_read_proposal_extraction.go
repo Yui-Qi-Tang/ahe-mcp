@@ -36,22 +36,33 @@ type MCPReadProposalExtractionInput struct {
 // MCPReadProposalExtractionResult reports source-bound model proposals or an
 // audited abstention. Neither outcome performs admission or graph activation.
 type MCPReadProposalExtractionResult struct {
-	Contract                string `json:"contract"`
-	Status                  string `json:"status"`
-	Reason                  string `json:"reason,omitempty"`
-	SourceSnapshotID        string `json:"source_snapshot_id"`
-	ExtractionViewID        string `json:"extraction_view_id"`
-	ExtractionRequestID     string `json:"extraction_request_id"`
-	ProposalCount           int    `json:"proposal_count"`
-	ProposalOccurrenceID    string `json:"proposal_occurrence_id,omitempty"`
-	ExtractionRunID         string `json:"extraction_run_id,omitempty"`
-	ExtractionAttemptID     string `json:"extraction_attempt_id,omitempty"`
-	ModelInvoked            bool   `json:"model_invoked"`
-	ModelCallCount          int    `json:"model_call_count"`
-	SectionCount            int    `json:"section_count"`
-	SectionCoverageComplete bool   `json:"section_coverage_complete"`
-	Replayed                bool   `json:"replayed"`
-	GlobalAbsenceInference  bool   `json:"global_absence_inference_allowed"`
+	Contract                string                            `json:"contract"`
+	Status                  string                            `json:"status"`
+	Reason                  string                            `json:"reason,omitempty"`
+	SourceSnapshotID        string                            `json:"source_snapshot_id"`
+	ExtractionViewID        string                            `json:"extraction_view_id"`
+	ExtractionRequestID     string                            `json:"extraction_request_id"`
+	ProposalCount           int                               `json:"proposal_count"`
+	ProposalOccurrenceID    string                            `json:"proposal_occurrence_id,omitempty"`
+	ExtractionRunID         string                            `json:"extraction_run_id,omitempty"`
+	ExtractionAttemptID     string                            `json:"extraction_attempt_id,omitempty"`
+	ModelInvoked            bool                              `json:"model_invoked"`
+	ModelCallCount          int                               `json:"model_call_count"`
+	SectionCount            int                               `json:"section_count"`
+	SectionCoverageComplete bool                              `json:"section_coverage_complete"`
+	Replayed                bool                              `json:"replayed"`
+	GlobalAbsenceInference  bool                              `json:"global_absence_inference_allowed"`
+	SelectionCoverage       *MCPReadProposalSelectionCoverage `json:"selection_coverage,omitempty"`
+}
+
+// MCPReadProposalSelectionCoverage counts controller units, not facts or claims.
+// Section processing and selection do not assess extraction completeness.
+type MCPReadProposalSelectionCoverage struct {
+	EligibleUnitCount        int  `json:"eligible_unit_count"`
+	SelectedUnitCount        int  `json:"selected_unit_count"`
+	UnselectedUnitCount      int  `json:"unselected_unit_count"`
+	MaxProposalsPerCall      int  `json:"max_proposals_per_call"`
+	FactCompletenessAssessed bool `json:"fact_completeness_assessed"`
 }
 
 // ExtractMCPReadDocumentSnapshot runs a bounded source-quote extractor over
@@ -124,22 +135,25 @@ func ExtractMCPReadDocumentSnapshot(
 		input.MaxProposals,
 	)
 	modelCallCount := 0
+	eligibleUnitCount := 0
 	var runner evidenceingestion.ExtractorRunner
 	if input.SectionMode == "" {
 		boundedInput, err := boundedMCPReadProposalExtractorInput(extractorInput, resolved)
 		if err != nil {
 			return MCPReadProposalExtractionResult{}, err
 		}
+		eligibleUnitCount = len(boundedInput.Spans)
 		runner = func(ctx context.Context, _ evidenceingestion.ExtractorInput) ([]byte, error) {
 			modelCallCount++
 			data, err := input.Runner(ctx, boundedInput)
 			if err != nil {
 				return data, err
 			}
-			if _, err := evidenceingestion.DecodeBoundedExactQuoteExtractorOutput(
+			if _, err := decodeMCPReadProposalExtractionOutput(
 				data,
 				boundedInput,
 				input.MaxProposals,
+				definition,
 			); err != nil {
 				return data, err
 			}
@@ -155,6 +169,7 @@ func ExtractMCPReadDocumentSnapshot(
 			return MCPReadProposalExtractionResult{}, err
 		}
 		result.SectionCount = len(sections)
+		eligibleUnitCount = len(sections)
 		runner = func(ctx context.Context, _ evidenceingestion.ExtractorInput) ([]byte, error) {
 			output := evidenceingestion.FrozenExtractorOutput{
 				Proposals: make([]evidenceingestion.ExtractorProposalOutput, 0),
@@ -162,7 +177,7 @@ func ExtractMCPReadDocumentSnapshot(
 					SchemaVersion:            evidenceingestion.DocumentSectionCoverageSchemaV1,
 					SegmentationContract:     input.SectionMode,
 					OffsetBasis:              evidenceingestion.DocumentSectionCoverageOffsetAdapterSelectedUTF8,
-					CoverageComplete:         true,
+					CoverageComplete:         true, // Every section is processed; facts are not counted.
 					NegativeInferenceAllowed: false,
 					SelectedSourceCount:      len(resolved),
 					SectionCount:             len(sections),
@@ -178,10 +193,11 @@ func ExtractMCPReadDocumentSnapshot(
 				if err != nil {
 					return data, err
 				}
-				decoded, err := evidenceingestion.DecodeBoundedExactQuoteExtractorOutput(
+				decoded, err := decodeMCPReadProposalExtractionOutput(
 					data,
 					section.input,
 					input.MaxProposals,
+					definition,
 				)
 				if err != nil {
 					return data, err
@@ -225,6 +241,14 @@ func ExtractMCPReadDocumentSnapshot(
 		return MCPReadProposalExtractionResult{}, err
 	}
 	result.ProposalCount = ingested.ProposalCount
+	if definition.Config["output_contract"] == evidenceingestion.OllamaExtractorPromptWholeSpanExactQuote {
+		result.SelectionCoverage = &MCPReadProposalSelectionCoverage{
+			EligibleUnitCount:   eligibleUnitCount,
+			SelectedUnitCount:   ingested.ProposalCount,
+			UnselectedUnitCount: eligibleUnitCount - ingested.ProposalCount,
+			MaxProposalsPerCall: input.MaxProposals,
+		}
+	}
 	result.ProposalOccurrenceID = ingested.ProposalOccurrenceID
 	result.ExtractionRunID = ingested.ExtractionRunID
 	result.ExtractionAttemptID = ingested.ExtractionAttemptID
@@ -350,6 +374,10 @@ func mcpReadProposalExtractionDefinition(
 	config["extraction_contract"] = contract
 	config["input_contract"] = "adapter-selected-source-spans-v1"
 	config["grounding_contract"] = "exact-selected-span-substring-v1"
+	if config["output_contract"] == evidenceingestion.OllamaExtractorPromptWholeSpanExactQuote {
+		config["selection_unit"] = "whole_current_span"
+		config["coverage_semantics"] = "selection_only_not_fact_completeness"
+	}
 	if sectionMode == "" {
 		config["max_proposals"] = fmt.Sprintf("%d", maxProposals)
 	} else {
@@ -403,4 +431,16 @@ func validateMCPReadProposalExtractionInput(input MCPReadProposalExtractionInput
 	default:
 		return "", newDomainError(ErrorInvalidInput, "unsupported section_mode %q", input.SectionMode)
 	}
+}
+
+func decodeMCPReadProposalExtractionOutput(
+	data []byte,
+	input evidenceingestion.ExtractorInput,
+	maxProposals int,
+	definition evidenceingestion.ExtractorDefinitionInput,
+) (evidenceingestion.FrozenExtractorOutput, error) {
+	if definition.Config["output_contract"] == evidenceingestion.OllamaExtractorPromptWholeSpanExactQuote {
+		return evidenceingestion.DecodeWholeSpanExactQuoteSelectionOutput(data, input, maxProposals)
+	}
+	return evidenceingestion.DecodeBoundedExactQuoteExtractorOutput(data, input, maxProposals)
 }

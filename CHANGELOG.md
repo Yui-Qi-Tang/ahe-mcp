@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — 2026-09-14
+
+- Froze Detective Desktop as unavailable (目前不工作); retained implementation
+  and historical results. Returned development priority to CLI stabilization.
+
+Entries below describe earlier checkpoints, not current Desktop availability.
+
 ## dev — 2026-09-12
 
 - Included Detective CLI and macOS Desktop `0.1.0-preview.18` in the MCP

@@ -1,7 +1,9 @@
 package detectivehost
 
 import (
+	"bytes"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,8 +12,64 @@ import (
 	"time"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/detective"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpstdio"
 )
+
+func TestMCPProposalExtractorRequiresExplicitEnablement(t *testing.T) {
+	for _, config := range []*MCPProposalExtractionConfig{nil, {Enabled: false}} {
+		if extractor, err := newMCPProposalExtractor(config); err != nil || extractor != nil {
+			t.Fatalf("unconfigured/disabled source gained a model extractor: %+v, %v", extractor, err)
+		}
+	}
+	config := &MCPProposalExtractionConfig{Enabled: true, Model: "synthetic-selector", MaxProposals: 4}
+	extractor, err := newMCPProposalExtractor(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if extractor.ExtractorDefinition.Config["output_contract"] != evidenceingestion.OllamaExtractorPromptWholeSpanExactQuote ||
+		extractor.MaxProposals != 4 || extractor.SectionMode != "" || extractor.MaxSections != 0 {
+		t.Fatalf("host did not select the explicit whole-span contract with unset sections: %+v", extractor)
+	}
+	if config.SectionMode != "" || config.MaxSections != 0 {
+		t.Fatalf("host mutated unset section configuration: %+v", config)
+	}
+}
+
+func TestMCPProposalExtractionLogDisclosesUnitOmissions(t *testing.T) {
+	for _, selection := range []bool{false, true} {
+		for _, replayed := range []bool{false, true} {
+			result := detective.MCPReadProposalExtractionResult{ProposalCount: 1, Replayed: replayed}
+			if selection {
+				result.SelectionCoverage = &detective.MCPReadProposalSelectionCoverage{
+					EligibleUnitCount: 3, SelectedUnitCount: 1, UnselectedUnitCount: 2, MaxProposalsPerCall: 1,
+				}
+			}
+			var log bytes.Buffer
+			logger := slog.New(slog.NewJSONHandler(&log, nil))
+			logMCPReadProposalExtraction(logger, "host:synthetic", "source:synthetic", result, false)
+			var event map[string]any
+			if err := json.Unmarshal(log.Bytes(), &event); err != nil {
+				t.Fatal(err)
+			}
+			if event["event"] != "mcp_read_proposal_extraction_completed" || event["replayed"] != replayed {
+				t.Fatalf("event lost extraction/replay identity: %+v", event)
+			}
+			coverage, present := event["selection_coverage"]
+			if present != selection {
+				t.Fatalf("selection=%t coverage presence=%t: %+v", selection, present, event)
+			}
+			if selection {
+				counts := coverage.(map[string]any)
+				if counts["eligible_unit_count"] != float64(3) || counts["selected_unit_count"] != float64(1) ||
+					counts["unselected_unit_count"] != float64(2) || counts["max_proposals_per_call"] != float64(1) ||
+					counts["fact_completeness_assessed"] != false {
+					t.Fatalf("event misreported unit omissions: %+v", counts)
+				}
+			}
+		}
+	}
+}
 
 func TestLoadConfigAcceptsBoundedLocalTextHost(t *testing.T) {
 	path := writeHostConfig(t, `{
@@ -294,6 +352,22 @@ func TestLoadConfigAcceptsBoundedLoopbackMCPProposalExtraction(t *testing.T) {
 	}
 
 	source := raw["mcp_read_sources"].([]any)[0].(map[string]any)
+	for _, identity := range []struct {
+		provider string
+		adapter  string
+	}{
+		{provider: "atlassian", adapter: "fixture-document-adapter"},
+		{provider: "codegraph", adapter: "fixture-document-adapter"},
+		{provider: "fixture", adapter: "ahe-mcp-atlassian-adapter"},
+		{provider: "fixture", adapter: "ahe-mcp-codegraph-adapter"},
+	} {
+		source["provider"], source["adapter_name"] = identity.provider, identity.adapter
+		payload, _ = json.Marshal(raw)
+		if _, err := LoadConfig(writeHostConfig(t, string(payload))); err != nil {
+			t.Fatalf("LoadConfig(engineering model selection %s/%s) error = %v", identity.provider, identity.adapter, err)
+		}
+	}
+	source["provider"], source["adapter_name"] = "fixture", "fixture-document-adapter"
 	source["proposal_extraction"].(map[string]any)["base_url"] = "https://models.example.test"
 	payload, _ = json.Marshal(raw)
 	if _, err := LoadConfig(writeHostConfig(t, string(payload))); err == nil ||

@@ -42,7 +42,7 @@ func verifyBriefRecord(record pendingRecord, input BriefSubmission, handoff Hand
 	record.Extractor.ConfigHash = "sha256:" + digest(map[string]string{"model": x.Model, "source_mode": "frozen_local_snapshot"})
 	record.AdmissionOutcome, record.CanonicalRef = "pending", json.RawMessage("null")
 	document, _ := briefDocument(input) // All callers validate the frozen input first.
-	if err := verifyPendingRecord(record, input.Report.Source.SourceID, document, x, labstatus.Record{Statement: input.Statement, Citation: input.Citation}, handoff); err != nil {
+	if err := verifyPendingRecord(record, briefSourceID(input), document, x, labstatus.Record{Statement: input.Statement, Citation: input.Citation}, handoff); err != nil {
 		return CandidateObservation{}, err
 	}
 	return observation, nil

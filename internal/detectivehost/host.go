@@ -629,7 +629,7 @@ func newMCPProposalExtractor(
 		Model:        config.Model,
 		Timeout:      config.Timeout,
 		NumPredict:   config.NumPredict,
-		PromptMode:   evidenceingestion.OllamaExtractorPromptBoundedExactQuote,
+		PromptMode:   evidenceingestion.OllamaExtractorPromptWholeSpanExactQuote,
 		MaxProposals: config.MaxProposals,
 	})
 	if err != nil {
@@ -651,6 +651,9 @@ func logMCPReadProposalExtraction(
 	result detective.MCPReadProposalExtractionResult,
 	recovered bool,
 ) {
+	if result.SelectionCoverage != nil {
+		logger = logger.With("selection_coverage", result.SelectionCoverage)
+	}
 	logger.Info(
 		"MCP document proposal extraction completed",
 		"event", "mcp_read_proposal_extraction_completed",

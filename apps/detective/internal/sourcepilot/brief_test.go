@@ -18,7 +18,7 @@ import (
 )
 
 func briefFixture() BriefSource {
-	return BriefSource{Version: BriefSourceVersion, SourceID: "synthetic-atlas", SourceRevision: "fixture-v1",
+	return BriefSource{Version: BriefSourceVersion, SourceKind: "news", SourceID: "synthetic-atlas", SourceRevision: "fixture-v1",
 		SourceURL: "https://example.invalid/incident", ObservedAt: "2026-09-10T09:00:00Z",
 		Coverage: "full_document", Limitations: []string{},
 		Body: "Atlas API reported increased errors. The team reverted a configuration change, and requests outside the north region returned to normal.\nAtlas API requests in the north region remain delayed. The cause remains unconfirmed."}
@@ -154,6 +154,115 @@ func TestBriefReadPreservesKnownHistoricalPromptVersions(t *testing.T) {
 			if _, err := ParseBriefReport(raw); err == nil {
 				t.Fatal("historical prompt bypassed authority validation")
 			}
+		}
+	}
+}
+
+func TestBriefRequiresExplicitNewsOrPublicEventBeforeModel(t *testing.T) {
+	for _, kind := range []string{"news", "public_event"} {
+		t.Run(kind, func(t *testing.T) {
+			source := briefFixture()
+			source.SourceKind = kind
+			raw, _ := json.Marshal(source)
+			if got, err := ParseBriefSource(raw); err != nil || !reflect.DeepEqual(got, source) {
+				t.Fatalf("explicit source selection rejected: %v", err)
+			}
+			llm := &briefModel{responses: []*model.LLMResponse{briefResponse("A public event was reported.")}}
+			extractor, _ := NewBriefExtractor(llm)
+			report, err := extractor.Extract(t.Context(), source)
+			if err != nil || len(llm.requests) != 1 || report.Source.SourceKind != kind {
+				t.Fatalf("selected source was changed or not extracted once: %v", err)
+			}
+			assertBriefRoundTrip(t, report)
+		})
+	}
+	for _, kind := range []string{"", "unknown", "engineering", "engineering_evidence", "jira", "confluence", "code", "git", "manual_text", "news_event", "News", " news"} {
+		t.Run("reject_"+kind, func(t *testing.T) {
+			source := briefFixture()
+			source.SourceKind = kind
+			assertBriefSourceCannotExecute(t, source)
+		})
+	}
+	for _, kind := range []string{"", "news", "public_event"} {
+		source := briefFixture()
+		source.Version, source.SourceKind = "detective-brief-source/v1", kind
+		assertBriefSourceCannotExecute(t, source)
+	}
+}
+
+func assertBriefSourceCannotExecute(t *testing.T, source BriefSource) {
+	t.Helper()
+	if err := ValidateBriefSourceForExtraction(source); err == nil {
+		t.Fatal("ineligible source passed extraction preflight")
+	}
+	raw, _ := json.Marshal(source)
+	if _, err := ParseBriefSource(raw); err == nil {
+		t.Fatal("ineligible source accepted for new import")
+	}
+	if _, err := NewBriefReport(source); err == nil {
+		t.Fatal("ineligible source accepted for a new report")
+	}
+	llm := &briefModel{}
+	extractor, _ := NewBriefExtractor(llm)
+	if _, err := extractor.Extract(t.Context(), source); err == nil || len(llm.requests) != 0 {
+		t.Fatal("ineligible source reached the model")
+	}
+}
+
+func TestBriefHistoricalV1SourceReadPreservesBytesWithoutExecution(t *testing.T) {
+	for _, prompt := range []string{"detective-brief-prompt/v1", BriefPromptVersion} {
+		for _, stage := range []string{"inspected", "model_requested", "complete"} {
+			report, err := NewBriefReport(briefFixture())
+			if err != nil {
+				t.Fatal(err)
+			}
+			report.PromptVersion, report.Stage = prompt, stage
+			if stage != "inspected" {
+				report.RawText, report.Text = "Historical reading.", "Historical reading."
+			}
+			raw, _ := json.Marshal(report)
+			// Recreate the v1 wire format: the source kind did not exist. These
+			// bytes must survive readback without reclassifying the old source.
+			raw = bytes.Replace(raw, []byte(BriefSourceVersion), []byte("detective-brief-source/v1"), 1)
+			raw = bytes.Replace(raw, []byte(`,"source_kind":"news"`), nil, 1)
+			got, err := ParseBriefReport(raw)
+			if err != nil || got.Source.Version != "detective-brief-source/v1" || got.Source.SourceKind != "" {
+				t.Fatalf("historical source rejected or relabeled: %v", err)
+			}
+			preserved, _ := json.Marshal(got)
+			if !bytes.Equal(preserved, raw) {
+				t.Fatal("historical source/report bytes or identity changed")
+			}
+			var out bytes.Buffer
+			if err := WriteBriefText(&out, got); err != nil || !strings.Contains(out.String(), "未宣告（歷史 v1") || !strings.Contains(out.String(), got.Source.Body) {
+				t.Fatalf("historical source context lost during display: %v", err)
+			}
+			assertBriefSourceCannotExecute(t, got.Source)
+		}
+	}
+}
+
+func TestBriefSourceKindDoesNotLoosenRecordedJSONShape(t *testing.T) {
+	report, err := NewBriefReport(briefFixture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(report)
+	for _, bad := range []string{
+		strings.Replace(string(raw), `,"source_kind":"news"`, "", 1),
+		strings.Replace(string(raw), `"source_kind":"news"`, `"source_kind":null`, 1),
+		strings.Replace(string(raw), `"source_kind":"news"`, `"source_kind":""`, 1),
+		strings.Replace(string(raw), `"source_kind":"news"`, `"source_kind":"unknown"`, 1),
+		strings.Replace(string(raw), `"source_kind":"news"`, `"source_kind":"engineering"`, 1),
+		strings.Replace(string(raw), `"source_kind":"news"`, `"source_kind":"news","source_kind":"public_event"`, 1),
+		strings.Replace(string(raw), `"source_kind":"news"`, `"SourceKind":"news"`, 1),
+		strings.Replace(string(raw), `"source_kind":"news"`, `"source_kind":"news","extra":"unknown"`, 1),
+		strings.Replace(string(raw), `,"source_revision":"fixture-v1"`, "", 1),
+		strings.Replace(string(raw), `,"source_revision":"fixture-v1"`, `,"extra":"unknown"`, 1),
+		strings.Replace(string(raw), BriefSourceVersion, "detective-brief-source/v1", 1),
+	} {
+		if _, err := ParseBriefReport([]byte(bad)); err == nil {
+			t.Fatal("optional source kind loosened source/report shape checks")
 		}
 	}
 }

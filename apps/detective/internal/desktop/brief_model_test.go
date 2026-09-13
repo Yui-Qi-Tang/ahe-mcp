@@ -15,7 +15,7 @@ import (
 )
 
 func briefModelSource() sourcepilot.BriefSource {
-	return sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion,
+	return sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceKind: "public_event",
 		SourceID: "private-brief-source", SourceRevision: "private-brief-revision",
 		SourceURL: "https://example.invalid/private-brief-url", ObservedAt: "2026-09-10T01:00:00Z",
 		Coverage: "full_document", Limitations: []string{},

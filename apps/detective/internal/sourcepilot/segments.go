@@ -35,29 +35,33 @@ type SegmentedBody struct {
 // This is not a DOM parser or sanitizer: even a literal BR inside quoted text,
 // an HTML attribute, or a script is a delimiter under these fixed rules.
 func SegmentBody(body string) (SegmentedBody, error) {
-	if len(body) > 32<<10 || !utf8.ValidString(body) {
-		return SegmentedBody{}, errors.New("invalid segment body size or UTF-8")
+	if len(body) > BriefBodyLimit {
+		return SegmentedBody{}, &InputLimitError{Resource: "body_bytes", Limit: BriefBodyLimit, Observed: int64(len(body))}
+	}
+	if !utf8.ValidString(body) {
+		return SegmentedBody{}, errors.New("invalid segment body UTF-8")
 	}
 	digest := sha256.Sum256([]byte(body))
 	result := SegmentedBody{
 		Version: SegmentsVersion, BodySHA256: hex.EncodeToString(digest[:]),
 		Segments: []Segment{},
 	}
-	appendSpan := func(start, end int) error {
+	count := 0
+	appendSpan := func(start, end int) {
 		piece := body[start:end]
 		leftTrimmed := strings.TrimLeftFunc(piece, unicode.IsSpace)
 		start += len(piece) - len(leftTrimmed)
 		text := strings.TrimRightFunc(leftTrimmed, unicode.IsSpace)
 		if text == "" {
-			return nil
+			return
 		}
-		if len(result.Segments) == 64 {
-			return errors.New("body exceeds nonempty segment limit")
+		count++
+		if count > BriefSegmentLimit {
+			return
 		}
 		result.Segments = append(result.Segments, Segment{
 			Number: len(result.Segments) + 1, StartByte: start, EndByte: start + len(text), Text: text,
 		})
-		return nil
 	}
 	start := 0
 	for offset := 0; offset < len(body); {
@@ -66,14 +70,13 @@ func SegmentBody(body string) (SegmentedBody, error) {
 			offset++
 			continue
 		}
-		if err := appendSpan(start, offset); err != nil {
-			return SegmentedBody{}, err
-		}
+		appendSpan(start, offset)
 		offset += length
 		start = offset
 	}
-	if err := appendSpan(start, len(body)); err != nil {
-		return SegmentedBody{}, err
+	appendSpan(start, len(body))
+	if count > BriefSegmentLimit {
+		return SegmentedBody{}, &InputLimitError{Resource: "nonempty_segments", Limit: BriefSegmentLimit, Observed: int64(count)}
 	}
 	return result, nil
 }

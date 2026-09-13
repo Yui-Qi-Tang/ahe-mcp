@@ -5,6 +5,7 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/apps/detective/internal/labstatus"
 	"github.com/Yui-Qi-Tang/ahe-mcp/apps/detective/internal/pending"
 	"github.com/Yui-Qi-Tang/ahe-mcp/apps/detective/internal/sourcemcp"
+	"github.com/Yui-Qi-Tang/ahe-mcp/apps/detective/internal/taskextract"
 )
 
 // Version identifies the independently testable desktop preview.
@@ -24,12 +25,15 @@ type Settings struct {
 
 // Connection describes one operator-approved source server.
 type Connection struct {
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	Transport    string   `json:"transport"`
-	Command      string   `json:"command"`
-	URL          string   `json:"url"`
-	AllowedTools []string `json:"allowedTools"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Transport     string   `json:"transport"`
+	Command       string   `json:"command"`
+	Args          []string `json:"args,omitempty"`
+	Directory     string   `json:"directory,omitempty"`
+	CodebaseCache string   `json:"codebaseCache,omitempty"`
+	URL           string   `json:"url"`
+	AllowedTools  []string `json:"allowedTools"`
 }
 
 // Tool is the exact discovered source tool, not evidence of read-only authority.
@@ -100,11 +104,12 @@ type SourceArtifact struct {
 // SourceCapture exposes the complete MCP capture without parsing display prose.
 // It is published only after the raw result, text and receipt have been saved.
 type SourceCapture struct {
-	CapturedAt string            `json:"capturedAt"`
-	Revision   string            `json:"revision"`
-	RawResult  SourceArtifact    `json:"rawResult"`
-	Receipt    SourceArtifact    `json:"receipt"`
-	Inspection *SourceInspection `json:"inspection,omitempty"`
+	CodeCitation *CodeCitation     `json:"codeCitation,omitempty"`
+	CapturedAt   string            `json:"capturedAt"`
+	Revision     string            `json:"revision"`
+	RawResult    SourceArtifact    `json:"rawResult"`
+	Receipt      SourceArtifact    `json:"receipt"`
+	Inspection   *SourceInspection `json:"inspection,omitempty"`
 }
 
 // SourceInspection retains recorded call data after an offline consistency check.
@@ -132,6 +137,26 @@ type CandidateView struct {
 	CheckpointPath string           `json:"checkpointPath"`
 }
 
+// TaskDraftRequest binds a human's purpose to the currently displayed capture.
+type TaskDraftRequest struct {
+	Objective    string `json:"objective"`
+	SourcePath   string `json:"sourcePath"`
+	SourceSHA256 string `json:"sourceSHA256"`
+}
+
+// TaskWork is a local selection for inspection, never an AHE review subject.
+type TaskWork struct {
+	Input   taskextract.Input   `json:"input"`
+	Model   string              `json:"model"`
+	BaseURL string              `json:"baseURL"`
+	InputID string              `json:"inputID"`
+	Scope   taskextract.Scope   `json:"scope"`
+	Units   []taskextract.Unit  `json:"units"`
+	Status  string              `json:"status"`
+	Path    string              `json:"path"`
+	Record  *taskextract.Record `json:"record"`
+}
+
 // State is a detached UI projection, never an approval or admission receipt.
 type State struct {
 	SourceAuth  map[string]SourceAuthView `json:"sourceAuth,omitempty"`
@@ -146,12 +171,14 @@ type State struct {
 	Candidates  []CandidateView           `json:"candidates"`
 	Tools       []Tool                    `json:"tools"`
 	ToolAdvice  *ToolAdvice               `json:"toolAdvice,omitempty"`
+	SourceChat  *SourceChat               `json:"sourceChat,omitempty"`
 	BatchPath   string                    `json:"batchPath"`
 	BatchDigest string                    `json:"batchDigest"`
 	DataDir     string                    `json:"dataDir"`
 	Extraction  *labstatus.RowBatch       `json:"extraction"`
 	BatchResult *pending.BatchResult      `json:"batchResult"`
 	Brief       *BriefWork                `json:"brief,omitempty"`
+	Task        *TaskWork                 `json:"task"`
 	Search      *EvidenceSearchView       `json:"search,omitempty"`
 	// WorkspaceID labels the validated path; it is not authority or a process ID.
 	WorkspaceID string `json:"workspaceID"`

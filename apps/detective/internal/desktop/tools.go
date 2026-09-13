@@ -15,17 +15,21 @@ import (
 func sourceConfig(connection Connection) sourcemcp.Config {
 	return sourcemcp.Config{ID: connection.ID, Name: connection.Name,
 		Transport: connection.Transport, Command: connection.Command, URL: connection.URL,
-		AllowedTools: append([]string(nil), connection.AllowedTools...)}
+		Args: append([]string(nil), connection.Args...), Directory: connection.Directory,
+		CodebaseCache: connection.CodebaseCache,
+		AllowedTools:  append([]string(nil), connection.AllowedTools...)}
 }
 
 func (s *Service) sourceConnection(id string) (sourcemcp.Config, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.state.Settings.Mode != "local" {
+	state := s.Snapshot()
+	if state.Settings.Mode != "local" {
 		return sourcemcp.Config{}, errors.New("source connections require explicit local mode")
 	}
-	for _, connection := range s.state.Settings.Connections {
+	for _, connection := range state.Settings.Connections {
 		if connection.ID == id {
+			if connection.CodebaseCache != "" {
+				return s.codebaseConnection(id)
+			}
 			return sourceConfig(connection), nil
 		}
 	}
@@ -50,6 +54,7 @@ type sourceReceipt struct {
 	RawResult     sourceFile       `json:"raw_result"`
 	Text          sourceFile       `json:"text"`
 	Revision      string           `json:"source_revision"`
+	CodeCitation  *CodeCitation    `json:"code_citation,omitempty"`
 }
 
 type sourceFile struct {
@@ -149,43 +154,58 @@ func (s *Service) CallSourceTool(ctx context.Context, id, name, argsJSON, confir
 		s.sourceAuthFailure(id, err)
 		return s.finish(done, err, "來源讀取未確認；請檢查登入、取消、逾時、工具變動或回覆限制。沒有送到 AHE")
 	}
+	source, err := s.captureToolResult(ctx, config, expected, argsJSON, result)
+	if err != nil {
+		return s.finish(done, err, err.Error())
+	}
+	return s.applySourceCapture(ctx, done, source)
+}
+
+func (s *Service) captureToolResult(ctx context.Context, config sourcemcp.Config, expected sourcemcp.Tool, argsJSON string, result sourcemcp.Result) (SourceView, error) {
+	name := expected.Name
 	capturedAt := time.Now().UTC().Format(time.RFC3339Nano)
 	if err := ctx.Err(); err != nil {
-		return s.finish(done, err, "已停止來源工作；沒有送到 AHE")
+		return SourceView{}, errors.New("已停止來源工作；沒有送到 AHE")
 	}
 	raw, err := s.captureSource(config.Name+" / "+name+" — MCP result", "mcp-result", result.RawJSON)
 	if err != nil {
-		return s.finish(done, err, "工具結果無法完整保存；沒有使用截斷內容，也沒有送到 AHE")
+		return SourceView{}, errors.New("工具結果無法完整保存；沒有使用截斷內容，也沒有送到 AHE")
 	}
 	if result.Text == "" {
-		return s.finish(done, errors.New("source returned no text"), "已保存工具原始結果，但沒有可用文字；沒有自行開啟資源連結或送到 AHE")
+		return SourceView{}, errors.New("已保存工具原始結果，但沒有可用文字；沒有自行開啟資源連結或送到 AHE")
 	}
 	source, err := s.captureSource(config.Name+" / "+name, "mcp", result.Text)
 	if err != nil {
-		return s.finish(done, err, "來源文字無法完整保存；可能已有工具原始結果檔，沒有送到 AHE")
+		return SourceView{}, errors.New("來源文字無法完整保存；可能已有工具原始結果檔，沒有送到 AHE")
 	}
 	// Publish provenance last: every referenced source file is already durable.
+	citation, err := codebaseCitation(config, name, result.Text)
+	if err != nil {
+		return SourceView{}, errors.New("原始結果已保存，但程式片段無法與所選 repository 的檔案核對；不產生引用或模型答案")
+	}
 	provenance, err := json.Marshal(sourceReceipt{
 		SchemaVersion: "detective-source-receipt/v1",
 		Config:        config, Tool: expected, ArgumentsJSON: argsJSON, CapturedAt: capturedAt,
-		RawResult: sourceFile{Path: raw.Path, SHA256: raw.SHA256, Bytes: raw.Bytes},
-		Text:      sourceFile{Path: source.Path, SHA256: source.SHA256, Bytes: source.Bytes},
-		Revision:  "unknown",
+		RawResult:    sourceFile{Path: raw.Path, SHA256: raw.SHA256, Bytes: raw.Bytes},
+		Text:         sourceFile{Path: source.Path, SHA256: source.SHA256, Bytes: source.Bytes},
+		Revision:     "unknown",
+		CodeCitation: citation,
 	})
 	if err != nil {
-		return s.finish(done, err, "來源參數紀錄無法保存；已取得的來源檔案保留，沒有送到 AHE")
+		return SourceView{}, errors.New("來源參數紀錄無法保存；已取得的來源檔案保留，沒有送到 AHE")
 	}
 	metadata, err := s.captureSource(config.Name+" / "+name+" — provenance", "mcp-provenance", string(provenance))
 	if err != nil {
-		return s.finish(done, err, "來源取得範圍無法完整保存；已取得的來源檔案保留，沒有送到 AHE")
+		return SourceView{}, errors.New("來源取得範圍無法完整保存；已取得的來源檔案保留，沒有送到 AHE")
 	}
 	source.Note = fmt.Sprintf("MCP 工具回傳，不保證是完整原始文件；來源 revision 未確認。完整結果 SHA-256：%s；保存路徑：%s；參數／觀測時間紀錄：%s", result.SHA256, raw.Path, metadata.Path)
 	source.Capture = &SourceCapture{
 		CapturedAt: capturedAt, Revision: "unknown",
-		RawResult: SourceArtifact{Path: raw.Path, SHA256: raw.SHA256, Bytes: raw.Bytes},
-		Receipt:   SourceArtifact{Path: metadata.Path, SHA256: metadata.SHA256, Bytes: metadata.Bytes},
+		CodeCitation: citation,
+		RawResult:    SourceArtifact{Path: raw.Path, SHA256: raw.SHA256, Bytes: raw.Bytes},
+		Receipt:      SourceArtifact{Path: metadata.Path, SHA256: metadata.SHA256, Bytes: metadata.Bytes},
 	}
-	return s.applySourceCapture(ctx, done, source)
+	return source, nil
 }
 
 // applySourceCapture is the source-display completion boundary. File capture is
@@ -197,6 +217,7 @@ func (s *Service) applySourceCapture(ctx context.Context, done func(), source So
 		return s.finish(done, err, "來源工作已取消或逾時；已取得的原始結果、文字與來源紀錄可能已保存，未取代目前來源，也沒有送到 AHE")
 	}
 	s.state.Source = &source
+	s.state.Task = nil
 	s.state.Brief = nil
 	s.state.Candidates = []CandidateView{}
 	s.state.Extraction = nil

@@ -26,6 +26,36 @@ func (a *App) SaveSettings(settings desktop.Settings) (desktop.State, error) {
 	return a.service.SaveSettings(settings)
 }
 
+// ChooseCodebaseRepository creates a draft, not a connection or index.
+func (a *App) ChooseCodebaseRepository() (desktop.Connection, error) {
+	if a.service.Snapshot().Busy {
+		return desktop.Connection{}, errors.New("請先等待目前工作完成")
+	}
+	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{Title: "選擇 Codebase 可讀取的 repository"})
+	if err != nil {
+		return desktop.Connection{}, errors.New("無法開啟資料夾選擇視窗")
+	}
+	if path == "" {
+		return desktop.Connection{}, nil
+	}
+	return a.service.CodebasePreset(path)
+}
+
+func (a *App) IndexCodebase(id string) (desktop.State, error) {
+	return a.service.IndexCodebase(a.ctx, id)
+}
+
+func (a *App) StartSourceChat(id, question string) (desktop.State, error) {
+	return a.service.StartSourceChat(a.ctx, id, question)
+}
+
+func (a *App) ConfirmSourceChat(id string) (desktop.State, error) {
+	return a.service.ConfirmSourceChat(a.ctx, id)
+}
+
+// NewWork starts an empty work without changing connections or saved files.
+func (a *App) NewWork() (desktop.State, error) { return a.service.NewWork() }
+
 // LoadDemo starts a clearly labelled offline rehearsal, preserving saved files.
 func (a *App) LoadDemo() (desktop.State, error) { return a.service.LoadDemo() }
 
@@ -35,7 +65,7 @@ func (a *App) ChooseSource() (desktop.State, error) {
 		return a.Snapshot(), errors.New("請先取消或等待目前工作完成")
 	}
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:   "選擇來源文件（目前抽取支援 STATUS 表列）",
+		Title:   "選擇來源文件（原文選段或 STATUS 表列）",
 		Filters: []runtime.FileFilter{{DisplayName: "Markdown / Text", Pattern: "*.md;*.txt"}},
 	})
 	if err != nil {
@@ -82,6 +112,36 @@ func (a *App) ChooseBatch() (desktop.State, error) {
 		return a.Snapshot(), nil
 	}
 	return a.service.OpenBatch(path)
+}
+
+// PrepareTask freezes an explicit objective against the current saved source.
+func (a *App) PrepareTask(request desktop.TaskDraftRequest) (desktop.State, error) {
+	return a.service.PrepareTask(request)
+}
+
+// RunTask selects original text for the exact prepared input, without intake.
+func (a *App) RunTask(inputID string) (desktop.State, error) {
+	return a.service.RunTask(a.ctx, inputID)
+}
+
+// ChooseTaskRecord reopens a saved task run without model or database operations.
+func (a *App) ChooseTaskRecord() (desktop.State, error) {
+	state := a.service.Snapshot()
+	if state.Busy {
+		return a.Snapshot(), errors.New("請先取消或等待目前工作完成")
+	}
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:            "開啟此工作區已保存的任務選段紀錄（離線核對）",
+		DefaultDirectory: state.DataDir,
+		Filters:          []runtime.FileFilter{{DisplayName: "Task run JSON", Pattern: "*.json"}},
+	})
+	if err != nil {
+		return a.Snapshot(), errors.New("無法開啟任務紀錄選擇視窗")
+	}
+	if path == "" {
+		return a.Snapshot(), nil
+	}
+	return a.service.OpenTaskRecord(path)
 }
 
 // ChooseBriefSource imports a caller-declared JSON source without model or DB I/O.

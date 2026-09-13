@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -102,6 +104,98 @@ func TestBriefDesktopFrozenSourceOneCallAndIndependentSelection(t *testing.T) {
 	detached.Brief.Submission.Statement = "changed"
 	if s.Snapshot().Brief.Submission.Statement == "changed" {
 		t.Fatal("renderer aliases Brief state")
+	}
+}
+
+func TestLegacyBriefReopensWithoutReclassificationAndStopsBeforeModelInventory(t *testing.T) {
+	s := newTestService(t)
+	state := importBriefFixture(t, s)
+	work := *state.Brief
+	work.Report.Source.Version = "detective-brief-source/v1"
+	work.Report.Source.SourceKind = ""
+	if err := s.saveBrief(work); err != nil {
+		t.Fatal(err)
+	}
+	path := s.Snapshot().Brief.Path
+	before, err := os.ReadFile(path)
+	if err != nil || bytes.Contains(before, []byte(`"source_kind"`)) {
+		t.Fatal("historical work acquired a source kind")
+	}
+	var calls atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(server.Close)
+	localSettings(t, s, server)
+	if _, err := s.OpenBriefWork(path); err != nil {
+		t.Fatalf("legacy work cannot reopen: %v", err)
+	}
+	if _, err := s.ExtractBrief(t.Context()); err == nil || calls.Load() != 0 {
+		t.Fatal("legacy work reached model inventory or generation")
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(before, after) || s.Snapshot().Brief.Report.Source.SourceKind != "" {
+		t.Fatal("legacy work was rewritten or reclassified")
+	}
+}
+
+func TestBriefImportDisplaysSpecificSafeInputBounds(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+		want string
+	}{
+		{"body", strings.Repeat("x", sourcepilot.BriefBodyLimit+1), "body_bytes"},
+		{"paragraphs", strings.Repeat("private-source-line\n", 65), "nonempty_segments"},
+		{"JSON", strings.Repeat("x", (256<<10)+1), "source_json_bytes"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newTestService(t)
+			source := briefModelSource()
+			source.Body = tc.body
+			raw, _ := json.Marshal(source)
+			path := filepath.Join(serviceDirectory(t), "private-filename.json")
+			if err := os.WriteFile(path, raw, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			state, err := s.ImportBriefSource(path)
+			var limit *sourcepilot.InputLimitError
+			if !errors.As(err, &limit) || limit.Resource != tc.want || !strings.Contains(state.Error, tc.want) || strings.Contains(state.Error, "private-source-line") || strings.Contains(state.Error, path) || state.Brief != nil || state.Source != nil {
+				t.Fatalf("import lost safe exact diagnostic or created work: %v %s", err, state.Error)
+			}
+		})
+	}
+}
+
+func TestBriefDesktopPreservesExcerptCoordinatesWithoutReopeningParent(t *testing.T) {
+	s := newTestService(t)
+	parent := briefModelSource()
+	parent.Body = strings.Repeat("Original parent line.\n", 80) + "The service remains delayed."
+	start := strings.LastIndex(parent.Body, "The service")
+	source, err := sourcepilot.SelectBriefExcerpt(parent, start, len(parent.Body), "Read only the named service status.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(source)
+	path := filepath.Join(serviceDirectory(t), "excerpt.json")
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	state, err := s.ImportBriefSource(path)
+	if err != nil || state.Brief == nil || !reflect.DeepEqual(state.Brief.Report.Source.Excerpt, source.Excerpt) {
+		t.Fatalf("excerpt import lost parent coordinates: %v", err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	state, err = s.OpenBriefWork(state.Brief.Path)
+	if err != nil || !reflect.DeepEqual(state.Brief.Report.Source.Excerpt, source.Excerpt) || state.Brief.Report.Source.Body != source.Body {
+		t.Fatalf("offline reopening required source file or changed excerpt: %v", err)
+	}
+	var out bytes.Buffer
+	if err := sourcepilot.WriteBriefText(&out, state.Brief.Report); err != nil || !strings.Contains(out.String(), "尚未重新比對父原文") {
+		t.Fatal("saved excerpt falsely implied parent reverification", err)
 	}
 }
 
