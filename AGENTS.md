@@ -37,6 +37,12 @@
   identity and revision metadata.
 - Never replace source content with a summary, paraphrase, or inferred
   reconstruction before `submit_external_source`.
+- Do not replace engineering evidence extraction with Brief or summary chunks.
+  Preserve in-scope facts and qualifiers and disclose omissions separately from
+  source coverage. Keeping raw content and observing no fabrication do not
+  establish extraction completeness. New Brief operations require a v2 source
+  declaring `news` or `public_event`; this is a caller declaration, not content
+  classification. Do not relabel engineering data to pass that gate.
 - Treat extraction output as candidate material. Only governed admission may
   create canonical evidence.
 - Use the read-only query MCP for lookup and readback. Use the ingestion MCP
@@ -45,6 +51,10 @@
   fragments alone. Every review card must include exact excerpts, source title
   and location, provider revision, coverage, limitations, and a version
   difference when one is available.
+- Standard source decisions require `get_source_claim_review`, then explicit
+  approval/rejection/audit_only and a reason bound to its unchanged native
+  subject/display. Use only the exact-reviewed writer tools named in the shared
+  skill; a hand-written review card is not a substitute for that display.
 - Use the dedicated proposal workflow for canonical `contradicts`. For
   `supersedes`, keep the new external-source proposal pending, read its exact
   older targets and the current Supersession head, then call
@@ -73,6 +83,13 @@ Do not expose credentials, tokens, DSNs, or private session text in the
 handoff.
 
 ## Repository Work
+
+- As of 2026-09-14, Detective Desktop is frozen and unavailable (目前不工作).
+  Do not resume UI/features, launch/trial/acceptance or Desktop publication
+  without explicit user approval to unfreeze it. Prior passing tests/builds
+  are historical, not usable-product acceptance. Retain code and saved work.
+  CLI-first review is the current priority in `STATUS.md`; shared helpers and
+  regression tests remain, so this does not authorize deletion or refactoring.
 
 - Preserve unrelated user changes and respect the current worktree boundary.
 - Do not commit, push, merge, or change branches unless explicitly requested.

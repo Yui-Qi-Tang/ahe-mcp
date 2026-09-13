@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/atlassianmcp"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpstdio"
 )
 
@@ -29,6 +30,9 @@ func TestMCPExtractionExample(t *testing.T) {
 	extractor, err := newMCPProposalExtractor(source.ProposalExtraction)
 	if err != nil || extractor == nil {
 		t.Fatalf("extractor = %v, error = %v", extractor, err)
+	}
+	if extractor.ExtractorDefinition.Config["output_contract"] != evidenceingestion.OllamaExtractorPromptWholeSpanExactQuote || extractor.SectionMode != "" {
+		t.Fatalf("example must explicitly select whole spans and preserve unset section semantics: %+v", extractor)
 	}
 	raw, err := os.ReadFile("../../configs/atlassian-adapter.example.json")
 	if err != nil {

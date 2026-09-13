@@ -22,6 +22,7 @@ export function emptyState() {
     candidates: [],
     tools: [],
     toolAdvice: null,
+    sourceChat: null,
     batchPath: "",
     batchDigest: "",
     dataDir: "",
@@ -30,6 +31,7 @@ export function emptyState() {
     batchResult: null,
     brief: null,
     search: null,
+    task: null,
   };
 }
 
@@ -77,6 +79,7 @@ export function toolConfirmation(connectionID, tool, argsJSON) {
 export function canSubmitPending(state) {
   return (
     state.settings.mode === "local" &&
+    !state.task &&
     !state.busy &&
     Boolean(
       state.batchDigest &&

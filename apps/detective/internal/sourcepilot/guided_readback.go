@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"reflect"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/apps/detective/internal/sourcemcp"
@@ -129,17 +130,23 @@ func guidedReportDecode(raw []byte, target any) error {
 }
 
 func guidedReportObjectShape(fields map[string]json.RawMessage, typ reflect.Type) bool {
-	if len(fields) != typ.NumField() {
-		return false
-	}
+	matched := 0
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
-		key := field.Tag.Get("json")
-		if key == "" || !guidedReportValueShape(fields[key], field.Type) {
+		key, option, _ := strings.Cut(field.Tag.Get("json"), ",")
+		if key == "" || (option != "" && option != "omitempty") {
 			return false
 		}
+		raw, present := fields[key]
+		if !present && option == "omitempty" {
+			continue
+		}
+		if !guidedReportValueShape(raw, field.Type) {
+			return false
+		}
+		matched++
 	}
-	return true
+	return matched == len(fields)
 }
 
 func guidedReportValueShape(raw json.RawMessage, typ reflect.Type) bool {
@@ -147,6 +154,8 @@ func guidedReportValueShape(raw json.RawMessage, typ reflect.Type) bool {
 		return false
 	}
 	switch typ.Kind() {
+	case reflect.Pointer:
+		return guidedReportValueShape(raw, typ.Elem())
 	case reflect.Struct:
 		var fields map[string]json.RawMessage
 		return json.Unmarshal(raw, &fields) == nil && guidedReportObjectShape(fields, typ)

@@ -1,5 +1,11 @@
 # Install Detective CLI and Desktop
 
+> **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** The Desktop installation,
+> launch, connection, upgrade and acceptance steps in this document are frozen
+> references, not current instructions. Do not run them as the next task.
+> CLI-first review is in [STATUS](../../STATUS.md). Source, tests, binaries and
+> saved work are retained; this freeze does not kill an app or remove data.
+
 This guide covers `0.1.0-preview.18` from the AHE MCP source tree. Detective and
 MCP share the root `go.mod` and `go.sum`; no second checkout, Go module, or
 `go.work` is needed. Record the exact reviewed Git commit used to build it.
@@ -37,10 +43,9 @@ xcode-select -p
 make build
 make detective
 make verify
-make desktop
 ```
 
-`make desktop` uses the pinned Wails build tool and the root Go dependency graph;
+Historically, `make desktop` uses the pinned Wails build tool and the root Go dependency graph;
 it builds the frontend rather than relying on an old checked-in bundle.
 `make detective` creates `bin/detective`, `bin/detective-source-demo` and
 `bin/detective-news-source`. These are different from the legacy
@@ -115,27 +120,50 @@ private permissions (`0700` directories and `0600` saved data files). Do not
 recursively change permissions on an unrelated directory to force it to open.
 Use the app's displayed workspace identifier to distinguish multiple windows.
 
-## First functional check without company data or a DB
+## Connect a source and use chat
 
-1. Start in the default offline mode. Open the synthetic example and inspect its
-   source/candidates. Offline chat replies are fixed rehearsal text; typing
-   `admit` does not record a real decision.
-2. To exercise a real local **synthetic source MCP**, open the source/connection
-   settings, select actual mode, add a stdio connection, and supply the absolute
-   path to the built `detective-source-demo` executable. Its allowed tool is
-   `read_status`; use an empty JSON object, `{}`, for the tool arguments.
-3. Save/apply settings, explicitly discover tools, select `read_status`, inspect
-   its schema and arguments, then confirm the source call. This demo reads no
-   network, company files or DB. A loaded demo source is not canonical evidence.
-4. For extraction, separately configure an already running local
-   OpenAI-compatible model endpoint and exact installed model name, then request
-   extraction explicitly. The default example endpoint is
-   `http://127.0.0.1:11434/v1`; the example model name is
-   `gemma4:e4b-it-qat`. Neither is proof the service/model exists on this machine.
+1. In **資料源與連線**, choose actual mode and configure the source MCP you intend
+   to use. For stdio, supply one approved executable launcher path and an explicit
+   tool allowlist. Saving settings does not call the source.
+2. Discover tools, inspect the selected tool's schema and complete arguments,
+   then confirm the source call. The returned text is saved as the current source.
+3. Configure an already-running local OpenAI-compatible endpoint and the exact
+   installed model name. The default endpoint/model are only initial settings,
+   not proof that either service exists on the machine.
+4. Return to **工作台** to read the source and chat. Chat does not automatically
+   call source tools, select evidence paragraphs or submit pending proposals.
+   The separate task-selection page and workbench selection card are removed;
+   the developer CLI and underlying selector remain available separately.
+
+The normal UI has no local-file, saved-work or synthetic-demo opening controls,
+and no persistent model-not-started warning on the workbench. The model must
+still be explicitly configured and running before it can answer.
+**新工作** clears the active work without loading an example, deleting saved
+files or changing the applied connection settings. Offline mode does not run
+the model or show fake model replies.
 
 Merely saving connection settings does not call tools or the model. Tool
 suggestions also require human confirmation before execution. On every restart,
 the app returns to offline mode even if its connection settings were saved.
+
+## Local Codebase preset (macOS, unreleased)
+
+**Frozen Desktop reference, not an available CLI setup.** The current CLI source
+configuration does not expose this preset. Never substitute an unguarded MCP
+command to make the frozen setup appear functional.
+
+Install Codebase separately; Desktop does not download it. The fixed preset
+expects the current user's `.local/bin/codebase-memory-mcp` executable. In
+**資料源與連線**, choose **加入本機 Codebase（選擇資料夾）**, select one repository,
+and apply settings in local mode. Advanced coordinates are read-only/collapsed.
+Use the separate **建立／更新此資料夾索引（不入庫）** action before querying it.
+
+In **工作台**, select the saved Codebase connection, fetch its tool list and ask
+a question. Review each proposed tool/argument card before confirming the read.
+The network block applies to the Codebase process tree, not to the separately
+configured local-model service. Other MCP servers are not available in chat.
+Do not replace the preset with a wrapper or remote server to bypass startup
+errors. See [the operation boundaries](README.md#network-blocked-codebase-chat-unreleased).
 
 ## Connect directly to Atlassian Rovo MCP with OAuth
 
@@ -201,14 +229,22 @@ First complete the root [MCP installation](../../INSTALL.md), including the
 separately selected private PostgreSQL schema and bounded runtime identities.
 Use the same reviewed source commit for MCP and Desktop when qualifying a pair.
 
-Enter the approved absolute launcher paths in Desktop settings:
+In **資料源與連線**, find **AHE 證據庫（選用）** after the source settings and
+expand its advanced connection settings. These fields are unnecessary for
+source collection or local chat. They do not install or configure PostgreSQL.
+If AHE has been installed, enter the full paths of executable launchers
+configured and supplied by the AHE installer/operator. The current installation
+does not create these files automatically; leave the fields blank if those
+paths have not been provided:
 
-- Query: read-only AHE evidence and pending-state lookup.
-- Intake: source/extraction/pending submissions, with its own credentials.
-- Review: separately authorized exact admit/reject/audit_only workflow, with its
-  own reviewer credentials and explicit human confirmation.
+- **證據查詢程式** (Query): read-only evidence and pending-state lookup; no writes.
+- **待審提交程式** (Intake): source/extraction/pending submissions, with its own
+  credentials. Pending proposals have not been admitted as evidence.
+- **人工審閱程式** (Review): writes an exact admit/reject/audit_only decision only
+  after explicit human confirmation, using separate reviewer credentials.
 
-Each value is one executable path, not `VAR=value command`, a password, or a DB
+These programs are also called launchers in the MCP installation guide. Each
+value is one executable path, not `VAR=value command`, a password, or a DB
 URL. Keep launcher configuration, credentials and saved workspaces outside Git.
 Never substitute a migration or operator identity for a failing runtime role.
 Source MCP connections and these AHE launchers are different settings.

@@ -22,7 +22,7 @@ function installBridge(mode = "demo") {
   let current = structuredClone(initial);
   const bridge = {};
   for (const method of [
-    "Snapshot", "SaveSettings", "LoadDemo", "ChooseSource", "ChooseSourceReceipt",
+    "Snapshot", "SaveSettings", "NewWork", "ChooseSource", "ChooseSourceReceipt",
     "ChooseBatch", "SendMessage", "Extract", "SubmitPending", "QueryPending",
     "Cancel", "DiscoverTools", "CallSourceTool", "SuggestSourceTool",
   ]) {
@@ -32,8 +32,10 @@ function installBridge(mode = "demo") {
     current = { ...current, settings: structuredClone(settings) };
     return structuredClone(current);
   });
-  bridge.LoadDemo.mockImplementation(async () => {
-    current = { ...current, settings: { ...current.settings, mode: "demo" } };
+  bridge.NewWork.mockImplementation(async () => {
+    current = { ...current, source: null, task: null, brief: null, candidates: [],
+      extraction: null, batchPath: "", batchDigest: "", batchResult: null,
+      messages: [], search: null, toolAdvice: null };
     return structuredClone(current);
   });
   window.go = { main: { App: bridge } };
@@ -43,6 +45,7 @@ function installBridge(mode = "demo") {
 async function openSettings() {
   await waitFor(() => expect(screen.getByRole("button", { name: "新工作" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "資料源與連線" }));
+  fireEvent.click(screen.getByText("進階連線設定"));
 }
 
 function editor(index) {
@@ -80,8 +83,8 @@ function editDraft(initial) {
   fireEvent.click(screen.getByRole("radio", { name: /實際模式/ }));
   for (const [label, key] of [
     ["模型名稱", "model"], ["本機模型 Base URL", "baseURL"],
-    ["來源識別 ID", "sourceID"], ["Intake launcher", "intakeLauncher"],
-    ["Query launcher", "queryLauncher"],
+    ["來源識別 ID", "sourceID"], ["待審提交程式", "intakeLauncher"],
+    ["證據查詢程式", "queryLauncher"],
   ]) {
     fireEvent.change(screen.getByLabelText(label), { target: { value: draft[key] } });
   }
@@ -92,6 +95,7 @@ function navigateAwayAndBack() {
   fireEvent.click(screen.getByRole("button", { name: "工作台" }));
   fireEvent.click(screen.getByRole("button", { name: "執行紀錄" }));
   fireEvent.click(screen.getByRole("button", { name: "資料源與連線" }));
+  fireEvent.click(screen.getByText("進階連線設定"));
 }
 
 function expectDraft(draft) {
@@ -101,7 +105,7 @@ function expectDraft(draft) {
     expect(fields.getByLabelText("連線 ID")).toHaveValue(connection.id);
     expect(fields.getByLabelText("顯示名稱")).toHaveValue(connection.name);
     expect(fields.getByLabelText("傳輸方式")).toHaveValue(connection.transport);
-    expect(fields.getByLabelText(connection.transport === "stdio" ? "Launcher 絕對路徑" : /^本機 gateway URL/))
+    expect(fields.getByLabelText(connection.transport === "stdio" ? "本機啟動程式" : /^本機 gateway URL/))
       .toHaveValue(connection.transport === "stdio" ? connection.command : connection.url);
     expect(fields.getByLabelText("工具 allowlist（每行一個精確名稱）"))
       .toHaveValue(connection.allowedTools.join("\n"));
@@ -109,8 +113,8 @@ function expectDraft(draft) {
   expect(screen.getByRole("radio", { name: /實際模式/ })).toBeChecked();
   for (const [label, key] of [
     ["模型名稱", "model"], ["本機模型 Base URL", "baseURL"],
-    ["來源識別 ID", "sourceID"], ["Intake launcher", "intakeLauncher"],
-    ["Query launcher", "queryLauncher"],
+    ["來源識別 ID", "sourceID"], ["待審提交程式", "intakeLauncher"],
+    ["證據查詢程式", "queryLauncher"],
   ]) {
     expect(screen.getByLabelText(label)).toHaveValue(draft[key]);
   }
@@ -259,16 +263,16 @@ describe("App connection draft navigation", () => {
     navigateAwayAndBack();
     expect(screen.getAllByLabelText("連線 ID")).toHaveLength(1);
     expect(editor(0).getByLabelText("連線 ID")).toHaveValue(initial.settings.connections[0].id);
-    expect(editor(0).getByLabelText("Launcher 絕對路徑")).toHaveValue(initial.settings.connections[0].command);
+    expect(editor(0).getByLabelText("本機啟動程式")).toHaveValue(initial.settings.connections[0].command);
     expect(screen.getByLabelText("模型名稱")).toHaveValue(initial.settings.model);
-    expect(screen.getByRole("radio", { name: /離線演練/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /離線/ })).toBeChecked();
     expect(screen.getByRole("button", { name: "套用本次設定" })).toBeDisabled();
     expect(saved()).toEqual(initial.settings);
     expect(bridge.SaveSettings).not.toHaveBeenCalled();
     expectNoSourceActions(bridge);
   });
 
-  it("preserves but blocks an older draft when new work changes applied mode, until explicit discard", async () => {
+  it("preserves the unsaved draft and applied mode when starting empty work", async () => {
     const { bridge, initial, saved } = installBridge("local");
     render(<App />);
     await openSettings();
@@ -277,19 +281,43 @@ describe("App connection draft navigation", () => {
     const modal = within(screen.getByRole("dialog"));
     fireEvent.click(modal.getByRole("checkbox"));
     fireEvent.click(modal.getByRole("button", { name: "開始新工作，保留已保存檔案" }));
-    await waitFor(() => expect(bridge.LoadDemo).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(bridge.NewWork).toHaveBeenCalledTimes(1));
     await openSettings();
     expectDraft(draft);
-    expect(screen.getByText("已生效：離線演練")).toBeInTheDocument();
+    expect(screen.getByText("已生效：實際模式")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "套用本次設定" })).toBeEnabled();
+    navigateAwayAndBack();
+    expectDraft(draft);
+    expect(bridge.SaveSettings).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "放棄未套用草稿" }));
+    expect(screen.getAllByLabelText("連線 ID")).toHaveLength(1);
+    expect(screen.getByRole("radio", { name: /實際模式/ })).toBeChecked();
+    expect(screen.getByRole("button", { name: "套用本次設定" })).toBeDisabled();
+    expect(saved()).toEqual(initial.settings);
+    expectNoSourceActions(bridge);
+  });
+
+  it("preserves but blocks a stale draft when failure resynchronization observes changed saved settings", async () => {
+    const { bridge, initial } = installBridge("local");
+    render(<App />);
+    await openSettings();
+    const draft = editDraft(initial);
+    const changed = { ...initial.settings, mode: "demo" };
+    bridge.SaveSettings.mockRejectedValueOnce(new Error("synthetic uncertain save"));
+    bridge.Snapshot.mockResolvedValueOnce({ ...initial, settings: changed });
+    fireEvent.click(screen.getByRole("button", { name: "套用本次設定" }));
+    await waitFor(() => expect(bridge.Snapshot).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByRole("button", { name: "新工作" })).toBeEnabled());
+    expectDraft(draft);
+    expect(screen.getByText("已生效：離線")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "套用本次設定" })).toBeDisabled();
     navigateAwayAndBack();
     expectDraft(draft);
     fireEvent.click(screen.getByRole("button", { name: "套用本次設定" }));
-    expect(bridge.SaveSettings).not.toHaveBeenCalled();
+    expect(bridge.SaveSettings).toHaveBeenCalledExactlyOnceWith(draft);
     fireEvent.click(screen.getByRole("button", { name: "放棄未套用草稿" }));
     expect(screen.getAllByLabelText("連線 ID")).toHaveLength(1);
-    expect(screen.getByRole("radio", { name: /離線演練/ })).toBeChecked();
-    expect(saved()).toEqual({ ...initial.settings, mode: "demo" });
+    expect(screen.getByRole("radio", { name: /離線/ })).toBeChecked();
     expectNoSourceActions(bridge);
   });
 
@@ -307,9 +335,9 @@ describe("App connection draft navigation", () => {
       await openSettings();
       expect(screen.getAllByLabelText("連線 ID")).toHaveLength(1);
       expect(editor(0).getByLabelText("連線 ID")).toHaveValue("original-source");
-      expect(editor(0).getByLabelText("Launcher 絕對路徑")).toHaveValue("/operator/original-source");
+      expect(editor(0).getByLabelText("本機啟動程式")).toHaveValue("/operator/original-source");
       expect(screen.getByLabelText("模型名稱")).toHaveValue(initial.settings.model);
-      expect(screen.getByRole("radio", { name: /離線演練/ })).toBeChecked();
+      expect(screen.getByRole("radio", { name: /離線/ })).toBeChecked();
       expect(screen.getByRole("button", { name: "套用本次設定" })).toBeDisabled();
       expect(saved()).toEqual(initial.settings);
       expect(bridge.SaveSettings).not.toHaveBeenCalled();

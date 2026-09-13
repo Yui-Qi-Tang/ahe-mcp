@@ -169,6 +169,9 @@ func (s *Service) begin(ctx context.Context, action string) (context.Context, fu
 	// Advice belongs to one observed inventory and operation only. A refresh,
 	// setting change, source operation or chat cannot silently reuse it.
 	s.state.ToolAdvice = nil
+	if s.state.SourceChat != nil && s.state.SourceChat.Status == "awaiting_confirmation" && action != "codebase_chat_confirm" {
+		s.state.SourceChat.Status = "superseded"
+	}
 	s.eventLocked(action, "running", "操作已開始；尚未確認完成。")
 	var once sync.Once
 	done := func() {
@@ -221,11 +224,23 @@ func (s *Service) messageLocked(role, text, kind string) {
 // is complete. Only the running operation clears Busy after its cleanup.
 func (s *Service) Cancel() State {
 	s.mu.Lock()
+	if s.state.Operation == "task_run" && s.state.Task != nil {
+		switch s.state.Task.Status {
+		case "selected", "abstained", "failed":
+			// Record publication has finished; do not imply a completed local
+			// selection will be rewritten into a cancellation failure.
+			s.mu.Unlock()
+			return s.Snapshot()
+		}
+	}
 	if s.cancel != nil {
 		s.cancel()
 		detail := "已要求取消；先前提交可能已生效，請保留同一批次並查詢或恢復。"
 		if s.state.Operation == "evidence_search" || s.state.Operation == "evidence_search_demo" {
 			detail = "已要求取消唯讀查詢；請等待程序結束。本操作未發出入庫或審查操作。"
+		}
+		if s.state.Operation == "task_run" {
+			detail = "已要求取消選段；請等待失敗紀錄保存。本操作不會送入 pending 或寫入 AHE。"
 		}
 		s.eventLocked(s.state.Operation, "cancel_requested", detail)
 	}
@@ -258,6 +273,13 @@ func (s *Service) Close() {
 
 // SaveSettings saves only explicit noncredential coordinates, never connecting.
 func (s *Service) SaveSettings(settings Settings) (State, error) {
+	for _, c := range settings.Connections {
+		if c.CodebaseCache != "" {
+			if err := s.validateCodebaseConnection(c); err != nil {
+				return s.Snapshot(), errors.New("Codebase 預設不可改成其他程式、參數或資料夾；請移除設定後重新選擇 repository。")
+			}
+		}
+	}
 	settings, err := validateSettings(settings, false)
 	if err != nil {
 		// Validation is side-effect free, including the existing UI projection.
@@ -280,6 +302,8 @@ func (s *Service) SaveSettings(settings Settings) (State, error) {
 	}
 	s.mu.Lock()
 	s.state.Settings = settings
+	s.state.Task = nil
+	s.state.SourceChat = nil
 	s.forgetAllSourceLoginsLocked()
 	s.state.Tools = []Tool{}
 	s.mu.Unlock()
@@ -310,6 +334,10 @@ func validateSettings(settings Settings, allowLegacyIDs bool) (Settings, error) 
 	seen := map[string]bool{}
 	for i := range settings.Connections {
 		c := &settings.Connections[i]
+		if err := sourcemcp.ValidateProcessOptions(sourceConfig(*c)); err != nil {
+			return Settings{}, err
+		}
+		c.Args = append([]string(nil), c.Args...)
 		validID := sourcemcp.ValidConnectionID(c.ID)
 		if allowLegacyIDs && !validID {
 			validID = safeText(c.ID, 128)

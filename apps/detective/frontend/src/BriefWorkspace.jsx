@@ -3,6 +3,12 @@ import { Code, Dialog, KeyValue } from "./components.jsx";
 import { stateLabel } from "./bridge.js";
 import "./BriefWorkspace.css";
 
+const coverageLabels = {
+  full_document: "全文（輸入者宣告）",
+  exact_excerpt: "精確摘錄",
+  truncated_document: "截斷資料",
+};
+
 // This is a quotation preview, not a support judgment. The service checks the
 // same source digest and line range again before saving a candidate.
 export function briefQuote(body, start, end) {
@@ -56,6 +62,7 @@ export default function BriefWorkspace({ state, disabled, onAction, draft, onDra
   const [confirmation, setConfirmation] = useState(null);
   const [error, setError] = useState("");
   const local = state.settings.mode === "local";
+  const eligible = source.version === "detective-brief-source/v2" && ["news", "public_event"].includes(source.source_kind);
   const inactive = disabled || !local;
   const quote = work.submission ? work.submission.citation.exact_quote : briefQuote(source.body, startLine, endLine);
   const review = work.review;
@@ -63,9 +70,9 @@ export default function BriefWorkspace({ state, disabled, onAction, draft, onDra
   const identity = confirmationIdentity(state);
   const hasHandoff = Boolean(work.handoff?.proposal_occurrence_id);
   const terminal = ["admitted", "rejected", "audit_only", "admit_verified", "reject_verified", "admitted_verified", "rejected_verified", "audit_only_verified"].includes(work.outcome);
-  const canPrepare = !inactive && report.stage === "complete" && !work.submission &&
+  const canPrepare = !inactive && eligible && report.stage === "complete" && !work.submission &&
     !hasHandoff && statement.trim() && quote.trim();
-  const canSubmit = !inactive && Boolean(work.submission?.digest) && !hasHandoff &&
+  const canSubmit = !inactive && eligible && Boolean(work.submission?.digest) && !hasHandoff &&
     Boolean(state.settings.intakeLauncher && state.settings.queryLauncher);
   const canReview = !inactive && hasHandoff && !terminal && !work.decision &&
     Boolean(state.settings.reviewLauncher && state.settings.queryLauncher);
@@ -145,23 +152,39 @@ export default function BriefWorkspace({ state, disabled, onAction, draft, onDra
         <p>來源、模型摘要、候選與 DB 狀態分開保留。引文存在不代表支持主張，聊天與歷史 admit 都不能代替本次決定。</p>
       </header>
       {!local && <p className="notice" role="note">目前為離線檢視；可查看已保存工作，不會呼叫模型、MCP 或資料庫。需明確切換實際模式才能操作。</p>}
+      <p className="notice" role="note">Brief 僅供明確選定的新聞／公開事件閱讀，不用於工程文件、程式碼或 git 擷取。摘要可能漏項；精確引用與沒有捏造不代表擷取完整。</p>
+      {!eligible && <p className="notice" role="note">這是未分類的舊紀錄或不適用 Brief 的來源，不能抽取、建立新候選或重送 pending。既有收據仍可查詢及精確審閱；不補填類型或改寫歷史資料。</p>}
       {error && <p className="error-text" role="alert">{error}</p>}
       <div className="brief-comparison">
-        <section className="surface brief-section" aria-label="Brief 完整來源">
-          <h2>完整來源原文</h2>
+        <section className="surface brief-section" aria-label="Brief 本次提供的來源">
+          <h2>本次提供的原文</h2>
           <p className="field-help">以下來源座標由輸入者宣告；沒有因此證明發布者身分、內容真實性或目前狀態。</p>
+          <p className="field-help">模型只會閱讀本次提供的文字；未提供的章節、欄位或連結內容不在本次範圍內。全文標示也是輸入者宣告，不是已核對發布者全文。</p>
           <dl>
             <KeyValue label="來源 ID">{source.source_id}</KeyValue>
+            <KeyValue label="宣告來源類型">{source.source_kind || "舊版未分類"}</KeyValue>
             <KeyValue label="來源 URL">{source.source_url}</KeyValue>
             <KeyValue label="來源 revision">{source.source_revision}</KeyValue>
             <KeyValue label="觀測時間">{source.observed_at}</KeyValue>
-            <KeyValue label="來源涵蓋範圍">{source.coverage}</KeyValue>
+            <KeyValue label="來源涵蓋範圍">{coverageLabels[source.coverage] || source.coverage || "未宣告"}</KeyValue>
             <KeyValue label="來源 SHA-256">{report.body_sha256}</KeyValue>
           </dl>
+          {source.excerpt ? <section aria-label="Brief 摘錄追溯">
+            <h3>已保存的父來源與摘錄位置</h3>
+            <p className="field-help">這些是隨工作保存的追溯座標；開啟此畫面不會載入或重新核對父來源。可用 brief verify-excerpt 搭配原始父來源檔離線核對，核對成功也不代表來源內容為真或摘錄已涵蓋全文重點。</p>
+            <dl>
+              <KeyValue label="父來源 ID">{source.excerpt.parent_source_id}</KeyValue>
+              <KeyValue label="父來源 revision">{source.excerpt.parent_source_revision}</KeyValue>
+              <KeyValue label="父本文 SHA-256">{source.excerpt.parent_body_sha256}</KeyValue>
+              <KeyValue label="父本文 bytes">{source.excerpt.parent_body_bytes}</KeyValue>
+              <KeyValue label="摘錄 byte 範圍（起點含、終點不含）">{`${source.excerpt.start_byte}–${source.excerpt.end_byte}`}</KeyValue>
+              <KeyValue label="選取理由">{source.excerpt.selection_reason}</KeyValue>
+            </dl>
+          </section> : source.coverage === "exact_excerpt" && <p className="notice" role="note">這份摘錄沒有父本文雜湊與位置紀錄；可檢視本次文字，但不能據此核對父來源或推論全文涵蓋程度。</p>}
           <Code label="來源限制">{JSON.stringify(source.limitations, null, 2)}</Code>
-          <Code label="Brief 完整來源原文">{source.body}</Code>
+          <Code label="Brief 本次提供的原文">{source.body}</Code>
           <details>
-            <summary>選引文用行號（不取代上方完整原文）</summary>
+            <summary>選引文用行號（不取代上方本次原文）</summary>
             <ol className="brief-source-lines">
               {source.body.split("\n").map((text, index) => <li key={index}><code>{text || " "}</code></li>)}
             </ol>
@@ -176,11 +199,11 @@ export default function BriefWorkspace({ state, disabled, onAction, draft, onDra
             <KeyValue label="閱讀階段">{stateLabel(report.stage)}</KeyValue>
           </dl>
           <Code label="模型 Brief 原文">{report.text || report.raw_text}</Code>
-          <button className="button primary" disabled={inactive || report.stage !== "inspected" || work.outcome !== "inspected" || Boolean(work.submission) || hasHandoff}
+          <button className="button primary" disabled={inactive || !eligible || report.stage !== "inspected" || work.outcome !== "inspected" || Boolean(work.submission) || hasHandoff}
             onClick={() => onAction("ExtractBrief")}>以本機模型產生 Brief</button>
           <p className="field-help">每份工作只做一次模型閱讀；完成或失敗的結果保留，不在這份工作中重新抽取。若要開始新試驗，請使用新工作。</p>
           <h2>2. 明確選定主張與精確引文</h2>
-          <p className="field-help">主張可從模型摘要修訂；引文必須選完整非空白來源行，最多 12 行。CRLF 換行依 manual-line-v1 投影為 LF，完整原文仍保留。這一步只保存本機候選，不寫 DB，也不宣稱語意已核對。</p>
+          <p className="field-help">主張可從模型摘要修訂；引文必須選完整非空白來源行，最多 12 行。CRLF 換行依 manual-line-v1 投影為 LF，本次提供的原文仍保留。這一步只保存本機候選，不寫 DB，也不宣稱語意已核對。</p>
           <p className="field-help">未保存的主張、行號與審查理由只在本視窗切頁時保留；開啟另一份工作或關閉視窗後不保留。切頁會撤銷已開啟的確認，不會自動保存或送出。</p>
           <fieldset disabled={disabled || Boolean(work.submission) || hasHandoff}>
             <label>候選主張<textarea aria-label="Brief 候選主張" value={work.submission ? work.submission.statement : statement} rows={5}

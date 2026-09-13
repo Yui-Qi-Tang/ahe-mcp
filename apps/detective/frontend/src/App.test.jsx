@@ -18,11 +18,16 @@ function installBridge(initial = emptyState()) {
   for (const name of [
     "Snapshot",
     "SaveSettings",
+    "NewWork",
     "LoadDemo",
+    "LoadEvidenceSearchDemo",
     "ChooseSource",
     "ChooseBriefSource",
     "ChooseBriefWork",
     "ChooseSourceReceipt",
+    "ChooseTaskRecord",
+    "PrepareTask",
+    "RunTask",
     "ChooseBatch",
     "SendMessage",
     "Extract",
@@ -81,7 +86,7 @@ function briefDraftState(withReview = false) {
   state.brief = {
     model: "test-local-model", path: "/private/draft-work.json", digest: "draft-work-digest", outcome: "candidate",
     report: { body_sha256: "body-digest", input_sha256: "input-digest", stage: "complete", text: "Atlas requests failed.",
-      source: { source_id: "atlas-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [], body: "Atlas requests failed.\nOther regions were unaffected." } },
+      source: { version: "detective-brief-source/v2", source_kind: "public_event", source_id: "atlas-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [], body: "Atlas requests failed.\nOther regions were unaffected." } },
   };
   if (withReview) {
     state.brief.outcome = "review_ready";
@@ -251,6 +256,40 @@ function inspectedReceiptState() {
 afterEach(() => vi.useRealTimers());
 
 describe("Desktop interface authority and recovery", () => {
+  function taskView(state, objective = "採集回復條件") {
+    return {
+      input: { task: { id: "task:desktop-test", revision: 1, objective, parts: ["body"] },
+        source: { id: state.source.id, revision: "unknown", title: state.source.title, location: state.source.path,
+          coverage: "exact_excerpt", limitations: ["Only supplied text."], parts: [{ name: "body", text: state.source.rawText }] } },
+      model: state.settings.model, baseURL: state.settings.baseURL, inputID: "task-input:desktop-test",
+      status: "prepared", path: "", record: null,
+      scope: { requested_parts: ["body"], provided_parts: ["body"], not_collected_parts: [], not_provided_parts: [], unselected_unit_ids: [], fact_completeness_assessed: false },
+      units: [{ id: "u001", part: "body", start_byte: 0, end_byte: 50, text: state.source.rawText }],
+    };
+  }
+
+  it("does not restore task UI or expose legacy writers when a snapshot still holds a task", async () => {
+    const state = readyState();
+    state.task = taskView(state);
+    state.brief = briefDraftState(true).brief;
+    const { bridge, update } = await renderReady(state);
+    for (const page of ["工作台", "資料源與連線", "執行紀錄", "工作台"]) {
+      fireEvent.click(screen.getByRole("button", { name: page, exact: true }));
+      expect(screen.queryByRole("button", { name: /任務選段|依目的選段|依目的選取原文段落|確認目的與來源|執行一次原文選段/ })).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("這次採集目的")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("Brief 本次具體理由")).not.toBeInTheDocument();
+      expect(screen.queryByLabelText("選取來源資料列")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /檢查並送 pending|查詢 pending/ })).not.toBeInTheDocument();
+    }
+    expect(screen.getByLabelText("完整來源原文").textContent).toBe(state.source.rawText);
+    update({ ...state, task: { ...state.task, status: "failed" } });
+    fireEvent.click(screen.getByRole("button", { name: "重新同步桌面狀態" }));
+    await waitFor(() => expect(bridge.Snapshot).toHaveBeenCalledTimes(2));
+    expect(screen.queryByLabelText("這次採集目的")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /檢查並送 pending|查詢 pending/ })).not.toBeInTheDocument();
+    for (const method of ["PrepareTask", "RunTask", "Extract", "ExtractBrief", "SubmitPending", "QueryPending", "ApplyBriefReview", "CallSourceTool"]) expect(bridge[method]).not.toHaveBeenCalled();
+  });
+
   it("retains an unsaved Brief candidate while checking settings or activity", async () => {
     const state = briefDraftState();
     const { bridge } = await renderReady(state);
@@ -322,71 +361,15 @@ describe("Desktop interface authority and recovery", () => {
     expect(bridge.PrepareBriefCandidate).not.toHaveBeenCalled();
     expect(bridge.ApplyBriefReview).not.toHaveBeenCalled();
   });
-  it.each(["ChooseBriefSource", "ChooseBriefWork"])("clears the candidate draft after a fresh successful %s, even for identical source content", async (method) => {
-    const state = briefDraftState();
-    const { bridge } = await renderReady(state);
-    fireEvent.change(screen.getByLabelText("Brief 候選主張"), { target: { value: "Draft belonging only to the old work." } });
-    fireEvent.change(screen.getByLabelText("Brief 引文起始行"), { target: { value: "2" } });
-    fireEvent.change(screen.getByLabelText("Brief 引文結束行"), { target: { value: "2" } });
-    const opened = structuredClone(state);
-    opened.brief.path = "/private/another-same-source-work.json";
-    opened.brief.digest = "another-work-digest";
-    opened.events.push({ id: "fresh-open", action: method === "ChooseBriefWork" ? "brief_open" : "brief_import", status: "completed", detail: "Synthetic explicit open", time: "" });
-    bridge[method].mockResolvedValueOnce(opened);
-    fireEvent.click(screen.getByRole("button", { name: method === "ChooseBriefWork" ? "恢復 Brief 工作" : "開啟 Brief 來源" }));
-    await waitFor(() => expect(screen.getByText(opened.brief.path)).toBeInTheDocument());
-    expect(screen.getByLabelText("Brief 候選主張")).toHaveValue(opened.brief.report.text);
-    expect(screen.getByLabelText("Brief 引文起始行")).toHaveValue(null);
-    expect(screen.getByLabelText("Brief 引文結束行")).toHaveValue(null);
-    expect(screen.getByRole("button", { name: "保存這筆本機候選" })).toBeDisabled();
-    expect(bridge.PrepareBriefCandidate).not.toHaveBeenCalled();
-  });
-  it("drops an unsent decision and its checked confirmation when explicitly reopening the same saved work", async () => {
-    const state = briefDraftState(true);
-    const { bridge } = await renderReady(state);
-    fireEvent.click(screen.getByRole("radio", { name: /^admit ·/ }));
-    fireEvent.change(screen.getByLabelText("Brief 本次具體理由"), { target: { value: "Unsent reason from the previous open." } });
-    fireEvent.click(screen.getByRole("button", { name: "檢查本次審查決定" }));
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("checkbox"));
-    const reopened = structuredClone(state);
-    reopened.events.push({ id: "fresh-reopen", action: "brief_open", status: "completed", detail: "Synthetic same-file reopen", time: "" });
-    bridge.ChooseBriefWork.mockResolvedValueOnce(reopened);
-    fireEvent.click(screen.getByRole("button", { name: "恢復 Brief 工作" }));
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    for (const radio of screen.getAllByRole("radio")) expect(radio).not.toBeChecked();
-    expect(screen.getByLabelText("Brief 本次具體理由")).toHaveValue("");
-    expect(screen.getByRole("button", { name: "檢查本次審查決定" })).toBeDisabled();
-    expect(bridge.ApplyBriefReview).not.toHaveBeenCalled();
-  });
-  it.each(["cancelled", "failed", "stale-completion"])("retains a Brief draft after a %s work chooser result", async (resultKind) => {
-    const state = briefDraftState();
-    if (resultKind === "stale-completion") state.events = [{ id: "old-open", action: "brief_open", status: "completed", detail: "Earlier open", time: "" }];
-    const { bridge } = await renderReady(state);
-    fireEvent.change(screen.getByLabelText("Brief 候選主張"), { target: { value: "Keep the current draft." } });
-    fireEvent.change(screen.getByLabelText("Brief 引文起始行"), { target: { value: "2" } });
-    fireEvent.change(screen.getByLabelText("Brief 引文結束行"), { target: { value: "2" } });
-    const retained = structuredClone(state);
-    if (resultKind === "failed") {
-      retained.error = "Synthetic failed open";
-      retained.events.push({ id: "failed-open", action: "brief_open", status: "failed", detail: "Synthetic error", time: "" });
-    }
-    bridge.ChooseBriefWork.mockResolvedValueOnce(retained);
-    fireEvent.click(screen.getByRole("button", { name: "恢復 Brief 工作" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "恢復 Brief 工作" })).toBeEnabled());
-    expect(bridge.ChooseBriefWork).toHaveBeenCalledExactlyOnceWith();
-    expect(screen.getByLabelText("Brief 候選主張")).toHaveValue("Keep the current draft.");
-    expect(screen.getByLabelText("Brief 引文起始行")).toHaveValue(2);
-    expect(screen.getByLabelText("Brief 引文結束行")).toHaveValue(2);
-    expect(bridge.PrepareBriefCandidate).not.toHaveBeenCalled();
-  });
   it("does not revive an unsent decision draft after changing a launcher and changing it back", async () => {
     const state = briefDraftState(true);
     const { bridge } = await renderReady(state);
     fireEvent.click(screen.getByRole("radio", { name: /^reject ·/ }));
     fireEvent.change(screen.getByLabelText("Brief 本次具體理由"), { target: { value: "Unsent reason before launcher changes." } });
     fireEvent.click(screen.getByRole("button", { name: "資料源與連線", exact: true }));
+    fireEvent.click(screen.getByText("進階連線設定", { selector: "summary" }));
     for (const queryLauncher of ["/other/query", state.settings.queryLauncher]) {
-      fireEvent.change(screen.getByLabelText("Query launcher"), { target: { value: queryLauncher } });
+      fireEvent.change(screen.getByLabelText("證據查詢程式"), { target: { value: queryLauncher } });
       bridge.SaveSettings.mockImplementationOnce(async (settings) => ({ ...state, settings }));
       fireEvent.click(screen.getByRole("button", { name: "套用本次設定" }));
       await waitFor(() => expect(screen.getByRole("button", { name: "套用本次設定" })).toBeDisabled());
@@ -397,26 +380,6 @@ describe("Desktop interface authority and recovery", () => {
     for (const radio of screen.getAllByRole("radio")) expect(radio).not.toBeChecked();
     expect(bridge.SaveSettings).toHaveBeenCalledTimes(2);
     expect(bridge.ApplyBriefReview).not.toHaveBeenCalled();
-  });
-  it("clears the old Brief draft when a failed open response is recovered by a fresh completed snapshot", async () => {
-    const state = briefDraftState();
-    const { bridge } = await renderReady(state);
-    fireEvent.change(screen.getByLabelText("Brief 候選主張"), { target: { value: "Only for the previously opened work." } });
-    fireEvent.change(screen.getByLabelText("Brief 引文起始行"), { target: { value: "2" } });
-    fireEvent.change(screen.getByLabelText("Brief 引文結束行"), { target: { value: "2" } });
-    const recovered = structuredClone(state);
-    recovered.brief.path = "/private/recovered-open.json";
-    recovered.brief.digest = "recovered-open-digest";
-    recovered.events.push({ id: "recovered-completed-open", action: "brief_open", status: "completed", detail: "Synthetic lost response", time: "" });
-    bridge.ChooseBriefWork.mockRejectedValueOnce(new Error("Synthetic open response lost"));
-    bridge.Snapshot.mockResolvedValueOnce(recovered);
-    fireEvent.click(screen.getByRole("button", { name: "恢復 Brief 工作" }));
-    await waitFor(() => expect(screen.getByText(recovered.brief.path)).toBeInTheDocument());
-    expect(screen.getByLabelText("Brief 候選主張")).toHaveValue(recovered.brief.report.text);
-    expect(screen.getByLabelText("Brief 引文起始行")).toHaveValue(null);
-    expect(screen.getByLabelText("Brief 引文結束行")).toHaveValue(null);
-    expect(bridge.ChooseBriefWork).toHaveBeenCalledExactlyOnceWith();
-    expect(bridge.PrepareBriefCandidate).not.toHaveBeenCalled();
   });
   it.each(["model", "sourceID", "normalized-same-settings"])("keeps an unsent decision draft when saving %s does not change review launchers or mode", async (change) => {
     const state = briefDraftState(true);
@@ -456,39 +419,18 @@ describe("Desktop interface authority and recovery", () => {
       storageSet.mockRestore();
     }
   });
-  it.each(["ChooseBriefSource", "ChooseBriefWork"])("opens the dedicated Brief workflow through %s without automatic extraction", async (method) => {
-    const initial = emptyState();
-    const installed = await renderReady(initial);
-    const next = structuredClone(initial);
-    next.brief = {
-      model: "", path: "/private/brief-work.json", outcome: "inspected", failureStage: "",
-      report: { body_sha256: "source-digest", prompt_version: "detective-brief-prompt/v2", stage: "inspected", text: "",
-        source: { source_id: "source-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [], body: "Complete original source." } },
-    };
-    installed.bridge[method].mockResolvedValueOnce(next);
-    fireEvent.click(screen.getByRole("button", { name: method === "ChooseBriefSource" ? "開啟 Brief 來源" : "恢復 Brief 工作" }));
-    await waitFor(() => expect(screen.getByLabelText("Brief 完整來源原文")).toHaveTextContent("Complete original source."));
-    expect(installed.bridge[method]).toHaveBeenCalledOnce();
-    for (const name of ["ExtractBrief", "PrepareBriefCandidate", "SubmitBriefPending", "PrepareBriefReview", "ApplyBriefReview", "SendMessage"]) {
-      expect(installed.bridge[name]).not.toHaveBeenCalled();
-    }
-    expect(screen.getByRole("button", { name: "以本機模型產生 Brief" })).toBeDisabled();
-  });
   it("restores the frozen Brief statement and citation across page changes and reopening", async () => {
     const saved = emptyState();
     saved.brief = {
       model: "test-local-model", path: "/private/saved-brief-work.json", digest: "saved-work-digest", outcome: "candidate_saved", failureStage: "",
       report: { body_sha256: "source-digest", prompt_version: "detective-brief-prompt/v2", stage: "complete", text: "Original model summary.",
-        source: { source_id: "source-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [], body: "Navigation.\r\nAtlas requests failed in the north region.\r\nOther regions were unaffected.\r\n" } },
+        source: { version: "detective-brief-source/v2", source_kind: "public_event", source_id: "source-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [], body: "Navigation.\r\nAtlas requests failed in the north region.\r\nOther regions were unaffected.\r\n" } },
       submission: { digest: "saved-submission-digest", statement: "A separately edited candidate statement.",
         citation: { start_line: 2, end_line: 3, exact_quote: "Atlas requests failed in the north region.\nOther regions were unaffected." } },
     };
     const original = JSON.stringify(saved);
-    const { bridge } = installBridge();
+    const { bridge } = installBridge(saved);
     const first = render(<App />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "恢復 Brief 工作" })).toBeEnabled());
-    bridge.ChooseBriefWork.mockResolvedValueOnce(saved);
-    fireEvent.click(screen.getByRole("button", { name: "恢復 Brief 工作" }));
     await screen.findByLabelText("Brief 完整候選綁定");
     const expectSavedSelection = () => {
       expect(screen.getByLabelText("Brief 引文起始行")).toHaveValue(2);
@@ -496,7 +438,7 @@ describe("Desktop interface authority and recovery", () => {
       expect(screen.getByLabelText("Brief 候選主張")).toHaveValue(saved.brief.submission.statement);
       for (const label of ["Brief 候選主張", "Brief 引文起始行", "Brief 引文結束行"]) expect(screen.getByLabelText(label)).toBeDisabled();
       expect(screen.getByLabelText("Brief 選定精確引文").textContent).toBe(saved.brief.submission.citation.exact_quote);
-      expect(screen.getByLabelText("Brief 完整來源原文").textContent).toBe(saved.brief.report.source.body);
+      expect(screen.getByLabelText("Brief 本次提供的原文").textContent).toBe(saved.brief.report.source.body);
       expect(screen.getByLabelText("模型 Brief 原文").textContent).toBe(saved.brief.report.text);
       expect(screen.getByLabelText("Brief 完整候選綁定").textContent).toBe(JSON.stringify(saved.brief.submission, null, 2));
     };
@@ -513,7 +455,7 @@ describe("Desktop interface authority and recovery", () => {
     await screen.findByLabelText("Brief 完整候選綁定");
     expectSavedSelection();
     expect(bridge.Snapshot).toHaveBeenCalledTimes(2);
-    expect(bridge.ChooseBriefWork).toHaveBeenCalledExactlyOnceWith();
+    expect(bridge.ChooseBriefWork).not.toHaveBeenCalled();
     for (const [name, method] of Object.entries(bridge)) {
       if (!["Snapshot", "ChooseBriefWork"].includes(name)) expect(method).not.toHaveBeenCalled();
     }
@@ -525,7 +467,7 @@ describe("Desktop interface authority and recovery", () => {
     saved.brief = {
       model: "test-local-model", path: "/private/saved-review-work.json", digest: "saved-review-digest", outcome: "decision_saved", failureStage: "review_write",
       report: { body_sha256: "source-digest", prompt_version: "detective-brief-prompt/v2", stage: "complete", text: "Atlas has recovered.",
-        source: { source_id: "atlas-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [], body: "Atlas requests failed.\nNo recovery has been reported." } },
+        source: { version: "detective-brief-source/v2", source_kind: "public_event", source_id: "atlas-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [], body: "Atlas requests failed.\nNo recovery has been reported." } },
       submission: { digest: "submission-digest", statement: "Atlas has recovered.",
         citation: { start_line: 1, end_line: 2, exact_quote: "Atlas requests failed.\nNo recovery has been reported." } },
       handoff: { proposal_occurrence_id: "occ:exact-current" },
@@ -541,11 +483,9 @@ describe("Desktop interface authority and recovery", () => {
     queried.brief.failureStage = "";
     const terminal = structuredClone(queried);
     terminal.brief.outcome = "reject_verified";
-    const { bridge } = await renderReady(emptyState());
-    bridge.ChooseBriefWork.mockResolvedValueOnce(saved);
+    const { bridge } = await renderReady(saved);
     bridge.QueryBriefPending.mockResolvedValueOnce(queried);
     bridge.ApplyBriefReview.mockResolvedValueOnce(terminal);
-    fireEvent.click(screen.getByRole("button", { name: "恢復 Brief 工作" }));
     const retryName = "核對並重試已保存決定";
     await waitFor(() => expect(screen.getByRole("button", { name: retryName })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "查回這筆 Brief 狀態" }));
@@ -590,7 +530,7 @@ describe("Desktop interface authority and recovery", () => {
     expect(screen.getByRole("button", { name: "檢查本次審查決定" })).toBeDisabled();
     for (const radio of screen.getAllByRole("radio")) expect(radio).toBeDisabled();
     expect(screen.getByLabelText("Brief 已保存決定").textContent).toBe(JSON.stringify(saved.brief.decision, null, 2));
-    expect(bridge.ChooseBriefWork).toHaveBeenCalledExactlyOnceWith();
+    expect(bridge.ChooseBriefWork).not.toHaveBeenCalled();
     expect(bridge.QueryBriefPending).toHaveBeenCalledExactlyOnceWith();
     for (const [name, method] of Object.entries(bridge)) {
       if (!["Snapshot", "ChooseBriefWork", "QueryBriefPending", "ApplyBriefReview"].includes(name)) expect(method).not.toHaveBeenCalled();
@@ -604,7 +544,7 @@ describe("Desktop interface authority and recovery", () => {
     saved.brief = {
       model: "test-local-model", path: "/private/missing-ack-work.json", digest: "missing-ack-digest", outcome: "decision_saved", failureStage: "review_write",
       report: { body_sha256: "source-digest", prompt_version: "detective-brief-prompt/v2", stage: "complete", text: "Atlas has recovered.",
-        source: { source_id: "atlas-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [], body: "Atlas requests failed.\nNo recovery has been reported." } },
+        source: { version: "detective-brief-source/v2", source_kind: "public_event", source_id: "atlas-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [], body: "Atlas requests failed.\nNo recovery has been reported." } },
       submission: { digest: "submission-digest", statement: "Atlas has recovered.",
         citation: { start_line: 1, end_line: 2, exact_quote: "Atlas requests failed.\nNo recovery has been reported." } },
       handoff: { proposal_occurrence_id: "occ:exact-current" },
@@ -625,11 +565,9 @@ describe("Desktop interface authority and recovery", () => {
       admission_decision_id: "adm:original-reject", admission_outcome: "rejected",
       decision_by: "mock:original-reviewer", decision_reason: saved.brief.decision.reason, replayed: true,
     };
-    const { bridge } = await renderReady(emptyState());
-    bridge.ChooseBriefWork.mockResolvedValueOnce(saved);
+    const { bridge } = await renderReady(saved);
     bridge.QueryBriefPending.mockResolvedValueOnce(queried);
     bridge.ApplyBriefReview.mockResolvedValueOnce(verified);
-    fireEvent.click(screen.getByRole("button", { name: "恢復 Brief 工作" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "查回這筆 Brief 狀態" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "查回這筆 Brief 狀態" }));
     await waitFor(() => expect(screen.getByText("無已記錄的失敗")).toBeInTheDocument());
@@ -674,7 +612,7 @@ describe("Desktop interface authority and recovery", () => {
     expect(screen.getByRole("button", { name: "取得這筆精確審查內容" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "檢查本次審查決定" })).toBeDisabled();
     for (const radio of screen.getAllByRole("radio")) expect(radio).toBeDisabled();
-    expect(bridge.ChooseBriefWork).toHaveBeenCalledExactlyOnceWith();
+    expect(bridge.ChooseBriefWork).not.toHaveBeenCalled();
     expect(bridge.QueryBriefPending).toHaveBeenCalledExactlyOnceWith();
     for (const [name, method] of Object.entries(bridge)) {
       if (!["Snapshot", "ChooseBriefWork", "QueryBriefPending", "ApplyBriefReview"].includes(name)) expect(method).not.toHaveBeenCalled();
@@ -685,29 +623,21 @@ describe("Desktop interface authority and recovery", () => {
   it("does not claim success without a native bridge", () => {
     render(<App />);
     expect(screen.getByText("需從桌面程式啟動")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /試用離線示範/ })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /試用離線示範/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "送出訊息" })).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: "檢查並送 pending" }),
-    ).toBeDisabled();
-    expect(screen.getByRole("button", { name: "開啟來源收據" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "檢查並送 pending" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "開啟來源收據" })).not.toBeInTheDocument();
   });
-  it("opens a saved receipt offline and shows complete text-only capture data without granting authority", async () => {
-    const state = emptyState();
-    const { bridge } = await renderReady(state);
+  it("shows already loaded capture data as complete text without granting authority or opening files", async () => {
     const reopened = inspectedReceiptState();
-    bridge.ChooseSourceReceipt.mockResolvedValueOnce(reopened);
-    fireEvent.click(screen.getByRole("button", { name: "資料源與連線" }));
-    const open = screen.getByRole("button", { name: "開啟來源收據" });
-    expect(open).toBeEnabled();
-    fireEvent.click(open);
+    const { bridge } = await renderReady(reopened);
     await waitFor(() =>
       expect(screen.getByRole("tab", { name: /來源原文/ })).toHaveAttribute(
         "aria-selected",
         "true",
       ),
     );
-    expect(bridge.ChooseSourceReceipt).toHaveBeenCalledExactlyOnceWith();
+    expect(bridge.ChooseSourceReceipt).not.toHaveBeenCalled();
     expect(screen.getByLabelText("完整來源原文").textContent).toBe(
       reopened.source.rawText,
     );
@@ -762,142 +692,12 @@ describe("Desktop interface authority and recovery", () => {
       expect(bridge[name]).not.toHaveBeenCalled();
     }
     fireEvent.click(screen.getByRole("button", { name: "資料源與連線" }));
-    expect(screen.getByText("已生效：離線演練")).toBeInTheDocument();
+    expect(screen.getByText("已生效：離線")).toBeInTheDocument();
     expect(
       screen.queryByDisplayValue("/historical/launcher"),
     ).not.toBeInTheDocument();
   });
 
-  it.each(["batchPath", "batchDigest"])(
-    "blocks receipt reopening for an active %s and explains why",
-    async (field) => {
-      const state = emptyState();
-      state[field] = "active-batch";
-      const { bridge } = await renderReady(state);
-      const open = screen.getByRole("button", { name: "開啟來源收據" });
-      expect(open).toBeDisabled();
-      expect(
-        document.getElementById(open.getAttribute("aria-describedby"))
-          .textContent,
-      ).toMatch(/目前有作用中的批次.*新工作/);
-      fireEvent.click(open);
-      expect(bridge.ChooseSourceReceipt).not.toHaveBeenCalled();
-    },
-  );
-
-  it("disables the receipt chooser while working and leaves cancellation available", async () => {
-    const { bridge } = await renderReady(emptyState());
-    let finish;
-    bridge.ChooseSourceReceipt.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "開啟來源收據" }));
-    expect(screen.getByRole("button", { name: "開啟來源收據" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "取消操作" })).toBeEnabled();
-    await act(async () => {
-      finish(emptyState());
-    });
-    expect(bridge.ChooseSourceReceipt).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText("檔案與已保存收據一致")).not.toBeInTheDocument();
-  });
-
-  it.each(["cancelled", "rejected", "stale_completion"])(
-    "preserves an older source after %s receipt opening without claiming a new inspection",
-    async (outcome) => {
-      const state = inspectedReceiptState();
-      const { bridge, update } = await renderReady(state);
-      fireEvent.click(screen.getByRole("tab", { name: /完整候選/ }));
-      const result = structuredClone(state);
-      if (outcome === "cancelled")
-        result.events.push({
-          id: "receipt-cancel",
-          action: "開啟來源收據",
-          status: "cancelled",
-          detail: "已取消",
-          time: "",
-        });
-      if (outcome === "rejected") {
-        bridge.ChooseSourceReceipt.mockImplementationOnce(async () => {
-          update(result);
-          throw new Error(
-            "private file body and credential details must not leak",
-          );
-        });
-      } else bridge.ChooseSourceReceipt.mockResolvedValueOnce(result);
-      fireEvent.click(screen.getByRole("button", { name: "開啟來源收據" }));
-      await waitFor(() =>
-        expect(bridge.ChooseSourceReceipt).toHaveBeenCalledTimes(1),
-      );
-      await waitFor(() =>
-        expect(
-          screen.getByRole("button", { name: "開啟來源收據" }),
-        ).toBeEnabled(),
-      );
-      expect(screen.getByRole("tab", { name: /完整候選/ })).toHaveAttribute(
-        "aria-selected",
-        "true",
-      );
-      if (outcome === "rejected") {
-        expect(
-          screen.getByText(/操作未完成。已重新同步桌面狀態/),
-        ).toBeInTheDocument();
-        expect(bridge.Snapshot.mock.calls.length).toBeGreaterThan(1);
-      }
-      expect(screen.queryByText(/private file body/)).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole("tab", { name: /來源原文/ }));
-      expect(screen.getByLabelText("完整來源原文").textContent).toBe(
-        state.source.rawText,
-      );
-      expect(
-        screen.getByText(state.source.capture.inspection.verifiedAt),
-      ).toBeInTheDocument();
-      expect(bridge.CallSourceTool).not.toHaveBeenCalled();
-      expect(bridge.SubmitPending).not.toHaveBeenCalled();
-    },
-  );
-
-  it("does not enable receipt opening when an older native bridge lacks the method", async () => {
-    const { bridge } = installBridge(emptyState());
-    delete bridge.ChooseSourceReceipt;
-    render(<App />);
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "新工作" })).toBeEnabled(),
-    );
-    const open = screen.getByRole("button", { name: "開啟來源收據" });
-    expect(open).toBeDisabled();
-    expect(
-      document.getElementById(open.getAttribute("aria-describedby"))
-        .textContent,
-    ).toMatch(/桌面版本/);
-  });
-  it("recognizes a fresh successful inspection of the same receipt path", async () => {
-    const state = inspectedReceiptState();
-    const { bridge } = await renderReady(state);
-    const reopened = structuredClone(state);
-    reopened.source.capture.inspection.verifiedAt = "2026-09-09T04:00:00Z";
-    reopened.events.push({
-      ...state.events[0],
-      id: "receipt-inspected-2",
-      time: "2026-09-09T04:00:00Z",
-    });
-    bridge.ChooseSourceReceipt.mockResolvedValueOnce(reopened);
-    fireEvent.click(screen.getByRole("tab", { name: /完整候選/ }));
-    fireEvent.click(screen.getByRole("button", { name: "開啟來源收據" }));
-    await waitFor(() =>
-      expect(screen.getByRole("tab", { name: /來源原文/ })).toHaveAttribute(
-        "aria-selected",
-        "true",
-      ),
-    );
-    expect(
-      screen.getByText(reopened.source.capture.inspection.verifiedAt),
-    ).toBeInTheDocument();
-    expect(bridge.ChooseSourceReceipt).toHaveBeenCalledTimes(1);
-    expect(bridge.CallSourceTool).not.toHaveBeenCalled();
-  });
   it("does not claim an offline recheck for a live capture without inspection metadata", async () => {
     const state = inspectedReceiptState();
     delete state.source.capture.inspection;
@@ -932,11 +732,9 @@ describe("Desktop interface authority and recovery", () => {
     expect(screen.getByRole("button", { name: "新工作" })).toBeEnabled();
     expect(bridge.LoadDemo).not.toHaveBeenCalled();
   });
-  it("routes chat admit only to SendMessage, never to a tool or writer", async () => {
-    const { bridge } = await renderReady(emptyState());
-    expect(screen.queryByLabelText("聊天模型輸入範圍")).not.toBeInTheDocument();
-    expect(screen.getByRole("note")).toHaveTextContent("離線固定操作演練，不是人工審核");
-    expect(screen.getByRole("note")).toHaveTextContent("載入合成來源後也是如此");
+  it("routes real chat admit only to SendMessage, never to a tool or writer", async () => {
+    const { bridge } = await renderReady(readyState());
+    expect(screen.getByLabelText("聊天模型輸入範圍")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("對話訊息"), {
       target: { value: "admit" },
     });
@@ -947,16 +745,17 @@ describe("Desktop interface authority and recovery", () => {
     expect(bridge.SubmitPending).not.toHaveBeenCalled();
     expect(bridge.CallSourceTool).not.toHaveBeenCalled();
   });
-  it("keeps the offline-review notice after a synthetic source is loaded", async () => {
+  it("requires an actual model for chat even when source text is already loaded", async () => {
     const state = readyState();
     state.settings.mode = "demo";
     state.source.kind = "demo";
     await renderReady(state);
-    expect(screen.getByRole("note")).toHaveTextContent("不會採納");
+    expect(screen.queryByText(/尚未啟用本機模型|尚未啟動本機模型/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("完整來源原文")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/只回固定提示，不會採納/)).toBeInTheDocument();
+    expect(screen.getByLabelText("對話訊息")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "送出訊息" })).toBeDisabled();
     expect(screen.queryByLabelText("聊天模型輸入範圍")).not.toBeInTheDocument();
-    expect(screen.getByText("固定提示 · 未採納")).toBeInTheDocument();
+    expect(screen.getByText("模型尚未啟用")).toBeInTheDocument();
   });
   it("shows local chat input boundaries beside the composer without implying automatic redaction or tool authority", async () => {
     const { bridge } = await renderReady(readyState());
@@ -966,7 +765,8 @@ describe("Desktop interface authority and recovery", () => {
     expect(notice).toHaveTextContent("不附帶操作路徑、設定、收據或 DB 查詢結果");
     expect(notice).toHaveTextContent("這不是敏感內容自動遮蔽");
     expect(notice).toHaveTextContent("寫進對話、來源或候選的敏感資訊仍會送入模型");
-    expect(notice).toHaveTextContent("聊天模型沒有工具呼叫或寫入權限");
+    expect(notice).toHaveTextContent("Codebase 模式可建議一次讀取，仍需另外按卡片確認");
+    expect(notice).toHaveTextContent("模型沒有寫入權限");
     expect(bridge.SendMessage).not.toHaveBeenCalled();
     expect(bridge.CallSourceTool).not.toHaveBeenCalled();
     expect(bridge.SubmitPending).not.toHaveBeenCalled();
@@ -1099,9 +899,8 @@ describe("Desktop interface authority and recovery", () => {
       screen.getByText("完整 RowBatch（包含來源與未完成列）"),
     ).toBeInTheDocument();
   });
-  it("shows validated abstention with no candidates after extracting the exact row without enabling pending", async () => {
+  it("shows retained legacy abstention with no candidates without re-extracting or enabling pending", async () => {
     const state = capturedSourceState();
-    const { bridge, update } = await renderReady(state);
     const result = {
       ...state,
       extraction: {
@@ -1122,18 +921,12 @@ describe("Desktop interface authority and recovery", () => {
         }],
       },
     };
-    bridge.Extract.mockImplementationOnce(async () => {
-      update(result);
-      return result;
-    });
-    fireEvent.change(screen.getByLabelText("選取來源資料列"), {
-      target: { value: "4" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /抽取此列候選/ }));
+    const { bridge } = await renderReady(result);
+    fireEvent.click(screen.getByRole("tab", { name: /完整候選 0/ }));
     await waitFor(() =>
       expect(screen.getByRole("tab", { name: /完整候選 0/ })).toHaveAttribute("aria-selected", "true"),
     );
-    expect(bridge.Extract).toHaveBeenCalledExactlyOnceWith(4);
+    expect(bridge.Extract).not.toHaveBeenCalled();
     expect(screen.queryAllByTestId(/^candidate-/)).toHaveLength(0);
     expect(screen.getByText("僅檢視本次選定資料列")).toBeVisible();
     expect(screen.getByText("來源資訊不足，無法建立有依據的候選")).toBeVisible();
@@ -1275,12 +1068,9 @@ describe("Desktop interface authority and recovery", () => {
       finish(readyState());
     });
   });
-  it("uses the native source chooser and exact selected row, with no inferred row for generic source", async () => {
+  it("uses only an explicitly selected legacy row already present in state", async () => {
     const { bridge } = await renderReady(readyState());
-    fireEvent.click(
-      screen.getByRole("button", { name: "開啟本機來源", exact: true }),
-    );
-    await waitFor(() => expect(bridge.ChooseSource).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("button", { name: "開啟本機來源", exact: true })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /抽取此列候選/ })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("選取來源資料列"), {
       target: { value: "4" },
@@ -1289,6 +1079,18 @@ describe("Desktop interface authority and recovery", () => {
     await waitFor(() =>
       expect(bridge.Extract).toHaveBeenCalledExactlyOnceWith(4),
     );
+  });
+  it("shows a new MCP source without task selection, STATUS or pending controls, even if it contains a status table", async () => {
+    const state = capturedSourceState();
+    state.source.rows = [{ line: 4, text: "| a status-like table row |" }];
+    const { bridge } = await renderReady(state);
+    expect(screen.getByLabelText("完整來源原文").textContent).toBe(state.source.rawText);
+    expect(screen.queryByLabelText("選取來源資料列")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /抽取此列候選|檢查並送 pending|查詢 pending/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /完整候選/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /任務選段|依目的選段|依目的選取原文段落/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("這次採集目的")).not.toBeInTheDocument();
+    for (const method of ["Extract", "SubmitPending", "QueryPending", "PrepareTask", "RunTask"]) expect(bridge[method]).not.toHaveBeenCalled();
   });
   it("keeps generic tool text intact without offering an inferred extractable row", async () => {
     const state = readyState();
@@ -1313,6 +1115,37 @@ describe("Desktop interface authority and recovery", () => {
     expect(bridge.DiscoverTools).not.toHaveBeenCalled();
     expect(bridge.CallSourceTool).not.toHaveBeenCalled();
   });
+  it("removes local and synthetic entry points across every normal page even when an older bridge exposes them", async () => {
+    const { bridge } = await renderReady(emptyState());
+    for (const page of ["工作台", "證據搜尋", "資料源與連線", "執行紀錄"]) {
+      fireEvent.click(screen.getByRole("button", { name: page, exact: true }));
+      expect(screen.queryByRole("button", { name: /開啟本機來源|開啟已保存任務|開啟來源收據|開啟批次|開啟 Brief 來源|恢復 Brief 工作|試用離線示範|載入.*示範|任務選段|依目的選段|依目的選取原文段落/ })).not.toBeInTheDocument();
+      expect(screen.queryByText(/detective-source-demo|合成來源、確定性回覆/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/尚未啟用本機模型|尚未啟動本機模型/)).not.toBeInTheDocument();
+    }
+    for (const method of ["ChooseSource", "ChooseTaskRecord", "ChooseSourceReceipt", "ChooseBatch", "ChooseBriefSource", "ChooseBriefWork", "LoadDemo", "LoadEvidenceSearchDemo", "SendMessage", "RunTask", "CallSourceTool"]) {
+      expect(bridge[method]).not.toHaveBeenCalled();
+    }
+  });
+  it("does not send an offline chat or produce a simulated reply even if the form is submitted directly", async () => {
+    const { bridge } = await renderReady(emptyState());
+    const input = screen.getByLabelText("對話訊息");
+    expect(input).toBeDisabled();
+    fireEvent.change(input, { target: { value: "admit" } });
+    fireEvent.submit(input.closest("form"));
+    expect(bridge.SendMessage).not.toHaveBeenCalled();
+    expect(bridge.LoadDemo).not.toHaveBeenCalled();
+    expect(screen.queryByText("離線固定提示 · 非模型判斷")).not.toBeInTheDocument();
+  });
+  it("does not fall back to a demo loader when the native bridge lacks NewWork", async () => {
+    const { bridge } = installBridge(emptyState());
+    delete bridge.NewWork;
+    render(<App />);
+    await waitFor(() => expect(bridge.Snapshot).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: "新工作" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "新工作" }));
+    expect(bridge.LoadDemo).not.toHaveBeenCalled();
+  });
   it("always offers an explicit new-work action without deleting stored artifacts", async () => {
     const state = readyState();
     state.messages = [
@@ -1325,6 +1158,7 @@ describe("Desktop interface authority and recovery", () => {
       },
     ];
     const { bridge } = await renderReady(state);
+    bridge.NewWork.mockResolvedValueOnce({ ...emptyState(), settings: state.settings, tools: state.tools });
     fireEvent.click(screen.getByRole("button", { name: "新工作" }));
     const modal = within(screen.getByRole("dialog"));
     expect(
@@ -1335,6 +1169,12 @@ describe("Desktop interface authority and recovery", () => {
     fireEvent.click(
       modal.getByRole("button", { name: "開始新工作，保留已保存檔案" }),
     );
-    await waitFor(() => expect(bridge.LoadDemo).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(bridge.NewWork).toHaveBeenCalledExactlyOnceWith());
+    expect(bridge.LoadDemo).not.toHaveBeenCalled();
+    expect(screen.queryByText("既有對話")).not.toBeInTheDocument();
+    expect(screen.getByText("實際 · 明確操作")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^依目的選段/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^連接資料源/ })).toBeEnabled();
+    for (const method of ["SaveSettings", "SendMessage", "CallSourceTool", "RunTask", "SubmitPending"]) expect(bridge[method]).not.toHaveBeenCalled();
   });
 });

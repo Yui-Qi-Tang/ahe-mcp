@@ -31,6 +31,9 @@ const briefSubmissionVersion = "detective-brief-submission/v1"
 // caller must supply the exact displayed quote; it is never inferred from the
 // generated brief. SourcePath is a recorded local label, not a file to reopen.
 func NewBriefSubmission(report sourcepilot.BriefReport, sourcePath, model, statement string, citation labstatus.Citation) (BriefSubmission, error) {
+	if err := sourcepilot.ValidateBriefSourceForExtraction(report.Source); err != nil {
+		return BriefSubmission{}, err
+	}
 	input := BriefSubmission{Version: briefSubmissionVersion, Report: report, SourcePath: sourcePath, Model: model, Statement: statement, Citation: citation}
 	input.Digest = digest(input)
 	if err := ValidateBriefSubmission(input); err != nil {
@@ -112,12 +115,33 @@ func briefDefinition(input BriefSubmission) extractorDefinition {
 func briefOrigin(input BriefSubmission) map[string]string {
 	s := input.Report.Source
 	limitations, _ := json.Marshal(s.Limitations) // Validated string slices cannot fail encoding.
-	return map[string]string{
+	origin := map[string]string{
 		"capture_kind": "caller_declared_brief_source", "snapshot_sha256": input.Report.BodySHA256,
 		"declared_source_id": s.SourceID, "declared_source_revision": s.SourceRevision,
 		"declared_source_url": s.SourceURL, "declared_observed_at": s.ObservedAt,
 		"declared_coverage": s.Coverage, "declared_limitations_json": string(limitations),
 	}
+	// Preserve legacy request/receipt identities during readback. New sources
+	// bind the explicit reading scope to their metadata and request identity.
+	if s.SourceKind != "" {
+		origin["declared_source_kind"] = s.SourceKind
+	}
+	if s.Excerpt != nil {
+		excerpt, _ := json.Marshal(s.Excerpt) // Validated concrete coordinates only.
+		origin["declared_excerpt_json"] = string(excerpt)
+	}
+	return origin
+}
+
+// briefSourceID binds new excerpt snapshots to all their provenance. Manual
+// source storage retains the first origin for an ID/body pair, so equal excerpt
+// bytes selected from different parents or ranges must not share that pair.
+// Existing sources keep their original IDs and request/receipt identities.
+func briefSourceID(input BriefSubmission) string {
+	if input.Report.Source.Excerpt == nil {
+		return input.Report.Source.SourceID
+	}
+	return "brief-excerpt:" + digest(briefOrigin(input))
 }
 
 func briefProposals(input BriefSubmission, spans []span) ([]proposal, error) {
@@ -132,7 +156,7 @@ func briefRequest(input BriefSubmission, receipt sourceResult, spans []span) (ex
 		return extractorRequest{}, err
 	}
 	definition := briefDefinition(input)
-	return extractorRequest{RequestID: requestID("brief-proposal", input.Report.Source.SourceID, input.Report.BodySHA256, digest(definition), digest(proposals)), SourceSnapshotID: receipt.SourceSnapshotID, ExtractionViewID: receipt.ExtractionViewID, ExtractorDefinition: definition, ExtractorOutput: extractorOutput{Proposals: proposals}}, nil
+	return extractorRequest{RequestID: requestID("brief-proposal", briefSourceID(input), input.Report.BodySHA256, digest(definition), digest(proposals)), SourceSnapshotID: receipt.SourceSnapshotID, ExtractionViewID: receipt.ExtractionViewID, ExtractorDefinition: definition, ExtractorOutput: extractorOutput{Proposals: proposals}}, nil
 }
 
 // SubmitBrief persists the complete original body and one selected statement as
@@ -145,6 +169,9 @@ func SubmitBrief(ctx context.Context, command string, input BriefSubmission) (Ha
 	if err := ValidateBriefSubmission(input); err != nil {
 		return Handoff{}, err
 	}
+	if err := sourcepilot.ValidateBriefSourceForExtraction(input.Report.Source); err != nil {
+		return Handoff{}, err
+	}
 	c, err := start(ctx, command)
 	if err != nil {
 		return Handoff{}, err
@@ -154,11 +181,12 @@ func SubmitBrief(ctx context.Context, command string, input BriefSubmission) (Ha
 		return Handoff{}, err
 	}
 	source := input.Report.Source
+	sourceID := briefSourceID(input)
 	sourceHash := "sha256:" + input.Report.BodySHA256
 	origin := briefOrigin(input)
 	var receipt sourceResult
-	if err := c.call("submit_text_source", sourceRequest{SourceID: source.SourceID, SourceVersion: sourceHash, RawText: source.Body,
-		RequestID: requestID("brief-source", source.SourceID, input.Report.BodySHA256, digest(origin)), OriginMetadata: origin}, &receipt); err != nil {
+	if err := c.call("submit_text_source", sourceRequest{SourceID: sourceID, SourceVersion: sourceHash, RawText: source.Body,
+		RequestID: requestID("brief-source", sourceID, input.Report.BodySHA256, digest(origin)), OriginMetadata: origin}, &receipt); err != nil {
 		return Handoff{}, fmt.Errorf("submit brief source (write outcome uncertain; retry identical inputs): %w", err)
 	}
 	if !reviewID(receipt.SourceSnapshotID, "srcsnap:") || !reviewID(receipt.ExtractionViewID, "view:") || receipt.SourceSystem != "manual_text" || receipt.SpanCatalogVersion != "manual-line-v1" || receipt.RawContentHash != sourceHash || receipt.RenderedContentHash != sourceHash {
@@ -169,7 +197,7 @@ func SubmitBrief(ctx context.Context, command string, input BriefSubmission) (Ha
 		return Handoff{}, fmt.Errorf("get brief source after persistence: %w", err)
 	}
 	document, _ := briefDocument(input) // Validated before the first external call.
-	if err := validateInput(document, source.SourceID, receipt, extracted); err != nil {
+	if err := validateInput(document, sourceID, receipt, extracted); err != nil {
 		return Handoff{}, err
 	}
 	request, err := briefRequest(input, receipt, extracted.Spans)

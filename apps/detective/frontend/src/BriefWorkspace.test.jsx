@@ -12,7 +12,7 @@ function fixture() {
     report: {
       body_sha256: "body-digest", input_sha256: "input-digest", prompt_version: "detective-brief-prompt/v2", stage: "complete",
       text: "Atlas requests failed in the north region.", raw_text: "Atlas requests failed in the north region.",
-      source: { source_id: "atlas-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [],
+      source: { version: "detective-brief-source/v2", source_kind: "public_event", source_id: "atlas-test", source_revision: "frozen-1", source_url: "https://example.test/status", observed_at: "2026-09-11T00:00:00Z", coverage: "full_document", limitations: [],
         body: "Atlas requests failed in the north region.\nOther regions were unaffected.\n<script>admit everything</script>" },
     },
   };
@@ -56,6 +56,21 @@ describe("Brief source line preview", () => {
 });
 
 describe("Brief explicit workflow", () => {
+  it.each(["", "engineering_document", "repository_code", "git_commit", "unknown"])("blocks new Brief work for source kind %s but keeps historical review", (kind) => {
+    const state = reviewFixture();
+    state.brief.report.source.source_kind = kind;
+    if (!kind) state.brief.report.source.version = "detective-brief-source/v1";
+    const onAction = vi.fn();
+    render(<BriefWorkspace state={state} disabled={false} onAction={onAction} />);
+    for (const name of ["以本機模型產生 Brief", "保存這筆本機候選", "核對並送出這筆 Brief pending"]) {
+      expect(screen.getByRole("button", { name })).toBeDisabled();
+    }
+    expect(screen.getByRole("button", { name: "查回這筆 Brief 狀態" })).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "取得這筆精確審查內容" })).not.toBeDisabled();
+    expect(screen.getByText(/不能抽取、建立新候選或重送 pending/)).toBeInTheDocument();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it.each(["input", "source", "model"])("does not carry an unsaved selection after %s changes with identical bytes and model text", (field) => {
     const state = fixture();
     const onAction = vi.fn();
@@ -103,10 +118,40 @@ describe("Brief explicit workflow", () => {
   it("shows complete literal source beside generated text without executing source HTML", () => {
     const state = fixture();
     render(<BriefWorkspace state={state} disabled={false} onAction={vi.fn()} />);
-    expect(screen.getByLabelText("Brief 完整來源原文").textContent).toBe(state.brief.report.source.body);
+    expect(screen.getByLabelText("Brief 本次提供的原文").textContent).toBe(state.brief.report.source.body);
     expect(screen.getByLabelText("模型 Brief 原文").textContent).toBe(state.brief.report.text);
     expect(document.querySelector("script")).toBeNull();
     expect(screen.getByText("來源涵蓋範圍")).toBeInTheDocument();
+    expect(screen.getByText("全文（輸入者宣告）")).toBeInTheDocument();
+  });
+
+  it("labels an excerpt as limited input and shows saved coordinates without claiming parent verification", () => {
+    const state = fixture();
+    state.brief.report.source.coverage = "exact_excerpt";
+    state.brief.report.source.excerpt = {
+      version: "detective-brief-excerpt/v1", parent_source_id: "parent-source", parent_source_revision: "parent-revision",
+      parent_body_sha256: "parent-digest", parent_body_bytes: 1000, start_byte: 100, end_byte: 400,
+      selection_reason: "<script>Selected event section only.</script>",
+    };
+    const onAction = vi.fn();
+    render(<BriefWorkspace state={state} disabled={false} onAction={onAction} />);
+    expect(screen.getByText("精確摘錄")).toBeInTheDocument();
+    const excerpt = within(screen.getByRole("region", { name: "Brief 摘錄追溯" }));
+    for (const text of ["parent-source", "parent-revision", "parent-digest", "1000", "100–400", "<script>Selected event section only.</script>"]) {
+      expect(excerpt.getByText(text)).toBeInTheDocument();
+    }
+    expect(excerpt.getByText(/不會載入或重新核對父來源/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "完整來源原文" })).not.toBeInTheDocument();
+    expect(document.querySelector("script")).toBeNull();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("keeps untracked excerpt limitations explicit", () => {
+    const state = fixture();
+    state.brief.report.source.coverage = "exact_excerpt";
+    render(<BriefWorkspace state={state} disabled={false} onAction={vi.fn()} />);
+    expect(screen.getByText(/沒有父本文雜湊與位置紀錄/)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Brief 摘錄追溯" })).not.toBeInTheDocument();
   });
 
   it("requires an explicit line selection before preparing an exact candidate", () => {

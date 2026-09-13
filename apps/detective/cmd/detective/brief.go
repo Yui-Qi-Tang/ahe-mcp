@@ -20,12 +20,19 @@ import (
 const briefRunVersion = "detective-brief-run/v1"
 
 const briefUsage = "detective brief inspect -input /absolute/private/source.json [-format text|json]\n" +
+	"detective brief select -input /absolute/private/parent.json -start-byte N -end-byte N -reason TEXT -out /absolute/private/new-excerpt.json\n" +
+	"detective brief verify-excerpt -parent /absolute/private/parent.json -input /absolute/private/excerpt.json\n" +
 	"detective brief run -input /absolute/private/source.json -model NAME -base-url http://127.0.0.1:11434/v1 -out /absolute/private/new-report.json [-timeout 2m] [-format text|json]\n" +
 	"detective brief read -input /absolute/private/saved-report.json [-format text|json]\n" +
 	"detective brief --version\n" +
-	"Inspect and read are offline. Run makes one tool-free local model attempt to summarize the complete supplied body.\n" +
+	"Inspect, read, select and verify-excerpt are offline. Run makes one tool-free local model attempt to summarize the complete supplied body.\n" +
+	"New sources require detective-brief-source/v2 and source_kind news or public_event. Engineering documents, code, git and unclassified sources must not use Brief.\n" +
+	"Legacy saved reports remain readable; their source type is never inferred or rewritten.\n" +
 	"The complete source is retained as a source-level reference, not proof that each summary claim is supported.\n" +
 	"Input is at most 64 KiB, mode 0600 under a 0700 directory. Output must be a new private file; saved reports are at most 2 MiB.\n" +
+	"Select reads one explicit full_document parent (JSON at most 1 MiB, body at most 512 KiB), using a half-open decoded UTF-8 byte range.\n" +
+	"Selected Brief input still allows at most 32 KiB body and 64 nonempty segments. No automatic chunking or truncation.\n" +
+	"Verify-excerpt compares the exact range with the supplied parent offline; saved coordinates alone are not reverified or provider-authenticated.\n" +
 	"No source fetch, retries, cloud fallback, AHE, DB or admission. Human review is still required.\n" +
 	"Failed or interrupted attempts retain their report; never overwrite or treat them as complete.\n"
 
@@ -59,8 +66,11 @@ func runBriefWithContext(ctx context.Context, args []string, stdout, stderr io.W
 	if len(args) > 0 && args[0] == "read" {
 		return readBriefRun(ctx, args[1:], stdout)
 	}
+	if len(args) > 0 && (args[0] == "select" || args[0] == "verify-excerpt") {
+		return runBriefExcerpt(ctx, args, stdout)
+	}
 	if len(args) == 0 || (args[0] != "inspect" && args[0] != "run") {
-		return errors.New("brief requires inspect, run or read; use brief --help")
+		return errors.New("brief requires inspect, run, read, select or verify-excerpt; use brief --help")
 	}
 	runModel := args[0] == "run"
 	flags := flag.NewFlagSet("detective brief", flag.ContinueOnError)
@@ -85,15 +95,15 @@ func runBriefWithContext(ctx context.Context, args []string, stdout, stderr io.W
 	}
 	raw, err := readSourcePrivate(*input)
 	if err != nil {
-		return errors.New("brief source requires a private regular file at most 64 KiB; no model was called")
+		return briefInputError(err, "brief source requires a private regular file at most 64 KiB; no model was called")
 	}
 	source, err := sourcepilot.ParseBriefSource(raw)
 	if err != nil {
-		return errors.New("brief source is not a valid frozen source bundle; no model was called")
+		return briefInputError(err, "brief requires a valid v2 source bundle with source_kind news or public_event; engineering or unclassified input is not eligible, no model was called")
 	}
 	initial, err := sourcepilot.NewBriefReport(source)
 	if err != nil {
-		return errors.New("brief source could not be projected; no model was called")
+		return briefInputError(err, "brief source could not be projected; no model was called")
 	}
 	if !runModel {
 		if *format == "json" {
@@ -147,6 +157,14 @@ func runBriefWithContext(ctx context.Context, args []string, stdout, stderr io.W
 		return fmt.Errorf("brief attempt did not complete (%s); report saved, no retry or AHE call", report.ErrorCode)
 	}
 	return nil
+}
+
+func briefInputError(err error, fallback string) error {
+	var limit *sourcepilot.InputLimitError
+	if errors.As(err, &limit) {
+		return fmt.Errorf("brief source rejected before model or MCP: %w", limit)
+	}
+	return errors.New(fallback)
 }
 
 func briefEndpointSafe(value string) bool {

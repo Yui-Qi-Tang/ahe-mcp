@@ -38,13 +38,16 @@ const (
 // Transport is "stdio", local "streamable-http", or official "atlassian-oauth".
 // OAuth credentials are runtime-only and never part of serialized configuration.
 type Config struct {
-	oauth        *OAuthSession
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	Transport    string   `json:"transport"`
-	Command      string   `json:"command"`
-	URL          string   `json:"url"`
-	AllowedTools []string `json:"allowed_tools"`
+	oauth         *OAuthSession
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Transport     string   `json:"transport"`
+	Command       string   `json:"command"`
+	Args          []string `json:"args,omitempty"`
+	Directory     string   `json:"directory,omitempty"`
+	CodebaseCache string   `json:"codebase_cache,omitempty"`
+	URL           string   `json:"url"`
+	AllowedTools  []string `json:"allowed_tools"`
 }
 
 // Tool is a discovered tool bound to its complete inventory and configuration.
@@ -83,6 +86,9 @@ func Validate(c Config) error {
 
 // Recorded call inspection checks syntax without touching historical launchers.
 func validateConfig(c Config, inspectLauncher bool) error {
+	if err := ValidateProcessOptions(c); err != nil {
+		return err
+	}
 	if !ValidConnectionID(c.ID) || !validText(c.Name, 256) || strings.TrimSpace(c.Name) == "" || len(c.AllowedTools) == 0 || len(c.AllowedTools) > maxTools {
 		return errors.New("invalid source MCP configuration")
 	}

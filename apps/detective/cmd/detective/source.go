@@ -24,6 +24,7 @@ import (
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/apps/detective/internal/desktop"
 	"github.com/Yui-Qi-Tang/ahe-mcp/apps/detective/internal/sourcemcp"
+	"github.com/Yui-Qi-Tang/ahe-mcp/apps/detective/internal/sourcepilot"
 )
 
 const sourceInputLimit = 64 << 10
@@ -254,8 +255,11 @@ func readSourcePrivateLimit(path string, limit int64) ([]byte, error) {
 		return nil, errors.New("source input parent is not private")
 	}
 	info, err := os.Lstat(path)
-	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 || info.Size() > limit {
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
 		return nil, errors.New("source input is not a bounded private regular file")
+	}
+	if info.Size() > limit {
+		return nil, &sourcepilot.InputLimitError{Resource: "source_json_bytes", Limit: limit, Observed: info.Size()}
 	}
 	owner, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || int(owner.Uid) != os.Getuid() {
@@ -280,8 +284,11 @@ func readSourcePrivateLimit(path string, limit int64) ([]byte, error) {
 		return nil, errors.New("source input changed while opening")
 	}
 	body, err := io.ReadAll(io.LimitReader(file, limit+1))
-	if err != nil || int64(len(body)) > limit {
+	if err != nil {
 		return nil, errors.New("source input exceeds its bound")
+	}
+	if int64(len(body)) > limit {
+		return nil, &sourcepilot.InputLimitError{Resource: "source_json_bytes", Limit: limit, Observed: int64(len(body)), AtLeast: true}
 	}
 	return body, nil
 }

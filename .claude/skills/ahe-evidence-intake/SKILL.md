@@ -1,6 +1,6 @@
 ---
 name: ahe-evidence-intake
-description: Collect exact Jira, Confluence, or other external provider objects through an available connector, submit them to AHE, create span-grounded proposals, present human review cards, and apply explicit admission or disposition decisions. Use for external evidence import or ingestion. Do not use for read-only AHE evidence queries or repository code extraction.
+description: Collect exact Jira, Confluence, or other external provider objects, produce scope-preserving span-grounded evidence, and apply explicit decisions through exact source review. Use for external evidence intake, not news briefs, read-only queries, or repository code extraction.
 ---
 
 # AHE External Evidence Intake
@@ -8,6 +8,39 @@ description: Collect exact Jira, Confluence, or other external provider objects 
 Use this workflow to turn connector-observed provider objects into reviewable
 AHE proposals without moving connector logic or admission judgment into AHE
 Core.
+
+## Engineering Evidence Is Not a Brief
+
+For engineering intake, do not replace the requested evidence with a model's
+short summary, selected highlights, or a sequence of summary chunks. Preserve
+the in-scope requirements, conditions, exceptions, decisions, and status details
+as readable grounded claims. Keeping the original body elsewhere does not
+compensate for information omitted from the evidence being proposed.
+
+Keep the two workflows separate. Brief provides a short reading orientation
+for explicitly selected news/public events; it is not engineering extraction
+or a completeness assessment. Do not convert provider content to `manual_text`
+to bypass a missing revision, connector or capability. Repository code and git
+extraction remain separate workflows.
+
+The native small-model engineering path selects complete, verbatim units from
+its current source input instead of writing shorter replacement sentences.
+The controller verifies the selected text and its exact span reference even
+when the model's output matches the JSON schema. A unit may contain multiple
+conditions or table rows; selecting it is neither semantic validation nor proof
+that all requested information was selected. Explicit section processing covers
+the supplied adapter-selected text, not uncollected provider fields or every
+fact in the full document. Oversized or invalid output must fail visibly.
+
+Atlassian/Codegraph model extraction is not categorically disabled.
+`proposal_extraction`, deterministic `proposal_conversion`, and collection-only
+remain distinct operator choices; never silently enable proposal writing.
+This native runner contract is separate from Claude's grounded proposal
+workflow below. Do not label Claude-generated claims as native model selections.
+
+Do not use the withdrawn exploratory 88%/77% figures as a document-coverage or
+Brief-quality metric. They do not establish that either complete workflow lost
+that fraction of source information.
 
 ## Preconditions
 
@@ -21,6 +54,14 @@ Core.
   frozen JSON contract.
 - If the source connector or required AHE tool is unavailable, stop and report
   the missing capability. Do not substitute a model-generated source.
+- The standard executable requires an explicitly selected `intake` or
+  `source-claim-reviewer` profile; it has no default profile. Intake exposes
+  `submit_external_source`, `get_extractor_input`, and `submit_extractor_output`.
+  A separately authorized reviewer exposes `get_source_claim_review`,
+  `admit_reviewed_source_claim`, and `record_reviewed_source_claim_disposition`.
+  Legacy admission/disposition and relation writers are not enabled. Do not
+  enable a legacy profile, change a launcher, or use direct SQL to work around
+  a missing capability. See [installation scope](../../../INSTALL.md#bounded-detective-to-pending-mcp-installation).
 
 ## Collect One Provider Object
 
@@ -69,35 +110,67 @@ new provider revision and a new request ID.
 3. Create zero or more candidate proposals:
    - Each proposal states one clear claim.
    - Every factual part is supported by cited span IDs.
-   - The proposed sentence may normalize wording, but must not add unsupported
-     facts, semantic change claims, deletion claims, or global coverage claims.
+   - Extract from the persisted source itself, not from a model summary.
+     Preserve exact wording where practical. Any necessary wording adjustment
+     must preserve meaning, conditions, negation, quantities, scope and unknowns;
+     it is not permission to compress distinct facts into highlights.
+   - Do not add unsupported facts, semantic change claims, deletion claims, or
+     global coverage claims. Do not force a fixed number of summary sentences.
    - Conflicting source material remains conflicting; do not silently reconcile
      it.
+   - Compare the proposed set with the requested source scope. List represented
+     details and known omissions or unprocessed sections in the review notes.
+     Explicitly requested subsets are valid; silently narrowing the requested
+     scope is not. Limits or unavailable content must be disclosed, not worked
+     around by summarizing or inventing completeness.
 4. Call `submit_extractor_output` using a new request ID and the returned source
    snapshot and extraction view IDs.
 5. Identify the producer as:
    - name: `claude-code-grounded-extractor`
-   - version: `ahe-external-intake-v1`
+   - version: `ahe-external-intake-v2`
+
+   These producer fields identify Claude Code. Other agents must use their own
+   approved producer identity; Codex uses its agent-specific wrapper overrides.
+   Do not attribute another agent's extraction to Claude.
    Treat the version as the proposal-production contract version. Increment it
    when proposal selection or grounding semantics change, not for formatting-only
    edits to this skill.
+   Version v2 makes scope-preserving extraction explicit. Preserve existing v1
+   attempts and receipts; do not relabel or silently regenerate them.
 6. Add bounded, non-secret extractor config only when it improves debugging.
    Supply `producer_session_ref` only if Claude Code exposes a stable opaque
    task or session reference. Omit it rather than inventing one.
 7. When no grounded proposal is warranted, submit an empty proposal list and
    report the successful `abstained` result.
 
+Source `coverage` describes what was collected, not how much the extractor
+retained. A `full_document` source can still yield incomplete proposals.
+Grounding, omission, and fabrication are separate checks: matching quotes and
+no observed fabrication do not prove completeness. Coverage review is an
+assistant check, not an independently measured recall guarantee. Keep its
+notes outside the MCP payload unless the live schema explicitly supports them.
+
 When the query MCP is available, read back the pending proposal records before
 building review cards. If `proposal_count` is greater than one, list pending
 records for the exact source snapshot; do not assume the single occurrence ID
 in the submit response identifies every proposal. If query readback is
-unavailable, use the exact submitted proposals plus the persisted extractor
-input and disclose the missing readback in the review.
+unavailable, disclose that limit and do not invent missing occurrence IDs.
+An exact review response can supply the complete manifest for a known member;
+use each member's own exact review before requesting a decision. Submitted text
+or a hand-written card cannot substitute for the native review response.
 
 ## Human Review Stop
 
-Before any admission or terminal disposition, display a numbered review card
-for every pending proposal. Each card must include:
+For each pending proposal, call `get_source_claim_review` with its exact
+`extraction_attempt_id` and `proposal_occurrence_id`. Retain the returned
+`subject`, complete manifest and exact display. The manifest identifies the
+batch; it does not approve other members or prove coverage of the source.
+Oversized, incomplete, conflicting or unavailable review material stops the
+decision path; do not trim it or fall back to a legacy writer.
+
+Display the complete native review material for each numbered proposal. A
+short navigation card may accompany it, but must not replace the exact display.
+Include:
 
 - proposal occurrence ID;
 - proposed sentence;
@@ -107,77 +180,50 @@ for every pending proposal. Each card must include:
 - coverage and limitations;
 - comparison with a prior revision when one is available, otherwise an explicit
   statement that no comparable prior revision was available;
-- any uncertainty that affects interpretation.
+- any uncertainty that affects interpretation;
+- the extraction coverage notes, including known omissions, separately from
+  the unmodified native display.
 
 Ask which proposal numbers the human approves, rejects, or retains as
 `audit_only`, then stop and wait for an explicit decision. Do not interpret
 silence, a request to continue analysis, or approval of the overall task as
 proposal admission approval.
+Approval of a selected claim does not certify the completeness of the entire
+document's extraction. If a reason is missing, ask for it; do not invent one.
 
 ## Apply the Human Decision
 
-- Call `admit_pending_proposal` only for explicitly approved proposal occurrence
-  IDs.
-- Call `record_pending_proposal_disposition` with `rejected` or `audit_only`
-  only when the human explicitly chooses that outcome.
-- Use a configured, non-secret reviewer identity. If a required reviewer
-  identity is unavailable, ask rather than inventing one.
-- Do not create a derived admission unless the user explicitly requests it and
-  the complete admitted parent set is known.
-- Use the query MCP to read back admitted or dispositioned records when
-  available.
+- Before a writer call, retain the exact attempt ID, returned `subject`, human
+  decision and reason, and the authorized reviewer launcher binding in the
+  permitted private work record. If they cannot be retained for an exact retry,
+  stop before writing. Do not put private records or credentials in the repo.
+- For explicit approval, call `admit_reviewed_source_claim` with
+  `decision=approved`, the attempt ID, the returned `subject` unchanged as
+  `expected_subject`, and the human's `decision_reason`.
+- For explicit non-admission, use `record_reviewed_source_claim_disposition`
+  with the same binding fields and `decision=reject` or `audit_only`.
+  `reject` is the request value; the persisted outcome is `rejected`.
+- The reviewer identity comes from the authorized launcher. Do not send a
+  caller-selected reviewer, forge subject IDs, or add request/session fields
+  that the live writer schema does not accept.
+- Each call applies only to that displayed proposal. Batch membership,
+  a previous approval, or a request to continue is not approval of other claims.
+- If the outcome is uncertain, read back when possible and retry only the
+  preserved identical subject, decision, reason and reviewer binding. Do not
+  obtain a new pending review or resubmit extraction merely to recover a
+  decision. Missing saved inputs or conflicting state requires a stop.
+- Use Query readback for the final state; report missing readback explicitly.
 
-## Relate Conflicting Canonical Nodes
+## Relations and Repository Extraction Are Separate
 
-Use this step only after both nodes exist through governed canonical admission.
-Do not encode a contradiction as a source-backed statement proposal and do not
-write a generic graph edge.
-
-1. Confirm both exact `canon-node:` IDs and read both canonical records.
-2. Call `submit_canonical_contradiction_proposal` with the two node IDs, a
-   source-bounded explanation of the incompatibility, a new request ID, the
-   proposing agent name and workflow version, and an optional stable non-secret
-   session reference.
-3. Call `get_canonical_contradiction_proposal`. Display a separate review card
-   containing:
-   - both canonical record payloads and IDs;
-   - exact source excerpts, titles, locations, revisions, coverage, and
-     limitations for both sides;
-   - the proposing agent's rationale, identity, version, and optional session
-     reference;
-   - the current proposal outcome and any prior decision.
-4. Stop and wait. Call `admit_pending_canonical_contradiction` only after the
-   human explicitly approves this relation. Use
-   `record_pending_canonical_contradiction_disposition` for an explicit
-   `rejected` or `audit_only` decision.
-5. Read the admitted edge with `get_relation_provenance` when available.
-
-`contradicts` is symmetric. AHE canonicalizes A/B order and retains one governed
-proposal per node pair, so do not submit the reverse pair as another relation.
-A node pair is single-use across every terminal outcome in v1: after
-`rejected`, `audit_only`, or `admitted`, the same two canonical node IDs cannot
-be proposed again. Changing the rationale, producer name/version, or session
-reference also conflicts instead of creating a new version. Do not create fake
-replacement nodes to bypass this limit; report that same-pair reconsideration
-is unsupported. A genuinely revised source normally produces new canonical
-node IDs and therefore a different pair.
-AHE records the reviewer fields but does not prove that the agent showed the
-card or that the conversation occurred.
-
-## Admit a Fresh Supersession
-
-Use this only when the records explicitly establish that a fresh pending claim
-replaces exact older admitted claims. Read the pending proposal, every target,
-and `get_canonical_supersession_head`. Show the sentences, exact source context,
-version differences, coverage/limitations, complete target set, six-field
-source-object/slot basis, and observed head. Stop for explicit approval.
-Then call `admit_pending_supersession` with the proposal, reviewer and reason,
-basis, exact targets, expected revision, and expected head event ID. It
-atomically admits the fresh immutable claim and `new -> old` edges. Rejection or
-`audit_only` uses `record_pending_proposal_disposition`. Read currentness with
-the returned lineage key. Never infer replacement or stable slot identity from
-revision order, supply caller-defined completeness/currentness, or submit when
-the semantic link or complete target set is uncertain.
+The standard intake/reviewer installation does not expose derived admission,
+contradiction, Supersession, or repository activation writers. If the task
+needs these capabilities, report the unavailable workflow and stop. Do not
+substitute an ordinary statement, generic edge, fake replacement node, legacy
+profile, or direct SQL. Provider revision order alone does not prove semantic
+replacement. Internal relation theory remains in
+[system design](../../../docs/SYSTEM_DESIGN.md#graph); it is not permission to
+execute a disabled writer. Repository code extraction is outside this skill.
 
 ## Completion Report
 
@@ -188,11 +234,10 @@ Report results per provider object and proposal:
 - extraction attempt and proposal occurrence IDs;
 - admitted canonical reference and admission decision ID, when admitted;
 - rejected, `audit_only`, abstained, replayed, conflicted, or unprocessed state;
-- coverage, limitations, and any missing readback capability.
-- contradiction proposal and edge IDs plus the reviewer outcome when a
-  cross-node contradiction was considered.
-- supersession lineage, event, edge, head, and currentness plus the reviewer
-  outcome when a version replacement was considered.
+- coverage, limitations, and any missing readback capability;
+- extraction coverage notes and known omissions, separate from source coverage;
+- the exact reviewed subject and resulting decision ID when a decision was made;
+- any requested relation or repository workflow that was unavailable.
 
 Do not claim that AHE cryptographically or independently verified the human
 review conversation. The cooperating agent is responsible for showing the

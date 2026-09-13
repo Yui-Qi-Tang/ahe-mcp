@@ -118,6 +118,7 @@ func chatInput(state State) (string, error) {
 		Conversation: make([]chatMessage, 0, len(state.Messages)),
 		Candidates:   make([]chatCandidate, 0, len(state.Candidates)),
 		Limitations: []string{
+			"MCP 回覆可能只是程式索引、關係或候選位置，不是原文證據。只能引用實際提供的原文；不可把搜尋摘要或圖關係當成程式內容，也不能用目前片段聲稱 repository 已完整檢查。",
 			"來源為已保存的觀測，不證明上游目前狀態、完整性或真實性；候選與引用不等於人工核准或 canonical 採納。",
 			"此閱讀輸入未附帶系統設定、私有路徑欄位、收據、工具、操作紀錄或 DB 查詢結果；原文與訊息未自動遮罩。來源分類與抽取列狀態不是目前 DB 狀態，請由人使用介面與明確 Query 查證。",
 		}}
