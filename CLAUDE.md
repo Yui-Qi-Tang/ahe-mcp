@@ -5,13 +5,13 @@
 - Detective Desktop is **frozen / unavailable (目前不工作)** as of 2026-09-14.
   CLI stabilization comes first. Do not request UI acceptance, start the app,
   extend Desktop or publish it unless the user explicitly unfreezes that work.
-  Keep existing code/tests/data; see `STATUS.md` for the CLI gaps and review order.
+  Keep existing code/tests/data. CLI end-to-end engineering intake remains incomplete.
 
 - Treat this file as the operational summary. Do not read all of `README.md` by
   default.
-- For Detective extraction development, read `STATUS.md` for the selected
-  task-driven direction, current capability gaps and code disposition. Planned
-  behavior there is not an available runtime capability or permission to write.
+- For Detective extraction contracts, read `docs/SYSTEM_DESIGN.md` and the
+  Detective README. Maintainer plans and experimental records are private;
+  they are not available runtime capabilities or permission to write.
 - For installation or operating-system support, read `INSTALL.md`. The
   `deploy/macos` directory is optional `launchd` packaging, not an AHE Core
   platform requirement.

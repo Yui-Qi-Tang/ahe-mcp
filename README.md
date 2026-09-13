@@ -13,7 +13,7 @@ MCP and Detective share one root Go module, using Go `1.27.0`.
 > **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** Desktop is not a
 > supported working product. Its code and previous test results are retained,
 > not offered for installation or acceptance. Stabilize Detective CLI first;
-> see [current status](STATUS.md). This does not disable the AHE MCP servers.
+> this does not disable the AHE MCP servers.
 
 ## Quick start
 
@@ -195,14 +195,12 @@ do not require Desktop's native libraries.
 
 ## Documentation
 
-- [Current development status and code disposition](STATUS.md)
 - [MCP installation and upgrades](INSTALL.md)
 - [Detective CLI and Desktop](apps/detective/README.md)
 - [Frozen Desktop installation reference and CLI setup](apps/detective/INSTALL.md)
 - [System design: theory, algorithms, data structures and references](docs/SYSTEM_DESIGN.md)
 - [Optional macOS service setup](deploy/macos/README.md)
 - [Changelog](CHANGELOG.md)
-- [Maintainer lab-to-product release gates](LAB_TO_PRODUCT_RELEASE_GATES.md)
 
 ## License
 

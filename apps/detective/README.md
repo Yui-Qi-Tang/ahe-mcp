@@ -3,8 +3,7 @@
 > **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** Stop Desktop feature work,
 > installation and UI acceptance. Retain its code, tests, built app and saved
 > work without treating them as a usable product. CLI is the development focus,
-> but its end-to-end engineering intake is not yet qualified. See
-> [current status and CLI-first review](../../STATUS.md).
+> but its end-to-end engineering intake is not yet qualified.
 
 Frozen Desktop code version: `0.1.0-preview.18`. Detective is the source-collection,
 extraction and human-review client included in AHE MCP. Its Go commands and
@@ -12,12 +11,8 @@ internal packages share the **repository-root `go.mod`** with MCP, using Go
 `1.27.0` semantics. There is no separate Detective module or `go.work` setup.
 The frontend keeps its own npm dependency lockfile.
 
-The imported implementation baseline is the former Detective repository's
-`a828b49` (preview.17). Preview.18 identifies this shared-module source build.
-The original Git history and private experiments are retained outside this
-repository; the old checkout is not needed for installation. Earlier preview.16
-DB/UI acceptance and preview.17 engineering results do not automatically qualify
-this newly built app or a different deployment.
+Preview.18 identifies the shared-module source build; no separate Detective
+checkout is needed for installation.
 
 ## Install and run
 
@@ -61,16 +56,15 @@ suggestions do not run the task selector. The new, unreleased Codebase preset
 adds a separately confirmed read to chat; other MCP servers remain manual-only.
 The ordinary pending/review client remains bound to a single-item
 `manual_text` contract. Desktop's three-decision UI currently belongs to Brief,
-not arbitrary engineering sources. See the [current status and code inventory](../../STATUS.md)
-for what is retained, being rewired, or planned to leave the main workflow.
+not arbitrary engineering sources.
 The `taskextract` library freezes task/source scope and copies selected paragraph
 ranges verbatim. A narrow `desktop.ExtractTask` adapter now uses the existing
 controlled loopback model, after input validation. Selector prompt v3 receives
 only the objective, source title and supplied units in a versioned input.
 Full provenance and missing-source scope remain available to the controller and
 reviewer. Bounded model annotations stay separate from verbatim candidate text
-and human decisions. Initial live checks produce reviewable candidates, but
-task relevance still needs scrutiny; exact citations do not prove completeness.
+and human decisions. Task relevance still needs scrutiny; exact citations do
+not prove completeness.
 The local `detective task inspect/run/read` CLI and retained Desktop service
 use this selector and save complete task/source context. The component, service
 and regression tests remain, but are not exposed by the normal Desktop UI.
