@@ -1,2 +1,18 @@
 /bin/
 .DS_Store
+
+# Private maintainer state and lab records (not product documentation).
+/[Ss][Tt][Aa][Tt][Uu][Ss].md
+/[Oo][Pp][Ee][Nn]_[Ii][Ss][Ss][Uu][Ee]*.md
+/[Ll][Aa][Bb]*.md
+/lab/
+/experiments/
+/artifacts/
+/reports/
+/reviews/
+/docs/artifacts/
+/docs/reviews/
+/docs/reports/
+/docs/experiments/
+/docs/*.md
+!/docs/SYSTEM_DESIGN.md

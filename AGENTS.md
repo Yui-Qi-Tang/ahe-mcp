@@ -88,7 +88,7 @@ handoff.
   Do not resume UI/features, launch/trial/acceptance or Desktop publication
   without explicit user approval to unfreeze it. Prior passing tests/builds
   are historical, not usable-product acceptance. Retain code and saved work.
-  CLI-first review is the current priority in `STATUS.md`; shared helpers and
+  CLI-first review is the current priority; shared helpers and
   regression tests remain, so this does not authorize deletion or refactoring.
 
 - Preserve unrelated user changes and respect the current worktree boundary.
@@ -100,5 +100,7 @@ handoff.
 - Keep `docs/` for current theory, algorithms, data structures and their
   references. Keep experiment logs, raw captures and historical reviews in a
   private lab outside this repository; never publish the lab's machine paths.
-- Follow `LAB_TO_PRODUCT_RELEASE_GATES.md` before public publication. A local
-  documentation or test pass does not authorize a commit, push or release.
+- Maintainer status, release checklists and experiment records are private,
+  ignored files, not public product documentation. Never force-add them.
+- Before publication obtain the maintainer's release checklist and approval;
+  stop if it is unavailable. A local test pass does not authorize publication.

@@ -3,7 +3,7 @@
 > **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** The Desktop installation,
 > launch, connection, upgrade and acceptance steps in this document are frozen
 > references, not current instructions. Do not run them as the next task.
-> CLI-first review is in [STATUS](../../STATUS.md). Source, tests, binaries and
+> CLI end-to-end engineering intake remains incomplete. Source, tests, binaries and
 > saved work are retained; this freeze does not kill an app or remove data.
 
 This guide covers `0.1.0-preview.18` from the AHE MCP source tree. Detective and

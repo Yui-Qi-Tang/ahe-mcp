@@ -3,7 +3,7 @@
 > **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** Do not install, launch,
 > upgrade or accept Desktop as a working product using this guide. Desktop
 > procedures below are retained references only. MCP setup is unchanged;
-> Detective development returns to CLI-first validation. See [STATUS](STATUS.md).
+> Detective CLI end-to-end engineering intake remains incomplete.
 
 This guide installs the current controlled-pilot source tree, including the MCP
 programs and Detective CLI/Desktop in one Go module. AHE does not yet publish
@@ -529,7 +529,7 @@ MCP read sources require the planner to remain disabled.
 
 This walkthrough describes the retained whole-unit baseline, not the selected
 task-driven engineering workflow. Its wiring is still present; the replacement
-and compatibility requirements are tracked in [STATUS.md](STATUS.md).
+is not yet an available end-to-end workflow.
 
 Opt-in `proposal_extraction` uses `whole-span-exact-quote-selection-v1`: the
 model selects complete supplied units, not summaries or shortened quotations.
