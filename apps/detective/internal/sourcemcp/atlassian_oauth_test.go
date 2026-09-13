@@ -348,6 +348,70 @@ func TestAtlassianCallbackValidationAndDecline(t *testing.T) {
 	}
 }
 
+func TestAtlassianCallbackResponseCompletes(t *testing.T) {
+	for _, outcome := range []string{"approved", "declined"} {
+		t.Run(outcome, func(t *testing.T) {
+			f, client := newOAuthFixture(t, "")
+			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+			defer cancel()
+			login, err := beginAtlassianOAuth(ctx, client)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer login.Close()
+			authorization, _ := url.Parse(login.URL())
+			f.challenge = authorization.Query().Get("code_challenge")
+			completed := make(chan error, 1)
+			go func() {
+				session, err := login.Wait(ctx)
+				if session != nil {
+					session.Forget()
+				}
+				completed <- err
+			}()
+			// A fresh connection cannot hide a truncated reply behind an HTTP retry.
+			transport := &http.Transport{DisableKeepAlives: true}
+			defer transport.CloseIdleConnections()
+			callbackClient := &http.Client{Transport: transport, Timeout: time.Second}
+			query := url.Values{"state": {login.state}}
+			if outcome == "approved" {
+				query.Set("code", "synthetic-code")
+			} else {
+				query.Set("error", "access_denied")
+			}
+			response, err := callbackClient.Get(login.redirectURI + "?" + query.Encode())
+			if err != nil {
+				t.Fatalf("callback response unavailable: %v", err)
+			}
+			body, err := io.ReadAll(response.Body)
+			_ = response.Body.Close()
+			if err != nil || response.StatusCode != http.StatusOK || string(body) != "Return to Detective to check login status. You may close this page." {
+				t.Fatalf("callback response incomplete: status=%d, read error=%v", response.StatusCode, err)
+			}
+			select {
+			case err := <-completed:
+				if (err != nil) != (outcome == "declined") {
+					t.Fatalf("unexpected login outcome: %v", err)
+				}
+			case <-ctx.Done():
+				t.Fatal("callback waiter did not stop")
+			}
+			if _, err := callbackClient.Get(login.redirectURI); err == nil {
+				t.Fatal("callback listener leaked")
+			}
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			wantExchanges := 0
+			if outcome == "approved" {
+				wantExchanges = 1
+			}
+			if len(f.forms) != wantExchanges {
+				t.Fatal("unexpected token exchange count")
+			}
+		})
+	}
+}
+
 func TestAtlassianRejectsBroaderTokenScopes(t *testing.T) {
 	f, client := newOAuthFixture(t, "extra-scope")
 	login, err := beginAtlassianOAuth(t.Context(), client)
