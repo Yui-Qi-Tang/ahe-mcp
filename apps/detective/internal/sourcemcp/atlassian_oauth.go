@@ -216,6 +216,14 @@ func (a *AtlassianAuthorization) Wait(ctx context.Context) (*OAuthSession, error
 	case <-served:
 		return nil, errors.New("Atlassian callback listener stopped")
 	}
+	// Receiving the callback does not mean net/http has flushed its response.
+	// Drain the accepted request before returning or exchanging the code. A slow
+	// client must not keep login alive; cancellation also stops the drain.
+	drainCtx, stopDrain := context.WithTimeout(ctx, time.Second)
+	if err := server.Shutdown(drainCtx); err != nil {
+		_ = server.Close() // Force cleanup; the validated callback remains consumed.
+	}
+	stopDrain()
 	if result.denied {
 		return nil, errors.New("Atlassian login was declined")
 	}
