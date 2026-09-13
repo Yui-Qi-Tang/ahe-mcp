@@ -2,7 +2,12 @@
 
 本文件集中說明現行資料結構、演算法與理論邊界。安裝與權限設定見
 [INSTALL](../INSTALL.md)，產品入口見 [README](../README.md)。
+目前開發方向、能力缺口與程式處置見 [STATUS](../STATUS.md)，不將計畫當成現行契約。
 歷史實驗日誌、審查報告與原始量測不屬於產品文件；本文也不是部署或模型品質證明。
+
+**適用狀態：Desktop 自 2026-09-14 起凍結、目前不工作（不可用）。** 本文的 Desktop
+介面與 Service 描述僅代表保留實作，不是可用性或完整流程的承諾。CLI 優先補齊與驗收；
+凍結不變更 MCP／Core 的查詢演算法、資料結構或 admission 邊界。
 
 ## 目錄
 
@@ -239,11 +244,92 @@ Han 字面 fallback 與 multisurface bigrams 是不同演算法，都不是通�
 
 ## Detective 擷取與恢復
 
+### 任務導向選段與本機模型邊界
+
+[taskextract](../apps/detective/internal/taskextract) 接受一份凍結的任務與來源，
+不負責蒐集或入庫，模型介面由呼叫者提供。
+[ExtractTask](../apps/detective/internal/desktop/task_model.go) 是受控本機接線：
+先 `Prepare`、拒絕無可讀範圍，再取得明選模型並生成一次，不開 Desktop 工作區。
+沿用 loopback 限制與環境憑證隔離，不使用工具、重試或模型備援；
+schema 綁定段落 ID，生成不完成或協定錯配不交付候選。
+相依方向為 `CLI／Desktop Service → desktop.ExtractTask → taskextract`；離線解析與檢視
+共用 `taskextract`。模型接線本身不開 Desktop 工作區，Desktop Service 負責目前工作與私有保存；
+外部 intake 尚未接通。
+
+`detective-task-input/v1` 是呼叫端宣告的 Task／Source 保存格式；
+`detective-task-run/v1` 綁定完整輸入、模型、InputID 與結果，不是 AHE attempt 或來源收據。
+`task inspect` 凍結明選模型的輸入並顯示原文，不連模型；`task run` 先保留全新私有輸出，
+再執行一次選段；`task read` 不取來源、不呼叫模型，只核對保存內容。
+成功結果必須通過既有 `Replay`；失敗保存有限錯誤碼與原始回覆，但不帶候選，
+重讀時不把失敗回覆重新解碼成成功。終端控制／格式字元的跳脫僅作用於顯示。
+檢視保留全部原文、已提供／未取得／未提供欄位、未選段落，以及分離的模型註記。
+這不是原生精確審閱 display，不取得人工決定，也不授予 intake／admission 權限。
+
+保留的 Desktop Service 以獨立 `TaskWork` 保存目的、InputID、模型設定、完整輸入、Scope 與 run record，
+不轉成舊 STATUS 的 CandidateView／RowBatch 或 Brief。`PrepareTask` 核對畫面指定的
+來源 path／SHA 與保存 bytes 後凍結；`RunTask` 只接受同一 prepared InputID 與模型設定，
+沿用 Service 的 busy／取消界線，執行一次並保存全新私有紀錄。失敗或取消沒有候選；
+保存未確認不發布成功。換來源或套用設定清除作用中的 TaskWork，不刪先前檔案。
+目的修改須重新準備，不替舊候選更名；同來源的新版本不沿用舊結果。
+
+一般已保存文字只對應一個 `body` 或 `tool_return` 欄位，revision 為 `unknown`、
+coverage 為 `exact_excerpt`；保留已知的 capture 引用與限制，不補造 Jira description／comments
+或 provider identity。整份保存文字超過 32 KiB 或 128 段則拒絕選段，不暗中截短。
+`OpenTaskRecord` 保留為離線恢復服務，核對私有工作區的 task-run，不重新讀來源或呼叫模型。
+一般 Desktop UI 不提供本機來源、保存紀錄或合成示範的開啟入口，也不掛載獨立
+`TaskWorkspace` 頁面或工作台選段卡；選段元件、Service、CLI 與回歸測試保留。
+來源 MCP 蒐集、聊天與證據查詢仍是分開的操作；聊天尚未接上任務選段。
+`NewWork` 只清空作用中來源、候選、聊天與查詢，不建立合成來源，
+也不改變已套用的設定、工具清單或登入。舊寫入／擷取入口仍拒絕作用中的任務。
+
+資料源設定之後另列選用的 AHE 證據庫，進階連線設定預設收合。
+查詢程式唯讀；待審提交程式建立 pending 而非採納；人工審閱程式須有明確決定才可寫入。
+這些顯示名稱不改變 MCP profile 或授權，也不自動設定 DB。工作台移除未啟動模型的
+常駐警示，不代表模型自動啟動；操作前置條件與失敗狀態仍由原流程檢查。
+
+`Task` 固定目的、版本、來源 ID 與要求的欄位；`Source` 保存本次提供的全部欄位原文及
+宣告的身分／版本／涵蓋範圍／限制。`InputID` 綁定完整 task、source、模型及選取契約，
+不是以 task label 或來源 hash 單獨決定重播身分。來源 metadata 不因此取得 provider 認證。
+
+提供給模型的單元依空白行分段，使用欄位內半開 byte 範圍；不正規化 CRLF、改寫縮排或
+解讀 HTML。模型只回同一欄位內的起訖段落 ID，控制器將中間全部原文字元回填為候選。
+不同欄位可以各自產生候選，不能拼接成新原句；必要上下文可重疊，不能視為獨立佐證。
+這些單元是閱讀定位，不是原子主張、文法正確或語意充分的證明。
+
+控制器分開記錄要求但未取得的欄位、取得但未提供的欄位，以及提供後未選的段落；
+不將「未選」改稱「已讀且不重要」。成功棄答須明示理由及空候選。
+未完成、超限、錯配引用、重複回覆及取消均失敗，不留部分成功候選；
+所有結果仍是 `not_reviewed`／`authority_effect=none`。
+
+來源涵蓋限制與模型執行完成度是不同軸。Prompt v3 指示模型只對 supplied units 完成選段；
+控制器的 `Task.parts` 是要求的蒐集範圍，`Scope.ProvidedParts` 與 units 才是本次可處理內容。
+缺少其他欄位不應單獨造成 `incomplete`，但選取成功也不表示整個蒐集任務完成。
+無相關的已提供段落可明示棄答；無法處理完已提供內容或超過候選上限仍須明示未完成。
+這是模型指令，不是控制器能證明的語意判斷；任何 `incomplete` 回覆仍整體拒絕，
+不能由呼叫端直接變成成功。`full_document` 等值只是來源宣告，不覆蓋實際缺少欄位的紀錄。
+模型輸入僅含 `version/objective/source_title/units`；蒐集身分、版本、coverage、
+limitations 與完整 requested／provided／missing 範圍仍留在 Request／Scope，供人核對。
+`ModelInputVersion` 獨立於段落切分的 ProjectionVersion，與完整來源／任務、PromptVersion、
+結果契約一起綁入 InputID；相同模型輸入不能取代完整的重播身分，舊契約結果不得混用。
+
+結果契約 v2 允許 `selected.reason` 留空或附有界模型註記，與 schema 的文字欄位一致；
+註記最多 512 個 Unicode 字元／2,048 bytes，非空時不可只有空白或帶控制字元。
+它不構成來源引文、語意支持或人工核准理由，不拼進 Candidate.Text；修改註記也會使
+原樣重播失敗。棄答／未完成仍要求非空理由與空 ranges，引用及完成檢查不因註記放寬。
+一般測試只用合成回覆；真實模型測試須明確啟用並指定模型、endpoint 與單一合成任務，
+其品質結論不由引用合法或程式測試通過推導。
+
+`Replay` 重新核對同一輸入、原模型文字及所有衍生候選，不呼叫模型，也不重播 AHE 寫入。
+CLI 與保留的 Desktop Service 可保存凍結 task/source；外部接力仍未實作，後續須將本機段落座標
+對應到 AHE 保存的 view/span，不能直接拿本機單元 ID 當成資料庫引用。
+
 ### 短摘要與可讀證據
 
 Brief 是另行選定的新聞／事件閱讀流程，不是 Jira、Confluence 或程式碼／git
-工程蒐證的通用替代入口。目前 runtime 尚未強制檢查來源類型；這是待修的
-分流缺口，不因 agent skill 加上限制就視為修復。工程來源須保留原有來源身分、
+工程蒐證的通用替代入口。新操作要求 `detective-brief-source/v2`，且
+`source_kind` 明確為 `news` 或 `public_event`；CLI、Desktop 及提交入口
+都在模型或 MCP 啟動前檢查。類型是呼叫者宣告，不是本文語意分類或來源認證。
+工程來源須保留原有來源身分、
 版本與精確引用契約，不以 `manual_text` 繞過外部來源要求。
 
 來源保存、候選有依據、資訊保留程度是不同檢查。小模型可能沒有捏造事實，
@@ -251,10 +337,47 @@ Brief 是另行選定的新聞／事件閱讀流程，不是 Jira、Confluence �
 工程擷取須對照使用者要求的範圍，明示未處理內容與已知遺漏；不可把
 `full_document` 或精確引用誤當成擷取完整性的證明。
 
+保留的 legacy host 文件模型路徑採 `whole-span-exact-quote-selection-v1`。
+這條接線仍在工作目錄草稿中；它是比較基準，不是已完成的任務導向擷取，也不是 Desktop 入口。
+以下描述其現行約束，不代表繼續採用它作新工程主線：模型只能選取
+本次提供的完整 span，不能摘要、改寫，或刪掉其中的條件、例外與表格列。
+JSON Schema 綁定完整文字及唯一 span ID；controller 另外驗證逐字相等、單一正確引用、
+無重複選取及數量限制，不信任 provider 一定遵守 schema。單一單位最多 64 KiB，
+超限或模型輸出不完整即失敗，不截短或自動修補。既有 decoder 與歷史契約保持相容。
+新 Ollama 模式另要求 `done=true` 與 `done_reason=stop`；因 token 上限、缺少完成標記
+或其他理由終止均原樣返回回覆及錯誤，不將合法 JSON 誤記為正常完成或棄答。
+省略完成理由的舊 provider 不符合此新契約；舊模式的相容行為不變。
+
+預設單位是 adapter 已選值；明確選 `heading_sections_v1` 才依既有章節邊界逐次處理，
+不新增句子切碎或摘要步驟。`selection_coverage` 區分提供、選取及未選單位數；
+`fact_completeness_assessed=false`。即使所有章節都處理過，也不代表找齊全部事實、
+選取單位是單一原子主張，或主張為真。Runner 不改寫模型回覆；runner／解析拒絕時
+只持久化回覆 hash，成功或部分後續驗證失敗保存的是解碼後的候選 JSON，不是原回覆封包。
+章節流程另保存逐章回覆 hash 與聚合結果；不宣稱保存了逐章或失敗的 raw 全文。
+
+不按 Atlassian／Codegraph 名稱全面禁止模型。相容的文件路徑須由操作者明確選擇
+模型擷取，或 `proposal_conversion` 逐字複製所有 adapter 所選值（最多 128 筆、每筆
+64 KiB）。只收集來源的設定不會自動變成提案寫入。這保留的是已選文字，不是 provider
+全部資訊；目前 Jira 選 description，Confluence 選本文，未選欄位與未收集內容仍須揭露。
+Codegraph candidate 與程式碼／git 的 typed 路徑沒有因此變成通用 MCP 文件輸入。
+
 現行 Brief 採 WorldMonitor-style：把有界本文交給模型，一次產生 1–2 句短摘要；
 prompt v2 要求保留主體、行為／狀態、範圍與未知，不額外分析。
-單次呼叫、無 tools、無自動重試；本文最多 32 KiB，請求上限 768 output tokens、2 分鐘。
+單次呼叫、無 tools、無自動重試；本文最多 32 KiB、64 個非空白段，CLI 輸入檔最多
+64 KiB；請求上限 768 output tokens、2 分鐘。超限錯誤明示資源、上限及觀測量，
+不把模型尚未呼叫的輸入拒絕歸類為模型品質失敗。
 保存原文、projection、來源／輸入雜湊及原始輸出；摘要不是來源，也不是 review approval。
+
+`brief select` 可從明確宣告為全文的 v2 新聞／事件父來源，離線選取連續 UTF-8 byte
+範圍（起點含、終點不含），建立 `coverage=exact_excerpt` 的新檔；不覆寫父檔。
+父 JSON 最多 1 MiB、本文最多 512 KiB，選後子來源仍受模型輸入限制。
+`detective-brief-excerpt/v1` 保存父來源 ID／revision、本文 hash／bytes、範圍與選取理由，
+參與既有 report、submission digest，並隨 pending 的 declared origin metadata 保留。
+新摘錄以 `brief-excerpt:` 加完整 origin 雜湊作 manual_text 儲存 ID，另保留宣告的父來源 ID；
+避免本文相同、父版本或選取理由不同時沿用第一筆來源座標。相同輸入重播得到相同 ID，
+既有無追溯欄位的來源及舊收據 ID 不變，不修改 Core 的 manual metadata first-writer 規則。
+子檔單獨驗證只能檢查結構；`brief verify-excerpt` 必須同時取得父檔才能核對實際切片。
+Desktop 顯示「本次提供的原文」與保存座標，不把開檔當成重新核對，也不推定摘錄完整。
 
 可讀性以人能理解完整主張為優先：誰做了什麼、必要的對象、條件與範圍不能只剩零碎關鍵字。
 原始證據用詞不做地區詞彙改寫。這是擷取與人工審閱原則，不宣稱程式可驗證所有語意或英文文法。
@@ -274,6 +397,9 @@ prompt v2 要求保留主體、行為／狀態、範圍與未知，不額外分�
 ```
 
 Checkpoint、來源收據、Brief 與決定檔是私有不可變資料，不能用它們取代 DB 查回。
+舊版 Brief v1 未記錄來源類型，保持原 JSON、digest 與既有審閱／決定重播；
+不推測類型、不補寫欄位。不能用舊來源開始新抽取、候選或 intake 提交；
+舊版未確認的 intake 須人工查核，不能靠修改收據繞過新限制。
 重開檔案預設是 `historical_not_rechecked`；App 重啟回離線模式，不自動連來源、model 或 MCP。
 離線聊天提示沒有核准效果，輸入 `admit` 不會改 DB。
 

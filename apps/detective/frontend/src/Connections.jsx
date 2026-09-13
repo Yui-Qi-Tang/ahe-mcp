@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { argumentsError } from "./bridge.js";
+import { argumentsError, desktopBridge } from "./bridge.js";
 import { Badge, Code, Empty, Icon, KeyValue } from "./components.jsx";
 import SourceToolAdvice from "./SourceToolAdvice.jsx";
 import "./Connections.css";
@@ -37,6 +37,20 @@ export default function Connections({
     Object.entries(state.sourceAuth || {}).find(([, login]) => login.status === "waiting")?.[0] || "");
   const [toolName, setToolName] = useState("");
   const [argsJSON, setArgsJSON] = useState("{}");
+  const [choosingCodebase, setChoosingCodebase] = useState(false);
+  const [presetError, setPresetError] = useState("");
+  async function addCodebase() {
+    if (disabled || choosingCodebase || draftConflict) return;
+    setChoosingCodebase(true); setPresetError("");
+    try {
+      const bridge = desktopBridge();
+      if (!bridge?.ChooseCodebaseRepository) throw new Error("請由新版桌面程式開啟資料夾選擇器。");
+      const preset = await bridge.ChooseCodebaseRepository();
+      if (preset?.id) onDraftChange((current) => ({...current,
+        connections: current.connections.some((c) => c.id === preset.id) ? current.connections : [...current.connections, preset]}));
+    } catch (err) { setPresetError(String(err?.message || err)); }
+    finally { setChoosingCodebase(false); }
+  }
   const changed = JSON.stringify(draft) !== fingerprint;
   const selectedConnection = state.settings.connections.find(
     (item) => item.id === connectionID,
@@ -66,7 +80,7 @@ export default function Connections({
     conflictReason ||
     (invalidIDs ? "連線 ID 不符合限制；請修正並套用設定後再操作工具。" : "") ||
     (changed ? "有未套用的草稿；請先套用設定，再操作來源工具。" : "") ||
-    (!local ? "目前仍是離線演練；請先選擇實際模式並套用設定。" : "");
+    (!local ? "目前尚未啟用連線；請先選擇實際模式並套用設定。" : "");
   const login = state.sourceAuth?.[connectionID];
   const atlassian = selectedConnection?.transport === "atlassian-oauth";
   const loginReason = toolPrerequisite || (!selectedConnection ? "請先選擇已套用的伺服器。" : "");
@@ -134,17 +148,17 @@ export default function Connections({
         <p className="eyebrow">CONNECTIONS</p>
         <h1>資料源與連線</h1>
         <p>
-          設定會保存於本機私有資料目錄，不保存金鑰或密碼。聊天不會自動保存；每次啟動仍從離線演練開始。
+          設定會保存於本機私有資料目錄，不保存金鑰或密碼。每次啟動仍從離線開始；套用實際模式後才能使用模型與來源工具。
         </p>
       </div>
       <section className="surface settings-apply-bar" aria-label="設定套用狀態">
         <div className="settings-apply-summary" aria-live="polite">
           <Badge tone={local ? "warning" : ""}>
-            {local ? "已生效：實際模式" : "已生效：離線演練"}
+            {local ? "已生效：實際模式" : "已生效：離線"}
           </Badge>
           <p className={changed ? "draft-pending" : "muted"}>
             {changed
-              ? `未套用草稿：${draft.mode === "local" ? "實際模式" : "離線演練"}；下方變更尚未生效。`
+              ? `未套用草稿：${draft.mode === "local" ? "實際模式" : "離線"}；下方變更尚未生效。`
               : "設定與桌面狀態一致。"}
           </p>
           <p className="field-help">
@@ -203,8 +217,8 @@ export default function Connections({
                 checked={draft.mode === "demo"}
                 onChange={() => update("mode", "demo")}
               />
-              <strong>離線演練</strong>
-              <span>合成來源、確定性回覆。沒有真實模型或 DB 呼叫。</span>
+              <strong>離線</strong>
+              <span>只檢視已載入內容；不連線、不呼叫模型或 DB。</span>
             </label>
             <label className={draft.mode === "local" ? "selected" : ""}>
               <input
@@ -216,7 +230,7 @@ export default function Connections({
               />
               <strong>實際模式</strong>
               <span>
-                明確使用本機模型、來源 MCP 與指定的 pending launcher。
+                可使用本機模型與來源工具；每次操作仍由你決定。
               </span>
             </label>
           </div>
@@ -246,60 +260,6 @@ export default function Connections({
         </fieldset>
       </section>
       <section className="surface settings-section">
-        <h2>AHE 查詢與 pending 交接</h2>
-        <p className="muted">
-          Query launcher 也供證據搜尋唯讀查詢，不需要模型、Intake 或 Review launcher。寫入仍須另外明確核准；聊天不能取得寫入權限。
-        </p>
-        <fieldset disabled={disabled}>
-          <label>
-            來源識別 ID
-            <input
-              value={draft.sourceID}
-              onChange={(e) => update("sourceID", e.target.value)}
-              spellCheck={false}
-              placeholder="由操作者指定來源 ID"
-            />
-          </label>
-          <div className="form-grid">
-            <label>
-              Intake launcher
-              <input
-                value={draft.intakeLauncher}
-                onChange={(e) => update("intakeLauncher", e.target.value)}
-                spellCheck={false}
-                placeholder="/absolute/path/to/intake-launcher"
-              />
-            </label>
-            <label>
-              Query launcher
-              <input
-                value={draft.queryLauncher}
-                onChange={(e) => update("queryLauncher", e.target.value)}
-                spellCheck={false}
-                placeholder="/absolute/path/to/query-launcher"
-              />
-            </label>
-            <label>
-              Review launcher
-              <input
-                value={draft.reviewLauncher || ""}
-                onChange={(e) => update("reviewLauncher", e.target.value)}
-                spellCheck={false}
-                placeholder="/absolute/path/to/review-launcher"
-              />
-            </label>
-          </div>
-        </fieldset>
-        <p className="field-help">
-          填入操作者管理的單一可執行檔路徑，不是 shell 指令。憑證由
-          launcher／服務端管理，不輸入 DSN、密碼或環境變數指派。
-        </p>
-        <p className="field-help">
-          Brief 審查使用獨立 Review launcher；取得審查內容不代表核准。
-          必須核對精確內容、選擇結果、填寫理由，再另外確認本次寫入。
-        </p>
-      </section>
-      <section className="surface settings-section">
         <div className="section-heading">
           <h2>來源 MCP 伺服器</h2>
           <button
@@ -315,14 +275,14 @@ export default function Connections({
         <p className="muted">
           Atlassian OAuth 可直連官方遠端 MCP；一般 HTTP 仍限本機 gateway。登入與工具呼叫是分開的操作。
         </p>
-        <p className="field-help">
-          共同試用可選用已建置的 detective-source-demo：stdio
-          填入該檔案的實際絕對路徑，allowlist 填 read_status，參數使用 {"{}"}
-          。HTTP 範例由操作者先明確啟動本機服務；介面不會自動啟動它。
-        </p>
+        <button className="button primary" aria-describedby={disabled ? "connections-busy-reason" : undefined} disabled={disabled || choosingCodebase || draftConflict} onClick={addCodebase}>
+          加入本機 Codebase（選擇資料夾）
+        </button>
+        <p className="field-help">聊天室目前只開放此網路封鎖預設。選擇資料夾只新增草稿；套用後，建立索引與聊天讀取仍需分別操作。</p>
+        {presetError && <p role="alert">{presetError}</p>}
         {draft.connections.length === 0 && (
           <Empty title="還沒有來源連線">
-            新增 Atlassian OAuth、stdio launcher 或本機 Streamable HTTP 連線，再明確列出允許工具。
+            選擇 Atlassian 帳號登入、本機程式或本機 HTTP 服務，再設定要使用的工具。
           </Empty>
         )}
         {draft.connections.map((connection, index) => (
@@ -350,6 +310,17 @@ export default function Connections({
                 移除此設定
               </button>
             </div>
+            {connection.codebaseCache ? <>
+              <h3>{connection.name}</h3>
+              <p>Repository：{connection.directory}</p>
+              <Badge>網路封鎖 · 不自動索引／監看 · 不入庫</Badge>
+              <details><summary>進階設定（固定預設）</summary>
+                <Code label="Codebase 固定設定">{JSON.stringify(connection, null, 2)}</Code>
+              </details>
+              <button type="button" className="button secondary" disabled={Boolean(toolPrerequisite)}
+                onClick={() => {if (!toolPrerequisite) onAction("IndexCodebase", connection.id);}}>建立／更新此資料夾索引（不入庫）</button>
+              <p className="field-help">索引會讀取上方資料夾並寫入獨立本機快取，不修改 repository。完成後回工作台選擇此來源，取得工具清單再提問。</p>
+            </> : <>
             <div className="form-grid">
               <label>
                 連線 ID
@@ -401,7 +372,7 @@ export default function Connections({
                 }
               >
                 <option value="atlassian-oauth">Atlassian 官方 MCP · OAuth</option>
-                <option value="stdio">stdio · 單一 launcher</option>
+                <option value="stdio">本機程式（stdio）</option>
                 <option value="streamable-http">
                   Streamable HTTP · 本機 gateway
                 </option>
@@ -411,15 +382,21 @@ export default function Connections({
               <p className="field-help">官方端點：https://mcp.atlassian.com/v2/mcp。套用後可登入；僅要求 Jira／Confluence 讀取與搜尋權限。</p>
             ) : connection.transport === "stdio" ? (
               <label>
-                Launcher 絕對路徑
+                本機啟動程式
                 <input
+                  aria-label="本機啟動程式"
+                  aria-describedby={`source-program-help-${index}`}
                   value={connection.command}
                   onChange={(e) =>
                     updateConnection(index, { command: e.target.value })
                   }
-                  placeholder="/absolute/path/to/source-launcher"
+                  placeholder="貼上此資料源啟動檔的完整路徑"
                   spellCheck={false}
                 />
+                <span id={`source-program-help-${index}`} className="field-help">
+                  使用資料源安裝說明提供的可執行啟動檔；不是資料文件、網址或整串終端機指令。
+                  若尚未取得啟動檔，請先完成該資料源的 MCP 安裝；不要填入密碼。
+                </span>
               </label>
             ) : (
               <label>
@@ -452,6 +429,7 @@ export default function Connections({
                 placeholder="search_documents\nread_document"
               />
             </label>
+            </>}
           </fieldset>
         ))}
         <p className="field-help">
@@ -471,7 +449,7 @@ export default function Connections({
         </ol>
         {!local && (
           <div className="notice">
-            離線演練不會連線來源 MCP。請明確套用實際模式後再探索或呼叫工具。
+            離線時不會連線來源 MCP。請明確套用實際模式後再探索或呼叫工具。
           </div>
         )}
         <div className="tool-controls">
@@ -520,7 +498,7 @@ export default function Connections({
             Atlassian 授權連結（請複製並自行開啟）
             <textarea readOnly value={login.authorizationURL} rows={4} onFocus={(e) => e.target.select()} />
           </label>}
-          <p className="field-help">登入連結約兩分鐘內有效，可用頁面上方的取消按鈕停止。Token 只留在記憶體；重新啟動、套用設定或切回離線演練後需重新登入。</p>
+          <p className="field-help">登入連結約兩分鐘內有效，可用頁面上方的取消按鈕停止。Token 只留在記憶體；重新啟動、套用設定或切回離線後需重新登入。</p>
         </div>}
         <p id="tool-discovery-reason" className="field-help">
           {discoveryReason ||
@@ -588,7 +566,7 @@ export default function Connections({
           >
             {parametersReason ||
               argsError ||
-              "參數會逐字送出，不會自動修補；read_status 範例使用 {}。"}
+              "參數會逐字送出，不會自動修補；請依所選工具的 input schema 填寫。"}
           </p>
         </div>
         {selectedTool && (
@@ -640,6 +618,80 @@ export default function Connections({
             <Icon name="arrow" size={16} />
           </button>
         </div>
+      </section>
+      <section className="surface settings-section" aria-label="AHE 證據庫設定">
+        <h2>AHE 證據庫（選用）</h2>
+        <p className="muted">
+          用來查詢資料庫中的既有證據，或處理待審資料。只聊天、取得來源內容，不需要填這一區。
+        </p>
+        <p className="field-help">
+          查詢：{state.settings.queryLauncher ? "已填寫" : "未設定"} ·
+          待審提交：{state.settings.intakeLauncher ? "已填寫" : "未設定"} ·
+          人工審閱：{state.settings.reviewLauncher ? "已填寫" : "未設定"}。
+          此處只顯示已套用的設定，不代表連線成功。
+        </p>
+        <details>
+          <summary>進階連線設定</summary>
+          <p className="field-help">
+            這些欄位填的是由 AHE 安裝者設定並提供的可執行啟動檔完整路徑（launcher），不是資料庫網址、密碼或 shell 指令。
+            目前安裝不會自動產生這些檔案；尚未準備好或不知道路徑時，可以先留空。
+          </p>
+          <fieldset disabled={disabled}>
+            <label>
+              證據查詢程式
+              <input
+                value={draft.queryLauncher}
+                onChange={(e) => update("queryLauncher", e.target.value)}
+                aria-describedby="ahe-query-help"
+                spellCheck={false}
+                placeholder="AHE 唯讀查詢啟動檔的完整路徑"
+              />
+            </label>
+            <p id="ahe-query-help" className="field-help">
+              供「證據搜尋」讀取既有資料，不寫入 DB。只需要搜尋時，填這一項即可，不需要本機模型。
+            </p>
+            <label>
+              待審提交程式
+              <input
+                value={draft.intakeLauncher}
+                onChange={(e) => update("intakeLauncher", e.target.value)}
+                aria-describedby="ahe-intake-help"
+                spellCheck={false}
+                placeholder="AHE 待審提交啟動檔的完整路徑"
+              />
+            </label>
+            <p id="ahe-intake-help" className="field-help">
+              將候選送入待審區（pending），不是正式採納。僅供既有候選流程使用，不會把聊天內容自動入庫。
+            </p>
+            <label>
+              人工審閱程式
+              <input
+                value={draft.reviewLauncher || ""}
+                onChange={(e) => update("reviewLauncher", e.target.value)}
+                aria-describedby="ahe-review-help"
+                spellCheck={false}
+                placeholder="AHE 人工審閱啟動檔的完整路徑"
+              />
+            </label>
+            <p id="ahe-review-help" className="field-help">
+              供既有 Brief 審閱流程取得精確內容；核對後明確選擇採納、拒絕或僅留紀錄，填寫理由並確認，才會寫入決定。
+              單純填入設定不會執行審閱。
+            </p>
+            <label>
+              來源識別 ID
+              <input
+                value={draft.sourceID}
+                onChange={(e) => update("sourceID", e.target.value)}
+                aria-describedby="ahe-source-id-help"
+                spellCheck={false}
+                placeholder="由待審資料提供者指定的識別碼"
+              />
+            </label>
+            <p id="ahe-source-id-help" className="field-help">
+              既有候選交接使用的來源識別碼；不是登入帳號，查詢既有證據不需修改。
+            </p>
+          </fieldset>
+        </details>
       </section>
     </div>
   );

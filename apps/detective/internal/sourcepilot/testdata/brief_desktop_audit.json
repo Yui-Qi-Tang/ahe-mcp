@@ -1,5 +1,6 @@
 {
-  "version": "detective-brief-source/v1",
+  "version": "detective-brief-source/v2",
+  "source_kind": "public_event",
   "source_id": "synthetic-observatory-audit-control",
   "source_revision": "fixture-v1",
   "source_url": "https://example.invalid/synthetic-observatory-audit-control",

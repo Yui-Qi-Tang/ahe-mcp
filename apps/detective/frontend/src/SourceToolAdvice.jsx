@@ -69,7 +69,7 @@ export default function SourceToolAdvice({
   const batchReason = state.batchPath || state.batchDigest
     ? "目前有作用中的批次；請先完成或明確開始新工作，再請模型建議來源工具。" : "";
   const reason = prerequisite || batchReason ||
-    (state.settings.mode !== "local" ? "請先套用實際模式；離線演練不會請求模型建議。" : "") ||
+    (state.settings.mode !== "local" ? "請先套用實際模式；離線時不會請求模型建議。" : "") ||
     (!validTools(tools, connection) ? "請先取得所選伺服器的有效工具清單（1–32 個），再請模型建議。" : "") ||
     (requesting ? "正在處理模型建議；尚未呼叫來源工具。" : "") ||
     (!question.trim() ? "請先輸入要請模型協助選擇工具的問題。" : "") ||

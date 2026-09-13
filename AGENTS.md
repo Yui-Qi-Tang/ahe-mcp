@@ -40,8 +40,9 @@
 - Do not replace engineering evidence extraction with Brief or summary chunks.
   Preserve in-scope facts and qualifiers and disclose omissions separately from
   source coverage. Keeping raw content and observing no fabrication do not
-  establish extraction completeness. Brief still has no runtime source-type
-  gate; this restriction does not claim that the product bug is fixed.
+  establish extraction completeness. New Brief operations require a v2 source
+  declaring `news` or `public_event`; this is a caller declaration, not content
+  classification. Do not relabel engineering data to pass that gate.
 - Treat extraction output as candidate material. Only governed admission may
   create canonical evidence.
 - Use the read-only query MCP for lookup and readback. Use the ingestion MCP
@@ -82,6 +83,13 @@ Do not expose credentials, tokens, DSNs, or private session text in the
 handoff.
 
 ## Repository Work
+
+- As of 2026-09-14, Detective Desktop is frozen and unavailable (目前不工作).
+  Do not resume UI/features, launch/trial/acceptance or Desktop publication
+  without explicit user approval to unfreeze it. Prior passing tests/builds
+  are historical, not usable-product acceptance. Retain code and saved work.
+  CLI-first review is the current priority in `STATUS.md`; shared helpers and
+  regression tests remain, so this does not authorize deletion or refactoring.
 
 - Preserve unrelated user changes and respect the current worktree boundary.
 - Do not commit, push, merge, or change branches unless explicitly requested.

@@ -17,16 +17,30 @@ the in-scope requirements, conditions, exceptions, decisions, and status details
 as readable grounded claims. Keeping the original body elsewhere does not
 compensate for information omitted from the evidence being proposed.
 
-The known [Brief routing gap](https://github.com/Yui-Qi-Tang/ahe-mcp/issues/9)
-is not fixed by this skill: Brief still accepts caller-declared local sources
-without an enforced source-type gate. Separately, operator-reported small-model
-checks found severe omission even where selected claims matched the source and
-no fabrication was observed. The exact execution path and rates have not been
-independently reproduced; do not attribute them to Brief alone. Do not use Brief
-or a summary-first small-model pass for Jira/Confluence engineering intake, or
-convert provider content to `manual_text` to bypass a missing revision or tool.
-News/event Brief work requires its own explicitly selected scope; it is not
-this workflow. Repository code and git extraction remain separate workflows.
+Keep the two workflows separate. Brief provides a short reading orientation
+for explicitly selected news/public events; it is not engineering extraction
+or a completeness assessment. Do not convert provider content to `manual_text`
+to bypass a missing revision, connector or capability. Repository code and git
+extraction remain separate workflows.
+
+The native small-model engineering path selects complete, verbatim units from
+its current source input instead of writing shorter replacement sentences.
+The controller verifies the selected text and its exact span reference even
+when the model's output matches the JSON schema. A unit may contain multiple
+conditions or table rows; selecting it is neither semantic validation nor proof
+that all requested information was selected. Explicit section processing covers
+the supplied adapter-selected text, not uncollected provider fields or every
+fact in the full document. Oversized or invalid output must fail visibly.
+
+Atlassian/Codegraph model extraction is not categorically disabled.
+`proposal_extraction`, deterministic `proposal_conversion`, and collection-only
+remain distinct operator choices; never silently enable proposal writing.
+This native runner contract is separate from Claude's grounded proposal
+workflow below. Do not label Claude-generated claims as native model selections.
+
+Do not use the withdrawn exploratory 88%/77% figures as a document-coverage or
+Brief-quality metric. They do not establish that either complete workflow lost
+that fraction of source information.
 
 ## Preconditions
 

@@ -1,10 +1,19 @@
 # AHE MCP
 
+**Artifacts give rise to hypotheses; evidence determines which hypotheses may become part of the world.**
+
+**The model may explore freely, but it cannot cross the evidential boundary.**
+
 Source-backed evidence for agents: preserve original material, review candidate
 claims, and query evidence with its provenance and lifecycle state.
 
-Current version: `dev` preview. Included Detective Desktop: `0.1.0-preview.18`.
+Current version: `dev` preview. Retained Detective Desktop code: `0.1.0-preview.18`.
 MCP and Detective share one root Go module, using Go `1.27.0`.
+
+> **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** Desktop is not a
+> supported working product. Its code and previous test results are retained,
+> not offered for installation or acceptance. Stabilize Detective CLI first;
+> see [current status](STATUS.md). This does not disable the AHE MCP servers.
 
 ## Quick start
 
@@ -15,21 +24,11 @@ make build      # MCP and operator binaries
 make detective # Detective CLI and source tools
 ```
 
-For the macOS 13+ Apple silicon Desktop, with Xcode Command Line Tools and
-Node.js 22.22.2 or newer:
-
-```sh
-make desktop
-```
-
-The app, `Start.command`, and synthetic source tool are built in
-`apps/detective/build/bin/`. Open `Start.command` for a persistent preview
-workspace, or use `make desktop-trial` for a new isolated workspace each time.
-
 Follow [MCP installation](INSTALL.md) for PostgreSQL, migrations, runtime roles
-and protected launchers. Follow [Desktop installation](apps/detective/INSTALL.md)
-for configuration and upgrades. Building does not configure a DB or download a
-model. Desktop is a source-build preview, not a notarized installer.
+and protected launchers, and [Detective CLI](apps/detective/README.md) for the
+retained command-line capabilities and gaps. Building does not configure a DB
+or download a model. Desktop launch instructions are frozen reference material,
+not part of quick start.
 
 ## Programs
 
@@ -41,7 +40,7 @@ model. Desktop is a source-build preview, not a notarized installer.
 | `ahe-runtime-admin` | Provision or verify bounded runtime roles |
 | `ahe-mcp-launch` | Start an MCP profile with protected external credentials |
 | `detective` | Source collection, extraction, queries and review workflows |
-| `AHE Detective.app` | Local source, candidate and human-review UI |
+| `AHE Detective.app` | Frozen / unavailable; retained code, not a supported workflow |
 | `detective-source-demo` | Synthetic, read-only source MCP for local testing |
 | `detective-news-source` | Explicitly selected public-source adapter |
 | `ahe-detective` | Legacy collection host; not the new CLI or Desktop |
@@ -66,6 +65,53 @@ collection configurations.
 This is a single-user controlled preview. Query visibility is schema-wide, not
 a per-row tenant policy; use a dedicated database and trusted operator.
 Unattended production writing is not qualified.
+
+## Graph Data Model
+
+AHE's `canonical-evidence-graph/v1` models evidence and claims, rather than
+code symbols. PostgreSQL remains authoritative; a `CanonicalArtifact` is a
+bounded, read-consistent snapshot, not a second database.
+
+### Node kinds
+
+| Kind | Meaning |
+| --- | --- |
+| `raw_evidence` | Source material backing a claim |
+| `source_claim` | A claim grounded in source material |
+| `derived_claim` | A claim derived from an explicit parent set |
+| `candidate` | Task-candidate vocabulary in the graph schema |
+
+Node kinds are not admission states. Pending proposals are stored separately;
+their existence does not create admitted canonical evidence. A schema type
+also does not imply that the standard MCP profiles expose its writer.
+
+### Edge relations
+
+| Relation | Meaning and direction |
+| --- | --- |
+| `supports_claim` | Raw evidence → source claim |
+| `derived_from` | Parent → derived target; the complete parent manifest expresses AND dependency |
+| `contradicts` | Symmetric contradiction, stored as a normalized endpoint pair |
+| `supersedes` | New replacement → old target |
+| `references` | Source-backed reference between evidence nodes |
+| `implements` | Source-backed implementation relation between evidence nodes |
+
+### Record structure
+
+| Type | Contents |
+| --- | --- |
+| `CanonicalNode` | ID, kind, and references to payload, provenance, temporal and integrity records |
+| `CanonicalEdge` | ID, `from`, `to`, relation and provenance reference |
+| `EvidencePayload` | Source, title, optional quotation and locator, claim, applicability and target anchors |
+| `CanonicalArtifact` | Schema and snapshot IDs, nodes, edges and their supporting records, including derivations |
+
+Provenance retains origin grouping and extraction/review traceability; multiple
+excerpts from one document are not independent sources. Temporal metadata and
+integrity digests are separate from the claim. A graph path proves structural
+connectivity, not truth, and the whole evidence graph is not assumed to be a DAG.
+
+See the [Go data types](internal/evidencegraph/canonical.go) and
+[graph semantics](docs/SYSTEM_DESIGN.md#graph) for the detailed contracts.
 
 ## External Model and Connector Intake
 
@@ -136,23 +182,29 @@ From the repository root:
 
 ```sh
 make verify               # Frontend tests, Go tests, build and vet
-make desktop-test         # Above plus full-module race tests
-make desktop-startup-test # macOS native build and non-UI startup checks
+go test -race ./...        # Full-module race tests; not Desktop acceptance
 ```
 
 Ordinary tests use deterministic fixtures. Live model/DB tests require a separately
 selected opt-in environment; see [database/process tests](INSTALL.md#optional-database-and-process-tests).
-Startup checks are not interactive UI acceptance.
+Retained Desktop tests may run as regression checks; passing them does not
+unfreeze Desktop or establish interactive usability.
 Linux full-module verification needs the native dependencies and build tag in
 [INSTALL.md](INSTALL.md#shared-module-verification-on-linux). MCP-only builds
 do not require Desktop's native libraries.
 
 ## Documentation
 
+- [Current development status and code disposition](STATUS.md)
 - [MCP installation and upgrades](INSTALL.md)
 - [Detective CLI and Desktop](apps/detective/README.md)
-- [Desktop installation and workspaces](apps/detective/INSTALL.md)
+- [Frozen Desktop installation reference and CLI setup](apps/detective/INSTALL.md)
 - [System design: theory, algorithms, data structures and references](docs/SYSTEM_DESIGN.md)
 - [Optional macOS service setup](deploy/macos/README.md)
 - [Changelog](CHANGELOG.md)
 - [Maintainer lab-to-product release gates](LAB_TO_PRODUCT_RELEASE_GATES.md)
+
+## License
+
+[MIT](LICENSE). Third-party dependencies and materials remain subject to their
+respective licenses.

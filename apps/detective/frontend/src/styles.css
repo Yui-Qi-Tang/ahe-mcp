@@ -557,6 +557,17 @@ details .code {
     transform: rotate(360deg);
   }
 }
+.task-workspace { max-width: 1120px; margin: 0 auto; padding: 28px; display: grid; gap: 20px; }
+.task-workspace .page-intro { margin-bottom: 0; }
+.task-workspace .surface { padding: 24px; min-width: 0; }
+.task-workspace h2 { font-size: 18px; }
+.task-workspace h3 { font-size: 15px; }
+.task-workspace .code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.task-workspace .key-value dd { overflow-wrap: anywhere; }
+.task-input textarea { display: block; width: 100%; margin-top: 8px; resize: vertical; }
+.task-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.task-candidate, .task-source-part { padding: 12px 0; border-top: 1px solid var(--border); }
+.task-workspace details { margin: 12px 0; }
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

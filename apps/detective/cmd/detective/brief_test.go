@@ -20,7 +20,7 @@ const briefCLIAnswer = "付款 API 已恢復，退款 API 仍有延遲。"
 
 func briefCLIInput(t *testing.T) (string, sourcepilot.BriefSource) {
 	t.Helper()
-	source := sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceID: "synthetic-service", SourceRevision: "revision-1",
+	source := sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceKind: "public_event", SourceID: "synthetic-service", SourceRevision: "revision-1",
 		SourceURL: "https://example.invalid/synthetic-service", ObservedAt: "2026-09-10T01:00:00Z",
 		Coverage: "full_document", Limitations: []string{}, Body: "Payment API recovered at 14:20 UTC.<br />Refund API still had delays."}
 	return briefPrivateJSON(t, source), source
@@ -67,6 +67,32 @@ func TestBriefInspectOfflineAndHelp(t *testing.T) {
 		if err := runBrief([]string{arg}, &stdout, &stderr); err != nil || stdout.Len() == 0 || stderr.Len() != 0 {
 			t.Fatal("offline help or version failed", err)
 		}
+	}
+}
+
+func TestBriefCLIRejectsEngineeringAndUnclassifiedSourcesBeforeModelFactory(t *testing.T) {
+	for _, kind := range []string{"", "unknown", "engineering_document", "repository_code", "git_commit"} {
+		t.Run(kind, func(t *testing.T) {
+			_, source := briefCLIInput(t)
+			source.SourceKind = kind
+			if kind == "" {
+				source.Version = "detective-brief-source/v1"
+			}
+			input := briefPrivateJSON(t, source)
+			out := filepath.Join(sourceCLIPrivateDir(t), "report.json")
+			calls := 0
+			factory := func(context.Context, string, string) (*sourcepilot.BriefExtractor, error) {
+				calls++
+				return nil, errors.New("unexpected model factory")
+			}
+			var stdout, stderr bytes.Buffer
+			if err := runBriefWithContext(t.Context(), briefCLIArgs(input, out), &stdout, &stderr, factory); err == nil || calls != 0 {
+				t.Fatal("unsupported source reached model factory")
+			}
+			if _, err := os.Stat(out); !os.IsNotExist(err) {
+				t.Fatal("rejected source created an output file")
+			}
+		})
 	}
 }
 
