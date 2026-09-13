@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -137,20 +138,24 @@ func (s *Service) ImportBriefSource(path string) (State, error) {
 	}
 	defer done()
 	state := s.Snapshot()
-	if state.BatchPath != "" || state.Brief != nil {
+	if state.BatchPath != "" || state.Brief != nil || state.Task != nil {
 		return s.finish(done, errors.New("active work"), "請先開始新工作；既有 Brief 與批次保留，不直接替換。")
+	}
+	if info, err := os.Lstat(path); err == nil && info.Mode().IsRegular() && info.Size() > 256<<10 {
+		limit := &sourcepilot.InputLimitError{Resource: "source_json_bytes", Limit: 256 << 10, Observed: info.Size()}
+		return s.finishBriefInput(done, limit, "")
 	}
 	document, err := labstatus.LoadDocument(path)
 	if err != nil {
-		return s.finish(done, err, "Brief 來源必須是有界 UTF-8 一般 JSON 檔案，不能是符號連結。")
+		return s.finishBriefInput(done, err, "Brief 來源必須是最多 256 KiB 的 UTF-8 一般 JSON 檔案，不能是符號連結。")
 	}
 	source, err := sourcepilot.ParseBriefSource([]byte(document.RawText()))
 	if err != nil {
-		return s.finish(done, err, "Brief 來源格式、範圍或限制不符；未連線。")
+		return s.finishBriefInput(done, err, "Brief 需 v2 來源並明確宣告 news 或 public_event；工程文件、程式碼、git 與未分類來源不使用短摘要。格式或範圍不符，未連線。")
 	}
 	report, err := sourcepilot.NewBriefReport(source)
 	if err != nil {
-		return s.finish(done, err, "Brief 來源無法凍結。")
+		return s.finishBriefInput(done, err, "Brief 來源無法凍結。")
 	}
 	view, err := s.captureSource(filepath.Base(path), "local", source.Body)
 	if err != nil {
@@ -166,6 +171,16 @@ func (s *Service) ImportBriefSource(path string) (State, error) {
 	return s.finish(done, nil, "Brief 原文與呼叫者聲明的來源座標已保存；尚未呼叫模型或 MCP。")
 }
 
+func (s *Service) finishBriefInput(done func(), err error, fallback string) (State, error) {
+	var limit *sourcepilot.InputLimitError
+	if errors.As(err, &limit) {
+		detail := "Brief 來源超出上限：" + limit.Error() + "。未呼叫模型或 MCP；請明確選取可追溯摘錄。"
+		state, _ := s.finish(done, err, detail)
+		return state, limit
+	}
+	return s.finish(done, err, fallback)
+}
+
 // ExtractBrief makes the same single tool-free model call as the Brief CLI.
 func (s *Service) ExtractBrief(ctx context.Context) (State, error) {
 	ctx, done, err := s.begin(ctx, "brief_extract")
@@ -174,10 +189,13 @@ func (s *Service) ExtractBrief(ctx context.Context) (State, error) {
 	}
 	defer done()
 	state := s.Snapshot()
-	if state.Settings.Mode != "local" || state.Brief == nil || state.Brief.Report.Stage != "inspected" || state.Brief.Outcome != "inspected" || state.Brief.Submission != nil {
+	if state.Task != nil || state.Settings.Mode != "local" || state.Brief == nil || state.Brief.Report.Stage != "inspected" || state.Brief.Outcome != "inspected" || state.Brief.Submission != nil {
 		return s.finish(done, errors.New("brief unavailable"), "請開啟新的 Brief 來源並明確啟用本機模式；不覆寫既有抽取。")
 	}
 	work := *state.Brief
+	if err := sourcepilot.ValidateBriefSourceForExtraction(work.Report.Source); err != nil {
+		return s.finish(done, err, "這份來源不能進行 Brief 抽取；舊紀錄僅供檢視及既有提案審閱，不補填類型或自動重送。未呼叫模型。")
+	}
 	work.Model, work.Outcome = state.Settings.Model, "model_requested"
 	if err := s.saveBrief(work); err != nil {
 		return s.finish(done, err, "抽取前紀錄未保存；未呼叫模型。")
@@ -207,10 +225,13 @@ func (s *Service) PrepareBriefCandidate(request BriefCandidateRequest) (State, e
 	}
 	defer done()
 	state := s.Snapshot()
-	if state.Brief == nil || state.Brief.Submission != nil || request.SourceSHA256 != state.Brief.Report.BodySHA256 {
+	if state.Task != nil || state.Brief == nil || state.Brief.Submission != nil || request.SourceSHA256 != state.Brief.Report.BodySHA256 {
 		return s.finish(done, errors.New("selection changed"), "來源確認不符或已有凍結候選；未建立或替換提案。")
 	}
 	work := *state.Brief
+	if err := sourcepilot.ValidateBriefSourceForExtraction(work.Report.Source); err != nil {
+		return s.finish(done, err, "這份來源不能建立新的 Brief 候選；工程資料請使用原文保留流程，舊紀錄不補填類型。")
+	}
 	document, err := labstatus.RestoreDocument(work.SourcePath, work.Report.Source.Body)
 	if err != nil {
 		return s.finish(done, err, "完整來源無法還原。")
@@ -228,7 +249,7 @@ func (s *Service) PrepareBriefCandidate(request BriefCandidateRequest) (State, e
 }
 
 func (s *Service) briefOnline(state State, confirmation string) error {
-	if state.Settings.Mode != "local" || state.BatchPath != "" || state.Brief == nil || state.Brief.Submission == nil || state.Source == nil || state.Source.RawText != state.Brief.Report.Source.Body || state.Source.SHA256 != state.Brief.Report.BodySHA256 || confirmation != state.Brief.Submission.Digest {
+	if state.Task != nil || state.Settings.Mode != "local" || state.BatchPath != "" || state.Brief == nil || state.Brief.Submission == nil || state.Source == nil || state.Source.RawText != state.Brief.Report.Source.Body || state.Source.SHA256 != state.Brief.Report.BodySHA256 || confirmation != state.Brief.Submission.Digest {
 		return errors.New("explicit local Brief selection confirmation required")
 	}
 	return validateBriefWork(*state.Brief)
@@ -246,6 +267,9 @@ func (s *Service) SubmitBriefPending(ctx context.Context, confirmation string) (
 		return s.finish(done, err, "請確認本機模式與完整候選 digest；未啟動 MCP。")
 	}
 	work := *state.Brief
+	if err := sourcepilot.ValidateBriefSourceForExtraction(work.Report.Source); err != nil {
+		return s.finish(done, err, "這份來源不允許 Brief 提交；舊版未確認的提交需人工查核，請勿補填類型、修改收據或重新抽取。未啟動 MCP。")
+	}
 	if work.Decision != nil || state.Settings.IntakeLauncher == "" || state.Settings.QueryLauncher == "" || (work.IntakeLauncher != "" && (work.IntakeLauncher != state.Settings.IntakeLauncher || work.QueryLauncher != state.Settings.QueryLauncher)) {
 		return s.finish(done, errors.New("launchers changed"), "需明確 intake／Query launcher；重試須使用原 launcher，已有審查決定不重新提交。")
 	}
@@ -407,6 +431,7 @@ func (s *Service) OpenBriefWork(path string) (State, error) {
 	work.FailureStage = "historical_not_rechecked"
 	work.Digest = briefWorkDigest(work)
 	s.mu.Lock()
+	s.state.Task = nil
 	s.state.Brief = &work
 	s.state.Source = &SourceView{ID: "sha256:" + work.Report.BodySHA256, Title: work.Report.Source.SourceID, Path: work.SourcePath, Kind: "local", RawText: work.Report.Source.Body, SHA256: work.Report.BodySHA256, Bytes: len(work.Report.Source.Body), Rows: []SourceRow{}, Note: "保存的 Brief 原文；尚未重新查詢 DB。"}
 	s.state.Candidates, s.state.Extraction, s.state.BatchResult = []CandidateView{}, nil, nil

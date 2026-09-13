@@ -2,8 +2,16 @@
 
 ## Read First
 
+- Detective Desktop is **frozen / unavailable (目前不工作)** as of 2026-09-14.
+  CLI stabilization comes first. Do not request UI acceptance, start the app,
+  extend Desktop or publish it unless the user explicitly unfreezes that work.
+  Keep existing code/tests/data; see `STATUS.md` for the CLI gaps and review order.
+
 - Treat this file as the operational summary. Do not read all of `README.md` by
   default.
+- For Detective extraction development, read `STATUS.md` for the selected
+  task-driven direction, current capability gaps and code disposition. Planned
+  behavior there is not an available runtime capability or permission to write.
 - For installation or operating-system support, read `INSTALL.md`. The
   `deploy/macos` directory is optional `launchd` packaging, not an AHE Core
   platform requirement.
@@ -56,6 +64,24 @@
 
 ## External Evidence Invariants
 
+- Engineering evidence intake must not be replaced by Brief, model highlights,
+  or summary chunks. Retained source bytes and individually grounded claims do
+  not compensate for omitted in-scope information. Preserve requirements,
+  conditions, exceptions and status details; disclose extraction omissions
+  separately from source coverage. No observed fabrication is not completeness.
+- New Brief operations require `detective-brief-source/v2` with `source_kind`
+  equal to `news` or `public_event`. The declaration is not automatic content
+  classification; do not relabel engineering sources or use `manual_text` to
+  bypass external-source identity, provider revision or capability requirements.
+- The retained legacy host's small-model engineering path selects complete
+  verbatim source units, then independently checks text and span identity.
+  This whole-span mode is still wired in the working draft; it is a comparison
+  baseline, not the selected task-driven end state or a Desktop capability. It does not
+  replace engineering content with Brief summaries. Explicit section processing
+  describes the supplied input, not semantic completeness or uncollected fields.
+  Model extraction, deterministic conversion and collection-only are separate
+  operator choices; do not silently enable proposal writing or categorically
+  prohibit a model because the provider is Atlassian/Codegraph.
 - Submit connector-observed text or JSON exactly. Never replace source content
   with a model summary or paraphrase.
 - Use provider identity and revision metadata from the connector. Never invent
@@ -70,9 +96,21 @@
 - Before admission, show the human the proposed sentence, exact excerpts,
   source title and location, coverage and limitations, provider revision, and
   the version difference when a comparable prior revision exists.
-- Do not call `admit_pending_proposal` until the human explicitly approves the
-  displayed proposal. AHE records the decision but does not prove that this
-  review conversation occurred.
+- Obtain `get_source_claim_review` for each exact attempt/occurrence and show
+  its complete native display. After an explicit decision and reason, use
+  `admit_reviewed_source_claim` (`approved`) or
+  `record_reviewed_source_claim_disposition` (`reject`/`audit_only`) with the
+  unchanged returned subject as `expected_subject`. The launcher supplies the
+  reviewer identity. Preserve the exact inputs for uncertain-outcome replay;
+  do not fall back to `admit_pending_proposal` or legacy disposition tools.
+  AHE records the binding but does not prove the human read the display.
+
+## Internal Relation Contracts (Not Standard MCP Operations)
+
+The following describes retained domain behavior, not an executable intake
+recipe. These writers are disabled in the standard installation; stop and
+report the missing capability rather than changing profiles or using SQL.
+
 - When two admitted canonical nodes appear incompatible, call
   `submit_canonical_contradiction_proposal`, then read
   `get_canonical_contradiction_proposal`. Show both grounded canonical records,

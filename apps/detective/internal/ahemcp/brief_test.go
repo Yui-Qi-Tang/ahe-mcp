@@ -14,7 +14,7 @@ import (
 
 func briefSubmissionFixture(t *testing.T, body string, first, last int) BriefSubmission {
 	t.Helper()
-	report, err := sourcepilot.NewBriefReport(sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion,
+	report, err := sourcepilot.NewBriefReport(sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceKind: "public_event",
 		SourceID: "synthetic-brief-source", SourceRevision: "fixture-v1", SourceURL: "https://example.invalid/brief",
 		ObservedAt: "2026-09-11T00:00:00Z", Coverage: "exact_excerpt", Limitations: []string{"Synthetic excerpt; no production claim."}, Body: body})
 	if err != nil {
@@ -51,6 +51,48 @@ func TestBriefSubmissionPreservesOriginalAndDoesNotAssertSupport(t *testing.T) {
 	input.Report.Source.Limitations[0] = "Changed caller-owned slice."
 	if selected.Report.Source.Limitations[0] == input.Report.Source.Limitations[0] || ValidateBriefSubmission(selected) != nil {
 		t.Fatal("constructor retained mutable caller-owned data")
+	}
+}
+
+func TestBriefExcerptProvenanceSurvivesPendingSubmission(t *testing.T) {
+	parent := sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceKind: "news", SourceID: "synthetic-parent", SourceRevision: "fixture-v1",
+		SourceURL: "https://example.invalid/parent", ObservedAt: "2026-09-13T00:00:00Z", Coverage: "full_document", Limitations: []string{},
+		Body: strings.Repeat("Original parent context.\n", 100) + "The named service remains delayed.\nCause unknown."}
+	start := strings.Index(parent.Body, "The named service")
+	source, err := sourcepilot.SelectBriefExcerpt(parent, start, len(parent.Body), "Read the service status and unknown cause.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := sourcepilot.NewBriefReport(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report.Stage, report.RawText, report.Text = "complete", "Service remains delayed; cause unknown.", "Service remains delayed; cause unknown."
+	input, err := NewBriefSubmission(report, "/synthetic/excerpt.json", "test-model", "The named service remains delayed.", labstatus.Citation{StartLine: 1, EndLine: 1, ExactQuote: "The named service remains delayed."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	launcher, trace := handoffLauncher(t, "batch_pending")
+	if _, err := SubmitBrief(t.Context(), launcher, input); err != nil {
+		t.Fatal(err)
+	}
+	calls := readHandoffTrace(t, trace)
+	var sent sourceRequest
+	if json.Unmarshal(calls[3].Arguments, &sent) != nil || sent.SourceID != briefSourceID(input) || sent.RawText != source.Body || !reflect.DeepEqual(sent.OriginMetadata, briefOrigin(input)) {
+		t.Fatal("pending source lost exact excerpt or provenance")
+	}
+	var recorded sourcepilot.BriefExcerpt
+	if json.Unmarshal([]byte(sent.OriginMetadata["declared_excerpt_json"]), &recorded) != nil || recorded != *source.Excerpt {
+		t.Fatal("pending origin lost parent source identity, body digest, range or reason")
+	}
+	if _, ok := sent.OriginMetadata["provider_verified"]; ok {
+		t.Fatal("provenance pretended to verify provider")
+	}
+	beforeOrigin := digest(briefOrigin(input))
+	beforeDefinition := digest(briefDefinition(input))
+	input.Report.Source.Excerpt.SelectionReason = "Changed reason."
+	if ValidateBriefSubmission(input) == nil || digest(briefOrigin(input)) == beforeOrigin || digest(briefDefinition(input)) == beforeDefinition {
+		t.Fatal("excerpt metadata was not bound into frozen submission and request identity")
 	}
 }
 
@@ -94,7 +136,7 @@ func TestBriefSubmissionRejectsInvalidFrozenInputsBeforeLauncher(t *testing.T) {
 		})
 	}
 	for _, body := range []string{"First\n\nThird", "First\rSecond"} {
-		report, err := sourcepilot.NewBriefReport(sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceID: "fixture", SourceRevision: "v1", SourceURL: "https://example.invalid", ObservedAt: "2026-09-11T00:00:00Z", Coverage: "full_document", Limitations: []string{}, Body: body})
+		report, err := sourcepilot.NewBriefReport(sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceKind: "public_event", SourceID: "fixture", SourceRevision: "v1", SourceURL: "https://example.invalid", ObservedAt: "2026-09-11T00:00:00Z", Coverage: "full_document", Limitations: []string{}, Body: body})
 		if err != nil {
 			continue // A stricter source parser rejecting lone CR is also safe.
 		}
@@ -104,6 +146,30 @@ func TestBriefSubmissionRejectsInvalidFrozenInputsBeforeLauncher(t *testing.T) {
 		if _, err := NewBriefSubmission(report, "/fixture", "test-model", "Selection.", labstatus.Citation{StartLine: 1, EndLine: doc.Source().Lines, ExactQuote: quote}); err == nil {
 			t.Fatal("empty selected line or ambiguous CR accepted")
 		}
+	}
+}
+
+func TestLegacyBriefRemainsReadableButCannotCreateOrResubmit(t *testing.T) {
+	input := briefSubmissionFixture(t, "The service is degraded.\nThe cause remains unknown.", 1, 2)
+	input.Report.Source.Version = "detective-brief-source/v1"
+	input.Report.Source.SourceKind = ""
+	input.Digest = ""
+	input.Digest = digest(input)
+	if err := ValidateBriefSubmission(input); err != nil {
+		t.Fatalf("legacy submission cannot be read: %v", err)
+	}
+	if _, found := briefOrigin(input)["declared_source_kind"]; found {
+		t.Fatal("legacy origin identity was rewritten")
+	}
+	if _, err := NewBriefSubmission(input.Report, input.SourcePath, input.Model, input.Statement, input.Citation); err == nil {
+		t.Fatal("legacy report created a new candidate")
+	}
+	launcher, trace := handoffLauncher(t, "batch_pending")
+	if _, err := SubmitBrief(t.Context(), launcher, input); err == nil {
+		t.Fatal("legacy submission reached intake")
+	}
+	if _, err := os.Stat(trace); !os.IsNotExist(err) {
+		t.Fatal("legacy submission started launcher")
 	}
 }
 
@@ -145,14 +211,23 @@ func briefReviewFixture(t *testing.T) (BriefSubmission, SourceClaimReview, Hando
 	t.Helper()
 	review, doc, _, handoff := reviewFixture(t)
 	input := briefSubmissionFixture(t, doc.RawText(), 1, 1)
+	return briefReviewFixtureForInput(t, input, review, handoff)
+}
+
+func briefReviewFixtureForInput(t *testing.T, input BriefSubmission, review SourceClaimReview, handoff Handoff) (BriefSubmission, SourceClaimReview, Handoff, pendingRecord) {
+	t.Helper()
+	doc, err := briefDocument(input)
+	if err != nil {
+		t.Fatal(err)
+	}
 	q := queryFixture(doc, labstatus.Record{Statement: input.Statement, Citation: input.Citation}, handoff)
-	q.Source.SourceID = input.Report.Source.SourceID
+	q.Source.SourceID = briefSourceID(input)
 	q.Extractor.Name, q.Extractor.Version = briefDefinition(input).Name, briefDefinition(input).Version
 	q.Extractor.ConfigHash = "sha256:" + digest(briefDefinition(input).Config)
 	var p reviewPackage
 	_ = json.Unmarshal([]byte(review.Display.PayloadUTF8), &p)
 	b := &p.ProposalBasis
-	b.StatementText, b.SourceID = input.Statement, input.Report.Source.SourceID
+	b.StatementText, b.SourceID = input.Statement, briefSourceID(input)
 	b.ExtractorName, b.ExtractorVersion, b.ExtractorConfigHash = q.Extractor.Name, q.Extractor.Version, q.Extractor.ConfigHash
 	b.OriginMetadataHash = "sha256:" + digest(briefOrigin(input))
 	request, err := briefRequest(input, sourceResult{SourceSnapshotID: handoff.SourceSnapshotID, ExtractionViewID: handoff.ExtractionViewID}, []span{{SpanID: "span:S1", DisplayLine: 1}})

@@ -22,6 +22,7 @@ describe("desktop bridge guards", () => {
     expect(emptyState().settings.sourceID).toBe("desktop-status");
     expect(emptyState().version).toBe("0.1.0-preview.18");
     expect(emptyState().search).toBeNull();
+    expect(emptyState().task).toBeNull();
   });
   it("normalizes null slices but rejects a missing state envelope", () => {
     expect(() => normalizeState(null)).toThrow();
@@ -69,6 +70,7 @@ describe("desktop bridge guards", () => {
     expect(canSubmitPending(state)).toBe(false);
     state.settings.mode = "local";
     expect(canSubmitPending(state)).toBe(true);
+    expect(canSubmitPending({ ...state, task: { status: "prepared" } })).toBe(false);
     expect(canSubmitPending({ ...state, busy: true })).toBe(false);
     expect(canSubmitPending({ ...state, batchDigest: "" })).toBe(false);
     expect(canSubmitPending({ ...state, candidates: [] })).toBe(false);

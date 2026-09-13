@@ -86,7 +86,7 @@ func TestBriefRecoveryPrepareNative(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer s.Close()
-			source := sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion,
+			source := sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceKind: "public_event",
 				SourceID:       "synthetic:recovery:" + filepath.Base(runDir) + ":" + name,
 				SourceRevision: "synthetic-v1", SourceURL: "https://example.invalid/recovery",
 				ObservedAt: "2026-09-12T00:00:00Z", Coverage: "full_document", Limitations: []string{},

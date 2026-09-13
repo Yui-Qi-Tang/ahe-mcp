@@ -25,6 +25,7 @@ function install(initial = null) {
   let current = initial || { ...emptyState(), settings: { ...emptyState().settings, mode: "local", queryLauncher: "/operator/query", model: "", baseURL: "" } };
   const bridge = {
     Snapshot: vi.fn(async () => structuredClone(current)),
+    NewWork: vi.fn(async () => structuredClone(current)),
     SearchEvidence: vi.fn(async (input) => { current = { ...current, search: result(input) }; return structuredClone(current); }),
     LoadEvidenceSearchDemo: vi.fn(async (scenario) => { current = { ...current, search: result({ ...request, question: "固定示範" }, { demo: true, empty: scenario === "empty" }) }; return structuredClone(current); }),
     SaveSettings: vi.fn(async (settings) => { current = { ...current, settings, search: null }; return structuredClone(current); }),
@@ -63,7 +64,8 @@ describe("evidence search desktop page", () => {
   it("blocks unapplied settings and never sends the draft launcher", async () => {
     const { bridge } = install(); await openSearch(); enter();
     fireEvent.click(screen.getByRole("button", { name: "前往連線設定" }));
-    fireEvent.change(screen.getByLabelText("Query launcher"), { target: { value: "/draft/not-saved" } });
+    fireEvent.click(screen.getByText("進階連線設定"));
+    fireEvent.change(screen.getByLabelText("證據查詢程式"), { target: { value: "/draft/not-saved" } });
     fireEvent.click(screen.getByRole("button", { name: "證據搜尋" }));
     expect(screen.getByRole("button", { name: "查詢既有證據" })).toBeDisabled();
     expect(screen.getByText(/有尚未套用的設定草稿/)).toBeInTheDocument();
@@ -77,7 +79,8 @@ describe("evidence search desktop page", () => {
     const { bridge } = install(); bridge.SearchEvidence.mockRejectedValueOnce(new Error("failed"));
     await openSearch(); enter(); submit(); await screen.findByRole("heading", { name: "查詢未完成或結果未確認" });
     fireEvent.click(screen.getByRole("button", { name: "前往連線設定" }));
-    fireEvent.change(screen.getByLabelText("Query launcher"), { target: { value: "/operator/updated-query" } });
+    fireEvent.click(screen.getByText("進階連線設定"));
+    fireEvent.change(screen.getByLabelText("證據查詢程式"), { target: { value: "/operator/updated-query" } });
     fireEvent.click(screen.getByRole("button", { name: "套用本次設定" }));
     await waitFor(() => expect(bridge.SaveSettings).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole("button", { name: "證據搜尋" }));
@@ -95,16 +98,14 @@ describe("evidence search desktop page", () => {
   it("does not fabricate a bridge or run demos in a browser-only page", () => {
     render(<App />); fireEvent.click(screen.getByRole("button", { name: "證據搜尋" })); enter();
     expect(screen.getByRole("button", { name: "查詢既有證據" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "載入混合處置示範" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "載入混合處置示範" })).not.toBeInTheDocument();
   });
-  it("runs fixed mixed/empty demos in demo mode without calling the query bridge", async () => {
-    const { bridge } = install(emptyState()); await openSearch(); enter("不影響固定示範");
-    fireEvent.click(screen.getByRole("button", { name: "載入混合處置示範" }));
-    await screen.findByText("離線合成示範 · 未查 DB"); expect(screen.getAllByRole("article")).toHaveLength(4);
-    expect(screen.getByRole("heading", { name: "固定示範條件（未查 DB）" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "載入空結果示範" }));
-    await screen.findByText(/這次查詢沒有回傳記錄/);
-    expect(bridge.LoadEvidenceSearchDemo.mock.calls).toEqual([["mixed"], ["empty"]]); expect(bridge.SearchEvidence).not.toHaveBeenCalled();
+  it("does not expose synthetic search loaders even if an older bridge has them", async () => {
+    const { bridge } = install(emptyState()); await openSearch(); enter("查詢草稿");
+    expect(screen.queryByRole("button", { name: /載入.*示範/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /離線示範/ })).not.toBeInTheDocument();
+    expect(bridge.LoadEvidenceSearchDemo).not.toHaveBeenCalled();
+    expect(bridge.SearchEvidence).not.toHaveBeenCalled();
   });
   it("preserves order, exact raw large integers, source scope, original quotes and separate matched spans as text", async () => {
     install(); await openSearch(); enter(); submit(); await screen.findByLabelText("搜尋結果");

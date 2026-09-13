@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -40,7 +39,7 @@ func startSession(parent context.Context, c Config) (*session, error) {
 		return nil, err
 	}
 	if c.Transport == "stdio" {
-		child, err := startStdio(ctx, c.Command)
+		child, err := startStdio(ctx, c)
 		if err != nil {
 			cancel()
 			return nil, err
@@ -139,14 +138,23 @@ type stdioSession struct {
 	waited  chan error
 	stopIO  func() bool
 	ioDone  chan struct{}
+	cleanup func()
 }
 
-func startStdio(ctx context.Context, command string) (*stdioSession, error) {
-	cmd := exec.CommandContext(ctx, command)
-	// Nothing is inherited from the application environment, including HOME,
-	// proxy settings, API keys, database credentials, or dynamic loader flags.
-	// An operator launcher can set the exact environment its source needs.
-	cmd.Env = []string{"PATH=/usr/bin:/bin:/usr/sbin:/sbin", "LANG=C", "TZ=UTC"}
+func startStdio(ctx context.Context, config Config) (*stdioSession, error) {
+	cmd, cleanup, err := sourceProcess(ctx, config, config.Args)
+	if err != nil {
+		return nil, err
+	}
+	started := false
+	defer func() {
+		if !started {
+			cleanup()
+		}
+	}()
+	// Generic launchers inherit no application environment. Codebase receives
+	// its actual user home plus fixed private config/cache coordinates, but no
+	// proxy settings, API keys, DB credentials, or dynamic loader flags.
 	cmd.WaitDelay = shutdownGrace
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -166,7 +174,8 @@ func startStdio(ctx context.Context, command string) (*stdioSession, error) {
 		return nil, errors.New("starting source MCP launcher failed")
 	}
 	_ = writer.Close() // Only the child's descriptor must remain open.
-	s := &stdioSession{stdin: stdin, stdout: stdout, waited: make(chan error, 1), ioDone: make(chan struct{})}
+	s := &stdioSession{stdin: stdin, stdout: stdout, waited: make(chan error, 1), ioDone: make(chan struct{}), cleanup: cleanup}
+	started = true
 	s.scanner = bufio.NewScanner(stdout)
 	s.scanner.Buffer(make([]byte, 64<<10), maxRPCBytes+1)
 	s.stopIO = context.AfterFunc(ctx, func() {
@@ -192,6 +201,7 @@ func (s *stdioSession) exchange(data []byte, notification bool) ([]byte, error) 
 }
 
 func (s *stdioSession) close(ctx context.Context, cancel context.CancelFunc) error {
+	defer s.cleanup()
 	_ = s.stdin.Close() // EOF requests normal shutdown; closed input is equivalent.
 	timer := time.NewTimer(shutdownGrace)
 	defer timer.Stop()

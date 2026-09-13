@@ -98,7 +98,7 @@ func InspectSource(ctx context.Context, receiptPath string) (SourceView, error) 
 		return SourceView{}, errSourceInspection
 	}
 	text, err := read(receipt.Text.Path)
-	if err != nil || !matchesSourceArtifact(text, receipt.Text) || sourcemcp.VerifyRecordedSource(receipt.Config, receipt.Tool, receipt.ArgumentsJSON, string(raw), string(text)) != nil {
+	if err != nil || !matchesSourceArtifact(text, receipt.Text) || !recordedCodeCitation(receipt.CodeCitation, receipt.Config, receipt.Tool.Name, string(text)) || sourcemcp.VerifyRecordedSource(receipt.Config, receipt.Tool, receipt.ArgumentsJSON, string(raw), string(text)) != nil {
 		return SourceView{}, errSourceInspection
 	}
 	document, err := labstatus.RestoreDocument(receipt.Text.Path, string(text))
@@ -112,9 +112,10 @@ func InspectSource(ctx context.Context, receiptPath string) (SourceView, error) 
 		Note: "檔案與已保存收據一致；沒有重新取材。這不是來源真實性、最新狀態或真人核准的證明；歷史完整工具清單未重新驗證，來源 revision 仍未知。",
 		Capture: &SourceCapture{
 			CapturedAt: receipt.CapturedAt, Revision: receipt.Revision,
-			RawResult:  SourceArtifact{Path: receipt.RawResult.Path, SHA256: receipt.RawResult.SHA256, Bytes: receipt.RawResult.Bytes},
-			Receipt:    sourceArtifact(receiptPath, body),
-			Inspection: &SourceInspection{VerifiedAt: time.Now().UTC().Format(time.RFC3339Nano), Config: receipt.Config, Tool: receipt.Tool, ArgumentsJSON: receipt.ArgumentsJSON, RawResultJSON: string(raw)},
+			CodeCitation: receipt.CodeCitation,
+			RawResult:    SourceArtifact{Path: receipt.RawResult.Path, SHA256: receipt.RawResult.SHA256, Bytes: receipt.RawResult.Bytes},
+			Receipt:      sourceArtifact(receiptPath, body),
+			Inspection:   &SourceInspection{VerifiedAt: time.Now().UTC().Format(time.RFC3339Nano), Config: receipt.Config, Tool: receipt.Tool, ArgumentsJSON: receipt.ArgumentsJSON, RawResultJSON: string(raw)},
 		},
 	}, nil
 }
@@ -122,11 +123,11 @@ func InspectSource(ctx context.Context, receiptPath string) (SourceView, error) 
 // encoding/json treats field names case-insensitively. Exact persisted keys
 // prevent aliases from silently overwriting a second value of the same field.
 func closedReceiptFields(body []byte) bool {
-	fields, ok := savedSourceFields(body, "schema_version", "config", "tool", "args_json", "captured_at", "raw_result", "text", "source_revision")
+	fields, ok := savedSourceOptionalFields(body, []string{"schema_version", "config", "tool", "args_json", "captured_at", "raw_result", "text", "source_revision"}, "code_citation")
 	if !ok {
 		return false
 	}
-	if _, ok := savedSourceFields(fields["config"], "id", "name", "transport", "command", "url", "allowed_tools"); !ok {
+	if _, ok := savedSourceOptionalFields(fields["config"], []string{"id", "name", "transport", "command", "url", "allowed_tools"}, "args", "directory", "codebase_cache"); !ok {
 		return false
 	}
 	if _, ok := savedSourceFields(fields["tool"], "name", "description", "input_schema_json", "schema_sha256", "inventory_sha256", "config_sha256"); !ok {
@@ -137,7 +138,26 @@ func closedReceiptFields(body []byte) bool {
 			return false
 		}
 	}
+	if citation, exists := fields["code_citation"]; exists {
+		if _, ok := savedSourceFields(citation, "filePath", "startLine", "endLine", "fileSHA256", "exactQuote"); !ok {
+			return false
+		}
+	}
 	return true
+}
+
+func savedSourceOptionalFields(body []byte, required []string, optional ...string) (map[string]json.RawMessage, bool) {
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(body, &fields) != nil {
+		return nil, false
+	}
+	names := append([]string(nil), required...)
+	for _, name := range optional {
+		if _, ok := fields[name]; ok {
+			names = append(names, name)
+		}
+	}
+	return savedSourceFields(body, names...)
 }
 
 func savedSourceFields(body []byte, names ...string) (map[string]json.RawMessage, bool) {
@@ -203,6 +223,7 @@ func (s *Service) OpenSourceReceipt(ctx context.Context, path string) (State, er
 		return s.finish(done, errors.New("source inspection cancelled or batch active"), "來源重開已取消或有既有批次；保留原本來源，沒有修改檔案。")
 	}
 	s.state.Source = &source
+	s.state.Task = nil
 	s.state.Brief = nil
 	s.state.Candidates = []CandidateView{}
 	s.state.Extraction = nil

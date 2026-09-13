@@ -61,7 +61,7 @@ func TestBriefDesktopNativeMCP(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer s.Close()
-			source := sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceID: "synthetic:desktop-brief:" + filepath.Base(runDir) + ":" + outcome, SourceRevision: "synthetic-v1", SourceURL: "https://example.invalid/brief-native-test", ObservedAt: "2026-09-11T00:00:00Z", Coverage: "full_document", Limitations: []string{}, Body: "The synthetic service reported increased errors.\nThe cause remains unconfirmed.\nOther services remain unaffected."}
+			source := sourcepilot.BriefSource{Version: sourcepilot.BriefSourceVersion, SourceKind: "public_event", SourceID: "synthetic:desktop-brief:" + filepath.Base(runDir) + ":" + outcome, SourceRevision: "synthetic-v1", SourceURL: "https://example.invalid/brief-native-test", ObservedAt: "2026-09-11T00:00:00Z", Coverage: "full_document", Limitations: []string{}, Body: "The synthetic service reported increased errors.\nThe cause remains unconfirmed.\nOther services remain unaffected."}
 			sourceRaw, err := json.Marshal(source)
 			if err != nil {
 				t.Fatal(err)

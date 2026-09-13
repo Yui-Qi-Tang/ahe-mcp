@@ -81,7 +81,7 @@ function MatchCard({ match, index, sourceScopes }) {
   </article>;
 }
 
-export default function EvidenceSearch({ state, draft, onDraftChange, blockedReason, demoDisabled, onSearch, onDemo, onSettings, feedback }) {
+export default function EvidenceSearch({ state, draft, onDraftChange, blockedReason, onSearch, onSettings, feedback }) {
   const pending = feedback?.status === "running" || feedback?.status === "cancel_requested";
   const unavailable = ["unconfirmed", "cancelled"].includes(feedback?.status);
   const search = pending || unavailable ? null : state.search;
@@ -105,12 +105,9 @@ export default function EvidenceSearch({ state, draft, onDraftChange, blockedRea
       <div className="search-actions"><button className="button primary" type="submit" disabled={Boolean(blockedReason || validation)}>查詢既有證據</button><button className="button secondary" type="button" onClick={onSettings}>前往連線設定</button></div>
       {(blockedReason || validation) && <p className="notice">{blockedReason || validation}</p>}
     </form>
-    <section className="surface search-demo"><h2>先看離線示範</h2><p>載入固定合成資料，不查 DB、不呼叫模型，也不會改變任何實際記錄的處置。</p>
-      <div className="search-actions"><button className="button secondary" disabled={demoDisabled} onClick={() => onDemo("mixed")}>載入混合處置示範</button><button className="button secondary" disabled={demoDisabled} onClick={() => onDemo("empty")}>載入空結果示範</button></div>
-    </section>
     {pending && <section className="surface search-result" role="status"><h2>{feedback.status === "cancel_requested" ? "已要求取消，等待確認" : "搜尋處理中"}</h2><p>舊結果已收起；不會自動重試。取消不會改變 DB。</p>{feedback.request && <RequestDetails request={feedback.request} title="這次送出的查詢" />}</section>}
     {unavailable && <section className="surface search-result" role="alert"><h2>{feedback.status === "cancelled" ? "已要求取消／結果未採用" : "查詢未完成或結果未確認"}</h2><p>不顯示舊結果，也不能判定為查無資料。請檢查執行紀錄；不會自動重試。</p>{feedback.request && <RequestDetails request={feedback.request} title="這次送出的查詢" />}</section>}
-    {!search && !feedback && <p className="notice">尚未執行查詢。請送出草稿，或先載入離線示範。</p>}
+    {!search && !feedback && <p className="notice">尚未執行查詢。確認文字與篩選後送出。</p>}
     {search && <section className="search-result" aria-label="搜尋結果"><div className="search-heading"><h2>搜尋結果</h2><Badge>{search.demo ? "離線合成示範 · 未查 DB" : "既有 DB 記錄 · 唯讀"}</Badge></div>
       <RequestDetails request={search.request} title={search.demo ? "固定示範條件（未查 DB）" : "這次已執行的查詢"} />
       {!sameSearchRequest(searchRequest(draft), search.request) && <p className="notice">上方草稿與以下結果條件不同；尚未依草稿重新搜尋。</p>}

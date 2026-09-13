@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Connections from "./Connections.jsx";
+import CodebaseChat, { codebaseConnections } from "./CodebaseChat.jsx";
 import BriefWorkspace from "./BriefWorkspace.jsx";
 import EvidenceSearch, { initialSearchDraft, sameSearchRequest, searchDraftError } from "./EvidenceSearch.jsx";
 import {
@@ -39,6 +40,10 @@ function SourceCaptureDetails({ capture }) {
         以下是保存當時的資料，不會套用為目前設定、工具權限或指令；沒有重新連線來源。
       </p>
       <dl>
+        {capture.codeCitation && <>
+          <KeyValue label="核對的本機檔案">{capture.codeCitation.filePath}:{capture.codeCitation.startLine}–{capture.codeCitation.endLine}</KeyValue>
+          <KeyValue label="觀測內容版本 SHA-256（非 Git revision）">{capture.codeCitation.fileSHA256}</KeyValue>
+        </>}
         <KeyValue label="來源取得時間">{capture.capturedAt}</KeyValue>
         <KeyValue label="來源 revision">
           {capture.revision || "unknown"}
@@ -55,6 +60,7 @@ function SourceCaptureDetails({ capture }) {
         </KeyValue>
         <KeyValue label="原始結果 bytes">{capture.rawResult?.bytes}</KeyValue>
       </dl>
+      {capture.codeCitation && <Code label="已核對的程式原文">{capture.codeCitation.exactQuote}</Code>}
       {inspection && (
         <>
           <h4 className="section-label">完整保存連線設定</h4>
@@ -99,7 +105,6 @@ export default function App() {
   // Drafts survive page unmounts but never enter backend/model state or storage.
   const [settingsEdit, setSettingsEdit] = useState(null);
   const [briefDraft, setBriefDraft] = useState(null);
-  const [briefOpenSequence, setBriefOpenSequence] = useState(0);
   const [searchDraft, setSearchDraft] = useState(initialSearchDraft);
   const [searchFeedback, setSearchFeedback] = useState(null);
   const [connected, setConnected] = useState(false);
@@ -109,6 +114,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [toolFeedback, setToolFeedback] = useState(null);
   const [page, setPage] = useState("desk");
+  const [chatConnectionID, setChatConnectionID] = useState("");
   const [pane, setPane] = useState("source");
   const [message, setMessage] = useState("");
   const [line, setLine] = useState("");
@@ -120,6 +126,7 @@ export default function App() {
   const busy = working || state.busy || cancelling;
   const disabled = !connected || busy;
   const demo = state.settings.mode === "demo";
+  const legacyWork = !state.task && Boolean(state.batchPath || state.batchDigest || state.candidates.length || state.extraction);
   const settingsFingerprint = JSON.stringify(state.settings);
   const settingsDraft = settingsEdit?.draft ?? state.settings;
   const settingsChanged = JSON.stringify(settingsDraft) !== settingsFingerprint;
@@ -131,17 +138,8 @@ export default function App() {
     : busy ? "正在處理操作；請等待完成或取消後再查詢。"
       : typeof desktopBridge()?.SearchEvidence !== "function" ? "目前桌面版本尚未提供證據搜尋，請更新桌面程式。"
         : settingsChanged ? "有尚未套用的設定草稿；請先前往連線設定套用或捨棄。"
-          : state.settings.mode !== "local" ? "實際搜尋需切換為實際模式並套用設定；也可先看離線示範。"
-            : !state.settings.queryLauncher ? "請先在連線設定保存 Query launcher。搜尋不需要模型或其他 launcher。" : "";
-  const receiptOpenReason = !connected
-    ? "需從桌面程式啟動並完成狀態同步，才能開啟來源收據。"
-    : busy
-      ? "正在處理操作；請等待完成或取消後，再開啟來源收據。"
-      : state.batchPath || state.batchDigest
-        ? "目前有作用中的批次；請先使用「新工作」保留保存檔案並清除工作指標，再開啟來源收據。"
-        : typeof desktopBridge()?.ChooseSourceReceipt !== "function"
-          ? "目前桌面版本尚未提供來源收據入口，請使用支援此功能的桌面程式。"
-          : "";
+          : state.settings.mode !== "local" ? "搜尋需切換為實際模式並套用設定。"
+            : !state.settings.queryLauncher ? "請先在資料源與連線的進階連線設定填入證據查詢程式。搜尋不需要模型，也不需要啟用寫入。" : "";
   const accept = useCallback((value, ticket) => {
     const normalized = normalizeState(value);
     if (ticket >= applied.current) {
@@ -189,6 +187,9 @@ export default function App() {
     setLine("");
   }, [state.source?.sha256, state.source?.id]);
   useEffect(() => {
+    if (!legacyWork) setPane("source");
+  }, [legacyWork]);
+  useEffect(() => {
     if (!busy) setSearchFeedback((current) => current?.status === "cancel_requested" ? { ...current, status: "cancelled" } : current);
   }, [busy]);
 
@@ -215,18 +216,13 @@ export default function App() {
     setWorking(true);
     setError("");
     setToolFeedback(null);
-    const previousEventIDs = new Set(state.events.map((event) => event.id));
     function reconcileBriefDraft(accepted) {
       if (!accepted) return;
       if (method === "SaveSettings" && ["mode", "intakeLauncher", "queryLauncher", "reviewLauncher"].some((key) =>
         accepted.settings[key] !== state.settings[key])) {
         setBriefDraft((current) => current ? { ...current, review: null } : null);
       }
-      const briefOpenAction = { ChooseBriefSource: "brief_import", ChooseBriefWork: "brief_open" }[method];
-      const openedBrief = briefOpenAction && !accepted.error && accepted.events.some((event) =>
-        event.action === briefOpenAction && event.status === "completed" && !previousEventIDs.has(event.id));
-      if (!accepted.brief || openedBrief) setBriefDraft(null);
-      if (openedBrief) setBriefOpenSequence((current) => current + 1);
+      if (!accepted.brief) setBriefDraft(null);
     }
     try {
       const result = await bridge[method](...args);
@@ -237,11 +233,11 @@ export default function App() {
         // rejected/uncertain save preserves the draft; never retry it here.
         setSettingsEdit((current) => current === settingsEdit ? null : current);
       }
-      if ((method === "SaveSettings" || method === "LoadDemo") && !accepted.error) setSearchFeedback(null);
+      if ((method === "SaveSettings" || method === "NewWork") && !accepted.error) setSearchFeedback(null);
       return accepted;
     } catch {
       setError(
-        method === "SearchEvidence" || method === "LoadEvidenceSearchDemo"
+        method === "SearchEvidence"
           ? "唯讀搜尋未完成。正在嘗試同步狀態；不能判定為查無資料，請檢查執行紀錄。不會自動重試或寫入 DB。"
           : "操作未完成。已重新同步桌面狀態，請檢查保留的來源、逐候選結果與執行紀錄；不會自動重試。",
       );
@@ -259,18 +255,12 @@ export default function App() {
     const confirmed = result?.search && result.search.demo === false && !result.error && !result.busy && sameSearchRequest(result.search.request, request);
     setSearchFeedback((current) => ({ status: current?.status === "cancel_requested" ? "cancelled" : confirmed ? "complete" : "unconfirmed", request }));
   }
-  async function loadEvidenceSearchDemo(scenario) {
-    if (disabled || locked.current || !["mixed", "empty"].includes(scenario)) return;
-    setSearchFeedback({ status: "running" });
-    const result = await action("LoadEvidenceSearchDemo", scenario);
-    setSearchFeedback((current) => ({ status: current?.status === "cancel_requested" ? "cancelled" : result?.search?.demo === true && !result.error && !result.busy ? "complete" : "unconfirmed" }));
-  }
   async function cancel() {
     const bridge = desktopBridge();
     if (!bridge?.Cancel || cancelLocked.current) return;
     cancelLocked.current = true;
     setCancelling(true);
-    const searchOperation = searchFeedback?.status === "running" || searchFeedback?.status === "cancel_requested" || state.operation === "evidence_search" || state.operation === "evidence_search_demo";
+    const searchOperation = searchFeedback?.status === "running" || searchFeedback?.status === "cancel_requested" || state.operation === "evidence_search";
     if (searchOperation) setSearchFeedback((current) => ({ ...current, status: "cancel_requested" }));
     try {
       accept(await bridge.Cancel(), ++sequence.current);
@@ -311,11 +301,13 @@ export default function App() {
     setConfirmation(null);
     if (!intent || disabled) return;
     if (intent.kind === "reset") {
-      const result = await action("LoadDemo");
-      if (result) {
+      const result = await action("NewWork");
+      if (result && !result.error) {
         setPage("desk");
         setPane("source");
         setMessage("");
+        setBriefDraft(null);
+        setSearchDraft(initialSearchDraft());
       }
       return;
     }
@@ -329,7 +321,7 @@ export default function App() {
         intent.query !== state.settings.queryLauncher
       ) {
         setError(
-          "批次或 launcher 已變動，先前確認已失效。請重新核對完整候選。",
+          "批次或連線程式已變動，先前確認已失效。請重新核對完整候選。",
         );
         return;
       }
@@ -388,31 +380,15 @@ export default function App() {
   }
   async function send(event) {
     event.preventDefault();
-    if (!message.trim() || disabled) return;
+    if (!message.trim() || disabled || demo || settingsChanged) return;
     const sent = message;
-    const result = await action("SendMessage", sent);
-    if (result) setMessage((current) => (current === sent ? "" : current));
-  }
-  async function openSourceReceipt() {
-    if (receiptOpenReason) return;
-    const previousEventIDs = new Set(state.events.map((event) => event.id));
-    const result = await action("ChooseSourceReceipt");
-    const completion = result?.events.at(-1);
-    if (
-      result &&
-      !result.busy &&
-      !result.error &&
-      completion?.action === "開啟來源收據" &&
-      completion.status === "completed" &&
-      !previousEventIDs.has(completion.id) &&
-      result.source?.kind === "mcp" &&
-      result.source.capture?.inspection?.verifiedAt
-    ) {
-      // A fresh completed inspection may reopen the same saved path. A retained
-      // source on cancellation/error is not evidence that this operation passed.
-      setPage("desk");
-      setPane("source");
+    if (chatConnectionID && !codebaseConnections(state).some((c) => c.id === chatConnectionID)) {
+      setChatConnectionID(""); setError("讀取連線已變更，請重新選擇。"); return;
     }
+    const result = chatConnectionID
+      ? await action("StartSourceChat", chatConnectionID, sent)
+      : await action("SendMessage", sent);
+    if (result) setMessage((current) => (current === sent ? "" : current));
   }
 
   return (
@@ -464,7 +440,7 @@ export default function App() {
         </div>
         <div className="sidebar-footer">
           <span className={`status-dot ${demo ? "offline" : ""}`} />
-          <span>{demo ? "離線演練模式" : "明確實際模式"}</span>
+          <span>{demo ? "離線 · 尚未啟用連線" : "明確實際模式"}</span>
           <small>{state.version}</small>
         </div>
       </aside>
@@ -481,35 +457,7 @@ export default function App() {
           <div className="topbar-actions">
             <button
               className="button secondary compact"
-              disabled={disabled || typeof desktopBridge()?.ChooseBriefSource !== "function"}
-              onClick={async () => {
-                const result = await action("ChooseBriefSource");
-                if (result?.brief) setPage("desk");
-              }}
-            >
-              開啟 Brief 來源
-            </button>
-            <button
-              className="button secondary compact"
-              disabled={disabled || typeof desktopBridge()?.ChooseBriefWork !== "function"}
-              onClick={async () => {
-                const result = await action("ChooseBriefWork");
-                if (result?.brief) setPage("desk");
-              }}
-            >
-              恢復 Brief 工作
-            </button>
-            <button
-              className="button secondary compact"
-              disabled={Boolean(receiptOpenReason)}
-              aria-describedby="receipt-open-reason"
-              onClick={openSourceReceipt}
-            >
-              開啟來源收據
-            </button>
-            <button
-              className="button secondary compact"
-              disabled={disabled}
+              disabled={disabled || typeof desktopBridge()?.NewWork !== "function"}
               onClick={() => setConfirmation({ kind: "reset" })}
             >
               <Icon name="add" size={15} />
@@ -541,10 +489,6 @@ export default function App() {
           </div>
         </header>
         <WorkspaceIdentity state={state} />
-        <div id="receipt-open-reason" className="working-bar">
-          {receiptOpenReason ||
-            "可離線開啟已保存的 MCP 來源收據；只核對檔案，不會連線、抽取或寫入。"}
-        </div>
         {initializing && (
           <div className="working-bar" role="status">
             <span className="spinner" />
@@ -638,8 +582,8 @@ export default function App() {
         )}
         {page === "search" ? (
           <EvidenceSearch state={state} draft={searchDraft} onDraftChange={setSearchDraft}
-            blockedReason={searchBlockedReason} demoDisabled={disabled || typeof desktopBridge()?.LoadEvidenceSearchDemo !== "function"}
-            onSearch={runEvidenceSearch} onDemo={loadEvidenceSearchDemo} onSettings={() => setPage("source")} feedback={searchFeedback} />
+            blockedReason={searchBlockedReason}
+            onSearch={runEvidenceSearch} onSettings={() => setPage("source")} feedback={searchFeedback} />
         ) : page === "source" ? (
           <div className="page-scroll">
             <Connections
@@ -689,8 +633,8 @@ export default function App() {
               <BatchDetails result={state.batchResult} />
             </div>
           </div>
-        ) : state.brief ? (
-          <BriefWorkspace key={briefOpenSequence} state={state} disabled={disabled} onAction={action} draft={briefDraft} onDraftChange={setBriefDraft} />
+        ) : !state.task && state.brief ? (
+          <BriefWorkspace state={state} disabled={disabled} onAction={action} draft={briefDraft} onDraftChange={setBriefDraft} />
         ) : (
           <div className="workspace-grid">
             <section className="conversation">
@@ -700,26 +644,7 @@ export default function App() {
                   <h1>把來源，變成可追問的線索。</h1>
                   <p>先理解原文與範圍，再逐筆檢查候選。</p>
                 </div>
-                <button
-                  className="button secondary compact"
-                  disabled={disabled}
-                  onClick={() => {
-                    void action("ChooseBatch");
-                  }}
-                >
-                  <Icon name="folder" size={17} />
-                  開啟批次
-                </button>
               </header>
-              {demo && (
-                <div className="rehearsal-notice" role="note">
-                  <strong>離線固定操作演練，不是人工審核</strong>
-                  <p>
-                    聊天只回固定提示，不做語意判斷。輸入 admit 不會採納、
-                    改變候選狀態或寫入 DB；載入合成來源後也是如此。
-                  </p>
-                </div>
-              )}
               <div className="messages" aria-live="polite" aria-busy={busy}>
                 {state.messages.length === 0 ? (
                   <div className="welcome">
@@ -735,40 +660,22 @@ export default function App() {
                     </p>
                     <div className="welcome-cards">
                       <button
-                        disabled={disabled || !demo}
-                        onClick={() => {
-                          void action("LoadDemo");
-                        }}
-                      >
-                        <Icon name="desk" />
-                        <strong>試用離線示範</strong>
-                        <span>
-                          合成來源與固定操作提示
-                          <br />
-                          不呼叫模型或資料庫
-                        </span>
-                        <Icon name="arrow" size={16} />
-                      </button>
-                      <button
                         disabled={disabled}
-                        onClick={() => {
-                          void action("ChooseSource");
-                        }}
+                        onClick={() => setPage("source")}
                       >
                         <Icon name="source" />
-                        <strong>開啟本機來源</strong>
+                        <strong>連接資料源</strong>
                         <span>
-                          用原生選檔器匯入
+                          設定來源 MCP 與本機模型
                           <br />
-                          保留完整原文與雜湊
+                          確認工具與參數後取得來源
                         </span>
                         <Icon name="arrow" size={16} />
                       </button>
                     </div>
                     <div className="welcome-boundary">
                       <Icon name="shield" size={16} />
-                      目前是 {demo ? "離線演練" : "實際模式"}
-                      。聊天沒有採納權限；Brief 審查需獨立明確操作。
+                      聊天不會自行呼叫工具或寫入 DB。
                     </div>
                   </div>
                 ) : (
@@ -792,6 +699,8 @@ export default function App() {
                 )}
               </div>
               <form className="composer-area" onSubmit={send}>
+                <CodebaseChat state={state} selected={chatConnectionID} onSelect={setChatConnectionID}
+                  disabled={disabled || demo || settingsChanged} onAction={action} />
                 <div className="composer">
                   <label className="sr-only" htmlFor="message-input">
                     對話訊息
@@ -799,23 +708,23 @@ export default function App() {
                   <textarea
                     id="message-input"
                     placeholder={
-                      demo ? "練習送出訊息（只回固定提示，不會採納）…" : "針對目前來源與候選提問…"
+                      demo ? "請先到資料源與連線啟用本機模型" : "針對目前來源與候選提問…"
                     }
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
-                    disabled={disabled}
+                    disabled={disabled || demo || settingsChanged}
                     rows={3}
                   />
                   <div className="composer-bottom">
                     <span>
                       <span className={`status-dot ${demo ? "offline" : ""}`} />
-                      {demo ? "固定提示 · 未採納" : state.settings.model}
+                      {demo ? "模型尚未啟用" : state.settings.model}
                     </span>
                     <button
                       type="submit"
                       className="send-button"
                       aria-label="送出訊息"
-                      disabled={disabled || !message.trim()}
+                      disabled={disabled || demo || settingsChanged || !message.trim()}
                     >
                       <Icon name="send" size={19} />
                     </button>
@@ -826,12 +735,11 @@ export default function App() {
                     聊天模型僅接收對話文字、來源原文，以及完整候選、引用與限制；
                     不附帶操作路徑、設定、收據或 DB 查詢結果。
                     這不是敏感內容自動遮蔽：寫進對話、來源或候選的敏感資訊仍會送入模型。
-                    聊天模型沒有工具呼叫或寫入權限。
+                    一般對話沒有工具權限；Codebase 模式可建議一次讀取，仍需另外按卡片確認。模型沒有寫入權限。
                   </p>
                 )}
                 <p className="composer-note">
-                  對話不會觸發來源工具或 pending
-                  寫入；來源內容與模型回覆不是指令或核准。
+                  對話不會直接執行工具或 pending 寫入；來源內容與模型回覆不是指令或核准。
                 </p>
               </form>
             </section>
@@ -843,12 +751,10 @@ export default function App() {
                 </div>
                 <button
                   className="icon-button"
-                  aria-label="開啟本機來源"
-                  title="開啟本機來源"
+                  aria-label="前往來源連線"
+                  title="前往來源連線"
                   disabled={disabled}
-                  onClick={() => {
-                    void action("ChooseSource");
-                  }}
+                  onClick={() => setPage("source")}
                 >
                   <Icon name="add" />
                 </button>
@@ -865,13 +771,13 @@ export default function App() {
                 >
                   來源原文 <span>{state.source ? 1 : 0}</span>
                 </button>
-                <button
+                {legacyWork && <button
                   role="tab"
                   aria-selected={pane === "candidates"}
                   onClick={() => setPane("candidates")}
                 >
                   完整候選 <span>{state.candidates.length}</span>
-                </button>
+                </button>}
               </div>
               <div
                 className="pane-scroll"
@@ -906,7 +812,7 @@ export default function App() {
                         </KeyValue>
                       </dl>
                       <SourceCaptureDetails capture={state.source.capture} />
-                      <div className="extract-controls">
+                      {legacyWork && <div className="extract-controls">
                         <label>
                           選取來源資料列
                           <select
@@ -944,9 +850,9 @@ export default function App() {
                         </button>
                         <p className="field-help">
                           僅處理後端辨識的 STATUS
-                          資料列；一般工具結果先檢視／對話，不宣稱可直接抽取或入庫。
+                          資料列；不會將一般文字轉成候選或送入 DB。
                         </p>
-                      </div>
+                      </div>}
                       <h4 className="section-label">完整來源原文</h4>
                       <Code label="完整來源原文">{state.source.rawText}</Code>
                       <details>
@@ -956,7 +862,7 @@ export default function App() {
                     </div>
                   ) : (
                     <Empty title="來源會留在這裡">
-                      開啟一份本機文件，或到資料源與連線明確呼叫來源工具。原文不會被候選摘要取代。
+                      到資料源與連線確認工具與參數，取得來源。原文不會被候選摘要取代。
                     </Empty>
                   )
                 ) : (
@@ -993,11 +899,12 @@ export default function App() {
                   </>
                 )}
               </div>
-              <footer className="evidence-footer">
+              {legacyWork && <footer className="evidence-footer">
                 <button
                   className="button secondary"
                   disabled={
                     disabled ||
+                    Boolean(state.task) ||
                     demo ||
                     !state.batchPath ||
                     !state.settings.queryLauncher
@@ -1019,9 +926,9 @@ export default function App() {
                 <p>
                   pending 會寫入 DB，不是 canonical 採納。
                   <br />
-                  需全部候選與兩個 launcher 的獨立確認。
+                  需獨立確認全部候選，以及待審提交與證據查詢程式。
                 </p>
-              </footer>
+              </footer>}
             </aside>
           </div>
         )}
@@ -1030,7 +937,7 @@ export default function App() {
         <Dialog
           title={
             confirmation.kind === "reset"
-              ? "開始新的離線工作"
+              ? "開始新工作"
               : confirmation.kind === "pending"
                 ? "確認完整批次的 pending 寫入"
                 : "確認這一次來源工具呼叫"
@@ -1049,11 +956,10 @@ export default function App() {
           {confirmation.kind === "reset" ? (
             <>
               <div className="notice">
-                只清除目前工作中的來源／批次指向與對話檢視，回到離線演練。先前保存的
-                checkpoint、批次與收據不會刪除。
+                只清除目前來源、任務、候選、搜尋與對話檢視。先前保存的 checkpoint、批次與收據不會刪除。
               </div>
               <p>
-                之後可從「開啟批次」重新載入已保存工作，或明確切換到實際模式再匯入新的來源。
+                保留已套用設定、來源登入及工具清單；不連線、不呼叫模型，也不寫入 DB。未套用的設定草稿仍保留。
               </p>
             </>
           ) : confirmation.kind === "pending" ? (
@@ -1070,10 +976,10 @@ export default function App() {
                 <KeyValue label="Batch index 路徑">
                   {confirmation.path}
                 </KeyValue>
-                <KeyValue label="Intake launcher">
+                <KeyValue label="待審提交程式">
                   {confirmation.intake}
                 </KeyValue>
-                <KeyValue label="Query launcher">{confirmation.query}</KeyValue>
+                <KeyValue label="證據查詢程式">{confirmation.query}</KeyValue>
               </dl>
               <p>
                 這是同一來源列的獨立單候選

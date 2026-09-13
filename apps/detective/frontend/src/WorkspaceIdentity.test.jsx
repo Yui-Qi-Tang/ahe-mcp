@@ -9,7 +9,7 @@ afterEach(() => { delete window.go; });
 function installWorkspace(extra = {}) {
   const state = { ...emptyState(), workspaceID: "a1b2c3d4e5f6", dataDir: "/private/synthetic/workspace", ...extra };
   const bridge = Object.fromEntries([
-    "Snapshot", "SaveSettings", "LoadDemo", "DiscoverTools", "CallSourceTool",
+    "Snapshot", "SaveSettings", "NewWork", "DiscoverTools", "CallSourceTool",
     "SuggestSourceTool", "SendMessage", "Extract", "QueryPending", "SubmitPending",
   ].map((name) => [name, vi.fn(async () => structuredClone(state))]));
   window.go = { main: { App: bridge } };

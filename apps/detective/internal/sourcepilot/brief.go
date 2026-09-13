@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	// BriefSourceVersion identifies a caller-declared source without an external summary.
-	BriefSourceVersion = "detective-brief-source/v1"
+	// BriefSourceVersion requires an explicitly selected news or public event source.
+	BriefSourceVersion = "detective-brief-source/v2"
 	// BriefVersion identifies an unreviewed reading brief, never an AHE proposal.
 	BriefVersion = "detective-brief/v1"
 	// BriefPromptVersion identifies the single-call, plain-text reading task.
@@ -32,14 +32,16 @@ const (
 // BriefSource preserves exact input text and caller-declared provenance.
 // These coordinates do not establish publisher authenticity or Core intake.
 type BriefSource struct {
-	Version        string   `json:"version"`
-	SourceID       string   `json:"source_id"`
-	SourceRevision string   `json:"source_revision"`
-	SourceURL      string   `json:"source_url"`
-	ObservedAt     string   `json:"observed_at"`
-	Coverage       string   `json:"coverage"`
-	Limitations    []string `json:"limitations"`
-	Body           string   `json:"body"`
+	Version        string        `json:"version"`
+	SourceKind     string        `json:"source_kind,omitempty"`
+	SourceID       string        `json:"source_id"`
+	SourceRevision string        `json:"source_revision"`
+	SourceURL      string        `json:"source_url"`
+	ObservedAt     string        `json:"observed_at"`
+	Coverage       string        `json:"coverage"`
+	Limitations    []string      `json:"limitations"`
+	Body           string        `json:"body"`
+	Excerpt        *BriefExcerpt `json:"excerpt,omitempty"`
 }
 
 // BriefReport separates generated text from the complete original source.
@@ -62,18 +64,60 @@ type BriefReport struct {
 // ParseBriefSource rejects unknown or duplicate fields, nulls and invalid sources.
 func ParseBriefSource(raw []byte) (BriefSource, error) {
 	var source BriefSource
-	if len(raw) > 256<<10 || guidedReportDecode(raw, &source) != nil {
+	if len(raw) > 256<<10 {
+		return BriefSource{}, &InputLimitError{Resource: "source_json_bytes", Limit: 256 << 10, Observed: int64(len(raw))}
+	}
+	if guidedReportDecode(raw, &source) != nil {
 		return BriefSource{}, errors.New("invalid brief source JSON")
 	}
-	if err := validateBriefSource(source); err != nil {
+	if err := ValidateBriefSourceForExtraction(source); err != nil {
 		return BriefSource{}, err
 	}
 	return source, nil
 }
 
+// ValidateBriefSourceForExtraction requires an explicit news or public_event
+// selection before creating a new Brief or starting a model or intake client.
+// The selection is caller-declared; it does not authenticate or classify content.
+func ValidateBriefSourceForExtraction(source BriefSource) error {
+	if source.Version != BriefSourceVersion || (source.SourceKind != "news" && source.SourceKind != "public_event") {
+		return errors.New("brief requires an explicitly selected news or public_event source in detective-brief-source/v2; engineering evidence requires scope-preserving extraction")
+	}
+	return validateBriefSource(source)
+}
+
 func validateBriefSource(s BriefSource) error {
+	if err := validateBriefSourceFields(s, BriefBodyLimit, "body_bytes"); err != nil {
+		return err
+	}
+	projection, err := SegmentBody(s.Body)
+	if err != nil {
+		return err
+	}
+	if len(projection.Segments) == 0 {
+		return errors.New("brief source has no nonempty segments")
+	}
+	return nil
+}
+
+func validateBriefSourceFields(s BriefSource, bodyLimit int, resource string) error {
 	bad := errors.New("invalid brief source or coverage")
-	if s.Version != BriefSourceVersion || !guidedText(s.SourceID, 512, false, false) || !guidedText(s.SourceRevision, 512, false, false) || !guidedText(s.SourceURL, 2048, false, false) || !guidedText(s.Body, 32<<10, false, true) || s.Limitations == nil || len(s.Limitations) > 8 {
+	switch s.Version {
+	case "detective-brief-source/v1":
+		if s.SourceKind != "" || s.Excerpt != nil {
+			return bad
+		}
+	case BriefSourceVersion:
+		if s.SourceKind != "news" && s.SourceKind != "public_event" {
+			return bad
+		}
+	default:
+		return bad
+	}
+	if len(s.Body) > bodyLimit {
+		return &InputLimitError{Resource: resource, Limit: int64(bodyLimit), Observed: int64(len(s.Body))}
+	}
+	if !guidedText(s.SourceID, 512, false, false) || !guidedText(s.SourceRevision, 512, false, false) || !guidedText(s.SourceURL, 2048, false, false) || !guidedText(s.Body, bodyLimit, false, true) || s.Limitations == nil || len(s.Limitations) > 8 {
 		return bad
 	}
 	u, err := url.Parse(s.SourceURL)
@@ -94,15 +138,20 @@ func validateBriefSource(s BriefSource) error {
 			return bad
 		}
 	}
-	projection, err := SegmentBody(s.Body)
-	if err != nil || len(projection.Segments) == 0 {
-		return bad
-	}
-	return nil
+	return validateBriefExcerpt(s)
 }
 
 // NewBriefReport creates an offline inspection preserving the complete body.
 func NewBriefReport(source BriefSource) (BriefReport, error) {
+	if err := ValidateBriefSourceForExtraction(source); err != nil {
+		return BriefReport{}, err
+	}
+	return newBriefReport(source)
+}
+
+// newBriefReport also reconstructs historical v1 reports for consistency checks.
+// It never upgrades their source version or supplies a missing source kind.
+func newBriefReport(source BriefSource) (BriefReport, error) {
 	if err := validateBriefSource(source); err != nil {
 		return BriefReport{}, err
 	}
@@ -111,6 +160,10 @@ func NewBriefReport(source BriefSource) (BriefReport, error) {
 		return BriefReport{}, err
 	}
 	source.Limitations = append([]string{}, source.Limitations...)
+	if source.Excerpt != nil {
+		excerpt := *source.Excerpt
+		source.Excerpt = &excerpt
+	}
 	digest := sha256.Sum256([]byte(briefInput(source.Body)))
 	return BriefReport{Version: BriefVersion, PromptVersion: BriefPromptVersion, Source: source,
 		BodySHA256: projection.BodySHA256, Projection: projection, InputSHA256: hex.EncodeToString(digest[:]),
@@ -234,7 +287,7 @@ func ParseBriefReport(raw []byte) (BriefReport, error) {
 
 func validateBriefReport(report BriefReport) error {
 	bad := errors.New("brief report does not match its recorded source and text")
-	want, err := NewBriefReport(report.Source)
+	want, err := newBriefReport(report.Source)
 	if err != nil || len(report.RawText) > 32<<10 || !utf8.ValidString(report.RawText) {
 		return bad
 	}
@@ -275,10 +328,21 @@ func WriteBriefText(w io.Writer, report BriefReport) error {
 	fmt.Fprintln(&out, "來源短摘要｜待人審閱，不是真實性證明或採納")
 	fmt.Fprintf(&out, "階段：%s\n來源：%s\n版本：%s\n來源連結（僅文字，不開啟）：%s\n觀測時間：%s\n宣告涵蓋：%s\n原文 SHA-256：%s\n輸入 SHA-256：%s\n",
 		guidedDisplay(report.Stage), guidedDisplay(report.Source.SourceID), guidedDisplay(report.Source.SourceRevision), guidedDisplay(report.Source.SourceURL), guidedDisplay(report.Source.ObservedAt), guidedDisplay(report.Source.Coverage), report.BodySHA256, report.InputSHA256)
+	if report.Source.SourceKind == "" {
+		fmt.Fprintln(&out, "來源類型：未宣告（歷史 v1；不可用於新的 Brief 抽取、候選或來源提交；既有查詢與審查可原樣恢復）")
+	} else {
+		fmt.Fprintf(&out, "來源類型（輸入者宣告）：%s\n", guidedDisplay(report.Source.SourceKind))
+	}
 	for _, limitation := range report.Source.Limitations {
 		fmt.Fprintf(&out, "來源限制：%s\n", guidedDisplay(limitation))
 	}
 	fmt.Fprintln(&out, "來源座標由輸入者宣告；雜湊只固定內容，不驗證發布者身分。")
+	if e := report.Source.Excerpt; e != nil {
+		fmt.Fprintf(&out, "摘錄父來源：%s\n父版本：%s\n父本文 SHA-256：%s\n父本文長度：%d UTF-8 bytes\n選取範圍：[%d, %d) UTF-8 bytes\n選取原因：%s\n", guidedDisplay(e.ParentSourceID), guidedDisplay(e.ParentSourceRevision), e.ParentBodySHA256, e.ParentBodyBytes, e.StartByte, e.EndByte, guidedDisplay(e.SelectionReason))
+		fmt.Fprintln(&out, "保存的父來源座標，尚未重新比對父原文；摘錄不代表父文件完整內容或逐句支持。")
+	} else if report.Source.Coverage != "full_document" {
+		fmt.Fprintln(&out, "本次提供的部分原文沒有可重驗的父本文範圍座標；未驗證與父文件的對應。")
+	}
 	if report.Text != "" {
 		fmt.Fprintf(&out, "\n模型短摘要（尚未人工核對）\n%s\n", guidedDisplay(report.Text))
 	} else if report.RawText != "" {

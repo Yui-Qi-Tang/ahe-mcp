@@ -44,3 +44,36 @@ func ollamaExtractorOutputSchema(input ExtractorInput, maxProposals int) (map[st
 		"properties":           map[string]any{"proposals": proposals},
 	}, nil
 }
+
+func ollamaWholeSpanSelectionSchema(input ExtractorInput, maxProposals int) (map[string]any, error) {
+	units, err := wholeSpanExactQuoteUnits(input)
+	if err != nil {
+		return nil, err
+	}
+	schema, err := ollamaExtractorOutputSchema(input, maxProposals)
+	if err != nil {
+		return nil, err
+	}
+	if len(units) == 0 {
+		return schema, nil
+	}
+	choices := make([]any, 0, len(units))
+	for _, unit := range units {
+		choices = append(choices, map[string]any{
+			"type":                 "object",
+			"additionalProperties": false,
+			"required":             []string{"proposal_local_id", "statement_text", "evidence_refs"},
+			"properties": map[string]any{
+				"proposal_local_id": map[string]any{"type": "string", "minLength": 1},
+				"statement_text":    map[string]any{"type": "string", "enum": []string{unit.StatementText}},
+				"evidence_refs": map[string]any{
+					"type": "array", "minItems": 1, "maxItems": 1,
+					"items": map[string]any{"type": "string", "enum": unit.EvidenceRefs},
+				},
+			},
+		})
+	}
+	proposals := schema["properties"].(map[string]any)["proposals"].(map[string]any)
+	proposals["items"] = map[string]any{"oneOf": choices}
+	return schema, nil
+}

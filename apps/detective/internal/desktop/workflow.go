@@ -13,6 +13,31 @@ import (
 
 const demoSource = "## Status at a Glance\n| Capability | Status | Notes |\n| --- | --- | --- |\n| Demonstration review | IMPLEMENTED | Synthetic demonstration only; no production claim or admission. |\n"
 
+// NewWork clears the active work without changing connections or saved files.
+// It creates no source, candidate, chat response, or external operation.
+func (s *Service) NewWork() (State, error) {
+	_, done, err := s.begin(context.Background(), "new_work")
+	if err != nil {
+		return s.Snapshot(), err
+	}
+	defer done()
+
+	s.mu.Lock()
+	s.state.Source = nil
+	s.state.SourceChat = nil
+	s.state.Task = nil
+	s.state.Brief = nil
+	s.state.Candidates = []CandidateView{}
+	s.state.Extraction = nil
+	s.state.BatchPath = ""
+	s.state.BatchDigest = ""
+	s.state.BatchResult = nil
+	s.state.Messages = []Message{}
+	s.state.Search = nil
+	s.mu.Unlock()
+	return s.finish(done, nil, "已開始空白工作；設定、連線與已保存檔案仍保留。")
+}
+
 // LoadDemo starts a deterministic rehearsal and clears only active UI pointers.
 // Previously saved sources, checkpoints and receipts are never deleted.
 func (s *Service) LoadDemo() (State, error) {
@@ -27,6 +52,7 @@ func (s *Service) LoadDemo() (State, error) {
 	}
 	s.mu.Lock()
 	s.state.Settings.Mode = "demo"
+	s.state.Task = nil
 	s.forgetAllSourceLoginsLocked()
 	s.state.Brief = nil
 	s.state.Source = &source
@@ -75,6 +101,7 @@ func (s *Service) ImportSource(path string) (State, error) {
 	source.Note = "原始路徑：" + path + "；抽取使用保存的快照 bytes。不可覆寫來源座標紀錄：" + provenance.Path
 	s.mu.Lock()
 	s.state.Brief = nil
+	s.state.Task = nil
 	s.state.Source = &source
 	s.state.Candidates = []CandidateView{}
 	s.state.Extraction = nil
@@ -82,7 +109,7 @@ func (s *Service) ImportSource(path string) (State, error) {
 	s.mu.Unlock()
 	detail := "來源快照已保存；沒有呼叫模型或 MCP。"
 	if len(source.Rows) == 0 {
-		detail = "來源已保存供檢視；目前抽取只支援 Status at a Glance 表列，不支援此文件形狀。"
+		detail = "來源已保存；可到任務選段輸入目的並確認原文範圍。舊表列抽取不支援此文件形狀。"
 	}
 	return s.finish(done, nil, detail)
 }
@@ -110,6 +137,7 @@ func (s *Service) OpenBatch(path string) (State, error) {
 		return s.finish(done, err, "批次在檢查期間變更；保留原畫面，請重新開啟並核對批次。")
 	}
 	s.mu.Lock()
+	s.state.Task = nil
 	s.state.Source = &source
 	s.state.BatchPath = path
 	s.state.BatchDigest = index.Digest
@@ -133,7 +161,7 @@ func (s *Service) Extract(ctx context.Context, line int) (State, error) {
 	}
 	defer done()
 	state := s.Snapshot()
-	if state.Source == nil || state.BatchPath != "" || state.Brief != nil {
+	if state.Source == nil || state.BatchPath != "" || state.Brief != nil || state.Task != nil {
 		return s.finish(done, errors.New("source unavailable"), "請先選擇來源；既有批次只能檢視或恢復，不重新抽取覆寫。")
 	}
 	if state.Source.Kind == "demo" {
@@ -254,7 +282,7 @@ func (s *Service) SubmitPending(ctx context.Context, confirmation string) (State
 	s.invalidateObservationsLocked()
 	s.mu.Unlock()
 	state := s.Snapshot()
-	if state.Settings.Mode != "local" || state.Source == nil || state.Source.Kind == "demo" || state.BatchPath == "" || state.BatchDigest == "" || confirmation != state.BatchDigest {
+	if state.Task != nil || state.Settings.Mode != "local" || state.Source == nil || state.Source.Kind == "demo" || state.BatchPath == "" || state.BatchDigest == "" || confirmation != state.BatchDigest {
 		return s.finish(done, errors.New("confirmation required"), "送出需本機模式、非演練批次，以及完整且相同的 batch digest；聊天文字不是授權。")
 	}
 	index, err := pending.LoadBatchIndex(state.BatchPath)

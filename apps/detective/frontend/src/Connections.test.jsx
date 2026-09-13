@@ -77,6 +77,51 @@ function description(element) {
 }
 
 describe("Connections settings and manual source workflow", () => {
+  it("keeps optional evidence-store setup collapsed and distinguishes configured paths from connectivity", () => {
+    const state = fixture();
+    state.settings.queryLauncher = "/operator/query";
+    const { onAction, onToolConfirm } = setup(state);
+    const section = screen.getByRole("region", { name: "AHE 證據庫設定" });
+    const details = within(section).getByText("進階連線設定").closest("details");
+    expect(details).not.toHaveAttribute("open");
+    expect(within(section).getByText(/只聊天、取得來源內容，不需要填這一區/)).toBeVisible();
+    expect(within(section).getByText(/查詢：已填寫.*不代表連線成功/)).toBeVisible();
+    expect(within(section).getByLabelText("證據查詢程式")).not.toBeVisible();
+    expect(screen.queryByText("AHE 查詢與 pending 交接")).not.toBeInTheDocument();
+    expect(onAction).not.toHaveBeenCalled();
+    expect(onToolConfirm).not.toHaveBeenCalled();
+  });
+  it("explains the three roles and preserves exact executable paths without calling them", () => {
+    const state = fixture();
+    const { onAction, onToolConfirm } = setup(state);
+    fireEvent.click(screen.getByText("進階連線設定"));
+    expect(screen.getByText(/目前安裝不會自動產生這些檔案/)).toBeVisible();
+    const fields = [
+      ["證據查詢程式", "queryLauncher", "只需要搜尋時，填這一項即可"],
+      ["待審提交程式", "intakeLauncher", "不是正式採納"],
+      ["人工審閱程式", "reviewLauncher", "單純填入設定不會執行審閱"],
+    ];
+    const expected = { ...state.settings };
+    for (const [label, key, help] of fields) {
+      const field = screen.getByLabelText(label);
+      expect(field).toBeVisible();
+      expect(description(field)).toContain(help);
+      expected[key] = `/operator/private tools/${key}`;
+      fireEvent.change(field, { target: { value: expected[key] } });
+    }
+    expect(onAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "套用本次設定" }));
+    expect(onAction).toHaveBeenCalledExactlyOnceWith("SaveSettings", expected);
+    expect(onToolConfirm).not.toHaveBeenCalled();
+  });
+  it("explains which file a local source needs without presenting a shell command", () => {
+    setup();
+    const field = screen.getByLabelText("本機啟動程式");
+    expect(field).toHaveValue("/operator/source");
+    expect(description(field)).toContain("資料源安裝說明提供的可執行啟動檔");
+    expect(description(field)).toContain("不是資料文件、網址或整串終端機指令");
+    expect(screen.queryByLabelText("Launcher 絕對路徑")).not.toBeInTheDocument();
+  });
   it("keeps model advice separate from the existing human call confirmation", async () => {
     const state = fixture();
     state.tools = [tool()];
@@ -97,6 +142,8 @@ describe("Connections settings and manual source workflow", () => {
     fireEvent.click(screen.getByRole("button", { name: "帶入工具與參數草稿" }));
     expect(screen.getByLabelText("已探索工具")).toHaveValue("read_status");
     expect(screen.getByLabelText("精確參數 JSON")).toHaveValue(argsJSON);
+    expect(description(screen.getByLabelText("精確參數 JSON"))).toContain("請依所選工具的 input schema 填寫");
+    expect(screen.queryByText(/read_status 範例使用/)).not.toBeInTheDocument();
     expect(onAction).toHaveBeenCalledExactlyOnceWith("SuggestSourceTool", "source-1", "查詢狀態");
     expect(onToolConfirm).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "檢查並批准這次呼叫" }));
@@ -110,9 +157,9 @@ describe("Connections settings and manual source workflow", () => {
     const apply = status.getByRole("button", { name: "套用本次設定" });
     expect(apply).toBeDisabled();
     expect(description(apply)).toMatch(/沒有尚未套用/);
-    expect(status.getByText("已生效：離線演練")).toBeInTheDocument();
+    expect(status.getByText("已生效：離線")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: /實際模式/ }));
-    expect(status.getByText("已生效：離線演練")).toBeInTheDocument();
+    expect(status.getByText("已生效：離線")).toBeInTheDocument();
     expect(status.getByText(/未套用草稿：實際模式/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "取得工具清單" })).toBeDisabled();
     expect(onAction).not.toHaveBeenCalled();
@@ -120,7 +167,7 @@ describe("Connections settings and manual source workflow", () => {
     const expected = { ...state.settings, mode: "local" };
     expect(onAction).toHaveBeenCalledExactlyOnceWith("SaveSettings", expected);
     expect(onToolConfirm).not.toHaveBeenCalled();
-    expect(status.getByText("已生效：離線演練")).toBeInTheDocument();
+    expect(status.getByText("已生效：離線")).toBeInTheDocument();
     rerender({ ...state, settings: expected });
     expect(status.getByText("已生效：實際模式")).toBeInTheDocument();
     expect(apply).toBeDisabled();
@@ -185,13 +232,13 @@ describe("Connections settings and manual source workflow", () => {
     expect(onToolConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it("explains private persisted settings, unsaved chat and offline startup", () => {
+  it("explains private persisted settings, unsaved drafts and offline startup", () => {
     setup();
     expect(
       screen.getByText(/設定會保存於本機私有資料目錄/),
     ).toBeInTheDocument();
-    expect(screen.getByText(/聊天不會自動保存/)).toBeInTheDocument();
-    expect(screen.getByText(/每次啟動仍從離線演練開始/)).toBeInTheDocument();
+    expect(screen.getByText(/未套用的設定草稿.*不會自動保存，關閉視窗後不保留/)).toBeInTheDocument();
+    expect(screen.getByText(/每次啟動仍從離線開始/)).toBeInTheDocument();
     expect(
       screen.queryByText(/只留在這次桌面工作階段/),
     ).not.toBeInTheDocument();
