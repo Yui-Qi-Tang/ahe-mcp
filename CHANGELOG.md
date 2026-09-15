@@ -2,7 +2,7 @@
 
 ## Unreleased — 2026-09-14
 
-- Froze Detective Desktop as unavailable (目前不工作); retained implementation
+- Froze Detective Desktop as unavailable; retained implementation
   and historical results. Returned development priority to CLI stabilization.
 - Fixed premature OAuth callback connection closure with bounded response draining.
 

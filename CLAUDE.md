@@ -2,7 +2,7 @@
 
 ## Read First
 
-- Detective Desktop is **frozen / unavailable (目前不工作)** as of 2026-09-14.
+- Detective Desktop is **frozen / unavailable** as of 2026-09-14.
   CLI stabilization comes first. Do not request UI acceptance, start the app,
   extend Desktop or publish it unless the user explicitly unfreezes that work.
   Keep existing code/tests/data. CLI end-to-end engineering intake remains incomplete.

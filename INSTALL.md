@@ -1,6 +1,6 @@
 # Installing AHE
 
-> **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** Do not install, launch,
+> **Desktop frozen / unavailable — 2026-09-14.** Do not install, launch,
 > upgrade or accept Desktop as a working product using this guide. Desktop
 > procedures below are retained references only. MCP setup is unchanged;
 > Detective CLI end-to-end engineering intake remains incomplete.
