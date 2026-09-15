@@ -1,515 +1,819 @@
-# AHE 系統設計
+# AHE System Design
 
-本文件集中說明現行資料結構、演算法與理論邊界。安裝與權限設定見
-[INSTALL](../INSTALL.md)，產品入口見 [README](../README.md)。
-本文描述產品契約，不將內部開發計畫或實驗進度當成現行能力。
-歷史實驗日誌、審查報告與原始量測不屬於產品文件；本文也不是部署或模型品質證明。
+This document describes current data structures, algorithms and theoretical boundaries.
+See [INSTALL](../INSTALL.md) for installation and permissions, and [README](../README.md)
+for product entry points. It describes product contracts; internal plans and experiment
+progress are not current capabilities. Historical experiment logs, reviews and raw
+measurements are not product documentation. This document is not proof of deployment
+readiness or model quality.
 
-**適用狀態：Desktop 自 2026-09-14 起凍結、目前不工作（不可用）。** 本文的 Desktop
-介面與 Service 描述僅代表保留實作，不是可用性或完整流程的承諾。CLI 優先補齊與驗收；
-凍結不變更 MCP／Core 的查詢演算法、資料結構或 admission 邊界。
+**Status: Desktop has been frozen and unavailable since 2026-09-14.** Desktop UI and
+Service descriptions refer to retained code, not a working or complete workflow.
+CLI completion and acceptance come first. The freeze does not change MCP/Core query
+algorithms, data structures or admission boundaries.
 
-## 目錄
+## Contents
 
-- [系統職責](#architecture)
-- [資料模型與身分](#data-model)
-- [審查與狀態轉移](#review)
-- [圖關係與版本](#graph)
-- [文字搜尋](#search)
-- [Detective 擷取與恢復](#detective)
-- [執行權限與完整性](#authority)
-- [參考文獻](#references)
+- [System responsibilities](#architecture)
+- [Data model and identity](#data-model)
+- [Review and state transitions](#review)
+- [Graph relations and versions](#graph)
+- [Text search](#search)
+- [Detective extraction and recovery](#detective)
+- [Runtime authority and integrity](#authority)
+- [References](#references)
 
 <a id="architecture"></a>
 
-## 系統職責
+## System responsibilities
 
 ```text
-資料源／來源 MCP → Detective → Intake MCP → 來源、擷取紀錄、pending
-                                      ↓
-                        精確 review subject → 人工決定
-                                      ↓
-                               Review MCP → PostgreSQL
-                                      ↑
-Detective／下游 agent ← 唯讀證據包 ← Query MCP
+Data source / source MCP → Detective → Intake MCP → sources, extraction records, pending
+                                           ↓
+                             exact review subject → human decision
+                                           ↓
+                                    Review MCP → PostgreSQL
+                                           ↑
+Detective / downstream agent ← read-only evidence package ← Query MCP
 ```
 
-- **Detective** 負責資料源連線、原文保存、模型擷取及人工作業介面。來源取得不進入 Core。
-- **MCP domain／PostgreSQL** 保存來源身分、提案、審查決定與 canonical graph；模型輸出沒有寫入核准效力。
-- **Query** 只取回有範圍、狀態與引用的材料，不替使用者生成事實結論。
-- **拓撲核心** 處理節點、邊與結構演算法；關係的證據意義、時間語意與 admission 仍由 AHE 定義。
+- **Detective** connects to sources, preserves original content, runs model extraction
+  and provides the human workflow. Source collection stays outside Core.
+- **MCP domain / PostgreSQL** stores source identity, proposals, review decisions and
+  the canonical graph. Model output does not authorize writes.
+- **Query** retrieves material with scope, status and citations. It does not produce
+  factual conclusions for the user.
+- **Topology kernel** handles nodes, edges and structural algorithms. AHE defines
+  the evidence meaning, temporal semantics and admission rules of relations.
 
-Detective 與 MCP 共用一份 Go module，但仍透過分離的 stdio 程序互動。
-新 Desktop 不直接持有 DB 憑證；舊 `ahe-detective` collector 不是新 Desktop。
-來源已收集、提案 pending、canonical 已採納、repository generation 已啟用與下游答案，是五個不同層次。
+Detective and MCP share one Go module but communicate through separate stdio processes.
+The new Desktop does not hold DB credentials directly; the old `ahe-detective` collector
+is a separate program. Collected sources, pending proposals, admitted canonical evidence,
+active repository generations and downstream answers are five distinct states or layers.
 
 <a id="data-model"></a>
 
-## 資料模型與身分
+## Data model and identity
 
-### 來源與候選
+### Sources and candidates
 
-| 結構 | 保存什麼 | 不代表什麼 |
+| Structure | Stores | Does not establish |
 | --- | --- | --- |
-| `source_blobs` | 原始內容與內容雜湊 | 來源是真實或可信的 |
-| `source_snapshots` | 來源物件、版本與 metadata | 該版本在來源端仍為最新 |
-| `extraction_views` | renderer／版本、呈現本文及雜湊 | 模型摘要可以取代原文 |
-| `span_catalog_entries` | view 內精確 byte 範圍、行號、引用與雜湊 | 引用支持任意主張 |
-| `extraction_runs`／`extraction_attempts` | 來源、extractor 定義、嘗試狀態及輸出身分 | 模型語意品質已合格 |
-| `proposal_batches`／`proposal_occurrences` | 一次輸出的候選集合與各筆主張 | 已取得 admission |
-| external source request／receipt | 某次交付與已保存來源的綁定 | 多次交付就是多個獨立來源 |
+| `source_blobs` | Original content and content hashes | Source truth or trustworthiness |
+| `source_snapshots` | Source objects, revisions and metadata | Whether a revision is still the latest at the provider |
+| `extraction_views` | Renderer/version, rendered body and hash | Permission to replace original content with a model summary |
+| `span_catalog_entries` | Exact byte ranges, line numbers, citations and hashes within a view | Support for arbitrary claims |
+| `extraction_runs` / `extraction_attempts` | Source, extractor definition, attempt status and output identity | Acceptable model semantic quality |
+| `proposal_batches` / `proposal_occurrences` | Candidate sets from one output and their claims | Admission approval |
+| External source request/receipt | Binding between a delivery and its stored source | Independent sources merely because there were multiple deliveries |
 
-原始 bytes、呈現 view、精確引文與主張分開保存。清理或呈現轉換要留下 renderer 與來源關係，
-不能以模型摘要覆寫原始證據。同一文件的多段引用也不會自然變成互相獨立的佐證。
+Raw bytes, rendered views, exact quotes and claims are stored separately. Cleaning or
+rendering must retain the renderer and source relationship; a model summary must not
+overwrite original evidence. Multiple quotes from one document are not automatically
+independent support.
 
-外部來源使用 provider 物件身分及 revision；同一 revision 的內容或來源 metadata 改變會衝突。
-外部 envelope 要求 `content_fidelity=verbatim`；`exact_excerpt`／`truncated_document` 要說明限制，
-`full_document` 的 `limitations` 必須為空。這是提交契約，不是 AHE 對 provider 身分或完整性的外部認證。
+External sources use provider object identity and revision. Content or source metadata
+changes under the same revision cause a conflict. The external envelope requires
+`content_fidelity=verbatim`. `exact_excerpt` and `truncated_document` require stated
+limitations; `full_document` requires empty `limitations`. This submission contract does
+not externally certify provider identity or completeness.
 
-來源交付 request 與 extraction request 是不同命名空間。相同 extraction request 只允許相同來源、
-view 與 extractor 定義；不同輸入須使用新 request。相同輸出可重播，改輸出不得追加另一組候選。
-`producer_session_ref` 是稽核註記，不用來替換語意身分。成功的零候選輸出是 abstention。
-晚到的失敗只能將 `started` 改為 `failed`，不能覆寫先前已提交的終態。
+Source delivery requests and extraction requests use separate namespaces. Reusing an
+extraction request requires the same source, view and extractor definition. Different
+inputs require a new request. Identical output can be replayed; changed output cannot
+append another candidate set. `producer_session_ref` is an audit annotation, not a
+replacement for semantic identity. A successful output with zero candidates is abstention.
+A late failure can only move `started` to `failed`; it cannot overwrite a committed terminal state.
 
 ### Canonical graph
 
-`CanonicalArtifact` 是可傳遞的有界資料表示，包含 nodes、edges、payloads、provenance、temporal、
-integrity 與 derivations；不是另一個持久化權威資料庫。
+`CanonicalArtifact` is a portable, bounded representation containing nodes, edges,
+payloads, provenance, temporal data, integrity and derivations. It is not another
+authoritative persistent database.
 
-- 節點種類：`raw_evidence`、`source_claim`、`derived_claim`、`candidate`。
-- 邊包含 `from`、`to`、relation 與 provenance reference。
-- payload 分開保留來源內容／定位、claim、適用範圍與 target anchors；不將標題當成完整證據。
-- temporal 記錄與 Supersession currentness 是不同概念；後者是查詢時計算的投影。
-- derivation 記錄完整 parent 集合，表達 **AND 依賴**，不是任一 parent 都足夠。
+- Node kinds: `raw_evidence`, `source_claim`, `derived_claim`, `candidate`.
+- Edges contain `from`, `to`, a relation and a provenance reference.
+- Payloads separately retain source content/location, claims, scope and target anchors.
+  A title is not complete evidence.
+- Temporal records and Supersession currentness differ. Currentness is a projection
+  computed at query time.
+- A derivation records the complete parent set as an **AND dependency**; one parent
+  alone is not sufficient.
 
-種類存在不等於標準 MCP writer 可以建立該種類。
-資料型別見 [canonical.go](../internal/evidencegraph/canonical.go)，來源契約見
-[external_source.go](../internal/evidenceingestion/external_source.go)，實際持久化約束見 [migrations](../migrations)。
+The existence of a type does not mean a standard MCP writer can create it.
+See [canonical.go](../internal/evidencegraph/canonical.go) for types,
+[external_source.go](../internal/evidenceingestion/external_source.go) for source
+contracts, and [migrations](../migrations) for persistence constraints.
 
 <a id="review"></a>
 
-## 審查與狀態轉移
+## Review and state transitions
 
-| 人工決定 | 保存結果 | Canonical 效果 |
+| Human decision | Stored result | Canonical effect |
 | --- | --- | --- |
-| 暫不決定 | 留在 `pending`；不是 writer outcome | 無 |
-| `admit` | `admitted` 決定及 exact-review binding | 原子建立或驗證允許重用的 canonical materialization |
-| `reject` | `rejected` 終態及審查理由 | 不建立 canonical 節點／邊 |
-| `audit_only` | `audit_only` 終態及審查理由 | 不建立 canonical 節點／邊 |
+| Defer | Remains `pending`; not a writer outcome | None |
+| `admit` | `admitted` decision and exact-review binding | Atomically creates or verifies canonical materialization eligible for reuse |
+| `reject` | `rejected` terminal state and review reason | No canonical nodes or edges created |
+| `audit_only` | `audit_only` terminal state and review reason | No canonical nodes or edges created |
 
-精確審查的綁定鏈為 manifest → submission receipt → proposal basis → review package → displayed subject。
-顯示本文也在 binding 內，不只核對 proposal ID。Review getter 只接受 pending；writer 在同一
-Repeatable Read 交易鎖定提案、重新建構 subject、核對完整 display，才原子保存決定與相應 materialization。
-Intake、Query 與 model 不會因看到一份 review package 就取得核准權。
+The exact-review binding chain is manifest → submission receipt → proposal basis →
+review package → displayed subject. The displayed text is bound too; checking only a
+proposal ID is insufficient. The review getter accepts only pending proposals. In one
+Repeatable Read transaction, the writer locks the proposal, rebuilds the subject and
+checks the complete display before atomically storing the decision and any corresponding
+materialization. Seeing a review package grants no approval authority to Intake, Query or a model.
 
-重播須維持原 outcome、subject、extraction attempt、principal 與 reason。修改理由、引用或 ID
-不是恢復程序；不確定的回覆也不代表遠端交易已回滾。終態重試走原 writer request，不要求重新取得 pending review。
+Replay must preserve the original outcome, subject, extraction attempt, principal and
+reason. Changing a reason, quote or ID is not recovery. An uncertain response does not
+mean the remote transaction rolled back. Terminal-state retries use the original writer
+request and do not require a new pending review.
 
-普通 source-backed admission 產生 `raw_evidence → source_claim` 的 `supports_claim`。
-mutation manifest、node／edge binding 與 first-materializer 身分用來約束重用與精確重播；
-相同 ID 的本文或關係不同要拒絕，不能覆寫既有證據。
-DB 保存的是被誰、以什麼理由採納的主張，不能證明該人確實看過畫面，也不能證明主張為真。
+Ordinary source-backed admission creates `raw_evidence → source_claim` through
+`supports_claim`. The mutation manifest, node/edge binding and first-materializer identity
+constrain reuse and exact replay. Different content or relations under the same ID must
+be rejected rather than overwrite existing evidence. The DB records who admitted a claim
+and why; it does not prove that the person read the display or that the claim is true.
 
-實作入口： [review contract](../internal/evidenceingestion/reviewable_ingestion.go)、
-[display binding](../internal/evidenceingestion/reviewable_ingestion_display.go)、
-[admission](../internal/evidenceingestion/reviewable_ingestion_admission.go)、
-[disposition](../internal/evidenceingestion/reviewable_ingestion_disposition.go)。
+Implementation: [review contract](../internal/evidenceingestion/reviewable_ingestion.go),
+[display binding](../internal/evidenceingestion/reviewable_ingestion_display.go),
+[admission](../internal/evidenceingestion/reviewable_ingestion_admission.go),
+[disposition](../internal/evidenceingestion/reviewable_ingestion_disposition.go).
 
 <a id="graph"></a>
 
-## 圖關係與版本
+## Graph relations and versions
 
-### 結構演算法不等於證據推論
+### Structural algorithms are not evidence inference
 
-| 關係 | 語意／方向 |
+| Relation | Meaning/direction |
 | --- | --- |
-| `supports_claim` | 原始證據 → 來源主張 |
-| `derived_from` | 此實作為 parent → derived target；完整 parent manifest 才表達 AND 依賴 |
-| `contradicts` | 對稱關係；端點排序後以同一 node pair 表示 |
-| `supersedes` | 新 replacement → 舊 target |
-| `references`／`implements` | 型別化參照／實作關係；不能只靠相似度或任意邊寫入認定 |
+| `supports_claim` | Raw evidence → source claim |
+| `derived_from` | In this implementation, parent → derived target; the complete parent manifest expresses the AND dependency |
+| `contradicts` | Symmetric; sorted endpoints identify the same node pair |
+| `supersedes` | New replacement → old target |
+| `references` / `implements` | Typed reference/implementation relations; similarity or arbitrary edge writes alone cannot establish them |
 
-Graph adapter 從同一讀取快照取得 AHE 選定的關係與有界範圍，再交給通用拓撲演算法。
-路徑只證明該視圖內有結構連通；cycle、SCC 或 contradiction component 不是語意矛盾的自動證明，
-更不代表 component 內任兩點都互相矛盾。需要 DAG 的檢查必須指定關係，不可假定整張證據圖無環。
-程序內 read-view handle 綁定 principal 與 DB／schema／role；被淘汰或程序重啟後要重開。
-有界 ReadView 不能冒充全域完整圖。
+The graph adapter obtains AHE-selected relations and a bounded scope from one read
+snapshot, then passes them to general topology algorithms. A path proves only structural
+connectivity within that view. A cycle, SCC or contradiction component does not automatically
+prove a semantic contradiction, nor that every pair in the component contradicts each other.
+Checks requiring a DAG must name the relation; the full evidence graph is not assumed acyclic.
+Process-local read-view handles bind the principal and DB/schema/role. They must be reopened
+after eviction or process restart. A bounded ReadView is not a complete global graph.
 
-### 已實作的內部領域契約
+### Graph adapter example
 
-以下寫入路徑存在於 domain／typed registry，但**目前標準 ingestion runtime 不開放這些 writer**。
-不可套用 `source-claim-reviewer` 憑證繞過入口，也不可把它們當成 Desktop 按鈕。
+The adapter maps AHE records to the generic graph kernel without changing their IDs
+or relations. It sorts nodes and edges by ID, then calls `graph.Build` to create a
+snapshot. Canonical records remain in each graph node/edge's `Data` field. The relation
+filter is applied when an algorithm reads that snapshot.
 
-- **Derived admission**：最多 64 個已採納 parents、新的 immutable derived target、完整精確的
-  `parent → target` 邊；交易內以鎖與 cycle preflight 驗證，不從鬆散二元邊猜測必要前提。
-- **Contradiction**：先建立完整提案再核准；node pair 身分為單次使用，包含 `rejected`／`audit_only`
-  終態。改 rationale 不會變成新版本，不得複製節點繞過限制。
-- **Supersession**：新外部來源 pending proposal、fresh replacement、完整 targets 與 head 條件一起核准；
-  不從 provider revision 排序自動建立替代關係。
+```mermaid
+flowchart LR
+    A["Bounded CanonicalArtifact"] --> V["AHE validation"]
+    V --> M["Map IDs, endpoints and canonical Data"]
+    M --> S["Sort by ID and call graph.Build"]
+    S --> G["Immutable graph.Snapshot"]
+    G --> F["Explicit relation filter"]
+    F --> P["Path witness"]
+```
 
-見 [admission](../internal/evidenceingestion/admission.go)、
-[contradiction](../internal/evidenceingestion/canonical_contradiction.go)、
-[supersession admission](../internal/evidenceingestion/supersession_admission.go)。
+For example, suppose a complete artifact contains these synthetic relations:
 
-### Supersession：lineage、CAS 與不可變歷史
+```mermaid
+flowchart LR
+    A["A: parent claim"] -->|derived_from| D["D: derived claim"]
+    B["B: parent claim"] -->|derived_from| D
+    A ---|contradicts| C["C: another claim"]
+```
 
-Lineage 由六欄 basis 決定：`source_system`、`source_namespace`、`object_type`、`object_id`、
-`slot_kind`、`slot_id`。前四欄須符合已保存來源，後兩欄是經審閱的穩定語意槽宣告。
-內容、provider revision、時間、模型與 session 不參與 lineage 身分；相同內容不等於同一 lineage。
+The following helper runs inside this repository's Go module because it imports
+`internal` packages. Its input is a complete `CanonicalArtifact`, including the
+payload, provenance, temporal, integrity and derivation records required by validation.
+An edge-only diagram is not enough to construct that artifact. A bounded PostgreSQL
+read supplies `CanonicalReadView.Artifact`; its scope and `Truncated` flag must remain
+part of the caller's interpretation.
 
-每次替代最多 64 targets，產生 fresh source claim、`new → old` edges、append-only event、
-member／target mirrors、decision 與新 head。完整集合要同一交易原子成立；不能部分採納或事後追加 targets。
-Bootstrap 只把符合來源物件條件的既有 admitted claim 登記為舊成員，不重建或重審原節點。
+```go
+package graphexample
 
-所有 lineage 共用一個 global revision／head。Command 帶入讀到的 expected revision 與 head event ID；
-鎖定 head 後重新比對，只有符合才從 N 推進到 N+1。這是資料庫內序列化點，不是 provider 時間，
-也不是多節點共識協定。request／decision／event hashes 綁定各自完整語意，差異不能當 exact replay。
-PostgreSQL 約束與 deferred triggers 檢查 relational mirrors、append-only 與 head progression；
-Go domain 重算語意雜湊，兩者不是兩套可各自改寫的 JSON canonicalization。
+import (
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceprojection"
+)
 
-### Currentness：同一快照的可證明範圍
+// FindDerivedPath finds one directed path using only derived_from edges.
+func FindDerivedPath(
+	artifact evidencegraph.CanonicalArtifact,
+	from, to string,
+) (evidenceprojection.PathWitness, error) {
+	topology, err := evidenceprojection.PrepareTopology(artifact)
+	if err != nil {
+		return evidenceprojection.PathWitness{}, err
+	}
+	return topology.FindPath(evidenceprojection.PathQuery{
+		FromNodeID: from,
+		ToNodeID:   to,
+		Relations: []evidencegraph.CanonicalEdgeRelation{
+			evidencegraph.CanonicalDerivedFrom,
+		},
+	})
+}
+```
 
-唯讀 loader 讀取 head、完整 global event chain、所選 lineage members／edges／targets 與同物件 claims，
-核對雜湊、連續性、無環及分類完整性，再計算沒有 incoming `supersedes` 的 frontier。
-以下為逐節點狀態：有有效 incoming `supersedes` 者維持 `superseded`；
-只有其餘 frontier 節點再依 closure 完整性與 frontier 數量判定，不將所有節點一起改為 `current` 或 `unknown`。
-
-| 結果 | 條件 |
+| Query in this example | Result |
 | --- | --- |
-| `superseded` | 存在有效 incoming `supersedes` |
-| `current` | closure 完整，且只有一個 frontier |
-| `ambiguous` | closure 完整，但有多個 frontier |
-| `unknown` | 同物件尚有未分類 claim，無法證明 frontier 完整性 |
+| A to D, `derived_from` only | `Found=true`, path A → D |
+| A to C, `derived_from` only | `Found=false`; the contradiction edge is excluded |
+| D to A, `derived_from` only | `Found=false`; derived edges keep their direction |
+| A to C, `contradicts` only | `Found=true`; use `CanonicalContradicts` in `Relations` |
 
-資料結構損壞、事件缺漏、hash／mirror 不符、cycle 或超出上限直接報錯，不偽裝成 `unknown`。
-現行硬上限：10,000 global events、10,000 lineage members、100,000 lineage edges、50,000 object claims。
-Witness 綁定當次快照，不是簽署憑證；`current` 不代表來源端最新或現實為真。
-Query 只接受 lineage key，不接受 caller 宣告 winner、members 或 completeness。
+The A → D path does not establish that A alone supports D: D's complete derivation
+still requires both A and B. The witness reports connectivity within this view and
+does not admit evidence or change PostgreSQL. The adapter and `graph` types remain
+private to `evidenceprojection`; callers use AHE's `PreparedTopology` and `PathWitness`.
+See [adapter](../internal/evidenceprojection/topology.go),
+[path API](../internal/evidenceprojection/topology_algorithms.go) and
+[relation-scope tests](../internal/evidenceprojection/topology_algorithms_test.go).
 
-見 [lineage / event](../internal/evidencesupersession/supersession.go)、
-[closure / currentness](../internal/evidencesupersession/closure.go)。
-Migration 42 的 pair-v1 退場不猜測舊資料：既有 pair authority 非空會停止，不能用舊邊偽造 fresh-v2 歷史。
+### Implemented internal domain contracts
+
+These write paths exist in the domain/typed registry, but **the current standard ingestion
+runtime does not expose these writers**. Do not bypass the entry point with
+`source-claim-reviewer` credentials or treat these paths as Desktop buttons.
+
+- **Derived admission**: each new immutable derived claim requires 1–64 admitted
+  direct parents and the complete exact `parent → target` edges. Go admission validation
+  enforces this parent-count limit; the database schema does not enforce the same
+  64-parent limit. Transactional locks and cycle preflight validate the set; loose
+  binary edges do not establish required premises.
+- **Contradiction**: create a complete proposal before approval. Node-pair identity is
+  single-use, including `rejected` and `audit_only` terminal states. Changing the rationale
+  does not create a new version. Do not duplicate nodes to bypass this rule.
+- **Supersession**: approve a new external-source pending proposal, fresh replacement,
+  complete targets and head conditions together. Provider revision order does not
+  automatically create a replacement relation.
+
+See [admission](../internal/evidenceingestion/admission.go),
+[contradiction](../internal/evidenceingestion/canonical_contradiction.go),
+[supersession admission](../internal/evidenceingestion/supersession_admission.go).
+
+### Supersession review flow
+
+This diagram describes the internal Supersession domain workflow. The standard
+ingestion runtime does not expose its writer.
+
+```mermaid
+sequenceDiagram
+    participant A as External agent
+    participant H as Human reviewer
+    participant I as Intake service
+    participant W as Internal Supersession writer
+    participant P as PostgreSQL
+    A->>I: Submit source and pending proposal
+    I->>P: Validate and store candidate material
+    A->>H: Show claim, exact quotes, source revision and limitations
+    A->>H: Show complete targets, six-field basis and observed head
+    H-->>A: Explicit approval, reviewer and reason
+    A->>W: Proposal, basis, exact targets and expected head
+    W->>P: Begin transaction; read proposal and lock head
+    P-->>W: Stored source, proposal and current head
+    W->>W: Check fresh replacement, targets, lineage, hashes and head
+    W->>P: Atomically save replacement, relations, decision, event and new head
+    W-->>A: Committed result or error
+```
+
+### Supersession: lineage, CAS and immutable history
+
+Six basis fields define lineage: `source_system`, `source_namespace`, `object_type`,
+`object_id`, `slot_kind`, `slot_id`. The first four must match the stored source; the
+last two are reviewed declarations of a stable semantic slot. Content, provider revision,
+time, model and session are not part of lineage identity. Identical content does not imply
+identical lineage.
+
+The database schema enforces 1–64 targets per Supersession event, limiting each
+replacement to 64 `supersedes` relations. Each replacement creates a fresh source claim,
+`new → old` edges, an append-only event, member/target mirrors, a decision and a new head. The entire
+set must be atomic in one transaction. Partial admission and later target additions are
+not allowed. Bootstrap registers existing admitted claims that meet source-object
+conditions as old members; it does not recreate or review those nodes again.
+
+All lineages share one global revision/head. A command supplies the expected revision
+and head event ID it read. After locking the head, the command checks them again and
+advances N to N+1 only on a match. This is a database serialization point, not provider
+time or a multi-node consensus protocol. Request/decision/event hashes bind their complete
+semantics; differences cannot be treated as exact replay. PostgreSQL constraints and
+deferred triggers check relational mirrors, append-only history and head progression.
+The Go domain recomputes semantic hashes; these are not two independently editable
+JSON canonicalization schemes.
+
+The stored relationships are:
+
+```mermaid
+flowchart LR
+    P["Pending proposal"] --> D["Admission decision"]
+    D --> E["Append-only replacement event"]
+    L["Six-field lineage"] --> M["Lineage members"]
+    E --> M
+    E --> T["Exact target records: 1–64"]
+    E -->|advances| H["Global revision / head"]
+    R["Raw evidence"] -->|supports_claim| N["Fresh source claim"]
+    N -->|supersedes| O["Old target claims"]
+    T -.-> O
+    E -.-> N
+```
+
+All writes belong to the same transaction:
+
+```mermaid
+flowchart LR
+    G["New nodes and all edges"] --> D["Decision"]
+    D --> E["Event"]
+    E --> M["Replacement and bootstrap members"]
+    M --> T["Exact target mirrors"]
+    T --> H["Head N to N+1"]
+    H --> C["Commit-time integrity checks"]
+    C --> V{"All checks pass?"}
+    V -->|Yes| A["Commit: complete event becomes visible"]
+    V -->|No| R["Roll back all writes"]
+```
+
+### Currentness: what one snapshot can establish
+
+The read-only loader reads the head, complete global event chain, selected lineage
+members/edges/targets and claims for the same object. It checks hashes, continuity,
+acyclicity and classification completeness, then computes the frontier of nodes with no
+incoming `supersedes`. Status is per node: nodes with valid incoming `supersedes` remain
+`superseded`. Only the remaining frontier nodes are classified by closure completeness
+and frontier size; not all nodes become `current` or `unknown` together.
+
+| Result | Condition |
+| --- | --- |
+| `superseded` | A valid incoming `supersedes` exists |
+| `current` | Complete closure with one frontier node |
+| `ambiguous` | Complete closure with multiple frontier nodes |
+| `unknown` | Unclassified claims for the same object prevent proof of frontier completeness |
+
+Corrupt structures, missing events, hash/mirror mismatches, cycles and exceeded limits
+return errors, not `unknown`. Current hard limits: 10,000 global events, 10,000 lineage
+members, 100,000 lineage edges and 50,000 object claims. A witness binds the snapshot;
+it is not a signed certificate. `current` does not mean latest at the provider or true
+in the real world. Query accepts only the lineage key, not caller-declared winners,
+members or completeness.
+
+```mermaid
+flowchart TD
+    Q["Lineage key"] --> R["One Repeatable Read / Read Only snapshot"]
+    R --> L["Load global head, full event chain and selected lineage"]
+    L --> V["Validate hashes, mirrors, continuity, bounds and acyclicity"]
+    V -->|Invalid| E["Return an error"]
+    V -->|Valid| N{"Node has incoming supersedes?"}
+    N -->|Yes| S["superseded"]
+    N -->|No| C{"Closure complete?"}
+    C -->|No| U["Frontier node: unknown"]
+    C -->|Yes| F{"Frontier size"}
+    F -->|One| X["current"]
+    F -->|Multiple| B["ambiguous"]
+```
+
+See [lineage / event](../internal/evidencesupersession/supersession.go),
+[closure / currentness](../internal/evidencesupersession/closure.go).
+Migration 42 retires pair-v1 without guessing old data: nonempty existing pair authority
+stops the migration. Old edges cannot stand in for fresh-v2 history.
+
+```mermaid
+flowchart TD
+    L["Lock graph edges, pair-v1 proposals and decisions in one transaction"]
+    L --> C["Count supersedes edges, pair-v1 proposals and decisions"]
+    C --> Z{"All three counts are zero?"}
+    Z -->|No| F["Stop and roll back; legacy data needs separate handling"]
+    Z -->|Yes| D["Retire pair-v1 tables and dependent schema objects"]
+    D --> V["Install fresh-v2 tables, constraints and triggers"]
+```
 
 <a id="search"></a>
 
-## 文字搜尋
+## Text search
 
-搜尋分成「哪些資料可入選」及「入選資料如何排序」。兩者都不判斷主張真假。
-`search_evidence_records` 保持 exact lexical lookup；下表是 grounded brief 可選模式，不能混用預設。
+Search separates candidate eligibility from candidate ranking. Neither determines truth.
+`search_evidence_records` retains exact lexical lookup. The modes below are options for
+grounded brief; their defaults are not interchangeable.
 
-| `query_mode` | 方法 |
+| `query_mode` | Method |
 | --- | --- |
-| `exact_lexical` | statement 上 PostgreSQL `simple` 正規化後的全詞匹配；不是原始 bytes 相等 |
-| `deterministic_lexical_recovery` | grounded brief 預設；記錄 simple 嘗試，再採 English morphology；仍零結果且 English 至少 3 詞才放寬至至少 2 詞重疊 |
-| `experimental_han_lexical_recovery_v1` | recovery-v2 最終零結果後才加字面 Han 全詞匹配；混合 ASCII 另依規則處理 |
-| `experimental_multisurface_lexical_v1` | 研究路線；既有 baseline 候選與 statement／有界來源本文候選聯集 |
-| `practical_multisurface_lexical_v1` | Detective 實務路線；有條件零命中補查與 Han 輔助詞限制 |
+| `exact_lexical` | Matches all terms in the statement after PostgreSQL `simple` normalization; not raw-byte equality |
+| `deterministic_lexical_recovery` | Grounded brief default; records the simple attempt, then uses English morphology. Only if results remain empty and English yields at least 3 terms does it relax to at least 2 overlapping terms |
+| `experimental_han_lexical_recovery_v1` | Adds literal Han all-term matching only after recovery-v2 ends with zero results; mixed ASCII follows separate rules |
+| `experimental_multisurface_lexical_v1` | Research mode; unions baseline candidates with statement/bounded-source-body candidates |
+| `practical_multisurface_lexical_v1` | Detective practical mode; conditional zero-hit expansion and restrictions on auxiliary Han terms |
 
-`simple` 有命中並不會讓 recovery-v2 提早停止；它仍執行 English morphology。
-Han 字面 fallback 與 multisurface bigrams 是不同演算法，都不是通用中文斷詞、翻譯或語意推論。
+A `simple` match does not stop recovery-v2 early; English morphology still runs.
+Literal Han fallback and multisurface bigrams are different algorithms. Neither is a
+general Chinese word segmenter, translator or semantic inference engine.
 
-### 實務 multisurface plan v2
+### Practical multisurface plan v2
 
-1. 將連續 Han 字元轉為重疊雙字片段，其他文字使用 PostgreSQL English 正規化；保留原始 query。
-2. 保留 baseline 候選；statement 與來源本文的英文門檻為 `min(2, 詞數)`，Han 依選入政策補充候選。
-3. 固定輔助片段如「影響、造成、是否、如何」不能單獨觸發 Han 補充命中。
-   若問句只有輔助 Han 片段且無英文詞，保留明示的廣查例外。這不是語意主題辨識。
-4. 只有首輪完整零結果、有英文詞、baseline 未截斷且沒有來源被上限排除，才再以 1 個英文詞查一次。
-   非空結果、錯誤、取消或資料超限不會觸發擴張。
-5. SQL 在排序與 limit 前套用選入條件。以 distinct matched-term count 降冪、建立時間降冪、ID 升冪排序；
-   原詞仍用於匹配說明與計分，不改來源字詞或候選引文。
+1. Convert consecutive Han characters into overlapping bigrams. Normalize other text
+   with PostgreSQL English and retain the original query.
+2. Retain baseline candidates. The English threshold for statements and source bodies
+   is `min(2, term count)`; Han adds candidates under its eligibility policy.
+3. Fixed auxiliary fragments meaning "affect", "cause", "whether" and "how" cannot
+   trigger supplemental Han matches alone. An explicit broad-search exception remains
+   for queries containing only auxiliary Han fragments and no English terms. This is
+   not semantic topic recognition.
+4. Retry with one English term only if the first pass is completely empty, English
+   terms exist, the baseline is not truncated and no source was excluded by a limit.
+   Nonempty results, errors, cancellation and exceeded data limits do not trigger expansion.
+5. SQL applies eligibility before sorting and limit. Sort by distinct matched-term
+   count descending, creation time descending, then ID ascending. Original terms still
+   explain and score matches; source wording and candidate quotes are not changed.
 
-實務 mode 名稱仍為 v1，實際 plan 為 `practical-multisurface-lexical-v2`，回應為
-`grounded-evidence-brief-v7`；三個版本代表不同契約。Detective 明確選用 mode／schema，
-不相容時回報錯誤，不默默降級。研究 v6 保留獨立模式，不把固定案例結果當成一般品質保證。
+The practical mode name remains v1, its plan is `practical-multisurface-lexical-v2`,
+and its response is `grounded-evidence-brief-v7`. These versions identify different
+contracts. Detective explicitly selects the mode/schema and reports incompatibility
+instead of silently falling back. Research v6 remains a separate mode. Fixed-case results
+are not a general quality guarantee.
 
-### 範圍與限制
+### Scope and limits
 
-- 完整來源補查只涵蓋 `manual_text`／`manual-text-identity/v1`，不是所有 external-document renderer。
-- Source view 最多 1 MiB、4,096 spans，單一 span 最多 8,192 bytes；超限明示排除，不聲稱查遍。
-- 每個來源至多回傳 8 個匹配 spans，超出明示 truncation；另以 `within_proposal_source_refs`
-  區分新找回的上下文與候選原引用，不修改原提案。
-- Query 最多 256 個 Unicode 字元、16 個空白分隔詞，結果 limit 最大 100；filter 與可見範圍不可因補查放寬。
-- 一次 evidence query 使用 Repeatable Read／Read Only 快照；逾時或完整性失敗是錯誤，不是假空集合。
-- 沒有向量搜尋、模型 query rewrite 或語意蘊涵判定。零命中只表示在本次範圍與規則內沒找到。
+- Full-source expansion covers only `manual_text` / `manual-text-identity/v1`, not all
+  external-document renderers.
+- Source views are limited to 1 MiB and 4,096 spans; each span is limited to 8,192 bytes.
+  Exclusions are explicit and do not support a claim of exhaustive search.
+- Each source returns at most 8 matching spans, with explicit truncation beyond that.
+  `within_proposal_source_refs` distinguishes recovered context from original proposal
+  citations without changing the proposal.
+- Queries allow at most 256 Unicode characters and 16 whitespace-separated terms;
+  result limit is at most 100. Expansion cannot broaden filters or visibility.
+- Each evidence query uses one Repeatable Read / Read Only snapshot. Timeout and
+  integrity failures return errors, not false empty sets.
+- There is no vector search, model query rewrite or semantic entailment check. Zero
+  hits mean nothing was found within this request's scope and rules.
 
-程式依據：[query modes](../internal/evidenceingestion/query_execution.go)、
-[lexical recovery](../internal/evidenceingestion/query_recovery.go)、
-[Han fallback](../internal/evidenceingestion/query_han_recovery.go)、
-[multisurface](../internal/evidenceingestion/query_multisurface.go)、
-[source bounds](../internal/evidenceingestion/source_view_bounded.go)。
-理論背景見 [搜尋文獻](#search-references)；目前排序不是 BM25、PathSim 或論文評分器的實作。
+Code: [query modes](../internal/evidenceingestion/query_execution.go),
+[lexical recovery](../internal/evidenceingestion/query_recovery.go),
+[Han fallback](../internal/evidenceingestion/query_han_recovery.go),
+[multisurface](../internal/evidenceingestion/query_multisurface.go),
+[source bounds](../internal/evidenceingestion/source_view_bounded.go).
+See [search references](#search-references) for background. Current ranking does not
+implement BM25, PathSim or a paper's scoring model.
 
 <a id="detective"></a>
 
-## Detective 擷取與恢復
+## Detective extraction and recovery
 
-### 任務導向選段與本機模型邊界
+### Task-driven selection and local-model boundaries
 
-[taskextract](../apps/detective/internal/taskextract) 接受一份凍結的任務與來源，
-不負責蒐集或入庫，模型介面由呼叫者提供。
-[ExtractTask](../apps/detective/internal/desktop/task_model.go) 是受控本機接線：
-先 `Prepare`、拒絕無可讀範圍，再取得明選模型並生成一次，不開 Desktop 工作區。
-沿用 loopback 限制與環境憑證隔離，不使用工具、重試或模型備援；
-schema 綁定段落 ID，生成不完成或協定錯配不交付候選。
-相依方向為 `CLI／Desktop Service → desktop.ExtractTask → taskextract`；離線解析與檢視
-共用 `taskextract`。模型接線本身不開 Desktop 工作區，Desktop Service 負責目前工作與私有保存；
-外部 intake 尚未接通。
+[taskextract](../apps/detective/internal/taskextract) accepts a frozen task and source.
+It does not collect or ingest data; the caller supplies the model interface.
+[ExtractTask](../apps/detective/internal/desktop/task_model.go) provides controlled local
+integration: it calls `Prepare`, rejects input without a readable scope, then obtains
+the explicitly selected model and generates once without opening a Desktop workspace.
+Loopback restrictions and environment credential isolation remain. There are no tools,
+retries or fallback models. The schema binds paragraph IDs; incomplete generation or
+protocol mismatch yields no candidates.
 
-`detective-task-input/v1` 是呼叫端宣告的 Task／Source 保存格式；
-`detective-task-run/v1` 綁定完整輸入、模型、InputID 與結果，不是 AHE attempt 或來源收據。
-`task inspect` 凍結明選模型的輸入並顯示原文，不連模型；`task run` 先保留全新私有輸出，
-再執行一次選段；`task read` 不取來源、不呼叫模型，只核對保存內容。
-成功結果必須通過既有 `Replay`；失敗保存有限錯誤碼與原始回覆，但不帶候選，
-重讀時不把失敗回覆重新解碼成成功。終端控制／格式字元的跳脫僅作用於顯示。
-檢視保留全部原文、已提供／未取得／未提供欄位、未選段落，以及分離的模型註記。
-這不是原生精確審閱 display，不取得人工決定，也不授予 intake／admission 權限。
+Dependencies run `CLI / Desktop Service → desktop.ExtractTask → taskextract`.
+Offline parsing and inspection share `taskextract`. The model integration itself does
+not open a Desktop workspace. Desktop Service manages active work and private storage;
+external intake is not connected yet.
 
-保留的 Desktop Service 以獨立 `TaskWork` 保存目的、InputID、模型設定、完整輸入、Scope 與 run record，
-不轉成舊 STATUS 的 CandidateView／RowBatch 或 Brief。`PrepareTask` 核對畫面指定的
-來源 path／SHA 與保存 bytes 後凍結；`RunTask` 只接受同一 prepared InputID 與模型設定，
-沿用 Service 的 busy／取消界線，執行一次並保存全新私有紀錄。失敗或取消沒有候選；
-保存未確認不發布成功。換來源或套用設定清除作用中的 TaskWork，不刪先前檔案。
-目的修改須重新準備，不替舊候選更名；同來源的新版本不沿用舊結果。
+`detective-task-input/v1` stores caller-declared Task/Source data.
+`detective-task-run/v1` binds complete input, model, InputID and result; it is not an AHE
+attempt or source receipt. `task inspect` freezes input for the explicitly selected model
+and displays original text without connecting to the model. `task run` reserves a fresh
+private output before one selection run. `task read` only verifies saved content; it
+does not fetch a source or call a model. Successful results must pass existing `Replay`
+checks. Failures store bounded error codes and raw responses without candidates. Reading
+them again does not decode failed responses into success. Escaping terminal control and
+format characters affects display only. Inspection retains all original text, fields
+provided/not obtained/not provided, unselected paragraphs and separate model notes.
+This is not the native exact-review display, does not collect a human decision and grants
+no intake/admission authority.
 
-一般已保存文字只對應一個 `body` 或 `tool_return` 欄位，revision 為 `unknown`、
-coverage 為 `exact_excerpt`；保留已知的 capture 引用與限制，不補造 Jira description／comments
-或 provider identity。整份保存文字超過 32 KiB 或 128 段則拒絕選段，不暗中截短。
-`OpenTaskRecord` 保留為離線恢復服務，核對私有工作區的 task-run，不重新讀來源或呼叫模型。
-一般 Desktop UI 不提供本機來源、保存紀錄或合成示範的開啟入口，也不掛載獨立
-`TaskWorkspace` 頁面或工作台選段卡；選段元件、Service、CLI 與回歸測試保留。
-來源 MCP 蒐集、聊天與證據查詢仍是分開的操作；聊天尚未接上任務選段。
-`NewWork` 只清空作用中來源、候選、聊天與查詢，不建立合成來源，
-也不改變已套用的設定、工具清單或登入。舊寫入／擷取入口仍拒絕作用中的任務。
+The retained Desktop Service stores the objective, InputID, model settings, complete
+input, Scope and run record in a separate `TaskWork`. It does not convert them into old
+STATUS CandidateView/RowBatch or Brief records. `PrepareTask` checks the UI-selected
+source path/SHA against saved bytes before freezing. `RunTask` requires the same prepared
+InputID and model settings, respects Service busy/cancellation boundaries, runs once and
+saves a fresh private record. Failure or cancellation yields no candidates; unconfirmed
+storage cannot publish success. Changing the source or applying settings clears active
+TaskWork without deleting earlier files. Changing the objective requires preparation
+again, not relabeling old candidates. A new source version cannot reuse old results.
 
-資料源設定之後另列選用的 AHE 證據庫，進階連線設定預設收合。
-查詢程式唯讀；待審提交程式建立 pending 而非採納；人工審閱程式須有明確決定才可寫入。
-這些顯示名稱不改變 MCP profile 或授權，也不自動設定 DB。工作台移除未啟動模型的
-常駐警示，不代表模型自動啟動；操作前置條件與失敗狀態仍由原流程檢查。
+Ordinary saved text maps to one `body` or `tool_return` field, with revision `unknown`
+and coverage `exact_excerpt`. Known capture references and limitations are retained;
+Jira description/comments and provider identity are not invented. Selection rejects
+saved text over 32 KiB or 128 paragraphs without silent truncation. `OpenTaskRecord`
+remains an offline recovery service that checks a private workspace task-run without
+rereading the source or calling a model. The ordinary Desktop UI has no entry point to
+open local sources, saved records or synthetic demos, and mounts neither a separate
+`TaskWorkspace` page nor a workbench selection card. Selection components, Service, CLI
+and regression tests remain. Source MCP collection, chat and evidence queries remain
+separate operations; chat is not connected to task selection. `NewWork` clears only the
+active source, candidates, chat and query. It creates no synthetic source and preserves
+applied settings, tool lists and login. Old write/extraction entry points still reject
+active tasks.
 
-`Task` 固定目的、版本、來源 ID 與要求的欄位；`Source` 保存本次提供的全部欄位原文及
-宣告的身分／版本／涵蓋範圍／限制。`InputID` 綁定完整 task、source、模型及選取契約，
-不是以 task label 或來源 hash 單獨決定重播身分。來源 metadata 不因此取得 provider 認證。
+Source settings are followed by an optional AHE evidence store; advanced connection
+settings are collapsed by default. The query program is read-only. The intake program
+creates pending proposals, not admissions. The human review program requires an explicit
+decision before writing. These labels do not change MCP profiles or authority, and do
+not configure the DB automatically. Removing the workbench's persistent inactive-model
+warning does not start a model automatically. Existing workflows still check prerequisites
+and failures.
 
-提供給模型的單元依空白行分段，使用欄位內半開 byte 範圍；不正規化 CRLF、改寫縮排或
-解讀 HTML。模型只回同一欄位內的起訖段落 ID，控制器將中間全部原文字元回填為候選。
-不同欄位可以各自產生候選，不能拼接成新原句；必要上下文可重疊，不能視為獨立佐證。
-這些單元是閱讀定位，不是原子主張、文法正確或語意充分的證明。
+`Task` fixes the objective, version, source ID and requested fields. `Source` preserves
+all supplied field text and declared identity/version/coverage/limitations. `InputID`
+binds the complete task, source, model and selection contract. A task label or source
+hash alone does not define replay identity. Source metadata gains no provider certification.
 
-控制器分開記錄要求但未取得的欄位、取得但未提供的欄位，以及提供後未選的段落；
-不將「未選」改稱「已讀且不重要」。成功棄答須明示理由及空候選。
-未完成、超限、錯配引用、重複回覆及取消均失敗，不留部分成功候選；
-所有結果仍是 `not_reviewed`／`authority_effect=none`。
+Model units are split at blank lines and use half-open byte ranges within each field.
+CRLF, indentation and HTML are not normalized or interpreted. The model returns only
+start/end paragraph IDs within one field; the controller restores all original characters
+between them as a candidate. Different fields can yield separate candidates, but cannot
+be joined into a new source sentence. Necessary context may overlap; it is not independent
+support. Units locate text for reading, not proof of atomic claims, grammar or semantic sufficiency.
 
-來源涵蓋限制與模型執行完成度是不同軸。Prompt v3 指示模型只對 supplied units 完成選段；
-控制器的 `Task.parts` 是要求的蒐集範圍，`Scope.ProvidedParts` 與 units 才是本次可處理內容。
-缺少其他欄位不應單獨造成 `incomplete`，但選取成功也不表示整個蒐集任務完成。
-無相關的已提供段落可明示棄答；無法處理完已提供內容或超過候選上限仍須明示未完成。
-這是模型指令，不是控制器能證明的語意判斷；任何 `incomplete` 回覆仍整體拒絕，
-不能由呼叫端直接變成成功。`full_document` 等值只是來源宣告，不覆蓋實際缺少欄位的紀錄。
-模型輸入僅含 `version/objective/source_title/units`；蒐集身分、版本、coverage、
-limitations 與完整 requested／provided／missing 範圍仍留在 Request／Scope，供人核對。
-`ModelInputVersion` 獨立於段落切分的 ProjectionVersion，與完整來源／任務、PromptVersion、
-結果契約一起綁入 InputID；相同模型輸入不能取代完整的重播身分，舊契約結果不得混用。
+The controller separately records requested fields not obtained, obtained fields not
+provided, and supplied paragraphs not selected. "Unselected" does not mean "read and
+unimportant". Successful abstention requires an explicit reason and no candidates.
+Incomplete, over-limit, mismatched-reference, duplicate and cancelled responses fail
+without partial successful candidates. All results remain `not_reviewed` with
+`authority_effect=none`.
 
-結果契約 v2 允許 `selected.reason` 留空或附有界模型註記，與 schema 的文字欄位一致；
-註記最多 512 個 Unicode 字元／2,048 bytes，非空時不可只有空白或帶控制字元。
-它不構成來源引文、語意支持或人工核准理由，不拼進 Candidate.Text；修改註記也會使
-原樣重播失敗。棄答／未完成仍要求非空理由與空 ranges，引用及完成檢查不因註記放寬。
-一般測試只用合成回覆；真實模型測試須明確啟用並指定模型、endpoint 與單一合成任務，
-其品質結論不由引用合法或程式測試通過推導。
+Source coverage and model execution completeness are separate dimensions. Prompt v3
+asks the model to complete selection only over supplied units. Controller `Task.parts`
+describes requested collection scope; `Scope.ProvidedParts` and units describe available
+content. Missing other fields alone should not cause `incomplete`, but successful selection
+does not complete the whole collection task. No relevant supplied paragraphs allows
+explicit abstention. Failure to process all supplied content or exceeding the candidate
+limit still requires an incomplete result. These are model instructions, not semantic
+judgments the controller can prove. Every `incomplete` response is rejected as a whole;
+callers cannot turn it directly into success. Values such as `full_document` are source
+declarations and do not override recorded missing fields.
 
-`Replay` 重新核對同一輸入、原模型文字及所有衍生候選，不呼叫模型，也不重播 AHE 寫入。
-CLI 與保留的 Desktop Service 可保存凍結 task/source；外部接力仍未實作，後續須將本機段落座標
-對應到 AHE 保存的 view/span，不能直接拿本機單元 ID 當成資料庫引用。
+Model input contains only `version/objective/source_title/units`. Collection identity,
+revision, coverage, limitations and complete requested/provided/missing scope remain in
+Request/Scope for human inspection. `ModelInputVersion` is separate from the paragraph
+ProjectionVersion. Both bind into InputID with the complete source/task, PromptVersion
+and result contract. Identical model input cannot replace complete replay identity;
+results from old contracts cannot be mixed in.
 
-### 短摘要與可讀證據
+Result contract v2 allows `selected.reason` to be empty or a bounded model note, matching
+the schema's text field. Notes allow at most 512 Unicode characters / 2,048 bytes. Nonempty
+notes cannot be whitespace-only or contain control characters. A note is not a source
+quote, semantic support or a human approval reason, and is not appended to Candidate.Text.
+Changing a note also breaks exact replay. Abstention/incomplete responses still require
+a nonempty reason and empty ranges. Notes do not relax reference or completion checks.
+Ordinary tests use synthetic responses only. Real-model tests require explicit enablement,
+a named model and endpoint, and one synthetic task. Valid citations or passing code tests
+do not establish model quality.
 
-Brief 是另行選定的新聞／事件閱讀流程，不是 Jira、Confluence 或程式碼／git
-工程蒐證的通用替代入口。新操作要求 `detective-brief-source/v2`，且
-`source_kind` 明確為 `news` 或 `public_event`；CLI、Desktop 及提交入口
-都在模型或 MCP 啟動前檢查。類型是呼叫者宣告，不是本文語意分類或來源認證。
-工程來源須保留原有來源身分、
-版本與精確引用契約，不以 `manual_text` 繞過外部來源要求。
+`Replay` rechecks the same input, original model text and all derived candidates. It
+neither calls the model nor replays AHE writes. CLI and the retained Desktop Service can
+save frozen task/source data. External handoff is not implemented. It will require mapping
+local paragraph coordinates to AHE-persisted views/spans; local unit IDs cannot serve
+directly as database citations.
 
-來源保存、候選有依據、資訊保留程度是不同檢查。小模型可能沒有捏造事實，
-卻在摘要化選材時遺漏大量資訊；原文仍在不能抵銷候選集合的漏項。
-工程擷取須對照使用者要求的範圍，明示未處理內容與已知遺漏；不可把
-`full_document` 或精確引用誤當成擷取完整性的證明。
+### Short summaries and readable evidence
 
-保留的 legacy host 文件模型路徑採 `whole-span-exact-quote-selection-v1`。
-這條接線仍在工作目錄草稿中；它是比較基準，不是已完成的任務導向擷取，也不是 Desktop 入口。
-以下描述其現行約束，不代表繼續採用它作新工程主線：模型只能選取
-本次提供的完整 span，不能摘要、改寫，或刪掉其中的條件、例外與表格列。
-JSON Schema 綁定完整文字及唯一 span ID；controller 另外驗證逐字相等、單一正確引用、
-無重複選取及數量限制，不信任 provider 一定遵守 schema。單一單位最多 64 KiB，
-超限或模型輸出不完整即失敗，不截短或自動修補。既有 decoder 與歷史契約保持相容。
-新 Ollama 模式另要求 `done=true` 與 `done_reason=stop`；因 token 上限、缺少完成標記
-或其他理由終止均原樣返回回覆及錯誤，不將合法 JSON 誤記為正常完成或棄答。
-省略完成理由的舊 provider 不符合此新契約；舊模式的相容行為不變。
+Brief is a separately selected news/event reading workflow, not a general replacement
+for Jira, Confluence or code/git engineering evidence collection. New operations require
+`detective-brief-source/v2` with `source_kind` explicitly set to `news` or `public_event`.
+CLI, Desktop and submission entry points check this before starting a model or MCP.
+The kind is caller-declared, not semantic classification or source certification.
+Engineering sources must preserve source identity, revision and exact-reference contracts;
+`manual_text` cannot bypass external-source requirements.
 
-預設單位是 adapter 已選值；明確選 `heading_sections_v1` 才依既有章節邊界逐次處理，
-不新增句子切碎或摘要步驟。`selection_coverage` 區分提供、選取及未選單位數；
-`fact_completeness_assessed=false`。即使所有章節都處理過，也不代表找齊全部事實、
-選取單位是單一原子主張，或主張為真。Runner 不改寫模型回覆；runner／解析拒絕時
-只持久化回覆 hash，成功或部分後續驗證失敗保存的是解碼後的候選 JSON，不是原回覆封包。
-章節流程另保存逐章回覆 hash 與聚合結果；不宣稱保存了逐章或失敗的 raw 全文。
+Source preservation, candidate grounding and information retention are separate checks.
+A small model may invent nothing yet omit substantial information when selecting material
+for a summary. Retaining the original does not compensate for omissions in the candidate
+set. Engineering extraction must be checked against the user's requested scope and disclose
+unprocessed content and known omissions. `full_document` and exact quotes do not prove
+extraction completeness.
 
-不按 Atlassian／Codegraph 名稱全面禁止模型。相容的文件路徑須由操作者明確選擇
-模型擷取，或 `proposal_conversion` 逐字複製所有 adapter 所選值（最多 128 筆、每筆
-64 KiB）。只收集來源的設定不會自動變成提案寫入。這保留的是已選文字，不是 provider
-全部資訊；目前 Jira 選 description，Confluence 選本文，未選欄位與未收集內容仍須揭露。
-Codegraph candidate 與程式碼／git 的 typed 路徑沒有因此變成通用 MCP 文件輸入。
+The retained legacy host document-model path uses `whole-span-exact-quote-selection-v1`.
+This integration remains in the working draft as a comparison baseline, not completed
+task-driven extraction or a Desktop entry point. The constraints below describe it;
+they do not select it as the new engineering direction. The model can select only complete
+supplied spans, without summarizing, rewriting or removing conditions, exceptions or
+table rows. JSON Schema binds full text and a unique span ID. The controller separately
+checks verbatim equality, one correct reference, no duplicate selections and count limits;
+it does not assume the provider obeys the schema. A unit is limited to 64 KiB. Over-limit
+or incomplete output fails without truncation or automatic repair. Existing decoder and
+historical contracts remain compatible.
 
-現行 Brief 採 WorldMonitor-style：把有界本文交給模型，一次產生 1–2 句短摘要；
-prompt v2 要求保留主體、行為／狀態、範圍與未知，不額外分析。
-單次呼叫、無 tools、無自動重試；本文最多 32 KiB、64 個非空白段，CLI 輸入檔最多
-64 KiB；請求上限 768 output tokens、2 分鐘。超限錯誤明示資源、上限及觀測量，
-不把模型尚未呼叫的輸入拒絕歸類為模型品質失敗。
-保存原文、projection、來源／輸入雜湊及原始輸出；摘要不是來源，也不是 review approval。
+The new Ollama mode also requires `done=true` and `done_reason=stop`. Token-limit stops,
+missing completion markers or other stop reasons return the unchanged response and an
+error. Valid JSON alone is not normal completion or abstention. Older providers that
+omit the completion reason do not meet the new contract; old-mode compatibility is unchanged.
 
-`brief select` 可從明確宣告為全文的 v2 新聞／事件父來源，離線選取連續 UTF-8 byte
-範圍（起點含、終點不含），建立 `coverage=exact_excerpt` 的新檔；不覆寫父檔。
-父 JSON 最多 1 MiB、本文最多 512 KiB，選後子來源仍受模型輸入限制。
-`detective-brief-excerpt/v1` 保存父來源 ID／revision、本文 hash／bytes、範圍與選取理由，
-參與既有 report、submission digest，並隨 pending 的 declared origin metadata 保留。
-新摘錄以 `brief-excerpt:` 加完整 origin 雜湊作 manual_text 儲存 ID，另保留宣告的父來源 ID；
-避免本文相同、父版本或選取理由不同時沿用第一筆來源座標。相同輸入重播得到相同 ID，
-既有無追溯欄位的來源及舊收據 ID 不變，不修改 Core 的 manual metadata first-writer 規則。
-子檔單獨驗證只能檢查結構；`brief verify-excerpt` 必須同時取得父檔才能核對實際切片。
-Desktop 顯示「本次提供的原文」與保存座標，不把開檔當成重新核對，也不推定摘錄完整。
+Default units are adapter-selected values. Explicit `heading_sections_v1` selection
+processes existing sections in sequence without adding sentence splitting or summarization.
+`selection_coverage` distinguishes supplied, selected and unselected unit counts;
+`fact_completeness_assessed=false`. Processing every section does not prove that all facts
+were found, each unit is an atomic claim, or claims are true. The runner does not rewrite
+model responses. Runner/parser rejection persists only the response hash. Success or
+some later validation failures persist decoded candidate JSON, not the raw response packet.
+The section workflow also stores per-section response hashes and an aggregate result;
+it does not claim to save per-section or failed raw responses in full.
 
-可讀性以人能理解完整主張為優先：誰做了什麼、必要的對象、條件與範圍不能只剩零碎關鍵字。
-原始證據用詞不做地區詞彙改寫。這是擷取與人工審閱原則，不宣稱程式可驗證所有語意或英文文法。
-不以「刪掉文字後模型答案不變」證明剩餘片段充分；理由見 [Feng 等人的研究](#extraction-references)。
-舊版摘要引導、多步推理與 persona 對照是研究背景，不是本 Brief 的額外步驟。
+Models are not categorically banned based on the Atlassian/Codegraph name. For compatible
+document paths, the operator must explicitly choose model extraction or `proposal_conversion`
+to copy all adapter-selected values verbatim: at most 128 values, each at most 64 KiB.
+Collection-only settings do not automatically enable proposal writes. This preserves
+selected text, not all provider information. Jira currently selects description and
+Confluence selects body; unselected fields and uncollected content must still be disclosed.
+Codegraph candidate and typed code/git paths do not thereby become general MCP document inputs.
 
-人選擇可讀 statement 及連續 1–12 行精確引用；controller 驗證行／bytes 與保存來源一致，
-語意是否支持主張仍由人判斷。Brief 對應的原始 body 經 `submit_text_source` 保存為 `manual_text`，
-以本文雜湊標識版本；模型摘要另存為候選材料。
-外部 URL／revision 在這條路徑是 caller-declared metadata，不能冒充 provider-qualified 外部來源。
+Current Brief uses a WorldMonitor-style workflow: send a bounded body to the model and
+generate one short summary of 1–2 sentences. Prompt v2 asks it to preserve the subject,
+action/state, scope and unknowns without added analysis. One call, no tools, no automatic
+retries. Body limits are 32 KiB and 64 nonblank paragraphs; the CLI input file limit is
+64 KiB. Requests allow 768 output tokens and 2 minutes. Limit errors name the resource,
+limit and observed amount. Rejection before a model call is not a model-quality failure.
+Original content, projection, source/input hashes and raw output are saved. A summary is
+neither the source nor review approval.
 
-### 本機狀態與不確定結果
+`brief select` can select a contiguous UTF-8 byte range, start-inclusive and end-exclusive,
+offline from a v2 news/event parent explicitly declared as a full document. It creates a
+new `coverage=exact_excerpt` file without overwriting the parent. Parent JSON is limited
+to 1 MiB and body to 512 KiB; the selected child remains subject to model-input limits.
+`detective-brief-excerpt/v1` stores parent source ID/revision, body hash/bytes, range and
+selection reason. It participates in existing report/submission digests and is retained
+in pending declared-origin metadata. New excerpts use `brief-excerpt:` plus the full
+origin hash as their manual_text storage ID, while separately preserving the declared
+parent source ID. This prevents reuse of the first source's coordinates when body text
+matches but parent revision or selection reason differs. Identical input replays to the
+same ID. Existing sources without provenance fields and old receipt IDs remain unchanged;
+Core's manual-metadata first-writer rule is unchanged. Checking a child alone verifies only
+structure. `brief verify-excerpt` also needs the parent file to verify the actual slice.
+Desktop displays the original text supplied for this run and saved coordinates. Opening
+a file is not verification, and excerpt completeness is not assumed.
+
+Readability means a person can understand the complete claim: who did what, with necessary
+objects, conditions and scope, rather than isolated keywords. Original evidence wording
+is not localized into regional vocabulary. This is an extraction and review principle,
+not a claim that code validates all semantics or English grammar. An unchanged model
+answer after text deletion does not prove that the remaining fragment is sufficient;
+see [Feng et al.](#extraction-references). Older summary-guided, multi-step reasoning and
+persona comparisons are research background, not extra steps in this Brief workflow.
+
+A person chooses a readable statement and an exact quote of 1–12 consecutive lines.
+The controller checks lines/bytes against the stored source; semantic support remains
+a human judgment. The original Brief body is saved through `submit_text_source` as
+`manual_text`, with a body hash identifying its version. Model summaries are stored
+separately as candidate material. External URL/revision fields on this path are
+caller-declared metadata, not provider-qualified external-source identity.
+
+### Local state and uncertain outcomes
 
 ```text
-保存來源／Brief → 提交 pending → Query 精確讀回 → 取得 native review display
-→ 人選 outcome／reason → 先保存 frozen decision → 呼叫 writer → Query 獨立核對
+Save source / Brief → submit pending → exact Query readback → obtain native review display
+→ human selects outcome / reason → save frozen decision first → call writer → independent Query check
 ```
 
-Checkpoint、來源收據、Brief 與決定檔是私有不可變資料，不能用它們取代 DB 查回。
-舊版 Brief v1 未記錄來源類型，保持原 JSON、digest 與既有審閱／決定重播；
-不推測類型、不補寫欄位。不能用舊來源開始新抽取、候選或 intake 提交；
-舊版未確認的 intake 須人工查核，不能靠修改收據繞過新限制。
-重開檔案預設是 `historical_not_rechecked`；App 重啟回離線模式，不自動連來源、model 或 MCP。
-離線聊天提示沒有核准效果，輸入 `admit` 不會改 DB。
+Checkpoints, source receipts, Briefs and decision files are private immutable data, not
+substitutes for DB readback. Legacy Brief v1 did not record source kind. Preserve its
+original JSON, digest and existing review/decision replay without guessing a kind or
+adding fields. Old sources cannot start new extraction, candidates or intake submissions.
+Unconfirmed legacy intake requires human inspection; editing receipts cannot bypass the
+new restrictions. Reopened files default to `historical_not_rechecked`. App restart returns
+to offline mode without automatically connecting to a source, model or MCP. Offline chat
+prompts grant no approval; typing `admit` does not change the DB.
 
-遠端可能成功但本機收據未取得；恢復只允許凍結的原決定與明確選定 launcher。
-符合原完整 subject、理由與確認條件後才 exact replay；衝突、缺少必要資料或不支援的契約須停止。
-Query 讀回終態不等於驗證了原 decision ID／reason，不能據此編造遺失收據。
+A remote operation may succeed without a local receipt. Recovery permits only the frozen
+original decision and an explicitly selected launcher. Exact replay requires the complete
+original subject, reason and confirmation conditions. Conflicts, missing required data
+or unsupported contracts stop recovery. Reading a terminal state through Query does not
+verify the original decision ID/reason and cannot justify inventing a missing receipt.
 
-Workspace 使用受保護目錄、固定 directory handle 與非阻塞檔案鎖；鎖只協調遵守協定的本機程序。
-它不是權限沙箱，也不提供多使用者或分散式協調。工作區設定與 launcher／DB 憑證不進產品 repository。
+Workspaces use protected directories, fixed directory handles and nonblocking file locks.
+Locks coordinate only local processes that follow the protocol; they are neither a
+permission sandbox nor multi-user/distributed coordination. Workspace settings and
+launcher/DB credentials stay outside the product repository.
 
-見 [Brief extractor](../apps/detective/internal/sourcepilot/brief.go)、
-[source-to-pending adapter](../apps/detective/internal/ahemcp/brief.go)、
-[Desktop workflow](../apps/detective/internal/desktop/brief_workflow.go)、
-[query client](../apps/detective/internal/ahemcp/search.go)。
+See [Brief extractor](../apps/detective/internal/sourcepilot/brief.go),
+[source-to-pending adapter](../apps/detective/internal/ahemcp/brief.go),
+[Desktop workflow](../apps/detective/internal/desktop/brief_workflow.go),
+[query client](../apps/detective/internal/ahemcp/search.go).
 
 <a id="authority"></a>
 
-## 執行權限與完整性
+## Runtime authority and integrity
 
-| 程序／profile | 現行公開範圍 |
+| Program/profile | Current public scope |
 | --- | --- |
-| Query | 13 個唯讀工具；不呼叫模型、不寫證據 |
-| Intake | 5 個 source／extractor tools；只能來源／擷取／pending |
-| `source-claim-reviewer` | 3 個 exact source-review tools；admit／reject／audit_only |
-| `legacy-reviewer`／`legacy-operator` | CLI 拒絕啟動；內部 43-tool registry 不是對外能力清單 |
+| Query | 13 read-only tools; no model calls or evidence writes |
+| Intake | 5 source/extractor tools; source/extraction/pending only |
+| `source-claim-reviewer` | 3 exact source-review tools; admit/reject/audit_only |
+| `legacy-reviewer` / `legacy-operator` | CLI rejects startup; the internal 43-tool registry is not a public capability list |
 
-以執行時 `tools/list` 為介面權威。Tool arguments 不能切換 schema、DB role 或 reviewer principal。
-Separate LOGIN／NOLOGIN role、固定 launcher 與每次連線／重用檢查限制執行權限；
-Query 可見的是選定 schema，不是逐列租戶隔離。Reviewer 的 table ACL 仍屬 trusted raw DML，
-不能單靠 ACL 宣稱所有直接 SQL 都經過 exact review。DB owner／superuser 是受信任維運邊界。
+Runtime `tools/list` is the interface authority. Tool arguments cannot switch schema,
+DB role or reviewer principal. Separate LOGIN/NOLOGIN roles, fixed launchers and checks
+on each connection/reuse constrain runtime authority. Query visibility covers the selected
+schema, not row-level tenant isolation. Reviewer table ACLs still permit trusted raw DML;
+ACLs alone do not prove that all direct SQL passes exact review. DB owners/superusers
+remain within the trusted operations boundary.
 
-MCP 使用自己的 migration ledger，目前至 46；不能把另一個 Core repository 的同號 migration 直接接入。
-Migration／runtime 核對名稱、checksum 及受保護 schema 物件；失敗不自動刪資料或放寬 ACL。
-舊資料轉換、持久 DB 部署與服務角色配置需要獨立操作授權。
+MCP has its own migration ledger, currently through 46. Same-numbered migrations from
+another Core repository cannot be applied directly. Migration/runtime checks cover names,
+checksums and protected schema objects. Failures do not automatically delete data or
+relax ACLs. Legacy data conversion, persistent DB deployment and service-role provisioning
+require separate operational authorization.
 
-見 [runtime profile gate](../cmd/ahe-ingest-mcp/main.go)、
-[ingestion authorization](../internal/mcpadmin/authorization.go)、
-[query authorization](../internal/mcpquery/authorization.go)、[role policy](../internal/dbrole)。
-安裝步驟集中在 [INSTALL](../INSTALL.md#runtime-role-provisioning-gate)，不以本設計文件取代操作檢查。
+See [runtime profile gate](../cmd/ahe-ingest-mcp/main.go),
+[ingestion authorization](../internal/mcpadmin/authorization.go),
+[query authorization](../internal/mcpquery/authorization.go), [role policy](../internal/dbrole).
+Installation steps are in [INSTALL](../INSTALL.md#runtime-role-provisioning-gate);
+this design document does not replace operational checks.
 
 <a id="references"></a>
 
-## 參考文獻
+## References
 
-以下收錄可從既有 AHE／Detective 設計及研究紀錄追溯的文獻；論文、教科書、規格與外部工程方法分開列出。
-引用是設計背景，不會讓研究候選變成已實作功能，也不是對 AHE 的形式證明。
-未找到具體書目的理論關鍵字，不補造「曾經參考」的論文。
+These sources are traceable to existing AHE/Detective design and research records.
+Papers, textbooks, specifications and external engineering methods are identified separately.
+They provide design background, not implemented features or formal proof of AHE.
+No papers are invented for theoretical keywords without a specific bibliographic source.
 
 <a id="extraction-references"></a>
 
-### 擷取、引用與可讀性
+### Extraction, citations and readability
 
-- Alexander Fabbri、Chien-Sheng Wu、Wenhao Liu、Caiming Xiong（2022），
-  [QAFactEval: Improved QA-Based Factual Consistency Evaluation for Summarization](https://aclanthology.org/2022.naacl-main.187/)，NAACL。
-  摘要／來源一致性的研究背景；未採用其訓練流程或評分器。
-- James Thorne、Andreas Vlachos、Christos Christodoulopoulos、Arpit Mittal（2018），
-  [FEVER: a Large-scale Dataset for Fact Extraction and VERification](https://aclanthology.org/N18-1074/)，NAACL。
-  分開處理主張、證據與資訊不足；FEVER 標籤不是 AHE admission outcome。
-- Jay DeYoung 等（2020），[ERASER: A Benchmark to Evaluate Rationalized NLP Models](https://aclanthology.org/2020.acl-main.408/)，ACL。
-  區分人可理解的理由與對模型預測的忠實性；未實作 ERASER 的充分性／comprehensiveness 評分。
-- Shi Feng 等（2018），[Pathologies of Neural Models Make Interpretations Difficult](https://aclanthology.org/D18-1407/)，EMNLP。
-  輸入刪減後模型仍高信心回答，不足以證明剩餘文字可讀或充分；保留人能理解的脈絡是 AHE 的設計選擇，不採其微調方案。
+- Alexander Fabbri, Chien-Sheng Wu, Wenhao Liu, Caiming Xiong (2022),
+  [QAFactEval: Improved QA-Based Factual Consistency Evaluation for Summarization](https://aclanthology.org/2022.naacl-main.187/), NAACL.
+  Background on summary/source consistency; its training pipeline and scorer are not used.
+- James Thorne, Andreas Vlachos, Christos Christodoulopoulos, Arpit Mittal (2018),
+  [FEVER: a Large-scale Dataset for Fact Extraction and VERification](https://aclanthology.org/N18-1074/), NAACL.
+  Separates claims, evidence and insufficient information. FEVER labels are not AHE admission outcomes.
+- Jay DeYoung et al. (2020), [ERASER: A Benchmark to Evaluate Rationalized NLP Models](https://aclanthology.org/2020.acl-main.408/), ACL.
+  Distinguishes human-readable rationales from faithfulness to model predictions.
+  ERASER sufficiency/comprehensiveness scoring is not implemented.
+- Shi Feng et al. (2018), [Pathologies of Neural Models Make Interpretations Difficult](https://aclanthology.org/D18-1407/), EMNLP.
+  High model confidence after input reduction does not prove the remaining text is readable
+  or sufficient. AHE chooses to preserve human-readable context; it does not use their fine-tuning method.
 
 <a id="search-references"></a>
 
-### 搜尋與排序
+### Search and ranking
 
-- Christopher D. Manning、Prabhakar Raghavan、Hinrich Schütze（2008），教科書 *Introduction to Information Retrieval*：
-  [第 6 章：Scoring, term weighting and the vector space model](https://nlp.stanford.edu/IR-book/html/htmledition/scoring-term-weighting-and-the-vector-space-model-1.html)、
-  [Inverse document frequency](https://nlp.stanford.edu/IR-book/html/htmledition/inverse-document-frequency-1.html)。
-  區分候選匹配與排序；罕見詞權重不是證據真假或必須命中的語意條件。
-- Kalervo Järvelin、Jaana Kekäläinen（2002），[Cumulated Gain-based Evaluation of IR Techniques](https://doi.org/10.1145/582415.582418)，ACM TOIS 20(4), 422–446。
-  歷史排序研究的分級相關性與 nDCG 背景；不是 runtime 的可信度分數。
-- Ellen M. Voorhees（2003），[Evaluating the Evaluation: A Case Study Using the TREC 2002 Question Answering Track](https://aclanthology.org/N03-1034/)，HLT-NAACL，260–267。
-  歷史 reciprocal-rank 評估背景；第一筆可用結果不代表所有重點都已找齊。
-- Richard Sproat、Thomas Emerson（2003），[The First International Chinese Word Segmentation Bakeoff](https://aclanthology.org/W03-1719/)，SIGHAN。
-  中文斷詞標準差異的研究背景；Han 字元匹配不宣稱是該基準的斷詞器。
+- Christopher D. Manning, Prabhakar Raghavan, Hinrich Schütze (2008), textbook *Introduction to Information Retrieval*:
+  [Chapter 6: Scoring, term weighting and the vector space model](https://nlp.stanford.edu/IR-book/html/htmledition/scoring-term-weighting-and-the-vector-space-model-1.html),
+  [Inverse document frequency](https://nlp.stanford.edu/IR-book/html/htmledition/inverse-document-frequency-1.html).
+  Separates candidate matching from ranking. Rare-term weights establish neither evidence
+  truth nor semantic conditions that must match.
+- Kalervo Järvelin, Jaana Kekäläinen (2002), [Cumulated Gain-based Evaluation of IR Techniques](https://doi.org/10.1145/582415.582418), ACM TOIS 20(4), 422–446.
+  Background for graded relevance and nDCG in historical ranking research, not runtime confidence scores.
+- Ellen M. Voorhees (2003), [Evaluating the Evaluation: A Case Study Using the TREC 2002 Question Answering Track](https://aclanthology.org/N03-1034/), HLT-NAACL, 260–267.
+  Background for historical reciprocal-rank evaluation. A useful first result does not imply complete coverage.
+- Richard Sproat, Thomas Emerson (2003), [The First International Chinese Word Segmentation Bakeoff](https://aclanthology.org/W03-1719/), SIGHAN.
+  Background on differing Chinese segmentation standards. Han character matching is not
+  claimed to implement a segmenter for this benchmark.
 
-### 圖關係、版本與一致性
+### Graph relations, versions and consistency
 
-- Andrian Marcus、Jonathan I. Maletic（2003），[Recovering Documentation-to-Source-Code Traceability Links using Latent Semantic Indexing](https://ieeexplore.ieee.org/abstract/document/1201194/)，ICSE，DOI `10.1109/ICSE.2003.1201194`。
-  文件／程式追溯候選的研究背景；相似度不足以自動核准 `implements`。
-- Yizhou Sun、Jiawei Han、Xifeng Yan、Philip S. Yu、Tianyi Wu（2011），[PathSim: Meta Path-Based Top-K Similarity Search in Heterogeneous Information Networks](https://www.vldb.org/pvldb/vol4/p992-sun.pdf)，PVLDB 4(11)。
-  歷史異質圖路徑研究；未實作 PathSim，也不把同型對稱公式直接套成有向 `implements` 判準。
-- Maurice P. Herlihy、Jeannette M. Wing（1990），[Linearizability: A Correctness Condition for Concurrent Objects](https://www.cs.cmu.edu/~wing/publications/HerlihyWing90.pdf)，ACM TOPLAS 12(3), 463–492。
-  並行操作與合法循序歷史的規格背景；不是 AHE 已取得完整線性化證明的宣告。
+- Andrian Marcus, Jonathan I. Maletic (2003), [Recovering Documentation-to-Source-Code Traceability Links using Latent Semantic Indexing](https://ieeexplore.ieee.org/abstract/document/1201194/), ICSE, DOI `10.1109/ICSE.2003.1201194`.
+  Background for document/code traceability candidates. Similarity does not automatically authorize `implements`.
+- Yizhou Sun, Jiawei Han, Xifeng Yan, Philip S. Yu, Tianyi Wu (2011), [PathSim: Meta Path-Based Top-K Similarity Search in Heterogeneous Information Networks](https://www.vldb.org/pvldb/vol4/p992-sun.pdf), PVLDB 4(11).
+  Historical heterogeneous-graph path research. PathSim is not implemented, and its symmetric
+  same-type formula is not directly used as a criterion for directed `implements`.
+- Maurice P. Herlihy, Jeannette M. Wing (1990), [Linearizability: A Correctness Condition for Concurrent Objects](https://www.cs.cmu.edu/~wing/publications/HerlihyWing90.pdf), ACM TOPLAS 12(3), 463–492.
+  Specification background for concurrent operations and legal sequential histories,
+  not a claim of a complete AHE linearizability proof.
 
-### 尚未移植的 admission 理論研究
+### Admission theory not yet implemented
 
-- Paul H. Morris、Robert A. Nado（1986），[Representing Actions with an Assumption-Based Truth Maintenance System](https://cdn.aaai.org/AAAI/1986/AAAI86-003.pdf)，AAAI。
-  多假設環境與支持集合的研究背景；未實作 ATMS，移除一條支持不等於移除其他獨立支持。
-- Akhil A. Dixit、Phokion G. Kolaitis（2021），[Consistent Answers of Aggregation Queries using SAT Solvers](https://arxiv.org/pdf/2103.03314v3)，arXiv:2103.03314v3。
-  指定完整性約束下的修復與一致查詢答案研究；未實作 AggCAvSAT 或 SAT 聚合查詢。
-- Alexandra Meliou、Wolfgang Gatterbauer、Katherine F. Moore、Dan Suciu（2010），[The Complexity of Causality and Responsibility for Query Answers and non-Answers](https://homes.cs.washington.edu/~suciu/file22_main.pdf)，PVLDB 4(1)。
-  查詢 lineage 與因果責任的區分；AHE 依賴邊不是因果證明，也不計算責任度。
+- Paul H. Morris, Robert A. Nado (1986), [Representing Actions with an Assumption-Based Truth Maintenance System](https://cdn.aaai.org/AAAI/1986/AAAI86-003.pdf), AAAI.
+  Background on multiple assumption environments and support sets. ATMS is not implemented;
+  removing one support does not remove other independent support.
+- Akhil A. Dixit, Phokion G. Kolaitis (2021), [Consistent Answers of Aggregation Queries using SAT Solvers](https://arxiv.org/pdf/2103.03314v3), arXiv:2103.03314v3.
+  Research on repairs and consistent answers under specified integrity constraints.
+  AggCAvSAT and SAT-based aggregate queries are not implemented.
+- Alexandra Meliou, Wolfgang Gatterbauer, Katherine F. Moore, Dan Suciu (2010), [The Complexity of Causality and Responsibility for Query Answers and non-Answers](https://homes.cs.washington.edu/~suciu/file22_main.pdf), PVLDB 4(1).
+  Distinguishes query lineage from causal responsibility. AHE dependency edges are not
+  causal proof, and AHE does not compute responsibility scores.
 
-### 正式規格與工程方法
+### Formal specifications and engineering methods
 
-- W3C PROV（2013）：[Overview](https://www.w3.org/TR/prov-overview/)、[PROV-DM](https://www.w3.org/TR/prov-dm/)、[PROV-CONSTRAINTS](https://www.w3.org/TR/prov-constraints/)。
-  來源實體、活動、產生者與推導關係的概念背景；不宣稱完整 PROV 相容性，`supports_claim` 也不直接等同 `wasDerivedFrom`。
-- IETF RFC 9110（2022）：[Entity Tags §8.8.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3)、[If-Match §13.1.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.1)。
-  不透明版本識別與預期版本條件；不能從 opaque revision 推導先後或 lineage。
-- Unicode UAX #29，Revision 47：[Unicode Text Segmentation](https://www.unicode.org/reports/tr29/tr29-47.html)。
-  文字邊界及語言特化的規格背景；AHE 不宣稱實作此版本的完整斷詞器。
-- Clark Barrett、Pascal Fontaine、Cesare Tinelli，[The SMT-LIB Standard, Version 2.7，2025-07-07](https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-07-07.pdf)。
-  歷史形式一致性研究；未導入 SMT solver，unsat core 不判定自然語言事實。
-- PostgreSQL 18 官方文件：[全文搜尋](https://www.postgresql.org/docs/18/textsearch-controls.html)、[交易隔離](https://www.postgresql.org/docs/18/transaction-iso.html)、
-  [`ON CONFLICT`](https://www.postgresql.org/docs/18/sql-insert.html#SQL-ON-CONFLICT)、
-  [`SECURITY DEFINER`](https://www.postgresql.org/docs/18/sql-createfunction.html#SQL-CREATEFUNCTION-SECURITY)、[prepared statements](https://www.postgresql.org/docs/18/sql-prepare.html)。
-  搜尋、交易與重播的資料庫參考；資料庫機制本身不證明應用程式協定正確。
-- WorldMonitor：[固定版本的摘要提示建構](https://github.com/koala73/worldmonitor/blob/af4e6da5642f0fe6ddba62fd52ebe6dbcc341ef5/server/worldmonitor/news/v1/_shared.ts#L38-L108)。
-  外部工程方法，不是論文；保留既有查核版本，本輪未能重新載入此上游頁面。
-  Detective 借用短摘要工作方式，不宣稱複製整套資料流或保證相同模型品質。
+- W3C PROV (2013): [Overview](https://www.w3.org/TR/prov-overview/), [PROV-DM](https://www.w3.org/TR/prov-dm/), [PROV-CONSTRAINTS](https://www.w3.org/TR/prov-constraints/).
+  Conceptual background for source entities, activities, producers and derivation.
+  Full PROV compliance is not claimed; `supports_claim` is not directly equivalent to `wasDerivedFrom`.
+- IETF RFC 9110 (2022): [Entity Tags §8.8.3](https://www.rfc-editor.org/rfc/rfc9110.html#section-8.8.3), [If-Match §13.1.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.1).
+  Opaque version identifiers and expected-version conditions. Opaque revisions do not imply order or lineage.
+- Unicode UAX #29, Revision 47: [Unicode Text Segmentation](https://www.unicode.org/reports/tr29/tr29-47.html).
+  Specification background for text boundaries and language-specific tailoring.
+  AHE does not claim a complete segmenter for this revision.
+- Clark Barrett, Pascal Fontaine, Cesare Tinelli, [The SMT-LIB Standard, Version 2.7, 2025-07-07](https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-07-07.pdf).
+  Historical formal-consistency research. No SMT solver is integrated; an unsat core
+  does not determine natural-language facts.
+- PostgreSQL 18 documentation: [Full-text search](https://www.postgresql.org/docs/18/textsearch-controls.html), [Transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html),
+  [`ON CONFLICT`](https://www.postgresql.org/docs/18/sql-insert.html#SQL-ON-CONFLICT),
+  [`SECURITY DEFINER`](https://www.postgresql.org/docs/18/sql-createfunction.html#SQL-CREATEFUNCTION-SECURITY), [prepared statements](https://www.postgresql.org/docs/18/sql-prepare.html).
+  Database references for search, transactions and replay. Database mechanisms alone
+  do not prove application-protocol correctness.
+- WorldMonitor: [Summary prompt construction at a pinned revision](https://github.com/koala73/worldmonitor/blob/af4e6da5642f0fe6ddba62fd52ebe6dbcc341ef5/server/worldmonitor/news/v1/_shared.ts#L38-L108).
+  An external engineering method, not a paper. The previously checked revision is retained;
+  the upstream page could not be reloaded during the recorded review. Detective borrows
+  the short-summary workflow without claiming the same full data flow or model quality.

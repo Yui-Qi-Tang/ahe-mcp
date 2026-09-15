@@ -84,7 +84,7 @@ handoff.
 
 ## Repository Work
 
-- As of 2026-09-14, Detective Desktop is frozen and unavailable (目前不工作).
+- As of 2026-09-14, Detective Desktop is frozen and unavailable.
   Do not resume UI/features, launch/trial/acceptance or Desktop publication
   without explicit user approval to unfreeze it. Prior passing tests/builds
   are historical, not usable-product acceptance. Retain code and saved work.
