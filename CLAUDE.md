@@ -146,6 +146,6 @@ report the missing capability rather than changing profiles or using SQL.
 - Run `make verify` for ordinary code changes.
 - Run `go test -race ./...` when concurrency behavior or CI is in scope.
 - Run integration tests only against an explicitly selected non-production
-  PostgreSQL database. Never print or commit the value of `DATABASE_DNS`.
+  PostgreSQL database. Never print or commit the value of `DATABASE_DSN`.
 - Preserve unrelated user changes. Do not commit, push, merge, or change
   branches unless the user explicitly requests it.

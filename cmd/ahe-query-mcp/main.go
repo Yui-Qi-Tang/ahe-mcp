@@ -31,7 +31,7 @@ func run(ctx context.Context, args []string) error {
 			fmt.Fprintln(os.Stdout, "Usage: ahe-query-mcp")
 			fmt.Fprintln(os.Stdout, "")
 			fmt.Fprintln(os.Stdout, "Environment:")
-			fmt.Fprintln(os.Stdout, "  DATABASE_DNS  PostgreSQL DSN for the authoritative AHE store")
+			fmt.Fprintln(os.Stdout, "  DATABASE_DSN  PostgreSQL DSN for the authoritative AHE store")
 			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PRINCIPAL_ID  Launcher-fixed query consumer identity")
 			fmt.Fprintln(os.Stdout, "  AHE_DATABASE_ROLE         Installed NOLOGIN query role")
 			fmt.Fprintln(os.Stdout, "  AHE_DATABASE_SCHEMA       Explicit authoritative schema/visibility boundary")
@@ -45,9 +45,9 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("configuring query runtime identity: %w", err)
 	}
-	databaseURL := os.Getenv("DATABASE_DNS")
+	databaseURL := os.Getenv("DATABASE_DSN")
 	if databaseURL == "" {
-		return errors.New("DATABASE_DNS is required")
+		return errors.New("DATABASE_DSN is required")
 	}
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {

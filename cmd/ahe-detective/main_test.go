@@ -52,7 +52,7 @@ func TestRunRequiresDatabaseDNSAfterValidConfig(t *testing.T) {
 		&bytes.Buffer{},
 		func(string) string { return "" },
 	)
-	if err == nil || err.Error() != "DATABASE_DNS is required" {
+	if err == nil || err.Error() != "DATABASE_DSN is required" {
 		t.Fatalf("run() error = %v", err)
 	}
 }

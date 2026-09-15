@@ -30,9 +30,9 @@ import (
 // that profile, calls review/admission, or claims a provider intake contract.
 func TestIntegrationDetectivePendingProtectedLauncherRoundTrip(t *testing.T) {
 	detectiveRoot := detectivePendingSourceRoot(t)
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 240*time.Second)
 	defer cancel()

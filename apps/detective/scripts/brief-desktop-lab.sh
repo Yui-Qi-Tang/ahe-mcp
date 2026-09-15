@@ -38,7 +38,7 @@ private_dir() {
     [ "$task_mode" = "$(id -u) 700" ] || fail 'Lab directory must be current-user-owned mode 0700.'
 }
 
-# Clear ambient PG*, DATABASE_DNS and shell startup configuration. PostgreSQL
+# Clear ambient PG*, DATABASE_DSN and shell startup configuration. PostgreSQL
 # clients use -w and a lab-owned empty passfile, never the operator passfile.
 clean() { env -i PATH="$task_path" LC_ALL=C "$@"; }
 pg_client() { clean PGPASSFILE="$lab_dir/credentials/no-passwords.pgpass" "$@"; }
@@ -196,7 +196,7 @@ pg_client "$pg_bin/createdb" -w -h "$socket_dir" -p 55439 -U ahe_brief_operator 
 sql -c 'REVOKE CREATE, TEMPORARY ON DATABASE ahe_brief_lab FROM PUBLIC; REVOKE ALL ON SCHEMA public FROM PUBLIC; CREATE SCHEMA ahe_brief;' \
     >"$lab_dir/schema-setup.log" 2>&1 || fail 'Isolated schema preparation failed.'
 task_operator_url="postgresql://ahe_brief_operator@/ahe_brief_lab?host=$socket_dir&port=55439&sslmode=disable&connect_timeout=3"
-clean DATABASE_DNS="${task_operator_url}&passfile=/dev/null&sslcert=&sslkey=&sslrootcert=" AHE_DATABASE_SCHEMA=ahe_brief "$lab_dir/bin/ahe-migrate" \
+clean DATABASE_DSN="${task_operator_url}&passfile=/dev/null&sslcert=&sslkey=&sslrootcert=" AHE_DATABASE_SCHEMA=ahe_brief "$lab_dir/bin/ahe-migrate" \
     >"$lab_dir/migration.json" 2>"$lab_dir/migration.log" || fail 'Native migration failed.'
 task_current=$(sql -c "SELECT count(*)=46 AND max(migration_name)='000046_evidence_ingestion_reviewed_disposition.up.sql' FROM ahe_brief.schema_migrations;")
 [ "$task_current" = t ] || fail 'Unexpected migration coordinate; this lab requires native migration 46.'
@@ -205,12 +205,12 @@ for task_profile in query intake source-claim-reviewer; do
     task_role_suffix=$(printf '%s' "$task_profile" | tr '-' '_')
     task_group="brief_${task_role_suffix}_group"
     task_login="brief_${task_role_suffix}_login"
-    clean DATABASE_DNS="$task_operator_url" AHE_DATABASE_NAME=ahe_brief_lab AHE_DATABASE_SCHEMA=ahe_brief \
+    clean DATABASE_DSN="$task_operator_url" AHE_DATABASE_NAME=ahe_brief_lab AHE_DATABASE_SCHEMA=ahe_brief \
         AHE_DATABASE_ROLE="$task_group" AHE_DATABASE_LOGIN="$task_login" AHE_RUNTIME_PROFILE="$task_profile" \
         "$lab_dir/bin/ahe-runtime-admin" provision >"$lab_dir/provision-$task_profile.json" \
         2>"$lab_dir/provision-$task_profile.log" || fail "Provisioning failed: $task_profile"
     task_runtime_url="postgresql://$task_login@/ahe_brief_lab?host=$socket_dir&port=55439&sslmode=disable&connect_timeout=3"
-    clean DATABASE_DNS="$task_runtime_url" AHE_DATABASE_NAME=ahe_brief_lab AHE_DATABASE_SCHEMA=ahe_brief \
+    clean DATABASE_DSN="$task_runtime_url" AHE_DATABASE_NAME=ahe_brief_lab AHE_DATABASE_SCHEMA=ahe_brief \
         AHE_DATABASE_ROLE="$task_group" AHE_DATABASE_LOGIN="$task_login" AHE_RUNTIME_PROFILE="$task_profile" \
         "$lab_dir/bin/ahe-runtime-admin" verify >"$lab_dir/verify-$task_profile.json" \
         2>"$lab_dir/verify-$task_profile.log" || fail "Bounded LOGIN verification failed: $task_profile"

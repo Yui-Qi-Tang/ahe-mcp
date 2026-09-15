@@ -18,14 +18,14 @@ func TestRunHelp(t *testing.T) {
 
 func TestRunRequiresDatabaseDNS(t *testing.T) {
 	err := run(t.Context(), nil, func(string) string { return "" }, &bytes.Buffer{})
-	if err == nil || !strings.Contains(err.Error(), "DATABASE_DNS is required") {
-		t.Fatalf("run() error = %v, want DATABASE_DNS required", err)
+	if err == nil || !strings.Contains(err.Error(), "DATABASE_DSN is required") {
+		t.Fatalf("run() error = %v, want DATABASE_DSN required", err)
 	}
 }
 
 func TestRunRequiresDatabaseSchema(t *testing.T) {
 	err := run(t.Context(), nil, func(key string) string {
-		if key == "DATABASE_DNS" {
+		if key == "DATABASE_DSN" {
 			return "postgresql://fixture@localhost/fixture"
 		}
 		return ""
@@ -38,7 +38,7 @@ func TestRunRequiresDatabaseSchema(t *testing.T) {
 func TestRunRejectsSearchPathExpressionAsDatabaseSchema(t *testing.T) {
 	err := run(t.Context(), nil, func(key string) string {
 		switch key {
-		case "DATABASE_DNS":
+		case "DATABASE_DSN":
 			return "postgresql://fixture@localhost/fixture"
 		case "AHE_DATABASE_SCHEMA":
 			return "ahe_mcp_v1, public"
@@ -54,7 +54,7 @@ func TestRunRejectsSearchPathExpressionAsDatabaseSchema(t *testing.T) {
 func TestRunRejectsPublicDatabaseSchema(t *testing.T) {
 	err := run(t.Context(), nil, func(key string) string {
 		switch key {
-		case "DATABASE_DNS":
+		case "DATABASE_DSN":
 			return "postgresql://fixture@localhost/fixture"
 		case "AHE_DATABASE_SCHEMA":
 			return "public"

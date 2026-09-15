@@ -260,7 +260,7 @@ func hanPlanExecute(spec hanScaleSQL, statement hanPlanPrepared, args []any) (st
 func hanPlanConfig(socket, port string) (*pgx.ConnConfig, error) {
 	for _, entry := range os.Environ() {
 		name, value, _ := strings.Cut(entry, "=")
-		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS") {
+		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN") {
 			return nil, errors.New("plan lab refuses inherited database settings")
 		}
 	}
@@ -302,7 +302,7 @@ func hanPlanCodeHashes(t *testing.T) map[string]string {
 func TestHanPlanConfig(t *testing.T) {
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
-		if strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS" {
+		if strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN" {
 			t.Setenv(name, "")
 		}
 	}
@@ -310,7 +310,7 @@ func TestHanPlanConfig(t *testing.T) {
 	if err != nil || config.Database != "ahe_han_plan_lab" || config.User != "ahe_han_plan_operator" || config.Password != "" || config.TLSConfig != nil || config.Tracer != nil || len(config.Fallbacks) != 0 || config.RuntimeParams["statement_timeout"] != "2000" {
 		t.Fatal("fixed plan configuration boundary changed")
 	}
-	for _, name := range []string{"PGHOST", "PGSERVICE", "PGPASSWORD", "DATABASE_DNS", "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS"} {
+	for _, name := range []string{"PGHOST", "PGSERVICE", "PGPASSWORD", "DATABASE_DSN", "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN"} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(name, "not-consumed")
 			if config, err := hanPlanConfig("/private/tmp/han-plan-config-test", "55443"); err == nil || config != nil {

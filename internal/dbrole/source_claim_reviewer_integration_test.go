@@ -228,9 +228,9 @@ func sourceClaimRoleCounts(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 
 func sourceClaimRoleTestPools(t *testing.T) (context.Context, map[Profile]*pgxpool.Pool) {
 	t.Helper()
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 120*time.Second)
 	t.Cleanup(cancel)

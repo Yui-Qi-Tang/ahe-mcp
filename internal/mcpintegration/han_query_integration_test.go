@@ -98,7 +98,7 @@ type hanQueryLabReport struct {
 func hanQueryLabConfig(socket, port string) (*pgx.ConnConfig, error) {
 	for _, entry := range os.Environ() {
 		name, value, _ := strings.Cut(entry, "=")
-		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS") {
+		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN") {
 			return nil, fmt.Errorf("Han lab refuses inherited database environment settings")
 		}
 	}
@@ -119,7 +119,7 @@ func hanQueryLabConfig(socket, port string) (*pgx.ConnConfig, error) {
 func TestHanQueryLabConfig(t *testing.T) {
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
-		if strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS" {
+		if strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN" {
 			t.Setenv(name, "")
 		}
 	}
@@ -127,7 +127,7 @@ func TestHanQueryLabConfig(t *testing.T) {
 	if err != nil || config.Host != "/private/tmp/han-query-config-test" || config.Port != 55441 || config.Database != "ahe_han_mcp_lab" || config.User != "ahe_han_lab_operator" || config.Password != "" || config.TLSConfig != nil || len(config.Fallbacks) != 0 || len(config.RuntimeParams) != 2 {
 		t.Fatal("fixed Han lab config did not preserve the socket-only boundary")
 	}
-	for _, name := range []string{"PGHOST", "PGSERVICE", "PGSERVICEFILE", "PGPASSWORD", "PGPASSFILE", "DATABASE_DNS", "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS"} {
+	for _, name := range []string{"PGHOST", "PGSERVICE", "PGSERVICEFILE", "PGPASSWORD", "PGPASSFILE", "DATABASE_DSN", "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN"} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(name, "synthetic-setting-must-not-be-consumed")
 			if got, err := hanQueryLabConfig("/private/tmp/han-query-config-test", "55441"); err == nil || got != nil {
