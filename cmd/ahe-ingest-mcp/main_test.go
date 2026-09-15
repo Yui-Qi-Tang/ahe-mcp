@@ -10,7 +10,7 @@ import (
 
 func TestRunRequiresLauncherIdentityBeforeDatabase(t *testing.T) {
 	t.Setenv("AHE_RUNTIME_PRINCIPAL_ID", "")
-	t.Setenv("DATABASE_DNS", "invalid-secret-sentinel")
+	t.Setenv("DATABASE_DSN", "invalid-secret-sentinel")
 	if err := run(t.Context(), nil); !errors.Is(err, runtimeauth.ErrUnauthenticated) {
 		t.Fatalf("run() error = %v, want unauthenticated", err)
 	}
@@ -21,7 +21,7 @@ func TestRunRequiresQualifiedPublicProfile(t *testing.T) {
 		t.Run(profile, func(t *testing.T) {
 			t.Setenv("AHE_RUNTIME_PRINCIPAL_ID", "detective")
 			t.Setenv("AHE_RUNTIME_PROFILE", profile)
-			t.Setenv("DATABASE_DNS", "invalid-secret-sentinel")
+			t.Setenv("DATABASE_DSN", "invalid-secret-sentinel")
 			err := run(t.Context(), nil)
 			if err == nil || !strings.Contains(err.Error(), "profile") || strings.Contains(err.Error(), "secret-sentinel") {
 				t.Fatalf("unqualified profile must fail before database access: %v", err)
@@ -35,7 +35,7 @@ func TestRunRejectsInvalidDatabaseWithoutEcho(t *testing.T) {
 		t.Run(profile, func(t *testing.T) {
 			t.Setenv("AHE_RUNTIME_PRINCIPAL_ID", "mock:launcher")
 			t.Setenv("AHE_RUNTIME_PROFILE", profile)
-			t.Setenv("DATABASE_DNS", "invalid-secret-sentinel")
+			t.Setenv("DATABASE_DSN", "invalid-secret-sentinel")
 			if err := run(t.Context(), nil); err == nil || err.Error() != "invalid postgres configuration" {
 				t.Fatalf("unsafe or missing configuration error: %v", err)
 			}

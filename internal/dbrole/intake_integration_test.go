@@ -143,9 +143,9 @@ func TestIntegrationIntakeRolePersistsOnlySourceAndPendingProposals(t *testing.T
 
 func intakeRuntimeTestPool(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 90*time.Second)
 	t.Cleanup(cancel)

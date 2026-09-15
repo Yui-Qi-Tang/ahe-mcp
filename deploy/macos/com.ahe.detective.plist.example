@@ -14,8 +14,8 @@
 		<string>__AHE_DETECTIVE_BINARY__</string>
 		<key>AHE_DETECTIVE_CONFIG</key>
 		<string>__AHE_DETECTIVE_CONFIG__</string>
-		<key>AHE_DATABASE_DNS_FILE</key>
-		<string>__AHE_DATABASE_DNS_FILE__</string>
+		<key>AHE_DATABASE_DSN_FILE</key>
+		<string>__AHE_DATABASE_DSN_FILE__</string>
 	</dict>
 	<key>RunAtLoad</key>
 	<true/>

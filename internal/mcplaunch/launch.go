@@ -72,7 +72,7 @@ func childEnvironment(inherited []string, cfg config, credential string) []strin
 			values[key] = value
 		}
 	}
-	values["DATABASE_DNS"] = credential
+	values["DATABASE_DSN"] = credential
 	values["AHE_RUNTIME_PRINCIPAL_ID"] = cfg.PrincipalID
 	values["AHE_RUNTIME_PROFILE"] = cfg.Profile
 	values["AHE_DATABASE_ROLE"] = cfg.Role

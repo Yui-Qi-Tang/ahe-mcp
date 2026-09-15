@@ -26,7 +26,7 @@ var errProvisioning = errors.New("runtime role provisioning failed or its result
 const usage = `Usage: ahe-runtime-admin provision | verify
 
 Environment:
-  DATABASE_DNS          Explicit PostgreSQL URL; never a command argument
+  DATABASE_DSN          Explicit PostgreSQL URL; never a command argument
   AHE_DATABASE_NAME     Exact separately approved dedicated database
   AHE_DATABASE_SCHEMA   Existing private schema with current native migrations
   AHE_DATABASE_ROLE     Selected NOLOGIN group role
@@ -83,7 +83,7 @@ func Run(ctx context.Context, args []string, getenv func(string) string, out io.
 			return errors.New("PG environment settings must be absent for runtime administration")
 		}
 	}
-	databaseURL, err := explicitDatabaseURL(getenv("DATABASE_DNS"), cfg.database)
+	databaseURL, err := explicitDatabaseURL(getenv("DATABASE_DSN"), cfg.database)
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func loadConfiguration(getenv func(string) string) (configuration, error) {
 }
 
 func explicitDatabaseURL(value, database string) (string, error) {
-	reject := errors.New("DATABASE_DNS must be an explicit single-target PostgreSQL URL without external credential or service files")
+	reject := errors.New("DATABASE_DSN must be an explicit single-target PostgreSQL URL without external credential or service files")
 	if len(value) == 0 || len(value) > 16*1024 || !utf8.ValidString(value) || strings.ContainsAny(value, "\r\n\x00") {
 		return "", reject
 	}

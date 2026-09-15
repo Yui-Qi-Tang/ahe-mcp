@@ -34,7 +34,7 @@ chmod 0600 /absolute/private/database-dns
 Apply migrations before bootstrapping or restarting the LaunchAgent:
 
 ```sh
-DATABASE_DNS="$(cat /absolute/private/database-dns)" \
+DATABASE_DSN="$(cat /absolute/private/database-dns)" \
   /absolute/release/bin/ahe-migrate
 ```
 

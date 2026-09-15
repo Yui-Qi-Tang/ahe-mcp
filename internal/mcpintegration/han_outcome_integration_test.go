@@ -96,7 +96,7 @@ type hanOutcomeReport struct {
 func hanOutcomeConfig(socket, port, user string) (*pgx.ConnConfig, error) {
 	for _, entry := range os.Environ() {
 		name, value, _ := strings.Cut(entry, "=")
-		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS") {
+		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN") {
 			return nil, fmt.Errorf("outcome lab refuses inherited database environment")
 		}
 	}
@@ -650,7 +650,7 @@ func hanOutcomeCompareSnapshot(t *testing.T, ctx context.Context, observer *pgxp
 func TestHanOutcomeConfig(t *testing.T) {
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
-		if strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS" {
+		if strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN" {
 			t.Setenv(name, "")
 		}
 	}
@@ -658,7 +658,7 @@ func TestHanOutcomeConfig(t *testing.T) {
 	if err != nil || config.Database != "ahe_brief_lab" || config.User != "ahe_brief_operator" || config.Port != 55444 || config.Password != "" || config.TLSConfig != nil || len(config.Fallbacks) != 0 || config.RuntimeParams["default_transaction_read_only"] != "on" {
 		t.Fatal("fixed outcome configuration mismatch")
 	}
-	for _, name := range []string{"PGHOST", "PGSERVICE", "PGSERVICEFILE", "PGPASSWORD", "PGPASSFILE", "DATABASE_DNS", "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS"} {
+	for _, name := range []string{"PGHOST", "PGSERVICE", "PGSERVICEFILE", "PGPASSWORD", "PGPASSFILE", "DATABASE_DSN", "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN"} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(name, "must-not-be-read")
 			if _, err := hanOutcomeConfig("/private/tmp/ahe-han-outcome.config-test", "55444", "ahe_brief_operator"); err == nil {

@@ -163,7 +163,7 @@ func TestChildEnvironmentIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	inherited := []string{"HOME=/synthetic/home", "LANG=zh_TW.UTF-8", "PATH=/hostile/bin", "PGHOST=hostile", "PGSERVICE=hostile", "PGPASSFILE=/hostile/file", "DATABASE_DNS=hostile", "AHE_DATABASE_ROLE=hostile", "AHE_RUNTIME_PRINCIPAL_ID=hostile", "AHE_SOURCE=hostile", "DYLD_INSERT_LIBRARIES=hostile", "LD_PRELOAD=hostile", "GOFLAGS=hostile", "GODEBUG=hostile", "SSL_CERT_FILE=hostile", "SECRET=hostile"}
+	inherited := []string{"HOME=/synthetic/home", "LANG=zh_TW.UTF-8", "PATH=/hostile/bin", "PGHOST=hostile", "PGSERVICE=hostile", "PGPASSFILE=/hostile/file", "DATABASE_DSN=hostile", "AHE_DATABASE_ROLE=hostile", "AHE_RUNTIME_PRINCIPAL_ID=hostile", "AHE_SOURCE=hostile", "DYLD_INSERT_LIBRARIES=hostile", "LD_PRELOAD=hostile", "GOFLAGS=hostile", "GODEBUG=hostile", "SSL_CERT_FILE=hostile", "SECRET=hostile"}
 	before := append([]string{}, inherited...)
 	result := childEnvironment(inherited, cfg, "synthetic-credential")
 	if !reflect.DeepEqual(inherited, before) {
@@ -179,7 +179,7 @@ func TestChildEnvironmentIsolation(t *testing.T) {
 	}
 	want := map[string]string{
 		"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": "/synthetic/home", "LANG": "zh_TW.UTF-8",
-		"DATABASE_DNS": "synthetic-credential", "AHE_RUNTIME_PRINCIPAL_ID": cfg.PrincipalID,
+		"DATABASE_DSN": "synthetic-credential", "AHE_RUNTIME_PRINCIPAL_ID": cfg.PrincipalID,
 		"AHE_RUNTIME_PROFILE": cfg.Profile, "AHE_DATABASE_ROLE": cfg.Role, "AHE_DATABASE_SCHEMA": cfg.Schema,
 	}
 	if !reflect.DeepEqual(got, want) {

@@ -108,9 +108,9 @@ func TestIntegrationDetectiveLiveModelExperiment(t *testing.T) {
 	if selected["MODEL"] != "gemma4:e4b-it-qat" || !detectiveLiveEndpoint(selected["BASE_URL"]) {
 		t.Fatal("live experiment requires its exact selected model and explicit IPv4-loopback HTTP endpoint")
 	}
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	detectiveRoot := detectivePendingSourceRoot(t)
 	output := selected["OUTPUT"]

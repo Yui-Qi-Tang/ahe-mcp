@@ -21,7 +21,7 @@ func TestIntegrationRunAppliesAndVerifiesMigrations(t *testing.T) {
 	fixture := newMigrationCommandFixture(t)
 	getenv := func(key string) string {
 		switch key {
-		case "DATABASE_DNS":
+		case "DATABASE_DSN":
 			return fixture.databaseURL
 		case "AHE_DATABASE_SCHEMA":
 			return fixture.targetSchema
@@ -76,7 +76,7 @@ func TestIntegrationRunRejectsFallbackSearchPathBeforeWriting(t *testing.T) {
 	)
 	err := run(t.Context(), nil, func(key string) string {
 		switch key {
-		case "DATABASE_DNS":
+		case "DATABASE_DSN":
 			return mixedURL
 		case "AHE_DATABASE_SCHEMA":
 			return fixture.targetSchema
@@ -96,7 +96,7 @@ func TestIntegrationRunRejectsMissingSchemaBeforeWriting(t *testing.T) {
 	missingSchema := fixture.targetSchema + "_missing"
 	err := run(t.Context(), nil, func(key string) string {
 		switch key {
-		case "DATABASE_DNS":
+		case "DATABASE_DSN":
 			return fixture.databaseURL
 		case "AHE_DATABASE_SCHEMA":
 			return missingSchema
@@ -119,7 +119,7 @@ func TestIntegrationRunRejectsPublicSchemaAuthorityBeforeWriting(t *testing.T) {
 	}
 	err := run(t.Context(), nil, func(key string) string {
 		switch key {
-		case "DATABASE_DNS":
+		case "DATABASE_DSN":
 			return fixture.databaseURL
 		case "AHE_DATABASE_SCHEMA":
 			return fixture.targetSchema
@@ -152,9 +152,9 @@ type migrationCommandFixture struct {
 
 func newMigrationCommandFixture(t *testing.T) migrationCommandFixture {
 	t.Helper()
-	databaseURL := os.Getenv("DATABASE_DNS")
+	databaseURL := os.Getenv("DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("DATABASE_DNS is not set")
+		t.Skip("DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
@@ -210,7 +210,7 @@ func migrationCommandURLWithSearchPath(t *testing.T, databaseURL, searchPath str
 	}
 	parsed, err := url.Parse(databaseURL)
 	if err != nil {
-		t.Fatalf("parse DATABASE_DNS: %v", err)
+		t.Fatalf("parse DATABASE_DSN: %v", err)
 	}
 	query := parsed.Query()
 	query.Set("search_path", searchPath)
@@ -225,7 +225,7 @@ func migrationCommandURLWithoutSearchPath(t *testing.T, databaseURL string) stri
 	}
 	parsed, err := url.Parse(databaseURL)
 	if err != nil {
-		t.Fatalf("parse DATABASE_DNS: %v", err)
+		t.Fatalf("parse DATABASE_DSN: %v", err)
 	}
 	query := parsed.Query()
 	query.Del("search_path")

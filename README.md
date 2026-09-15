@@ -10,7 +10,7 @@ claims, and query evidence with its provenance and lifecycle state.
 Current version: `dev` preview. Retained Detective Desktop code: `0.1.0-preview.18`.
 MCP and Detective share one root Go module, using Go `1.27.0`.
 
-> **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** Desktop is not a
+> **Desktop frozen / unavailable — 2026-09-14.** Desktop is not a
 > supported working product. Its code and previous test results are retained,
 > not offered for installation or acceptance. Stabilize Detective CLI first;
 > this does not disable the AHE MCP servers.

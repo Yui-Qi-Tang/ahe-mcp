@@ -84,7 +84,7 @@ handoff.
 
 ## Repository Work
 
-- As of 2026-09-14, Detective Desktop is frozen and unavailable (目前不工作).
+- As of 2026-09-14, Detective Desktop is frozen and unavailable.
   Do not resume UI/features, launch/trial/acceptance or Desktop publication
   without explicit user approval to unfreeze it. Prior passing tests/builds
   are historical, not usable-product acceptance. Retain code and saved work.
@@ -96,7 +96,7 @@ handoff.
 - Use Go 1.27.0 semantics. For ordinary code changes run `make verify`; add
   `go test -race ./...` when concurrency behaviour or CI is in scope.
 - Run integration tests only against an explicitly selected non-production
-  PostgreSQL database. Never print or commit `DATABASE_DNS`.
+  PostgreSQL database. Never print or commit `DATABASE_DSN`.
 - Keep `docs/` for current theory, algorithms, data structures and their
   references. Keep experiment logs, raw captures and historical reviews in a
   private lab outside this repository; never publish the lab's machine paths.

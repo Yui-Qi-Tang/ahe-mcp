@@ -34,9 +34,9 @@ import (
 // The fixture creates only its private schema; approval is synthetic test data,
 // not evidence of authenticated human review or a production deployment.
 func TestIntegrationRuntimeProvisioningLauncherRoundTrip(t *testing.T) {
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 180*time.Second)
 	defer cancel()
@@ -380,7 +380,7 @@ func runProvisioningAdmin(t *testing.T, ctx context.Context, command, operation,
 	t.Helper()
 	cmd := exec.CommandContext(ctx, command, operation)
 	// In particular, no inherited PG* values reach the operator command.
-	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "DATABASE_DNS=" + dsn, "AHE_DATABASE_NAME=" + database,
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "DATABASE_DSN=" + dsn, "AHE_DATABASE_NAME=" + database,
 		"AHE_DATABASE_SCHEMA=" + schema, "AHE_DATABASE_ROLE=" + identity.group, "AHE_DATABASE_LOGIN=" + identity.login,
 		"AHE_RUNTIME_PROFILE=" + string(identity.profile), "GORACE=halt_on_error=1"}
 	var stdout bytes.Buffer
@@ -455,7 +455,7 @@ func writeProvisioningConfig(t *testing.T, path string, config provisioningLaunc
 
 func provisioningPollutedEnvironment() []string {
 	return []string{"PATH=/invalid/inherited/path", "PGHOST=/invalid/inherited/socket", "PGPORT=1", "PGUSER=spoofed", "PGDATABASE=spoofed", "PGOPTIONS=-c search_path=public",
-		"DATABASE_DNS=invalid-inherited-credential", "AHE_DATABASE_NAME=spoofed", "AHE_DATABASE_SCHEMA=public", "AHE_DATABASE_ROLE=spoofed",
+		"DATABASE_DSN=invalid-inherited-credential", "AHE_DATABASE_NAME=spoofed", "AHE_DATABASE_SCHEMA=public", "AHE_DATABASE_ROLE=spoofed",
 		"AHE_RUNTIME_PROFILE=legacy-operator", "AHE_RUNTIME_PRINCIPAL_ID=spoofed", "AHE_DATABASE_LOGIN=spoofed", "GORACE=halt_on_error=1"}
 }
 
