@@ -17,9 +17,9 @@ import (
 // The public wire must return a domain conflict, not a leaked unique violation
 // or a second pending run, using the unchanged restricted intake privileges.
 func TestIntegrationRuntimeAuthoritySubprocessRequestIdentity(t *testing.T) {
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 120*time.Second)
 	defer cancel()

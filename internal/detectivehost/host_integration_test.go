@@ -652,9 +652,9 @@ func hostPlannerGitWorkspace(t *testing.T) string {
 
 func hostIntegrationDatabase(t *testing.T) (string, *pgxpool.Pool) {
 	t.Helper()
-	databaseURL := os.Getenv("DATABASE_DNS")
+	databaseURL := os.Getenv("DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("DATABASE_DNS is not set")
+		t.Skip("DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
@@ -707,7 +707,7 @@ func hostSchemaDatabaseURL(databaseURL, schema string) (string, error) {
 	return parsed.String(), nil
 }
 
-var errUnsupportedDatabaseURL = errors.New("DATABASE_DNS must be a PostgreSQL URL for host integration tests")
+var errUnsupportedDatabaseURL = errors.New("DATABASE_DSN must be a PostgreSQL URL for host integration tests")
 
 func assertHostTableCount(t *testing.T, pool *pgxpool.Pool, table string, want int) {
 	t.Helper()

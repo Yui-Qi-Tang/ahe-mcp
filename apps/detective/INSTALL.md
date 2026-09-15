@@ -1,6 +1,6 @@
 # Install Detective CLI and Desktop
 
-> **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** The Desktop installation,
+> **Desktop frozen / unavailable — 2026-09-14.** The Desktop installation,
 > launch, connection, upgrade and acceptance steps in this document are frozen
 > references, not current instructions. Do not run them as the next task.
 > CLI end-to-end engineering intake remains incomplete. Source, tests, binaries and
@@ -122,7 +122,9 @@ Use the app's displayed workspace identifier to distinguish multiple windows.
 
 ## Connect a source and use chat
 
-1. In **資料源與連線**, choose actual mode and configure the source MCP you intend
+UI names below are English descriptions of the existing labels.
+
+1. In **Sources and connections**, choose actual mode and configure the source MCP you intend
    to use. For stdio, supply one approved executable launcher path and an explicit
    tool allowlist. Saving settings does not call the source.
 2. Discover tools, inspect the selected tool's schema and complete arguments,
@@ -130,7 +132,7 @@ Use the app's displayed workspace identifier to distinguish multiple windows.
 3. Configure an already-running local OpenAI-compatible endpoint and the exact
    installed model name. The default endpoint/model are only initial settings,
    not proof that either service exists on the machine.
-4. Return to **工作台** to read the source and chat. Chat does not automatically
+4. Return to **Workbench** to read the source and chat. Chat does not automatically
    call source tools, select evidence paragraphs or submit pending proposals.
    The separate task-selection page and workbench selection card are removed;
    the developer CLI and underlying selector remain available separately.
@@ -138,7 +140,7 @@ Use the app's displayed workspace identifier to distinguish multiple windows.
 The normal UI has no local-file, saved-work or synthetic-demo opening controls,
 and no persistent model-not-started warning on the workbench. The model must
 still be explicitly configured and running before it can answer.
-**新工作** clears the active work without loading an example, deleting saved
+**New work** clears the active work without loading an example, deleting saved
 files or changing the applied connection settings. Offline mode does not run
 the model or show fake model replies.
 
@@ -154,11 +156,11 @@ command to make the frozen setup appear functional.
 
 Install Codebase separately; Desktop does not download it. The fixed preset
 expects the current user's `.local/bin/codebase-memory-mcp` executable. In
-**資料源與連線**, choose **加入本機 Codebase（選擇資料夾）**, select one repository,
+**Sources and connections**, choose **Add local Codebase (choose folder)**, select one repository,
 and apply settings in local mode. Advanced coordinates are read-only/collapsed.
-Use the separate **建立／更新此資料夾索引（不入庫）** action before querying it.
+Use the separate **Create/update this folder index (no ingestion)** action before querying it.
 
-In **工作台**, select the saved Codebase connection, fetch its tool list and ask
+In **Workbench**, select the saved Codebase connection, fetch its tool list and ask
 a question. Review each proposed tool/argument card before confirming the read.
 The network block applies to the Codebase process tree, not to the separately
 configured local-model service. Other MCP servers are not available in chat.
@@ -172,16 +174,16 @@ Streamable HTTP. It does not require `mcp-remote`, a local provider, an adapter
 launcher, a gateway, or a DNS override. This is the Desktop source connection;
 the legacy `ahe-detective` collector and its pinned local adapter remain separate.
 
-1. In **資料源與連線**, choose **實際模式**, add a source connection and select
-   **Atlassian 官方 MCP · OAuth**. The endpoint is fixed. Review the proposed
+1. In **Sources and connections**, choose **Live mode**, add a source connection and select
+   **Official Atlassian MCP · OAuth**. The endpoint is fixed. Review the proposed
    allowlist (`getAccessibleAtlassianResources`, `getJiraIssue`,
    `getConfluenceContent`) and apply settings.
-2. Select the saved server under **手動來源工具**, then press **登入 Atlassian**.
+2. Select the saved server under **Manual source tools**, then press **Log in to Atlassian**.
    Copy the displayed authorization URL and open it yourself. Detective does not
    inspect or automatically open a browser. Complete Atlassian consent before
    the roughly two-minute operation deadline; the application's Cancel action
    stops waiting and closes the loopback callback.
-3. After Detective reports login complete, press **取得工具清單**. Select a
+3. After Detective reports login complete, press **Get tool list**. Select a
    discovered tool and inspect its live input schema. A separately confirmed
    `getAccessibleAtlassianResources` call can obtain the `cloudId`; use the exact
    returned site ID and the selected tool's schema for subsequent calls.
@@ -198,7 +200,7 @@ stay in backend memory and are excluded from settings, UI state, receipts and
 logs. Refresh occurs only when an explicit source operation needs it. A failed
 refresh or HTTP 401 requires login again; a source call is never replayed.
 
-**清除本次登入**, applying settings, starting offline rehearsal, or closing the
+**Clear this login**, applying settings, starting offline rehearsal, or closing the
 app forgets local credentials and invalidates the associated tool inventory.
 This does not revoke the grant at Atlassian; use your Atlassian account controls
 for server-side revocation. Restart begins offline and requires a new login.
@@ -229,7 +231,7 @@ First complete the root [MCP installation](../../INSTALL.md), including the
 separately selected private PostgreSQL schema and bounded runtime identities.
 Use the same reviewed source commit for MCP and Desktop when qualifying a pair.
 
-In **資料源與連線**, find **AHE 證據庫（選用）** after the source settings and
+In **Sources and connections**, find **AHE evidence store (optional)** after the source settings and
 expand its advanced connection settings. These fields are unnecessary for
 source collection or local chat. They do not install or configure PostgreSQL.
 If AHE has been installed, enter the full paths of executable launchers
@@ -237,10 +239,10 @@ configured and supplied by the AHE installer/operator. The current installation
 does not create these files automatically; leave the fields blank if those
 paths have not been provided:
 
-- **證據查詢程式** (Query): read-only evidence and pending-state lookup; no writes.
-- **待審提交程式** (Intake): source/extraction/pending submissions, with its own
+- **Evidence query program** (Query): read-only evidence and pending-state lookup; no writes.
+- **Pending submission program** (Intake): source/extraction/pending submissions, with its own
   credentials. Pending proposals have not been admitted as evidence.
-- **人工審閱程式** (Review): writes an exact admit/reject/audit_only decision only
+- **Human review program** (Review): writes an exact admit/reject/audit_only decision only
   after explicit human confirmation, using separate reviewer credentials.
 
 These programs are also called launchers in the MCP installation guide. Each

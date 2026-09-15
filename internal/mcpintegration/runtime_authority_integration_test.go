@@ -33,11 +33,11 @@ import (
 
 // This is a real compiled-command/stdio witness, not an in-process backend
 // test. The dedicated acceptance database is the only permitted database; no
-// DATABASE_DNS fallback or production launcher is used. It never admits data.
+// DATABASE_DSN fallback or production launcher is used. It never admits data.
 func TestIntegrationRuntimeAuthoritySubprocessPendingRoundTrip(t *testing.T) {
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 120*time.Second)
 	defer cancel()
@@ -363,7 +363,7 @@ func startAuthorityProcess(t *testing.T, ctx context.Context, command string, lo
 	}
 	processCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	cmd := exec.CommandContext(processCtx, binary)
-	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "DATABASE_DNS=" + login.dsn,
+	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "DATABASE_DSN=" + login.dsn,
 		"AHE_RUNTIME_PRINCIPAL_ID=mock:" + command, "AHE_DATABASE_ROLE=" + login.group, "AHE_DATABASE_SCHEMA=" + schema,
 		"GORACE=halt_on_error=1"}
 	if profile != "" {

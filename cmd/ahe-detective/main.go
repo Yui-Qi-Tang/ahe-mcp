@@ -54,9 +54,9 @@ func run(
 	if err != nil {
 		return err
 	}
-	databaseURL := strings.TrimSpace(getenv("DATABASE_DNS"))
+	databaseURL := strings.TrimSpace(getenv("DATABASE_DSN"))
 	if databaseURL == "" {
-		return errors.New("DATABASE_DNS is required")
+		return errors.New("DATABASE_DSN is required")
 	}
 	logger := slog.New(slog.NewJSONHandler(stderr, nil)).With(
 		"service", "ahe-detective",
@@ -127,6 +127,6 @@ func usage() string {
 		"  -h, --help     Show this help",
 		"",
 		"Environment:",
-		"  DATABASE_DNS   PostgreSQL DSN for the authoritative AHE store",
+		"  DATABASE_DSN   PostgreSQL DSN for the authoritative AHE store",
 	}, "\n")
 }

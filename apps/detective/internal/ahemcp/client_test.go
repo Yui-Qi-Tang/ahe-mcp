@@ -15,7 +15,7 @@ import (
 )
 
 func TestTransportRequiresAbsoluteExecutable(t *testing.T) {
-	for _, command := range []string{"", "ahe-ingest-mcp", "DATABASE_DNS=secret /bin/cat", "/bin/cat --secret", "/bin/../bin/cat", t.TempDir()} {
+	for _, command := range []string{"", "ahe-ingest-mcp", "DATABASE_DSN=secret /bin/cat", "/bin/cat --secret", "/bin/../bin/cat", t.TempDir()} {
 		t.Run(command, func(t *testing.T) {
 			if c, err := start(context.Background(), command); err == nil || c != nil {
 				t.Fatalf("start() = %v, %v; want rejection", c, err)
@@ -25,7 +25,7 @@ func TestTransportRequiresAbsoluteExecutable(t *testing.T) {
 }
 
 func TestTransportSanitizesEnvironmentAndExitsOnEOF(t *testing.T) {
-	for _, name := range []string{"PGPASSWORD", "PGSERVICE", "DATABASE_DNS", "AHE_RUNTIME_PROFILE", "AHE_DATABASE_ROLE", "OPENAI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "DYLD_INSERT_LIBRARIES", "LD_PRELOAD", "GODEBUG"} {
+	for _, name := range []string{"PGPASSWORD", "PGSERVICE", "DATABASE_DSN", "AHE_RUNTIME_PROFILE", "AHE_DATABASE_ROLE", "OPENAI_API_KEY", "GOOGLE_API_KEY", "ANTHROPIC_API_KEY", "DYLD_INSERT_LIBRARIES", "LD_PRELOAD", "GODEBUG"} {
 		t.Setenv(name, "synthetic-secret")
 	}
 	t.Setenv("PATH", "/synthetic/unsafe")

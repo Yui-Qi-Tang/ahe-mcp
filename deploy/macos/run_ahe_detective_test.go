@@ -16,7 +16,7 @@ func TestRunAHEDetectiveWrapperInjectsCredentialWithoutMigration(t *testing.T) {
 	command.Env = append(os.Environ(),
 		"AHE_DETECTIVE_BINARY="+fixture.binary,
 		"AHE_DETECTIVE_CONFIG="+fixture.config,
-		"AHE_DATABASE_DNS_FILE="+fixture.credential,
+		"AHE_DATABASE_DSN_FILE="+fixture.credential,
 	)
 	output, err := command.CombinedOutput()
 	if err != nil {
@@ -33,7 +33,7 @@ func TestRunAHEDetectiveWrapperRejectsLooseCredentialMode(t *testing.T) {
 	command.Env = append(os.Environ(),
 		"AHE_DETECTIVE_BINARY="+fixture.binary,
 		"AHE_DETECTIVE_CONFIG="+fixture.config,
-		"AHE_DATABASE_DNS_FILE="+fixture.credential,
+		"AHE_DATABASE_DSN_FILE="+fixture.credential,
 	)
 	output, err := command.CombinedOutput()
 	if err == nil {
@@ -57,7 +57,7 @@ func wrapperFixture(t *testing.T, credentialMode os.FileMode) detectiveWrapperFi
 	config := filepath.Join(root, "detective.json")
 	credential := filepath.Join(root, "database-dns")
 	fakeBinary := `#!/bin/sh
-if [ "$DATABASE_DNS" != "postgres://wrapper-test" ]; then
+if [ "$DATABASE_DSN" != "postgres://wrapper-test" ]; then
 	exit 9
 fi
 printf '%s\n' "$*"

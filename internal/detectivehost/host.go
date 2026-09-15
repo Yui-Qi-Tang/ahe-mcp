@@ -53,7 +53,7 @@ func Run(ctx context.Context, databaseURL string, config Config, options Options
 	}
 	databaseURL = strings.TrimSpace(databaseURL)
 	if databaseURL == "" {
-		return errors.New("DATABASE_DNS is required")
+		return errors.New("DATABASE_DSN is required")
 	}
 	logger := options.Logger
 	if logger == nil {

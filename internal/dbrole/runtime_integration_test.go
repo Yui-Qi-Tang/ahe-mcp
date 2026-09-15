@@ -23,9 +23,9 @@ type publicDatabaseAuthority struct {
 }
 
 func TestIntegrationOpenRuntimePoolBindsEveryPhysicalConnection(t *testing.T) {
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	t.Cleanup(cancel)
@@ -148,7 +148,7 @@ func TestIntegrationOpenRuntimePoolBindsEveryPhysicalConnection(t *testing.T) {
 	}
 	if publicAuthority.create || publicAuthority.temporary {
 		t.Fatalf(
-			"AHE_DBROLE_ACCEPTANCE_DATABASE_DNS must name a dedicated database whose PUBLIC CREATE/TEMPORARY authority is already revoked; got %+v",
+			"AHE_DBROLE_ACCEPTANCE_DATABASE_DSN must name a dedicated database whose PUBLIC CREATE/TEMPORARY authority is already revoked; got %+v",
 			publicAuthority,
 		)
 	}

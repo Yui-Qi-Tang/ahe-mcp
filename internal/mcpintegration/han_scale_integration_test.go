@@ -317,7 +317,7 @@ func hanScaleArguments(specification hanScaleSQL, input evidenceingestion.Ground
 func hanScaleConfig(socket, port string) (*pgx.ConnConfig, error) {
 	for _, entry := range os.Environ() {
 		name, value, _ := strings.Cut(entry, "=")
-		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS") {
+		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN") {
 			return nil, fmt.Errorf("scale lab refuses inherited database environment settings")
 		}
 	}
@@ -408,7 +408,7 @@ func TestHanScalePlan(t *testing.T) {
 func TestHanScaleConfig(t *testing.T) {
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
-		if strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS" {
+		if strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN" {
 			t.Setenv(name, "")
 		}
 	}
@@ -416,7 +416,7 @@ func TestHanScaleConfig(t *testing.T) {
 	if err != nil || config.Database != "ahe_han_scale_lab" || config.User != "ahe_han_scale_operator" || config.Password != "" || config.TLSConfig != nil || config.Tracer != nil || len(config.Fallbacks) != 0 || config.RuntimeParams["statement_timeout"] != "2000" {
 		t.Fatal("fixed scale configuration boundary changed")
 	}
-	for _, name := range []string{"PGHOST", "PGSERVICE", "PGPASSWORD", "DATABASE_DNS", "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS"} {
+	for _, name := range []string{"PGHOST", "PGSERVICE", "PGPASSWORD", "DATABASE_DSN", "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN"} {
 		t.Run(name, func(t *testing.T) {
 			t.Setenv(name, "synthetic-setting-not-consumed")
 			if config, err := hanScaleConfig("/private/tmp/han-scale-config-test", "55442"); err == nil || config != nil {

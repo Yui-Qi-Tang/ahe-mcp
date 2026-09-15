@@ -86,7 +86,7 @@ func TestVerifyPendingRejectsWrongEndpointAndAbnormalExit(t *testing.T) {
 }
 
 func TestVerifyPendingSanitizesInheritedCredentials(t *testing.T) {
-	for _, name := range []string{"DATABASE_DNS", "PGPASSWORD", "AHE_RUNTIME_PROFILE", "AHE_DATABASE_ROLE", "OPENAI_API_KEY", "GOOGLE_API_KEY"} {
+	for _, name := range []string{"DATABASE_DSN", "PGPASSWORD", "AHE_RUNTIME_PROFILE", "AHE_DATABASE_ROLE", "OPENAI_API_KEY", "GOOGLE_API_KEY"} {
 		t.Setenv(name, "synthetic-secret")
 	}
 	document, records := handoffDocument(t, "first line\n")

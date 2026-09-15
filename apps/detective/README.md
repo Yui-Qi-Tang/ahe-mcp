@@ -1,6 +1,6 @@
 # AHE Detective
 
-> **Desktop 凍結／目前不工作（不可用） — 2026-09-14.** Stop Desktop feature work,
+> **Desktop frozen / unavailable — 2026-09-14.** Stop Desktop feature work,
 > installation and UI acceptance. Retain its code, tests, built app and saved
 > work without treating them as a usable product. CLI is the development focus,
 > but its end-to-end engineering intake is not yet qualified.
@@ -78,17 +78,19 @@ intake and human decisions are not wired to task selection yet.
 Build with `make desktop` and intentionally choose a workspace using the
 [installation guide](INSTALL.md#first-launch-choose-the-workspace-intentionally).
 
-1. In **資料源與連線**, apply the intended source MCP settings.
+UI names below are English descriptions of the existing labels.
+
+1. In **Sources and connections**, apply the intended source MCP settings.
    Discover the allowed tools, inspect the tool and arguments, then confirm the
    source call. No tool is selected or called automatically.
 2. Configure an already-running local model if you want to chat, then use
-   **工作台** to read the returned source and converse. Chat does not automatically
+   **Workbench** to read the returned source and converse. Chat does not automatically
    execute source tools, select evidence paragraphs or submit proposals.
 3. If an AHE evidence store has separately been installed, configure the optional
    AHE connection to search it. Source collection and local chat do not require
    those AHE program paths.
 
-**新工作** clears the current source, candidates and conversation without
+**New work** clears the current source, candidates and conversation without
 loading synthetic content or changing the applied connections/model mode.
 Previously saved files are retained. There is no persistent model-not-started
 warning on the workbench; model configuration remains explicit, and removing
@@ -99,11 +101,11 @@ that notice does not start a model or conceal a failed operation.
 **Frozen / unavailable.** This Desktop-only wiring is not a CLI capability;
 do not bypass its network restriction with a generic source launcher.
 
-On macOS, **加入本機 Codebase（選擇資料夾）** creates a draft for the installed
+On macOS, **Add local Codebase (choose folder)** creates a draft for the installed
 `codebase-memory-mcp` binary. Apply settings, explicitly build the repository
 index, then select that Codebase source in the workbench and fetch its tool list.
 Ask a question, inspect the proposed tool and complete arguments, and press
-**確認本次讀取（不入庫）**. A follow-up requires a new confirmation.
+**Confirm this read (no ingestion)**. A follow-up requires a new confirmation.
 
 Only this fixed preset enters chat. Codebase and its children run under a macOS
 network-denying profile, with local Unix IPC permitted and repository writes
@@ -206,7 +208,7 @@ whether a claim is supported by the cited source.
 
 ## Authority and review
 
-**資料源與連線** places **AHE 證據庫（選用）** after source configuration.
+**Sources and connections** places **AHE evidence store (optional)** after source configuration.
 Its advanced connection settings are collapsed by default. Leave them blank
 when only collecting sources or using local chat; they do not configure a DB
 automatically. The three AHE program paths have distinct responsibilities:
@@ -214,9 +216,9 @@ automatically. The three AHE program paths have distinct responsibilities:
 | Connection | What it may do |
 | --- | --- |
 | Source MCP | Read the explicitly approved source tool and preserve its returned content |
-| 證據查詢程式 (Query) | Read evidence and pending/review state; no writes |
-| 待審提交程式 (Intake) | Save source/extraction/pending-proposal state; pending is not admitted evidence |
-| 人工審閱程式 (Review) | Write only the explicitly confirmed exact review decision through the separate reviewer profile |
+| Evidence query program (Query) | Read evidence and pending/review state; no writes |
+| Pending submission program (Intake) | Save source/extraction/pending-proposal state; pending is not admitted evidence |
+| Human review program (Review) | Write only the explicitly confirmed exact review decision through the separate reviewer profile |
 
 The AHE installer/operator must configure and provide the executable launchers;
 the current installation does not create them automatically. Leave unknown
