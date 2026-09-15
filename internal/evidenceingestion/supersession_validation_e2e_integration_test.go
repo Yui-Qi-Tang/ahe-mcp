@@ -333,9 +333,9 @@ func validationE2EPool(t *testing.T) (context.Context, *pgxpool.Pool) {
 
 func validationE2EPoolWithTimeout(t *testing.T, timeout time.Duration) (context.Context, *pgxpool.Pool) {
 	t.Helper()
-	databaseURL := os.Getenv("DATABASE_DNS")
+	databaseURL := os.Getenv("DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("DATABASE_DNS is not set")
+		t.Skip("DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	t.Cleanup(cancel)

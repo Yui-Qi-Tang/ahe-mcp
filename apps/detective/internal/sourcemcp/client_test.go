@@ -440,7 +440,7 @@ func stdioFixture(t *testing.T, mode string) Config {
 }
 
 func TestStdioSourceDiscoveryAndCall(t *testing.T) {
-	for _, key := range []string{"DATABASE_DNS", "PGPASSWORD", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "HTTP_PROXY", "DYLD_INSERT_LIBRARIES", "LD_PRELOAD", "HOME"} {
+	for _, key := range []string{"DATABASE_DSN", "PGPASSWORD", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "HTTP_PROXY", "DYLD_INSERT_LIBRARIES", "LD_PRELOAD", "HOME"} {
 		t.Setenv(key, "synthetic-secret")
 	}
 	cfg := stdioFixture(t, "valid")
@@ -520,7 +520,7 @@ func TestSourceMCPHelperProcess(t *testing.T) {
 		return
 	}
 	mode := os.Args[pos+1]
-	for _, key := range []string{"DATABASE_DNS", "PGPASSWORD", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "HTTP_PROXY", "DYLD_INSERT_LIBRARIES", "LD_PRELOAD", "HOME"} {
+	for _, key := range []string{"DATABASE_DSN", "PGPASSWORD", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "HTTP_PROXY", "DYLD_INSERT_LIBRARIES", "LD_PRELOAD", "HOME"} {
 		if os.Getenv(key) != "" {
 			os.Exit(20)
 		}

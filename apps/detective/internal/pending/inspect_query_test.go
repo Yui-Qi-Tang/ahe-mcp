@@ -26,7 +26,7 @@ import (
 func TestInspectQueryReadsOnlyExactPendingOccurrence(t *testing.T) {
 	for _, ending := range []string{"\n", "\r\n"} {
 		t.Run(fmt.Sprintf("line_ending_%q", ending), func(t *testing.T) {
-			for _, key := range []string{"DATABASE_DNS", "PGPASSWORD", "OPENAI_API_KEY", "GOOGLE_API_KEY", "DETECTIVE_BASE_URL", "DETECTIVE_AHE_INGEST_COMMAND"} {
+			for _, key := range []string{"DATABASE_DSN", "PGPASSWORD", "OPENAI_API_KEY", "GOOGLE_API_KEY", "DETECTIVE_BASE_URL", "DETECTIVE_AHE_INGEST_COMMAND"} {
 				t.Setenv(key, "synthetic-secret-must-not-leave-parent")
 			}
 			document, batch := checkpointFixture(t, ending)

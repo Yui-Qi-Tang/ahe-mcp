@@ -139,7 +139,7 @@ func TestRunHelpAndClosedArguments(t *testing.T) {
 func TestRunRejectsAmbientPGConfigurationBeforeParsing(t *testing.T) {
 	t.Setenv("PGSERVICEFILE", "/private/synthetic-never-read")
 	env := testEnvironment()
-	env["DATABASE_DNS"] = "postgres://fixture:synthetic@localhost/new_pilot?sslmode=disable"
+	env["DATABASE_DSN"] = "postgres://fixture:synthetic@localhost/new_pilot?sslmode=disable"
 	var out bytes.Buffer
 	err := Run(context.Background(), []string{"provision"}, func(key string) string { return env[key] }, &out)
 	if err == nil || !strings.HasPrefix(err.Error(), "PG environment") || out.Len() != 0 {

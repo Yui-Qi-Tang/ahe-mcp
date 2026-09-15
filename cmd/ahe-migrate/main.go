@@ -36,9 +36,9 @@ func run(
 		}
 		return fmt.Errorf("unknown argument %q\n\n%s", args[0], usage())
 	}
-	databaseURL := getenv("DATABASE_DNS")
+	databaseURL := getenv("DATABASE_DSN")
 	if databaseURL == "" {
-		return errors.New("DATABASE_DNS is required")
+		return errors.New("DATABASE_DSN is required")
 	}
 	schema := getenv("AHE_DATABASE_SCHEMA")
 	if err := migrations.ValidateTargetSchema(schema); err != nil {
@@ -86,7 +86,7 @@ func usage() string {
 	return `Usage: ahe-migrate
 
 Environment:
-  DATABASE_DNS         PostgreSQL DSN for the authoritative AHE store
+  DATABASE_DSN         PostgreSQL DSN for the authoritative AHE store
   AHE_DATABASE_SCHEMA  Existing private schema to migrate; no fallback schema is allowed
 
 The command acquires the migration advisory lock, applies missing embedded

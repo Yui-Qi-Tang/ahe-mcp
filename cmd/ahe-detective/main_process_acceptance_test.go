@@ -34,9 +34,9 @@ const (
 )
 
 func TestAcceptanceDetectiveHostRepairsSIGKILLDuringRepositoryExtraction(t *testing.T) {
-	databaseURL := os.Getenv("DATABASE_DNS")
+	databaseURL := os.Getenv("DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("DATABASE_DNS is not set")
+		t.Skip("DATABASE_DSN is not set")
 	}
 	realGit, err := exec.LookPath("git")
 	if err != nil {
@@ -73,7 +73,7 @@ exec "$AHE_TEST_REAL_GIT" "$@"
 	}
 	configPath := processAcceptanceConfig(t, repositoryRoot)
 	extraEnvironment := []string{
-		"DATABASE_DNS=" + schemaURL,
+		"DATABASE_DSN=" + schemaURL,
 		"PATH=" + binDir + string(os.PathListSeparator) + os.Getenv("PATH"),
 		"AHE_TEST_REAL_GIT=" + realGit,
 		"AHE_TEST_BLOCK_MARKER=" + markerPath,
@@ -137,9 +137,9 @@ exec "$AHE_TEST_REAL_GIT" "$@"
 }
 
 func TestAcceptanceDetectiveHostPlannerTransportAndRestart(t *testing.T) {
-	databaseURL := os.Getenv("DATABASE_DNS")
+	databaseURL := os.Getenv("DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("DATABASE_DNS is not set")
+		t.Skip("DATABASE_DSN is not set")
 	}
 	realGit, err := exec.LookPath("git")
 	if err != nil {
@@ -204,7 +204,7 @@ func TestAcceptanceDetectiveHostPlannerTransportAndRestart(t *testing.T) {
 	t.Cleanup(provider.Close)
 
 	configPath := processPlannerAcceptanceConfig(t, repositoryRoot, provider.URL)
-	extraEnvironment := []string{"DATABASE_DNS=" + schemaURL}
+	extraEnvironment := []string{"DATABASE_DSN=" + schemaURL}
 	first := startDetectiveHostProcess(t, configPath, true, extraEnvironment)
 	t.Cleanup(first.killIfRunning)
 	waitForPlannerProcessCompletion(t, pool, first, 15*time.Second)
@@ -524,10 +524,10 @@ func processSchemaDatabaseURL(t *testing.T, databaseURL, schema string) string {
 	t.Helper()
 	parsed, err := url.Parse(databaseURL)
 	if err != nil {
-		t.Fatalf("parse DATABASE_DNS: %v", err)
+		t.Fatalf("parse DATABASE_DSN: %v", err)
 	}
 	if parsed.Scheme != "postgres" && parsed.Scheme != "postgresql" {
-		t.Fatalf("DATABASE_DNS must be a PostgreSQL URL")
+		t.Fatalf("DATABASE_DSN must be a PostgreSQL URL")
 	}
 	query := parsed.Query()
 	query.Set("search_path", schema)

@@ -19,7 +19,7 @@ import (
 )
 
 func TestIntegrationRunRejectsUnmigratedOwnerBeforeServing(t *testing.T) {
-	t.Setenv("DATABASE_DNS", queryCommandEmptySchemaURL(t))
+	t.Setenv("DATABASE_DSN", queryCommandEmptySchemaURL(t))
 	t.Setenv("AHE_RUNTIME_PRINCIPAL_ID", "query-fixture")
 
 	// Runtime authority now precedes schema verification. The previous owner
@@ -35,9 +35,9 @@ func TestIntegrationRunRejectsUnmigratedOwnerBeforeServing(t *testing.T) {
 
 func queryCommandEmptySchemaURL(t *testing.T) string {
 	t.Helper()
-	databaseURL := os.Getenv("DATABASE_DNS")
+	databaseURL := os.Getenv("DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("DATABASE_DNS is not set")
+		t.Skip("DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
@@ -68,7 +68,7 @@ func queryCommandEmptySchemaURL(t *testing.T) string {
 
 	parsed, err := url.Parse(databaseURL)
 	if err != nil {
-		t.Fatalf("parse DATABASE_DNS: %v", err)
+		t.Fatalf("parse DATABASE_DSN: %v", err)
 	}
 	query := parsed.Query()
 	query.Set("search_path", schema)

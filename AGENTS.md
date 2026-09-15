@@ -96,7 +96,7 @@ handoff.
 - Use Go 1.27.0 semantics. For ordinary code changes run `make verify`; add
   `go test -race ./...` when concurrency behaviour or CI is in scope.
 - Run integration tests only against an explicitly selected non-production
-  PostgreSQL database. Never print or commit `DATABASE_DNS`.
+  PostgreSQL database. Never print or commit `DATABASE_DSN`.
 - Keep `docs/` for current theory, algorithms, data structures and their
   references. Keep experiment logs, raw captures and historical reviews in a
   private lab outside this repository; never publish the lab's machine paths.

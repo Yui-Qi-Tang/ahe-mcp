@@ -96,14 +96,14 @@ non-production database and an explicit private schema, retaining existing
 databases and their history unchanged. A new schema inside a shared database
 does not by itself establish isolation from that database's existing grants.
 
-All core programs that access PostgreSQL read the DSN from `DATABASE_DNS`. The
-name is intentionally `DATABASE_DNS`, not `DATABASE_DSN`.
+All core programs that access PostgreSQL read the DSN from `DATABASE_DSN`. The
+name is intentionally `DATABASE_DSN`, not `DATABASE_DSN`.
 
 The MCP executables additionally require launcher-owned configuration:
 
 | Variable | Query MCP | Intake MCP | Migration command |
 | --- | --- | --- | --- |
-| `DATABASE_DNS` | Bounded query LOGIN credentials | Different bounded intake LOGIN credentials | Separate trusted migration-owner credentials |
+| `DATABASE_DSN` | Bounded query LOGIN credentials | Different bounded intake LOGIN credentials | Separate trusted migration-owner credentials |
 | `AHE_RUNTIME_PRINCIPAL_ID` | Required fixed consumer identity | Required fixed intake identity | Not used |
 | `AHE_DATABASE_ROLE` | Required installed `query` NOLOGIN group role | Required installed `intake` NOLOGIN group role | Not used |
 | `AHE_DATABASE_SCHEMA` | Required exact authoritative schema | Required exact authoritative schema | Required pre-existing private schema |
@@ -194,7 +194,7 @@ assertions, individual deadlines and the race detector remain unchanged.
 
 ### Optional database and process tests
 
-Configure `DATABASE_DNS` only for an explicitly selected disposable test database,
+Configure `DATABASE_DSN` only for an explicitly selected disposable test database,
 then run from the repository root after `make frontend`:
 
 ```sh
@@ -205,7 +205,7 @@ go test -mod=readonly -count=1 -tags=acceptance -p 1 -parallel 1 ./cmd/ahe-detec
 On Linux, combine the relevant test tag with `webkit2_41`. Real `gopls` tests
 also require an explicit `AHE_GOPLS_PATH`; otherwise they skip. DB-role and
 Query/intake subprocess acceptance separately require
-`AHE_DBROLE_ACCEPTANCE_DATABASE_DNS`, targeting a fresh disposable database with
+`AHE_DBROLE_ACCEPTANCE_DATABASE_DSN`, targeting a fresh disposable database with
 closed database/public-schema PUBLIC privileges. Do not share that database
 with simultaneous migration tests. Use `GOFLAGS=-race` in addition to
 `go test -race` when subprocess builds must also be instrumented; preserve any
@@ -229,7 +229,7 @@ After the new schema is explicitly provisioned, apply this target repository's
 embedded forward-only migrations with the separate migration identity:
 
 ```sh
-DATABASE_DNS="$(cat /absolute/private/ahe/migration-database-dns)" \
+DATABASE_DSN="$(cat /absolute/private/ahe/migration-database-dns)" \
   AHE_DATABASE_SCHEMA=ahe \
   ./bin/ahe-migrate
 ```
@@ -295,7 +295,7 @@ and database-wide prerequisites, an authorized operator may run this example
 with its separate protected operator credential file:
 
 ```sh
-DATABASE_DNS="$(cat /absolute/private/ahe/operator-database-dns)" \
+DATABASE_DSN="$(cat /absolute/private/ahe/operator-database-dns)" \
   AHE_DATABASE_NAME=ahe_next_eval \
   AHE_DATABASE_SCHEMA=ahe \
   AHE_DATABASE_ROLE=ahe_query_runtime \
@@ -508,7 +508,7 @@ at least two, and enabled repository maintenance. A `local-prd-text/v1`-only
 host may disable repository maintenance. Then start the foreground process:
 
 ```sh
-DATABASE_DNS="$(cat /absolute/private/ahe/legacy-detective-database-dns)" \
+DATABASE_DSN="$(cat /absolute/private/ahe/legacy-detective-database-dns)" \
   ./bin/ahe-detective \
   --config /absolute/private/ahe/detective.json
 ```
@@ -613,7 +613,7 @@ this release does not introduce one.
    ./bin/ahe-detective --discover-tools /absolute/private/ahe/mcp-command.json
    ```
 
-   This command needs no `DATABASE_DNS` or host configuration. It starts the
+   This command needs no `DATABASE_DSN` or host configuration. It starts the
    selected adapter, initializes MCP, follows `tools/list` pages, prints JSON,
    and exits without `tools/call`, collection or model invocation. It does
    execute the selected adapter's startup code. Child stderr is suppressed to
@@ -646,7 +646,7 @@ this release does not introduce one.
    The adapter selects Jira description or Confluence content, not unselected
    fields, comments, history, linked documents or descendants. Collection
    coverage remains separate from selection and factual completeness.
-5. With `DATABASE_DNS` supplied externally for the selected test database:
+5. With `DATABASE_DSN` supplied externally for the selected test database:
 
    ```sh
    ./bin/ahe-detective --config /absolute/private/ahe/detective-extraction.json
@@ -713,7 +713,7 @@ embedded migration names and checksums.
 
 ## Common startup failures
 
-- `DATABASE_DNS is required`: the MCP client or shell did not provide the DSN.
+- `DATABASE_DSN is required`: the MCP client or shell did not provide the DSN.
 - missing/invalid runtime principal, profile, role or schema: configure the
   protected launcher; do not inject replacement identity through tool arguments.
 - `legacy writer runtime profiles are not enabled`: this executable currently

@@ -19,7 +19,7 @@ import (
 )
 
 func TestIntegrationRunRejectsUnmigratedOwnerBeforeServing(t *testing.T) {
-	t.Setenv("DATABASE_DNS", ingestCommandEmptySchemaURL(t))
+	t.Setenv("DATABASE_DSN", ingestCommandEmptySchemaURL(t))
 	t.Setenv("AHE_RUNTIME_PRINCIPAL_ID", "intake-fixture")
 	t.Setenv("AHE_RUNTIME_PROFILE", "intake")
 
@@ -36,9 +36,9 @@ func TestIntegrationRunRejectsUnmigratedOwnerBeforeServing(t *testing.T) {
 
 func ingestCommandEmptySchemaURL(t *testing.T) string {
 	t.Helper()
-	databaseURL := os.Getenv("DATABASE_DNS")
+	databaseURL := os.Getenv("DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("DATABASE_DNS is not set")
+		t.Skip("DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
@@ -69,7 +69,7 @@ func ingestCommandEmptySchemaURL(t *testing.T) string {
 
 	parsed, err := url.Parse(databaseURL)
 	if err != nil {
-		t.Fatalf("parse DATABASE_DNS: %v", err)
+		t.Fatalf("parse DATABASE_DSN: %v", err)
 	}
 	query := parsed.Query()
 	query.Set("search_path", schema)

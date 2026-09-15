@@ -20,9 +20,9 @@ import (
 // Three actual compiled stdio processes and restricted logins witness the
 // public route. Synthetic approval is not authenticated human review.
 func TestIntegrationSourceClaimReviewSubprocessExactAdmission(t *testing.T) {
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 120*time.Second)
 	defer cancel()

@@ -62,7 +62,7 @@ type multisurfaceLabReport struct {
 func multisurfaceLabConfig(socket, port, user string) (*pgx.ConnConfig, error) {
 	for _, entry := range os.Environ() {
 		name, value, _ := strings.Cut(entry, "=")
-		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS") {
+		if value != "" && (strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN") {
 			return nil, fmt.Errorf("multisurface lab refuses inherited database environment")
 		}
 	}
@@ -679,7 +679,7 @@ func multisurfaceTermPartition(query, matched, missing []string) error {
 func TestMultisurfaceLabConfigBoundaries(t *testing.T) {
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
-		if strings.HasPrefix(name, "PG") || name == "DATABASE_DNS" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DNS" {
+		if strings.HasPrefix(name, "PG") || name == "DATABASE_DSN" || name == "AHE_DBROLE_ACCEPTANCE_DATABASE_DSN" {
 			t.Setenv(name, "")
 		}
 	}

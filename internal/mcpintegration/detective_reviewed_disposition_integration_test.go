@@ -20,9 +20,9 @@ import (
 // It does not establish that any real person inspected or approved a decision.
 func TestIntegrationDetectiveReviewedDispositionProtectedLauncher(t *testing.T) {
 	detectiveRoot := detectivePendingSourceRoot(t)
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 600*time.Second)
 	defer cancel()

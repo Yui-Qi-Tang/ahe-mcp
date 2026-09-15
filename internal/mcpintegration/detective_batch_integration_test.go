@@ -22,9 +22,9 @@ import (
 // one candidate; the Detective index is not a native multi-proposal manifest.
 func TestIntegrationDetectiveBatchRecoveryProtectedLauncher(t *testing.T) {
 	detectiveRoot := detectivePendingSourceRoot(t)
-	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS")
+	databaseURL := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if databaseURL == "" {
-		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DNS is not set")
+		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 300*time.Second)
 	defer cancel()
