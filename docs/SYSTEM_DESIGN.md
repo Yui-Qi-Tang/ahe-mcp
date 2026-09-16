@@ -153,6 +153,39 @@ Implementation: [review contract](../internal/evidenceingestion/reviewable_inges
 | `supersedes` | New replacement → old target |
 | `references` / `implements` | Typed reference/implementation relations; similarity or arbitrary edge writes alone cannot establish them |
 
+Independent relation admission uses a dedicated MCP profile, separate from node
+review. The native writer reloads endpoint authority, verifies the exact review
+subject and launcher-bound approval, and atomically stores one directed edge
+with an append-only `canonical_implements_admissions` or
+`canonical_references_admissions` receipt. Query relation provenance includes
+that receipt. Exact retries reuse request identity; changed approval data or
+stale subjects conflict. Adding independently receipted edges does not alter
+the original node-admission manifest: replay excludes only verified independent
+relations, not arbitrary edges carrying a matching label.
+
+The exposed `implements` profile requires a derived specification and
+repository-backed Go source claim. Its complete recursive AND ancestry is
+bounded to 8 derived layers, 64 nodes and 128 parent edges; every derived layer
+has an explicit reviewed rule. Code is reconstructed from its retained revision
+and parser-backed source, not from a model summary. Only the reviewed root-to-code
+edge is admitted; no transitive implementation, execution or correctness is
+inferred. Direct source-specification and endpoint-creation writers are not
+exposed by this profile.
+
+`references` v1 resolves literal source reference and anchor markers, locally
+or against a pinned snapshot. It retains a complete bounded observed overlap
+set (1–64 candidates) and requires a unique target for a fresh admission.
+Historical replay uses the recorded cut, not today's overlap set. Reference
+cycles are permitted; receipt checks do not recursively infer support.
+Qualified external-source authority is required by the native path; arbitrary
+URLs, provider links and manual-review-profile admission are not supported.
+
+Product migrations 47–48 preserve the product's existing ordinary and
+Supersession authority contracts while adding these independent receipts.
+Startup verifies receipt columns, constraints, guarded functions and triggers;
+role policy v5 permits relation-reviewer INSERT only on the edge and two receipt
+tables. Trusted role credentials still do not authenticate a human conversation.
+
 The graph adapter obtains AHE-selected relations and a bounded scope from one read
 snapshot, then passes them to general topology algorithms. A path proves only structural
 connectivity within that view. A cycle, SCC or contradiction component does not automatically
@@ -236,10 +269,40 @@ See [adapter](../internal/evidenceprojection/topology.go),
 [path API](../internal/evidenceprojection/topology_algorithms.go) and
 [relation-scope tests](../internal/evidenceprojection/topology_algorithms_test.go).
 
+### Exact endpoint admission
+
+`repository-intake` fixes repository root/identity in its launcher, captures
+immutable tracked Go bytes and parses pending proposals into an inactive
+generation. Git transports and inherited Git authority are disabled. It never
+runs code, builds dependencies, invokes a model or admits evidence.
+
+`endpoint-reviewer` accepts only `repository_code` and `derived_spec`.
+Code is checked against original file bytes, commit/blob/path, offsets, line
+numbers, parser fact and fingerprint. A derived specification starts with an
+original-source-backed proposal plus explicit complete AND parents, method,
+producer and trace. Recursive parents use the same bounded native origin
+checks as `implements`; exact quotations remain separate from the proposed
+derived statement. This is not semantic entailment verification.
+
+The digest binds the complete deterministic display and requested effect.
+Admission rebuilds it under repeatable read, locks the proposal and retains
+native derivation/cycle checks. A schema-pinned definer helper obtains the
+original `FOR KEY SHARE` locks on up to nine node IDs without granting canonical
+UPDATE; the native writer retains its original lock path. The helper cannot
+select a schema or mutate evidence, and all other helper EXECUTE remains denied.
+
+The endpoint, support/AND edges, ordinary manifest and immutable
+`canonical_endpoint_review_bindings` receipt commit atomically. Receipts bind
+proposal, display, request ID, reviewer, reason and result; exact replay and
+relation-origin checks retain ordinary authority. Query exposes
+`endpoint_admission`; search algorithms and ranking are unchanged. Endpoint
+and relation approvals remain independent.
+
 ### Implemented internal domain contracts
 
-These write paths exist in the domain/typed registry, but **the current standard ingestion
-runtime does not expose these writers**. Do not bypass the entry point with
+The domain registry is broader than the standard runtime. Only the bounded
+exact-reviewed endpoint subset above is exposed; generic derived, contradiction
+and Supersession writers remain disabled. Do not bypass the entry point with
 `source-claim-reviewer` credentials or treat these paths as Desktop buttons.
 
 - **Derived admission**: each new immutable derived claim requires 1–64 admitted
@@ -708,6 +771,9 @@ See [Brief extractor](../apps/detective/internal/sourcepilot/brief.go),
 | Query | 13 read-only tools; no model calls or evidence writes |
 | Intake | 5 source/extractor tools; source/extraction/pending only |
 | `source-claim-reviewer` | 3 exact source-review tools; admit/reject/audit_only |
+| `relation-reviewer` | 4 exact implementation/reference review/admission tools; no node writes |
+| `repository-intake` | 2 fixed-repository capture/parser tools; pending and inactive generations |
+| `endpoint-reviewer` | 2 exact endpoint review/admission tools; no collection or independent relations |
 | `legacy-reviewer` / `legacy-operator` | CLI rejects startup; the internal 43-tool registry is not a public capability list |
 
 Runtime `tools/list` is the interface authority. Tool arguments cannot switch schema,
@@ -717,7 +783,7 @@ schema, not row-level tenant isolation. Reviewer table ACLs still permit trusted
 ACLs alone do not prove that all direct SQL passes exact review. DB owners/superusers
 remain within the trusted operations boundary.
 
-MCP has its own migration ledger, currently through 46. Same-numbered migrations from
+MCP has its own migration ledger, currently through 48. Same-numbered migrations from
 another Core repository cannot be applied directly. Migration/runtime checks cover names,
 checksums and protected schema objects. Failures do not automatically delete data or
 relax ACLs. Legacy data conversion, persistent DB deployment and service-role provisioning

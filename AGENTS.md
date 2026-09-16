@@ -55,6 +55,16 @@
   approval/rejection/audit_only and a reason bound to its unchanged native
   subject/display. Use only the exact-reviewed writer tools named in the shared
   skill; a hand-written review card is not a substitute for that display.
+- A separately provisioned `relation-reviewer` exposes exact review/admission
+  for `implements` and `references`. Follow the shared skill; existing node
+  approval is not approval of the independent relation. Do not use its narrow
+  endpoint/marker contracts as permission to create nodes or invent references.
+- A separately provisioned `repository-intake` captures a launcher-fixed Git
+  commit and parses pending Go proposals. `endpoint-reviewer` reviews/adopts
+  `repository_code` or `derived_spec` candidates. Show the full native display,
+  complete AND parents and source/code context; obtain explicit approval and
+  reason. Do not invent sources for model-authored derivations or treat
+  endpoint approval as independent relation approval.
 - Use the dedicated proposal workflow for canonical `contradicts`. For
   `supersedes`, keep the new external-source proposal pending, read its exact
   older targets and the current Supersession head, then call

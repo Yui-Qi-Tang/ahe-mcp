@@ -35,7 +35,7 @@ not part of quick start.
 | Program | Purpose |
 | --- | --- |
 | `ahe-query-mcp` | Read-only evidence queries over stdio |
-| `ahe-ingest-mcp` | Separate intake or exact source-claim review profiles |
+| `ahe-ingest-mcp` | Separate intake, source, endpoint and relation-review profiles |
 | `ahe-migrate` | Apply and verify PostgreSQL migrations |
 | `ahe-runtime-admin` | Provision or verify bounded runtime roles |
 | `ahe-mcp-launch` | Start an MCP profile with protected external credentials |
@@ -112,6 +112,29 @@ connectivity, not truth, and the whole evidence graph is not assumed to be a DAG
 
 See the [Go data types](internal/evidencegraph/canonical.go) and
 [graph semantics](docs/SYSTEM_DESIGN.md#graph) for the detailed contracts.
+
+## Evidence Endpoint Review
+
+Separate `repository-intake` and `endpoint-reviewer` profiles create
+immutable Git/Go code endpoints and explicitly reviewed derived specifications.
+Capture/extraction stays pending; endpoint admission binds exact source context,
+complete AND parents and the human reason. Query retains the endpoint receipt.
+See [setup and bounds](INSTALL.md#repository-and-derived-endpoint-writers).
+These tools do not enable Desktop or approve independent relations.
+
+## Independent Relation Review
+
+A separately authorized `relation-reviewer` exposes `get_implements_review`,
+`admit_reviewed_implements`, `get_references_review` and
+`admit_reviewed_references`. Read the complete native review, obtain explicit
+approval of that exact relation, then submit the unchanged subject and reason.
+Node approval alone does not approve an edge. Query readback includes the
+independent admission receipt.
+
+This bounded profile connects an admitted derived specification (complete AND
+ancestry) to admitted repository-backed Go code, or resolves exact source
+reference markers. It does not create derived/code endpoints, admit arbitrary
+edges, or interpret URLs as references. See [supported scope and setup](INSTALL.md#independent-relation-reviewer).
 
 ## External Model and Connector Intake
 

@@ -77,6 +77,10 @@ func childEnvironment(inherited []string, cfg config, credential string) []strin
 	values["AHE_RUNTIME_PROFILE"] = cfg.Profile
 	values["AHE_DATABASE_ROLE"] = cfg.Role
 	values["AHE_DATABASE_SCHEMA"] = cfg.Schema
+	if cfg.Profile == "repository-intake" {
+		values["AHE_REPOSITORY_ROOT"] = cfg.RepositoryRoot
+		values["AHE_REPOSITORY_ID"] = cfg.RepositoryID
+	}
 	keys := make([]string, 0, len(values))
 	for key := range values {
 		keys = append(keys, key)

@@ -1365,6 +1365,8 @@ func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sql
 
 func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) sqlRow {
 	switch {
+	case strings.Contains(query, "SELECT (SELECT receipt_payload FROM canonical_endpoint_review_bindings"):
+		return mockRow{values: []any{[]byte(nil)}}
 	case strings.Contains(query, "canonical-node-exact-semantic-row"):
 		node, exists := db.canonicalGraphNodes[args[0].(string)]
 		if !exists {

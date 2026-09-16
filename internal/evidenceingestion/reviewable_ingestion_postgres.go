@@ -62,6 +62,20 @@ func loadReviewableSourceClaimReviewSnapshotInTx(
 	extractionAttemptID string,
 	proposalOccurrenceID string,
 ) (ReviewableSourceClaimReviewSnapshot, error) {
+	return loadSourceClaimReviewSnapshotForLifecycleInTx(ctx, tx, extractionAttemptID, proposalOccurrenceID, "")
+}
+
+// A nonempty admittedCanonicalID is supplied only after the internal native
+// relation loader verifies that canonical node's first-materializer authority.
+// Re-materialization reconstructs the original immutable submission; it does
+// not change the persisted occurrence back to pending or assert prior display.
+func loadSourceClaimReviewSnapshotForLifecycleInTx(
+	ctx context.Context,
+	tx sqlTx,
+	extractionAttemptID string,
+	proposalOccurrenceID string,
+	admittedCanonicalID string,
+) (ReviewableSourceClaimReviewSnapshot, error) {
 	authority, err := loadReviewableAttemptAuthority(ctx, tx, extractionAttemptID)
 	if err != nil {
 		return ReviewableSourceClaimReviewSnapshot{}, err
@@ -108,8 +122,12 @@ func loadReviewableSourceClaimReviewSnapshotInTx(
 	if !ok {
 		return ReviewableSourceClaimReviewSnapshot{}, newDomainError(ErrorReviewContractConflict, "proposal occurrence %s is absent from persisted batch authority", proposalOccurrenceID)
 	}
-	if persistedSelected.occurrence.AdmissionOutcome != admissionOutcomePending {
+	if admittedCanonicalID == "" && persistedSelected.occurrence.AdmissionOutcome != admissionOutcomePending {
 		return ReviewableSourceClaimReviewSnapshot{}, newDomainError(ErrorReviewContractConflict, "proposal occurrence %s is no longer pending", proposalOccurrenceID)
+	}
+	if admittedCanonicalID != "" && (persistedSelected.occurrence.AdmissionOutcome != admissionOutcomeAdmitted ||
+		persistedSelected.occurrence.CanonicalRef != admittedCanonicalID) {
+		return ReviewableSourceClaimReviewSnapshot{}, newDomainError(ErrorReviewContractConflict, "proposal occurrence %s does not own the admitted source claim", proposalOccurrenceID)
 	}
 
 	manifest, err := BuildProposalBatchManifest(batch)

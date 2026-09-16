@@ -16,7 +16,6 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencesupersession"
 	"github.com/Yui-Qi-Tang/ahe-mcp/migrations"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -381,7 +380,7 @@ func validationE2EPoolWithTimeout(t *testing.T, timeout time.Duration) (context.
 	if err != nil {
 		t.Fatalf("migrations.VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 46 || status.LatestMigration != "000046_evidence_ingestion_reviewed_disposition.up.sql" {
+	if status.AppliedMigrations != 49 || status.LatestMigration != "000049_evidence_ingestion_endpoint_review.up.sql" {
 		t.Fatalf("verified migration status = %+v", status)
 	}
 	return ctx, pool

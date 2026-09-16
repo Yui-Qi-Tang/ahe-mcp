@@ -12,7 +12,6 @@ import (
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencesupersession"
-
 	"github.com/jackc/pgx/v5"
 )
 
@@ -313,6 +312,10 @@ func validatePersistedSupersessionCanonicalMutation(
 		return fmt.Errorf("iterating supersession proposal edge audit: %w", err)
 	}
 	rows.Close()
+	actualEdgeIDs, err = supersessionAdmissionAttributedEdges(ctx, tx, event, actualEdgeIDs, expectedEdgeIDs)
+	if err != nil {
+		return err
+	}
 	if !slices.Equal(actualEdgeIDs, expectedEdgeIDs) {
 		return newDomainError(
 			ErrorSupersessionReplayConflict,

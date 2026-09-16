@@ -20,6 +20,8 @@ import (
 var upFiles embed.FS
 
 var requiredTablesByMigration = map[string][]string{
+	"000047_evidence_ingestion_implements_admission.up.sql": {"canonical_implements_admissions"},
+	"000048_evidence_ingestion_references_admission.up.sql": {"canonical_references_admissions"},
 	"000001_evidence_ingestion_slice1.up.sql": {
 		"source_blobs",
 		"source_snapshots",
@@ -170,6 +172,7 @@ var requiredTablesByMigration = map[string][]string{
 		"canonical_supersession_members",
 		"canonical_supersession_replacement_targets",
 	},
+	"000049_evidence_ingestion_endpoint_review.up.sql":             {"canonical_endpoint_review_bindings"},
 	"000043_evidence_ingestion_source_run_request_identity.up.sql": {},
 	"000044_evidence_ingestion_ordinary_admission_integrity.up.sql": {
 		"canonical_ordinary_admission_manifests",
@@ -185,6 +188,9 @@ var requiredTablesByMigration = map[string][]string{
 }
 
 var requiredTables = []string{
+	"canonical_endpoint_review_bindings",
+	"canonical_implements_admissions",
+	"canonical_references_admissions",
 	"source_claim_disposition_review_bindings",
 	"source_blobs",
 	"source_snapshots",
@@ -275,6 +281,24 @@ type requiredAdmissionFunction struct {
 }
 
 var requiredAdmissionFunctions = []requiredAdmissionFunction{
+	{Name: "canonical_endpoint_lock_nodes_v1", Arguments: "text[]", Result: "SETOF text", SourceSHA256: "sha256:259fcf09f1de0da6fc46c6abe80f74c8ec5a241d9ea0771fda9633dd438f6c94", SecurityDefiner: true, SearchPath: "schema-pinned", OwnerTable: "canonical_graph_nodes"},
+	{Name: "canonical_endpoint_review_assert_v1", Arguments: "text", Result: "void", SourceSHA256: "sha256:997e258171e9218effe54a5b8e27f8d0b1a8e680a2804ba47ffea2f5dfe83cbe", OwnerTable: "canonical_endpoint_review_bindings"},
+	{Name: "canonical_endpoint_review_trigger_v1", Result: "trigger", SourceSHA256: "sha256:042ca78cd16baf09303c69c5a1b3e2201f04d63d546d58e2a4e60172f152c013", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "canonical_endpoint_review_bindings"},
+	{Name: "canonical_implements_admission_assert_v1", Arguments: "text", Result: "void", OwnerTable: "canonical_implements_admissions", SourceSHA256: "sha256:acf157d8968299b252da9d44c47ae14269d1667c3fbb3346aafa81cf5a350c08", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_implements_recursive_basis_assert_v2", Arguments: "text, jsonb", Result: "void", OwnerTable: "canonical_implements_admissions", SourceSHA256: "sha256:cba549e9619e216571243771477e713ae5c1f191bd261011a5769b15c086dadc", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_implements_admission_assert_v2", Arguments: "text", Result: "void", OwnerTable: "canonical_implements_admissions", SourceSHA256: "sha256:8e8c9976a317a39eb6664d51845cde1964e9bd532e76e1c65b8d3dd5dd7d94cd", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_implements_admission_assert_current", Arguments: "text", Result: "void", OwnerTable: "canonical_implements_admissions", SourceSHA256: "sha256:42825d7c9b60497132d166b9c10a322c580dbcc95e5325aee05688743f6e8cbb", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_implements_admission_assert_edge_v1", Arguments: "text", Result: "void", OwnerTable: "canonical_implements_admissions", SourceSHA256: "sha256:c5dc818e6a1f778beff4d32ea848e9dd766d20795f63e0bb28f4db81a4bbc125", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_implements_admission_trigger_v1", Arguments: "", Result: "trigger", OwnerTable: "canonical_implements_admissions", SourceSHA256: "sha256:a402495d9bc91280fddc7c4bf3d5a4d7be2e6a8d0a4ecfff74ffba6a53bdf60c", SecurityDefiner: true, SearchPath: "search_path=pg_catalog"},
+	{Name: "canonical_references_framed_hash_v1", Arguments: "text[]", Result: "text", OwnerTable: "canonical_references_admissions", SourceSHA256: "sha256:fb116c15552fc6c8cd14b3858973f40053f2818156c0195082eee86fd516e08c", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_references_json_v1", Arguments: "jsonb, text", Result: "text", OwnerTable: "canonical_references_admissions", SourceSHA256: "sha256:f933fb35281185e074c090d1b0b40fa0a17abfd5f25ac95e9f3aa778fdbe4444", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_references_assert_edge_v1", Arguments: "text", Result: "void", OwnerTable: "canonical_references_admissions", SourceSHA256: "sha256:f6d9a4e52c818858e0a1d911001968cd5882976057d7269b931d985ea2fdec7c", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_references_origin_edge_v1", Arguments: "text, text, text", Result: "boolean", OwnerTable: "canonical_references_admissions", SourceSHA256: "sha256:4becb491a3b58f51403e40c21a20f9da9980987891b0989b7a9adc0d866aa9bf", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_references_catalog_v1", Arguments: "text, boolean", Result: "jsonb", OwnerTable: "canonical_references_admissions", SourceSHA256: "sha256:dc201a50ff10fd77b61eef1e6e9ab9d4bafd4b22c729c5cd5b0c2fc5d1cbefc9", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_references_endpoint_v1", Arguments: "text", Result: "jsonb", OwnerTable: "canonical_references_admissions", SourceSHA256: "sha256:b5441d5d624088608bed1b94ffd7713183062b7f1b19c8ede19f2c21113e3477", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_references_insert_assert_v1", Arguments: "text", Result: "void", OwnerTable: "canonical_references_admissions", SourceSHA256: "sha256:f4564136b28f428bb5470c54c57df15aaeb68c4053541935dc34402f586fe572", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_references_source_event_assert_v1", Arguments: "text", Result: "void", OwnerTable: "canonical_references_admissions", SourceSHA256: "sha256:ca2ee02d960d7881a037e2374a354ae95e08f01cdf9e3ed6c34dbdd28d37b01c", SecurityDefiner: false, SearchPath: ""},
+	{Name: "canonical_references_admission_trigger_v1", Arguments: "", Result: "trigger", OwnerTable: "canonical_references_admissions", SourceSHA256: "sha256:5e4bde1e68b0432e902a2c632ca1fa6954fbb3333cd6d6f20d145a61d2923620", SecurityDefiner: true, SearchPath: "search_path=pg_catalog\nrow_security=off"},
 	{
 		Name:            "canonical_admission_forbid_mutation_v1",
 		Result:          "trigger",
@@ -309,7 +333,7 @@ var requiredAdmissionFunctions = []requiredAdmissionFunction{
 		Name:         "canonical_ordinary_admission_assert_edge_v1",
 		Arguments:    "text",
 		Result:       "void",
-		SourceSHA256: "sha256:8997cf90ddeb950488b67f19e6d3a48c101628d994dcab3b8a59736151bd8826",
+		SourceSHA256: "sha256:422fa0e22db09138e1e1ef98524178b0f33db37acf73a22a176046158db2803d",
 		OwnerTable:   "canonical_ordinary_admission_manifests",
 	},
 	{
@@ -363,7 +387,7 @@ var requiredAdmissionFunctions = []requiredAdmissionFunction{
 	{
 		Name:            "canonical_supersession_edge_authority_dispatch_v1",
 		Result:          "trigger",
-		SourceSHA256:    "sha256:fc46b2b754def60cd2d6dca37453d33ceb7a93915ad964062cc392302b3682d7",
+		SourceSHA256:    "sha256:0eef9100a918a2153b968862bfca4c98cdaac06e1b14eb9fae534d66d0b82a49",
 		SecurityDefiner: true,
 		SearchPath:      "search_path=pg_catalog",
 		OwnerTable:      "canonical_ordinary_admission_manifests",
@@ -372,7 +396,7 @@ var requiredAdmissionFunctions = []requiredAdmissionFunction{
 		Name:         "canonical_source_claim_review_binding_assert_v1",
 		Arguments:    "text",
 		Result:       "void",
-		SourceSHA256: "sha256:ab1061047a89ef005505209098907a5d271309d2a3059feabe006217ee2a4365",
+		SourceSHA256: "sha256:d174d287f2330914be38bfb49d1e7977efb94a610c41fef5a3ca1a483bf857d8",
 		OwnerTable:   "canonical_source_claim_review_bindings",
 	},
 	{
@@ -402,6 +426,15 @@ const (
 )
 
 var requiredAdmissionTriggers = []requiredAdmissionTrigger{
+	{Name: "canonical_endpoint_review_append_only", Table: "canonical_endpoint_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "canonical_endpoint_review_forbid_truncate", Table: "canonical_endpoint_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "canonical_endpoint_review_authority", Table: "canonical_endpoint_review_bindings", Function: "canonical_endpoint_review_trigger_v1", TriggerType: 1 | 4, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_implements_admissions_append_only", Table: "canonical_implements_admissions", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete, Constraint: false, Deferrable: false, InitiallyDeferred: false},
+	{Name: "canonical_implements_admissions_forbid_truncate", Table: "canonical_implements_admissions", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate, Constraint: false, Deferrable: false, InitiallyDeferred: false},
+	{Name: "canonical_implements_admissions_authority", Table: "canonical_implements_admissions", Function: "canonical_implements_admission_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_references_admissions_append_only", Table: "canonical_references_admissions", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete, Constraint: false, Deferrable: false, InitiallyDeferred: false},
+	{Name: "canonical_references_admissions_forbid_truncate", Table: "canonical_references_admissions", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate, Constraint: false, Deferrable: false, InitiallyDeferred: false},
+	{Name: "canonical_references_admissions_authority", Table: "canonical_references_admissions", Function: "canonical_references_admission_trigger_v1", TriggerType: 1 | 4, Constraint: true, Deferrable: true, InitiallyDeferred: true},
 	{Name: "canonical_graph_nodes_append_only", Table: "canonical_graph_nodes", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
 	{Name: "canonical_graph_nodes_forbid_truncate", Table: "canonical_graph_nodes", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
 	{Name: "canonical_graph_edges_append_only", Table: "canonical_graph_edges", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
@@ -545,7 +578,7 @@ var requiredCanonicalSupersessionFunctions = []requiredCanonicalSupersessionFunc
 		Name:         "canonical_supersession_assert_event",
 		Arguments:    "text",
 		Result:       "void",
-		SourceSHA256: "sha256:6ca36ecdbd3e9617bb0f05041326e8ba6037bd7af5624c64d7dcc9b3b0995713",
+		SourceSHA256: "sha256:bc85f34b5d2f622d51915ee3e1281e5d3d88057aa9f3719a14a722ec2828ffa0",
 	},
 	{
 		Name:         "canonical_supersession_lineage_authority_trigger",
@@ -810,6 +843,31 @@ var requiredCanonicalSupersessionConstraints = []requiredCanonicalSupersessionCo
 }
 
 var requiredAdmissionConstraints = []requiredCanonicalSupersessionConstraint{
+	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_pkey", Type: "p", Definition: "PRIMARY KEY (admission_decision_id)"},
+	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_proposal_occurrence_id_key", Type: "u", Definition: "UNIQUE (proposal_occurrence_id)"},
+	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_request_id_key", Type: "u", Definition: "UNIQUE (request_id)"},
+	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_admission_decision_id_fkey", Type: "f", Deferrable: true, InitiallyDeferred: true, Definition: "FOREIGN KEY (admission_decision_id) REFERENCES canonical_ordinary_admission_manifests(admission_decision_id) DEFERRABLE INITIALLY DEFERRED"},
+	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_proposal_occurrence_id_fkey", Type: "f", Definition: "FOREIGN KEY (proposal_occurrence_id) REFERENCES proposal_occurrences(proposal_occurrence_id)"},
+	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_request_id_check", Type: "c", Definition: "CHECK ((((octet_length(request_id) >= 1) AND (octet_length(request_id) <= 200)) AND (btrim(request_id) = request_id)))"},
+	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_review_subject_check", Type: "c", Definition: "CHECK ((review_subject ~ '^endpoint-review:sha256:[0-9a-f]{64}$'::text))"},
+	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_display_payload_check", Type: "c", Definition: "CHECK (((octet_length(display_payload) >= 1) AND (octet_length(display_payload) <= 1048576)))"},
+	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_receipt_payload_check", Type: "c", Definition: "CHECK (((jsonb_typeof(receipt_payload) = 'object'::text) AND (octet_length((receipt_payload)::text) <= 32768)))"},
+	{Table: "canonical_implements_admissions", Name: "canonical_implements_admissions_pkey", Type: "p", Definition: "PRIMARY KEY (request_id)"},
+	{Table: "canonical_implements_admissions", Name: "canonical_implements_admissions_receipt_uq", Type: "u", Definition: "UNIQUE (receipt_id)"},
+	{Table: "canonical_implements_admissions", Name: "canonical_implements_admissions_edge_uq", Type: "u", Definition: "UNIQUE (canonical_edge_id)"},
+	{Table: "canonical_implements_admissions", Name: "canonical_implements_admissions_pair_uq", Type: "u", Definition: "UNIQUE (specification_node_id, implementation_node_id)"},
+	{Table: "canonical_implements_admissions", Name: "canonical_implements_admissions_specification_fk", Type: "f", Definition: "FOREIGN KEY (specification_node_id) REFERENCES canonical_graph_nodes(canonical_node_id)"},
+	{Table: "canonical_implements_admissions", Name: "canonical_implements_admissions_implementation_fk", Type: "f", Definition: "FOREIGN KEY (implementation_node_id) REFERENCES canonical_graph_nodes(canonical_node_id)"},
+	{Table: "canonical_implements_admissions", Name: "canonical_implements_admissions_origin_fk", Type: "f", Definition: "FOREIGN KEY (origin_proposal_occurrence_id) REFERENCES proposal_occurrences(proposal_occurrence_id)"},
+	{Table: "canonical_implements_admissions", Name: "canonical_implements_admissions_edge_fk", Type: "f", Deferrable: true, InitiallyDeferred: true, Definition: "FOREIGN KEY (canonical_edge_id) REFERENCES canonical_graph_edges(canonical_edge_id) DEFERRABLE INITIALLY DEFERRED"},
+	{Table: "canonical_references_admissions", Name: "canonical_references_admissions_pkey", Type: "p", Definition: "PRIMARY KEY (request_id)"},
+	{Table: "canonical_references_admissions", Name: "canonical_references_admissions_receipt_uq", Type: "u", Definition: "UNIQUE (receipt_id)"},
+	{Table: "canonical_references_admissions", Name: "canonical_references_admissions_edge_uq", Type: "u", Definition: "UNIQUE (canonical_edge_id)"},
+	{Table: "canonical_references_admissions", Name: "canonical_references_admissions_pair_uq", Type: "u", Definition: "UNIQUE (from_node_id, to_node_id)"},
+	{Table: "canonical_references_admissions", Name: "canonical_references_admissions_from_fk", Type: "f", Definition: "FOREIGN KEY (from_node_id) REFERENCES canonical_graph_nodes(canonical_node_id)"},
+	{Table: "canonical_references_admissions", Name: "canonical_references_admissions_to_fk", Type: "f", Definition: "FOREIGN KEY (to_node_id) REFERENCES canonical_graph_nodes(canonical_node_id)"},
+	{Table: "canonical_references_admissions", Name: "canonical_references_admissions_origin_fk", Type: "f", Definition: "FOREIGN KEY (origin_proposal_occurrence_id) REFERENCES proposal_occurrences(proposal_occurrence_id)"},
+	{Table: "canonical_references_admissions", Name: "canonical_references_admissions_edge_fk", Type: "f", Deferrable: true, InitiallyDeferred: true, Definition: "FOREIGN KEY (canonical_edge_id) REFERENCES canonical_graph_edges(canonical_edge_id) DEFERRABLE INITIALLY DEFERRED"},
 	{
 		Name:       "canonical_ordinary_admission_manifests_pkey",
 		Table:      "canonical_ordinary_admission_manifests",
@@ -935,7 +993,7 @@ var requiredAdmissionConstraints = []requiredCanonicalSupersessionConstraint{
 		Name:       "admission_decisions_review_binding_contract_ck",
 		Table:      "admission_decisions",
 		Type:       "c",
-		Definition: "CHECK (((review_binding_contract_version IS NULL) OR (review_binding_contract_version = 'reviewed-source-claim-admission/v1'::text)))",
+		Definition: "CHECK (((review_binding_contract_version IS NULL) OR (review_binding_contract_version = ANY (ARRAY['reviewed-source-claim-admission/v1'::text, 'reviewed-endpoint-admission/v1'::text]))))",
 	},
 	{
 		Name:       "canonical_source_claim_review_bindings_pkey",
@@ -1803,6 +1861,9 @@ func verifyCanonicalSupersessionSchemaObjects(ctx context.Context, db tableQuery
 }
 
 func verifyAdmissionSchemaObjects(ctx context.Context, db tableQueryer) error {
+	if err := verifyRelationAdmissionColumns(ctx, db); err != nil {
+		return err
+	}
 	for _, required := range requiredAdmissionFunctions {
 		var (
 			language        string
@@ -1891,7 +1952,13 @@ func verifyAdmissionSchemaObjects(ctx context.Context, db tableQueryer) error {
 				required.Name,
 			)
 		}
-		if searchPath != required.SearchPath || !ownerMatches || publicExecute {
+		expectedSearchPath := required.SearchPath
+		if expectedSearchPath == "schema-pinned" {
+			if err := db.QueryRow(ctx, "SELECT 'search_path=pg_catalog, ' || pg_catalog.quote_ident(pg_catalog.current_schema()) || ', pg_temp'").Scan(&expectedSearchPath); err != nil {
+				return err
+			}
+		}
+		if searchPath != expectedSearchPath || !ownerMatches || publicExecute {
 			return fmt.Errorf(
 				"required canonical admission function %s does not match its owner, search_path, and privilege contract",
 				required.Name,
