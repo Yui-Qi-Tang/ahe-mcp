@@ -44,10 +44,10 @@ func TestIntegrationRunAppliesAndVerifiesMigrations(t *testing.T) {
 	if first.Schema != fixture.targetSchema {
 		t.Fatalf("Schema = %q, want %q", first.Schema, fixture.targetSchema)
 	}
-	if first.AppliedMigrations != 46 {
-		t.Fatalf("AppliedMigrations = %d, want 46", first.AppliedMigrations)
+	if first.AppliedMigrations != 49 {
+		t.Fatalf("AppliedMigrations = %d, want 49", first.AppliedMigrations)
 	}
-	if first.LatestMigration != "000046_evidence_ingestion_reviewed_disposition.up.sql" {
+	if first.LatestMigration != "000049_evidence_ingestion_endpoint_review.up.sql" {
 		t.Fatalf("LatestMigration = %q", first.LatestMigration)
 	}
 

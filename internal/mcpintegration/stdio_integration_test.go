@@ -100,6 +100,7 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		evidenceingestionmcp.ToolSubmitExternalSource,
 		evidenceingestionmcp.ToolGetSourceClaimReview,
 		evidenceingestionmcp.ToolAdmitReviewedSourceClaim,
+		evidenceingestionmcp.ToolRecordReviewedSourceClaimDisposition,
 	})
 	assertStdioToolNames(t, ctx, queryMCP, []string{
 		evidencequerymcp.ToolGetEvidenceRecord,

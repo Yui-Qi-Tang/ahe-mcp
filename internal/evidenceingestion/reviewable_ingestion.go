@@ -106,6 +106,8 @@ type ProposalBasis struct {
 	ExtractorVersion           string              `json:"extractor_version"`
 	ExtractorConfigHash        string              `json:"extractor_config_hash"`
 	SourceBindingKind          string              `json:"source_binding_kind"`
+	// Reserved for exact relation-review compatibility; current intake never sets it.
+	ManualReviewProfile *ManualReviewProfileBinding `json:"manual_review_profile,omitempty"`
 }
 
 // ReviewPackage is the exact source-claim card a cooperating agent may display.
@@ -1116,6 +1118,7 @@ func cloneProposalBatchManifest(manifest ProposalBatchManifest) ProposalBatchMan
 }
 
 func cloneReviewPackage(reviewPackage ReviewPackage) ReviewPackage {
+	reviewPackage.ProposalBasis.ManualReviewProfile = cloneManualReviewProfile(reviewPackage.ProposalBasis.ManualReviewProfile)
 	reviewPackage.ProposalBasis.SourceRefs = append([]ResolvedSourceRef(nil), reviewPackage.ProposalBasis.SourceRefs...)
 	reviewPackage.ProposalBasis.SourceLimitations = append([]string(nil), reviewPackage.ProposalBasis.SourceLimitations...)
 	if reviewPackage.ProposalBasis.SourceLimitations == nil {

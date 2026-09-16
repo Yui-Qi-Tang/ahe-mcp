@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — 2026-09-16
+
+- Added separate MCP profiles for local Git/Go intake and exact-reviewed
+  code/derived-specification endpoints, with receipts and Query readback.
+- Added migration 49 and role policy v5. Endpoint and relation approval remain
+  separate; Desktop stays frozen.
+
+## Unreleased — 2026-09-15
+
+- Added a separate exact-review MCP profile for bounded `implements` and
+  `references` admission, with independent receipts and Query readback.
+- Added native schema migrations 47–48 and isolated relation-reviewer role
+  policy. Existing deployments require separate migration qualification.
+
 ## Unreleased — 2026-09-14
 
 - Froze Detective Desktop as unavailable; retained implementation
