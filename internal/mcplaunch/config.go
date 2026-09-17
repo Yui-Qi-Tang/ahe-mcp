@@ -27,6 +27,8 @@ type config struct {
 	Role            string
 	Profile         string
 	PrincipalID     string
+	RepositoryRoot  string
+	RepositoryID    string
 }
 
 func parseConfig(body []byte) (config, error) {
@@ -39,6 +41,7 @@ func parseConfig(body []byte) (config, error) {
 		"database_dns_file": &cfg.DatabaseDNSFile, "database": &cfg.Database,
 		"session_user": &cfg.SessionUser, "schema": &cfg.Schema,
 		"role": &cfg.Role, "profile": &cfg.Profile, "principal_id": &cfg.PrincipalID,
+		"repository_root": &cfg.RepositoryRoot, "repository_id": &cfg.RepositoryID,
 	}
 	decoder := json.NewDecoder(bytes.NewReader(body))
 	first, err := decoder.Token()
@@ -62,10 +65,24 @@ func parseConfig(body []byte) (config, error) {
 		seen[key] = true
 	}
 	last, err := decoder.Token()
-	if err != nil || last != json.Delim('}') || len(seen) != len(fields) {
+	if err != nil || last != json.Delim('}') {
 		return config{}, errConfig
 	}
 	if _, err := decoder.Token(); err != io.EOF {
+		return config{}, errConfig
+	}
+	for key := range fields {
+		if key != "repository_root" && key != "repository_id" && !seen[key] {
+			return config{}, errConfig
+		}
+	}
+	if cfg.Profile == "repository-intake" {
+		if !seen["repository_root"] || !seen["repository_id"] || !absolutePath(cfg.RepositoryRoot) ||
+			cfg.RepositoryID == "" || len(cfg.RepositoryID) > 200 || !utf8.ValidString(cfg.RepositoryID) ||
+			strings.TrimSpace(cfg.RepositoryID) != cfg.RepositoryID || strings.ContainsFunc(cfg.RepositoryID, unicode.IsControl) {
+			return config{}, errConfig
+		}
+	} else if seen["repository_root"] || seen["repository_id"] {
 		return config{}, errConfig
 	}
 	if cfg.SchemaVersion != "ahe-mcp-launcher/v1" || !absolutePath(cfg.BinaryPath) || !absolutePath(cfg.DatabaseDNSFile) ||
@@ -83,7 +100,7 @@ func parseConfig(body []byte) (config, error) {
 	switch cfg.Profile {
 	case "query":
 		binaryName = "ahe-query-mcp"
-	case "intake", "source-claim-reviewer":
+	case "intake", "source-claim-reviewer", "relation-reviewer", "endpoint-reviewer", "repository-intake":
 		binaryName = "ahe-ingest-mcp"
 	default:
 		return config{}, errConfig

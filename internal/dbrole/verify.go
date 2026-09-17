@@ -660,7 +660,11 @@ func validatePrincipalSnapshot(
 	if expectation.allowedMembership != "" && snapshot.schemaUsage {
 		return policyViolation("LOGIN role %q has direct/effective schema USAGE", expectation.name)
 	}
-	if len(snapshot.functionExecute) != 0 {
+	var expectedFunctions []string
+	if !expectation.login {
+		expectedFunctions = manifest.FunctionExecute
+	}
+	if !slices.Equal(snapshot.functionExecute, expectedFunctions) {
 		return policyViolation("role %q has forbidden function EXECUTE %v", expectation.name, snapshot.functionExecute)
 	}
 	if len(snapshot.grantOptions) != 0 {

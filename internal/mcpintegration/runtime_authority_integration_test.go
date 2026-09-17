@@ -25,7 +25,6 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencequerymcp"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpstdio"
 	"github.com/Yui-Qi-Tang/ahe-mcp/migrations"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -168,11 +167,14 @@ type authorityProcessLogin struct {
 }
 
 type authorityProcessFixture struct {
-	schema   string
-	pool     *pgxpool.Pool
-	query    authorityProcessLogin
-	intake   authorityProcessLogin
-	reviewer authorityProcessLogin
+	endpoints  authorityProcessLogin
+	repository authorityProcessLogin
+	relations  authorityProcessLogin
+	schema     string
+	pool       *pgxpool.Pool
+	query      authorityProcessLogin
+	intake     authorityProcessLogin
+	reviewer   authorityProcessLogin
 }
 
 func newAuthorityProcessFixture(t *testing.T, ctx context.Context, databaseURL string, extraProfiles ...dbrole.Profile) authorityProcessFixture {
@@ -262,6 +264,12 @@ func newAuthorityProcessFixture(t *testing.T, ctx context.Context, databaseURL s
 			fixture.query = binding
 		} else if profile == dbrole.ProfileIntake {
 			fixture.intake = binding
+		} else if profile == dbrole.ProfileRelationReviewer {
+			fixture.relations = binding
+		} else if profile == dbrole.ProfileEndpointReviewer {
+			fixture.endpoints = binding
+		} else if profile == dbrole.ProfileRepositoryIntake {
+			fixture.repository = binding
 		} else if profile == dbrole.ProfileSourceClaimReviewer {
 			fixture.reviewer = binding
 		}
@@ -348,7 +356,7 @@ func (w *authorityRaceOutput) Write(data []byte) (int, error) {
 	return len(data), nil
 }
 
-func startAuthorityProcess(t *testing.T, ctx context.Context, command string, login authorityProcessLogin, schema, profile string) *authorityProcess {
+func startAuthorityProcess(t *testing.T, ctx context.Context, command string, login authorityProcessLogin, schema, profile string, extraEnv ...string) *authorityProcess {
 	t.Helper()
 	_, file, _, ok := runtime.Caller(0)
 	if !ok {
@@ -366,6 +374,7 @@ func startAuthorityProcess(t *testing.T, ctx context.Context, command string, lo
 	cmd.Env = []string{"PATH=" + os.Getenv("PATH"), "DATABASE_DSN=" + login.dsn,
 		"AHE_RUNTIME_PRINCIPAL_ID=mock:" + command, "AHE_DATABASE_ROLE=" + login.group, "AHE_DATABASE_SCHEMA=" + schema,
 		"GORACE=halt_on_error=1"}
+	cmd.Env = append(cmd.Env, extraEnv...)
 	if profile != "" {
 		cmd.Env = append(cmd.Env, "AHE_RUNTIME_PROFILE="+profile)
 	}

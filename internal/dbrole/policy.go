@@ -452,6 +452,9 @@ func policyStatements(
 				pgx.Identifier{schema, rule.Table}.Sanitize()+" TO "+roleID,
 		)
 	}
+	if manifest.Profile == ProfileEndpointReviewer {
+		statements = append(statements, "GRANT EXECUTE ON FUNCTION "+pgx.Identifier{schema, "canonical_endpoint_lock_nodes_v1"}.Sanitize()+"(text[]) TO "+roleID)
+	}
 	return statements, nil
 }
 

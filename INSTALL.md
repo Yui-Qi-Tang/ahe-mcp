@@ -2,7 +2,7 @@
 
 > **Desktop frozen / unavailable — 2026-09-14.** Do not install, launch,
 > upgrade or accept Desktop as a working product using this guide. Desktop
-> procedures below are retained references only. MCP setup is unchanged;
+> procedures below are retained references only. MCP remains available;
 > Detective CLI end-to-end engineering intake remains incomplete.
 
 This guide installs the current controlled-pilot source tree, including the MCP
@@ -17,9 +17,11 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 ## Installation scope
 
 Build the reviewed source commit using the steps below. The current MCP schema
-remains 46; Query/intake/source-reviewer tool inventories remain 13/5/3, with
-separate protected launchers and database roles. This checkpoint does not require
-new migrations or grant new writer authority.
+is 49. Query/intake/source-reviewer inventories remain 13/5/3. Separate
+`relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
+4/2/2 tools. Migrations 47–49 and role policy v5 are required. Do not perform a
+binary-only replacement against an older schema or reuse source-review
+credentials for endpoint/relation writes.
 
 The current practical query client explicitly requests both
 `query_mode=practical_multisurface_lexical_v1` and
@@ -41,7 +43,9 @@ below to install Desktop. Follow [Desktop installation and verification](apps/de
 The current MCP implementation uses explicit
 launcher and database authority. Query is read-only; the ingestion executable
 separates five source/extractor intake tools from a three-tool
-`source-claim-reviewer` profile. Its legacy reviewer/operator profiles remain
+`source-claim-reviewer`, a four-tool `relation-reviewer`, and two-tool
+`endpoint-reviewer` and `repository-intake` profiles.
+Its legacy reviewer/operator profiles remain
 disabled. Existing typed writers and collector code remain legacy
 implementation assets, not newly enabled MCP entrypoints. See
 [runtime authority](docs/SYSTEM_DESIGN.md#authority). This guide describes
@@ -236,9 +240,8 @@ DATABASE_DSN="$(cat /absolute/private/ahe/migration-database-dns)" \
 
 Success returns credential-free JSON containing `schema_version`, `schema`,
 `changed`, `applied_migrations`, and `latest_migration`. Repeating the command is
-safe when the selected schema, migration ledger and checksums match. This round
-advances the native schema to 46 while keeping SQL migrations 1–45 unchanged
-relative to the preceding source-review checkpoint.
+safe when the selected schema, migration ledger and checksums match. The current
+native schema is 49; migrations 1–48 retain their original checksums.
 Migration 43 retains the partial unique source-extraction request index.
 Migration 44 requires no proposal/canonical/admission authority and exactly the
 native empty Supersession head before adding ordinary admission manifests;
@@ -246,11 +249,26 @@ native empty Supersession head before adding ordinary admission manifests;
 Migration 46 adds separate append-only bindings for exact reviewed
 `reject`/`audit_only` dispositions without canonical nodes or edges; it does not
 reinterpret existing admission/review records.
+Migrations 47–48 add independent implementation/reference receipts and guarded
+edge admission. They refuse existing unreceipted edges of those relation types;
+they do not retroactively approve, delete or rewrite those edges.
+Migration 49 adds exact endpoint review bindings without rewriting existing
+evidence or relabeling historical approvals. Qualify backup restoration before
+upgrading retained evidence; for an isolated trial, restore into a new database
+without importing old ownership or runtime ACLs and verify the retained rows.
+A restore with `pg_restore --no-acl` also drops the native denial of function
+execution to `PUBLIC`. Before migration, the authorized operator must restore
+that denial in the selected AHE schema (for example,
+`REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA ahe FROM PUBLIC;`).
+Do not grant missing runtime privileges or weaken the migration verifier to
+make a restored database pass. Then migrate and provision fresh runtime
+identities. Keep the original database and launchers unchanged until a separate
+client cutover is approved.
 Failed preflight stops application atomically without deleting or rewriting data.
 It does not import Core's diverged migration ledger or move historical data.
 The new runtime also verifies schema-local index, trigger and guarded function
-definitions, not only recorded migration checksums. This round targets new disposable schemas,
-not an authorized upgrade of an existing deployment.
+definitions, not only recorded migration checksums. An installation example is
+not authorization to upgrade an existing deployment or change its client configuration.
 
 The MCP executables verify that exact schema and refuse to serve when its
 migrations or authority are missing or drifted. AHE does not ship
@@ -327,10 +345,12 @@ by an explicitly approved provisioning step. The API checks that boundary but
 does not change it; it does replace the selected group's ACL and remove PUBLIC
 authority inside the selected schema. It also rejects excess authority through
 other schemas. Never run that installation against existing/shared database
-ACLs without separate approval. Policy v3 includes the ordinary source-review
-tables and the separate reviewed-disposition binding table needed by the
-reviewer. None of these profiles receives direct helper
-EXECUTE or Supersession/contradiction/repository writer grants. Reviewer table
+ACLs without separate approval. Policy v5 includes independent relation/endpoint receipts and the endpoint lock-only helper.
+The relation reviewer may read the bounded schema and INSERT only canonical
+edges and the two relation receipt tables; it cannot create nodes or change
+source proposals. Query, intake, source-claim-reviewer and relation-reviewer
+receive no direct helper EXECUTE or Supersession/contradiction/repository writer
+grants. The separate endpoint profile's lock-only exception is documented below. Reviewer table
 ACLs still represent trusted raw DML; they are not universal exact-review routing.
 
 Runtime pools apply the selected role and verify policy on every new physical
@@ -338,6 +358,107 @@ connection, then recheck the session binding and complete ACL policy before reus
 the complete database/schema cut, not per-row tenancy. Its canonical read-view
 handles belong to the fixed principal and database-role binding and cannot be
 transferred to a different process/visibility cut.
+
+## Repository and derived endpoint writers
+
+These are separately provisioned profiles, not extra source-reviewer tools.
+Apply migration 49 and provision/verify matching roles with the operator
+workflow above. A schema upgrade also changes the required runtime policy.
+The operator CLI does not upgrade existing role pairs: provision distinct fresh
+pairs for the new installation and verify each one, rather than rerunning
+`provision` on old names or manually adding a missing grant.
+
+- `repository-intake`: `capture_repository_snapshot` and
+  `extract_repository_go`. Add `repository_root` (an absolute approved local
+  repository directory) and `repository_id` (an operator-assigned identity)
+  to this profile's protected launcher JSON. Capture requires trusted Git at
+  `/usr/bin/git`. Both fields are forbidden for
+  other profiles. The tool accepts a full immutable commit SHA, never a branch,
+  directory or command. Git transport protocols, inherited Git configuration
+  and replacement objects are disabled. No checkout, build, gopls, dependency
+  download or model runs. Capture retains the native limits: 10,000 tracked
+  regular Go files, 16 MiB/file, 256 MiB total. Parser extraction is limited to
+  256 files and 8 MiB. The generation stays inactive; use returned proposal IDs
+  or Query `lifecycle_scope=all`.
+- `endpoint-reviewer`: `get_endpoint_review` and
+  `admit_reviewed_endpoint`. `kind=repository_code` requires a verified
+  repository-backed Go proposal and forbids `derivation`.
+  `kind=derived_spec` requires an original-source-backed statement proposal
+  plus `derivation`: 1–8 unique sorted admitted `parent_node_ids`, `method`,
+  `producer` and `trace_ref`. Submit the statement through existing source
+  and extractor intake; never invent an original document for a derivation.
+  Complete AND ancestry is limited to 64 nodes and depth 8.
+
+Show the current `lifecycle` together with the entire immutable `display`
+(at most 1 MiB), including source context, code
+path/commit/blob, parents and limitations. Oversized complete-file/source context
+is refused, not silently truncated. Nested source-basis effects describe
+provenance context only; approval is for the requested endpoint. Obtain the
+human decision and reason, then submit the exact `review`, returned `subject`
+as `expected_subject`, `decision=approved`, `decision_reason` and a stable
+`request_id`. Preserve these unchanged for uncertain-outcome retries.
+
+Check `lifecycle.mode` first: `pending_admission` is a new review;
+`exact_replay_only` means the endpoint is already admitted and includes its
+canonical ID and original receipt. In that case the nested display is the
+historical pre-admission snapshot, not a new pending proposal. Only the original
+unchanged admission request may be retried; do not request a new decision.
+An admitted proposal without a matching endpoint receipt is refused.
+
+Admission atomically saves the endpoint, native support/AND edges, ordinary
+manifest and independent endpoint receipt. Query `get_evidence_record` with
+its canonical ID returns `endpoint_admission`. The endpoint role cannot
+collect sources, activate repositories or write independent relations.
+Canonical UPDATE remains forbidden; its only executable helper is a
+schema-pinned, bounded `FOR KEY SHARE` reader. Exact review is not proof of
+human attention or semantic entailment.
+
+Only after both endpoints are admitted should the separate relation reviewer
+prepare `implements`. Generic, contradiction and Supersession writers remain
+disabled. There is no new endpoint `reject`/`audit_only` writer; never relabel
+code as a source claim to use source-disposition tools.
+
+## Independent relation reviewer
+
+This optional profile is separate from source intake and source-claim review.
+Provision a dedicated LOGIN/NOLOGIN pair with
+`AHE_RUNTIME_PROFILE=relation-reviewer ./bin/ahe-runtime-admin provision`,
+supplying the same explicit database/schema prerequisites and role environment
+variables described above.
+Keep its authentication external and verify that exact runtime policy before
+starting `ahe-ingest-mcp` with `AHE_RUNTIME_PROFILE=relation-reviewer`.
+For protected `ahe-mcp-launch` configurations, select binary
+`ahe-ingest-mcp` and profile `relation-reviewer`; do not share its launcher
+or credentials with the extraction agent.
+
+The four tools are `get_implements_review`, `admit_reviewed_implements`,
+`get_references_review` and `admit_reviewed_references`. Discover their live
+schemas. Display the complete returned review, obtain explicit human approval
+of that exact relation, then submit its unchanged `review` and `subject`
+(as `expected_subject`), `decision=approved`, an explicit reason and a stable
+request ID. The launcher supplies reviewer identity; tool arguments cannot.
+Preserve those exact admission inputs for an uncertain-outcome retry.
+
+Supported scope:
+
+- `implements`: an already-admitted derived specification, its complete
+  recursive AND ancestry, and an already-admitted repository-backed Go code
+  endpoint. The profile creates neither derived nodes nor repository endpoints;
+  it does not expose a direct source-specification writer.
+- `references`: qualified external-source evidence with original-byte
+  `[[ahe-ref:#anchor]]` or snapshot-pinned reference markers and exact
+  `[[ahe-anchor:...]]` targets. Arbitrary URLs, Jira links and guessed references
+  are not accepted. Do not add markers to captured originals to bypass this.
+- Each write atomically saves one edge and its independent receipt. Node
+  approval is not edge approval. A stale review, changed retry or ambiguous
+  target fails closed. This profile does not persist relation `reject` or
+  `audit_only` decisions; retain those non-write outcomes with the human.
+- Use Query `get_relation_provenance` readback: the returned relation includes
+  `implements_admission` or `references_admission`. A graph edge or locally
+  constructed receipt is not proof that the native writer committed.
+
+These checks bind exact content and the trusted reviewer principal. They do
+not authenticate the human conversation or prove semantic correctness.
 
 ## Bounded Detective-to-pending MCP installation
 
@@ -670,16 +791,19 @@ semantic extraction completeness or the truth of source assertions.
 
 ## Upgrade
 
-For an MCP **binary-only** replacement against an already qualified schema 46
+For an MCP **binary-only** replacement against an already qualified schema 49
 deployment, record the old and new commits and protect a backup before the
 maintenance window. Stop the affected MCP processes, build and verify the new
 source, update the reviewed binary paths in the existing protected launcher
 configuration, verify the same runtime identity and schema policy, then reconnect
-the client and rediscover `tools/list`. This source integration does not add a
-migration or authorize new roles, ACL changes, data conversion, or DB clearing.
+the client and rediscover `tools/list`. This procedure does not authorize new
+roles, ACL changes, data conversion or DB clearing. An older schema, including
+46 or 48, needs separately authorized migration and runtime-role qualification
+before using this build; it is not a binary-only upgrade.
 Do not print or copy credentials into the repository while updating paths.
 
-For Detective, preserve its existing private workspace and original receipts;
+Historical Detective procedure only (Desktop remains frozen): preserve its
+existing private workspace and original receipts;
 replace only the app/launcher binaries from the reviewed build. Follow
 [Desktop upgrade](apps/detective/INSTALL.md#upgrade-and-existing-workspaces).
 The historical source repository is not an installed workspace and must not be
@@ -697,15 +821,19 @@ role provisioning; it does not authorize data conversion or ACL changes.
 4. Stop the affected AHE processes.
 5. Prepare the separately selected target database/private schema, operator
    identity and explicit database-wide privilege prerequisites. Do not pre-create
-   the runtime role pairs intended for the fresh provision command.
+   the runtime role pairs intended for the fresh provision command. If restoring
+   retained evidence, follow the restoration safeguards above, including native
+   PUBLIC function-execution denial and historical-row verification.
 6. Run the matching `ahe-migrate` with the explicit schema and separate
    migration credentials.
 7. Create the new runtime pairs and install the target-native role policy after
    migration, through the separately authorized `ahe-runtime-admin provision`.
 8. Separately configure LOGIN authentication and protected credentials, then run
    `ahe-runtime-admin verify` using each bounded LOGIN credential.
-9. Start only separately qualified query/intake/source-review launchers. Old DSN-only MCP launchers
-   and old MCP review/operator profiles no longer start successfully. Do not
+9. Start only the separately qualified launchers required for the selected
+   workflow: query, intake, source-review, relation-review, repository-intake or
+   endpoint-review. Old DSN-only launchers and legacy review/operator profiles
+   no longer start successfully. Do not
    reactivate the legacy collector as a substitute for the disabled writers.
 
 Do not replace or edit an already applied migration. The runtime verifies
@@ -717,7 +845,7 @@ embedded migration names and checksums.
 - missing/invalid runtime principal, profile, role or schema: configure the
   protected launcher; do not inject replacement identity through tool arguments.
 - `legacy writer runtime profiles are not enabled`: this executable currently
-  accepts only `intake` or `source-claim-reviewer`; do not weaken the gate to recover old writer exposure.
+  accepts only `intake`, `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer` or `repository-intake`; do not weaken the gate to recover old writer exposure.
 - schema/search-path rejection: pre-provision the exact private schema and
   remove fallback from the migration connection configuration, not from an
   existing database's ACLs.

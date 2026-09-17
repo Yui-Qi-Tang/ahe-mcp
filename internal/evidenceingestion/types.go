@@ -890,6 +890,8 @@ type GroundedEvidenceBriefQueryResult struct {
 
 // CanonicalRelationQueryResult is one canonical edge with both grounded endpoint records.
 type CanonicalRelationQueryResult struct {
+	ImplementsAdmission         *CanonicalImplementsAdmissionAuthority
+	ReferencesAdmission         *CanonicalReferencesAdmissionAuthority
 	Edge                        CanonicalGraphEdge
 	From                        CanonicalQueryResult
 	To                          CanonicalQueryResult
@@ -1105,6 +1107,7 @@ type CanonicalGraphNode struct {
 
 // CanonicalQueryResult is the external-query shape for one admitted canonical node.
 type CanonicalQueryResult struct {
+	EndpointAdmission          *EndpointAdmissionReceipt `json:"endpoint_admission,omitempty"`
 	CanonicalID                string
 	NodeKind                   evidencegraph.CanonicalNodeKind
 	Payload                    evidencegraph.EvidencePayload

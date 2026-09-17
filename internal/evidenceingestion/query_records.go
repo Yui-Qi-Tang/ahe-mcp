@@ -10,7 +10,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -184,6 +183,18 @@ func getCanonicalRelationByID(ctx context.Context, db sqlQueryer, canonicalEdgeI
 		return CanonicalRelationQueryResult{}, err
 	}
 	result := CanonicalRelationQueryResult{Edge: edge, From: from, To: to}
+	if edge.Relation == evidencegraph.CanonicalImplements {
+		result.ImplementsAdmission, err = loadCanonicalImplementsAdmission(ctx, db, edge)
+		if err != nil {
+			return CanonicalRelationQueryResult{}, err
+		}
+	}
+	if edge.Relation == evidencegraph.CanonicalReferences {
+		result.ReferencesAdmission, err = loadCanonicalReferencesAdmission(ctx, db, edge)
+		if err != nil {
+			return CanonicalRelationQueryResult{}, err
+		}
+	}
 	switch {
 	case edge.OriginProposalOccurrenceID != "":
 		origin, err := traceProposalProvenance(ctx, db, edge.OriginProposalOccurrenceID)

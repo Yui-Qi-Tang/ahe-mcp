@@ -25,7 +25,6 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencequerymcp"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpstdio"
 	"github.com/Yui-Qi-Tang/ahe-mcp/migrations"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -221,7 +220,14 @@ func provisioningProtectedDirectory(t *testing.T, databaseURL string) string {
 	}
 	parent := u.Query().Get("host")
 	resolved, err := filepath.EvalSymlinks(parent)
-	if err != nil || resolved != parent || !strings.HasPrefix(parent, "/private/tmp/") || filepath.Clean(parent) != parent {
+	// Keep fixtures in either the historical private temporary directory or
+	// a direct child of the explicitly selected TMPDIR (private dataset runs).
+	selectedTemp, tempErr := filepath.EvalSymlinks(os.TempDir())
+	privateTemporary := strings.HasPrefix(parent, "/private/tmp/") ||
+		(tempErr == nil && filepath.Dir(parent) == selectedTemp)
+	info, statErr := os.Stat(parent)
+	if err != nil || resolved != parent || !privateTemporary || filepath.Clean(parent) != parent ||
+		statErr != nil || !info.IsDir() || info.Mode().Perm() != 0o700 {
 		t.Fatal("provisioning acceptance requires its selected private temporary Unix socket directory")
 	}
 	directory, err := os.MkdirTemp(parent, "launcher-fixture-")
@@ -398,7 +404,7 @@ func runProvisioningAdmin(t *testing.T, ctx context.Context, command, operation,
 		return provisioningAdminResult{}
 	}
 	var result provisioningAdminResult
-	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.SessionUser != identity.login || result.AppliedMigrations != 46 || result.LatestMigration != "000046_evidence_ingestion_reviewed_disposition.up.sql" {
+	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.SessionUser != identity.login || result.AppliedMigrations != 49 || result.LatestMigration != "000049_evidence_ingestion_endpoint_review.up.sql" {
 		t.Fatalf("compiled runtime admin %s did not return its exact credential-free receipt (output suppressed)", operation)
 	}
 	if strings.Contains(stdout.String(), dsn) {
