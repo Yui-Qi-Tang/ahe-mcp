@@ -34,11 +34,21 @@ type EndpointCodeFile struct {
 	Text         string             `json:"text"`
 }
 
-// EndpointReview retains exact source context separately from the proposed effect.
-// The subject binds the complete display. It does not prove a human saw it.
+// EndpointReview retains the immutable pre-admission display and its subject.
+// Lifecycle reports current DB state separately; it is not part of that subject.
+// Neither field proves a human saw the display.
 type EndpointReview struct {
-	Subject string                `json:"subject"`
-	Display EndpointReviewDisplay `json:"display"`
+	Lifecycle EndpointReviewLifecycle `json:"lifecycle"`
+	Subject   string                  `json:"subject"`
+	Display   EndpointReviewDisplay   `json:"display"`
+}
+
+// EndpointReviewLifecycle distinguishes a new admission from receipt-bound replay.
+type EndpointReviewLifecycle struct {
+	Mode             string                    `json:"mode"`
+	AdmissionOutcome string                    `json:"admission_outcome"`
+	CanonicalRef     string                    `json:"canonical_ref,omitempty"`
+	Receipt          *EndpointAdmissionReceipt `json:"receipt,omitempty"`
 }
 type EndpointReviewDisplay struct {
 	ContractVersion string                               `json:"contract_version"`
@@ -137,6 +147,19 @@ func loadEndpointReview(ctx context.Context, tx sqlTx, req EndpointReviewRequest
 		return EndpointReview{}, newDomainError(ErrorAdmissionStateConflict, "endpoint requires a successful pending proposal or its exact admitted replay")
 	}
 	canonicalID := p.CanonicalRef
+	persisted := p
+	lifecycle := EndpointReviewLifecycle{Mode: "pending_admission", AdmissionOutcome: p.AdmissionOutcome}
+	if p.AdmissionOutcome == admissionOutcomeAdmitted {
+		receipt, err := loadEndpointAdmissionReceipt(ctx, tx, p.ProposalOccurrenceID)
+		if err != nil {
+			return EndpointReview{}, err
+		}
+		if receipt == nil {
+			return EndpointReview{}, newDomainError(ErrorAdmissionStateConflict, "proposal is already admitted without an endpoint review receipt")
+		}
+		lifecycle = EndpointReviewLifecycle{Mode: "exact_replay_only", AdmissionOutcome: p.AdmissionOutcome,
+			CanonicalRef: canonicalID, Receipt: receipt}
+	}
 	// Keep the pre-admission display stable on exact replay, never the resulting canonical node.
 	p.AdmissionOutcome = admissionOutcomePending
 	p.CanonicalRef = ""
@@ -182,7 +205,20 @@ func loadEndpointReview(ctx context.Context, tx sqlTx, req EndpointReviewRequest
 	if len(payload) > endpointReviewMaxBytes {
 		return EndpointReview{}, newDomainError(ErrorInvalidInput, "complete endpoint review exceeds one MiB; use a smaller source/proposal scope")
 	}
-	return EndpointReview{Subject: "endpoint-review:sha256:" + hashHex(payload), Display: display}, nil
+	subject := "endpoint-review:sha256:" + hashHex(payload)
+	if receipt := lifecycle.Receipt; receipt != nil {
+		if receipt.ReviewSubject != subject {
+			return EndpointReview{}, newDomainError(ErrorReviewContractConflict, "admitted endpoint review differs; only the original exact replay is available")
+		}
+		native := endpointAdmissionInput(req, receipt.ReviewerID, receipt.DecisionReason)
+		if err := validateEndpointBinding(ctx, tx, persisted, native); err != nil {
+			return EndpointReview{}, err
+		}
+		if err := validatePersistedOrdinaryAdmissionMutation(ctx, tx, persisted, native); err != nil {
+			return EndpointReview{}, err
+		}
+	}
+	return EndpointReview{Lifecycle: lifecycle, Subject: subject, Display: display}, nil
 }
 func endpointSourcePreflight(ctx context.Context, tx sqlTx, attempt string) error {
 	var size, spans, proposals int

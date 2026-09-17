@@ -389,13 +389,21 @@ pairs for the new installation and verify each one, rather than rerunning
   and extractor intake; never invent an original document for a derivation.
   Complete AND ancestry is limited to 64 nodes and depth 8.
 
-Display the entire review (at most 1 MiB), including source context, code
+Show the current `lifecycle` together with the entire immutable `display`
+(at most 1 MiB), including source context, code
 path/commit/blob, parents and limitations. Oversized complete-file/source context
 is refused, not silently truncated. Nested source-basis effects describe
 provenance context only; approval is for the requested endpoint. Obtain the
 human decision and reason, then submit the exact `review`, returned `subject`
 as `expected_subject`, `decision=approved`, `decision_reason` and a stable
 `request_id`. Preserve these unchanged for uncertain-outcome retries.
+
+Check `lifecycle.mode` first: `pending_admission` is a new review;
+`exact_replay_only` means the endpoint is already admitted and includes its
+canonical ID and original receipt. In that case the nested display is the
+historical pre-admission snapshot, not a new pending proposal. Only the original
+unchanged admission request may be retried; do not request a new decision.
+An admitted proposal without a matching endpoint receipt is refused.
 
 Admission atomically saves the endpoint, native support/AND edges, ordinary
 manifest and independent endpoint receipt. Query `get_evidence_record` with

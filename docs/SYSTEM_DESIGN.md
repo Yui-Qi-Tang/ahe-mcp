@@ -285,6 +285,14 @@ checks as `implements`; exact quotations remain separate from the proposed
 derived statement. This is not semantic entailment verification.
 
 The digest binds the complete deterministic display and requested effect.
+The review response keeps current DB `lifecycle` separate from that immutable
+pre-admission `display`. `pending_admission` denotes a new review;
+`exact_replay_only` reports an admitted canonical ID and its original endpoint
+receipt. The latter requires the same reconstructed subject, valid endpoint
+binding and persisted ordinary admission. A proposal admitted through another
+path without an endpoint receipt is refused, not presented as pending.
+Lifecycle is not part of the subject, so existing displays and receipts retain
+their hashes; its presence never authorizes a new decision or changed replay.
 Admission rebuilds it under repeatable read, locks the proposal and retains
 native derivation/cycle checks. A schema-pinned definer helper obtains the
 original `FOR KEY SHARE` locks on up to nine node IDs without granting canonical

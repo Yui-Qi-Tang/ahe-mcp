@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -99,11 +100,36 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 		proposal := submit(i, "extract-"+label, statement)
 		review := relationTool[evidenceingestionmcp.GetSourceClaimReviewResponse](t, reviewer, "get_source_claim_review", evidenceingestionmcp.GetSourceClaimReviewRequest{
 			ExtractionAttemptID: proposal.ExtractionAttemptID, ProposalOccurrenceID: proposal.ProposalOccurrenceID})
+		var staleReview evidenceingestion.EndpointReview
+		if i == 1 {
+			// A source admission can invalidate an already prepared endpoint review.
+			staleReview = relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, evidenceingestion.EndpointReviewRequest{
+				Kind: "derived_spec", ProposalOccurrenceID: proposal.ProposalOccurrenceID,
+				Derivation: &evidenceingestion.EndpointDerivation{ParentNodeIDs: []string{parents[0]},
+					Method: "Synthetic pending review before a different admission.", Producer: "synthetic-extractor", TraceRef: "synthetic:stale-review"},
+			})
+		}
 		admission := relationTool[evidenceingestionmcp.AdmitReviewedSourceClaimResponse](t, reviewer, "admit_reviewed_source_claim", evidenceingestionmcp.AdmitReviewedSourceClaimRequest{
 			ExtractionAttemptID: proposal.ExtractionAttemptID, ExpectedSubject: review.Subject, Decision: "approved",
 			DecisionReason: "APPROVE STUB: exact synthetic source only, no real human or model.",
 		})
 		parents = append(parents, admission.CanonicalRef)
+		if i == 1 {
+			before := relationCounts(t, ctx, f.pool)
+			original := relationTool[evidencequerymcp.GetEvidenceRecordResponse](t, query, "get_evidence_record", map[string]any{"canonical_id": admission.CanonicalRef})
+			if original.AdmissionOutcome != "admitted" || original.EndpointAdmission != nil {
+				t.Fatal("expected a source admission without an endpoint receipt")
+			}
+			endpointConflict(t, endpoints, mcpendpoints.ToolReview, staleReview.Display.Request, evidenceingestion.ErrorAdmissionStateConflict)
+			endpointConflict(t, endpoints, mcpendpoints.ToolAdmit, evidenceingestion.ReviewedEndpointAdmissionInput{
+				RequestID: "stale-endpoint", Review: staleReview.Display.Request, ExpectedSubject: staleReview.Subject,
+				Decision: "approved", DecisionReason: "APPROVE STUB: stale review must not authorize a different admission.",
+			}, evidenceingestion.ErrorAdmissionStateConflict)
+			after := relationTool[evidencequerymcp.GetEvidenceRecordResponse](t, query, "get_evidence_record", map[string]any{"canonical_id": admission.CanonicalRef})
+			if relationCounts(t, ctx, f.pool) != before || !reflect.DeepEqual(original, after) {
+				t.Fatal("rejected endpoint review/write changed the existing source admission")
+			}
+		}
 	}
 	slices.Sort(parents)
 	derived := submit(0, "extract-derived", "refund.ValidateRefundWindow is the integer refund-window predicate governed by the reviewed days <= 30 contract.")
@@ -111,6 +137,7 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 		Derivation: &evidenceingestion.EndpointDerivation{ParentNodeIDs: parents, Method: "Combine every AND parent without adding a time origin or nonnegative bound.", Producer: "synthetic-extractor", TraceRef: "synthetic:derived"}}
 	before := relationCounts(t, ctx, f.pool)
 	review := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, req)
+	assertPendingEndpointReview(t, review)
 	if relationCounts(t, ctx, f.pool) != before || len(review.Display.SourceLeaves) != 2 || len(review.Display.Ancestors) != 2 || review.Display.CodeFile != nil {
 		t.Fatal("derived review context/effect differs")
 	}
@@ -126,6 +153,17 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 	relations.assertDenied(t, mcpendpoints.ToolAdmit, approve)
 	verifyEndpointLockAndRollback(t, ctx, f, endpoints, approve)
 	admitted := relationTool[evidenceingestion.EndpointAdmissionReceipt](t, endpoints, mcpendpoints.ToolAdmit, approve)
+	reviewAgain := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, req)
+	assertAdmittedEndpointReview(t, review, reviewAgain, admitted)
+	changedReview := req
+	changedDerivation := *req.Derivation
+	changedDerivation.Method += " changed"
+	changedReview.Derivation = &changedDerivation
+	afterAdmission := relationCounts(t, ctx, f.pool)
+	endpointConflict(t, endpoints, mcpendpoints.ToolReview, changedReview, evidenceingestion.ErrorReviewContractConflict)
+	if relationCounts(t, ctx, f.pool) != afterAdmission {
+		t.Fatal("read-only replay inspection changed canonical state")
+	}
 	replay := relationTool[evidenceingestion.EndpointAdmissionReceipt](t, endpoints, mcpendpoints.ToolAdmit, approve)
 	if !replay.Admission.Replayed || replay.Admission.CanonicalRef != admitted.Admission.CanonicalRef {
 		t.Fatal("derived endpoint exact replay failed")
@@ -177,11 +215,14 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 	}
 	codeReq := evidenceingestion.EndpointReviewRequest{Kind: "repository_code", ProposalOccurrenceID: codeProposal}
 	codeReview := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, codeReq)
+	assertPendingEndpointReview(t, codeReview)
 	if codeReview.Display.CodeFile == nil || codeReview.Display.CodeFile.Text != codeText || codeReview.Display.CodeFile.FileSnapshot.GitBlobOID == "" {
 		t.Fatal("exact code/revision missing")
 	}
 	codeApprove := evidenceingestion.ReviewedEndpointAdmissionInput{RequestID: "code-endpoint", Review: codeReq, ExpectedSubject: codeReview.Subject, Decision: "approved", DecisionReason: "APPROVE STUB: synthetic immutable Go declaration."}
 	code := relationTool[evidenceingestion.EndpointAdmissionReceipt](t, endpoints, mcpendpoints.ToolAdmit, codeApprove)
+	codeReviewAgain := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, codeReq)
+	assertAdmittedEndpointReview(t, codeReview, codeReviewAgain, code)
 	codeReplay := relationTool[evidenceingestion.EndpointAdmissionReceipt](t, endpoints, mcpendpoints.ToolAdmit, codeApprove)
 	if !codeReplay.Admission.Replayed {
 		t.Fatal("code replay failed")
@@ -210,4 +251,40 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 		t.Fatalf("unexpected fully reviewed MCP graph: nodes=%d edges=%d decisions=%d endpoints=%d sources=%d unreviewed=%d active=%d", nodes, edges, decisions, endpointBindings, sourceBindings, unreviewed, active)
 	}
 	t.Log("standard MCP only: two reviewed source claims, one AND-derived endpoint, one repository code endpoint, one independently reviewed implements; no native canonical bootstrap")
+}
+
+func endpointConflict(t *testing.T, p *authorityProcess, tool string, args any, kind evidenceingestion.ErrorKind) {
+	t.Helper()
+	response := p.request(t, "tools/call", map[string]any{"name": tool, "arguments": args})
+	var envelope struct {
+		IsError bool                          `json:"isError"`
+		Failure evidenceingestion.DomainError `json:"structuredContent"`
+	}
+	if response.Error != nil || json.Unmarshal(response.Result, &envelope) != nil || !envelope.IsError {
+		t.Fatalf("%s did not reject the conflicting endpoint review", tool)
+	}
+	if envelope.Failure.Kind != kind {
+		t.Fatalf("%s error kind = %q, want %q", tool, envelope.Failure.Kind, kind)
+	}
+}
+
+func assertPendingEndpointReview(t *testing.T, review evidenceingestion.EndpointReview) {
+	t.Helper()
+	state := review.Lifecycle
+	if state.Mode != "pending_admission" || state.AdmissionOutcome != "pending" ||
+		state.CanonicalRef != "" || state.Receipt != nil || review.Display.Proposal.AdmissionOutcome != "pending" {
+		t.Fatal("pending endpoint review has conflicting lifecycle state")
+	}
+}
+
+func assertAdmittedEndpointReview(t *testing.T, before, after evidenceingestion.EndpointReview, receipt evidenceingestion.EndpointAdmissionReceipt) {
+	t.Helper()
+	state := after.Lifecycle
+	if state.Mode != "exact_replay_only" || state.AdmissionOutcome != "admitted" ||
+		state.CanonicalRef != receipt.Admission.CanonicalRef || !reflect.DeepEqual(state.Receipt, &receipt) {
+		t.Fatal("admitted endpoint review lost its current state or exact receipt")
+	}
+	if before.Subject != after.Subject || !reflect.DeepEqual(before.Display, after.Display) {
+		t.Fatal("lifecycle inspection changed the immutable pre-admission review")
+	}
 }
