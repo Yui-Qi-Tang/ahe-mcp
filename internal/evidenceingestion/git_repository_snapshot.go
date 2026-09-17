@@ -231,8 +231,9 @@ func canonicalDirectory(value string) (string, error) {
 }
 
 func runGitOutput(ctx context.Context, binaryPath, workspaceRoot string, args ...string) ([]byte, error) {
-	commandArgs := append([]string{"-C", workspaceRoot}, args...)
+	commandArgs := append([]string{"--no-replace-objects", "-c", "core.fsmonitor=false", "-C", workspaceRoot}, args...)
 	cmd := exec.CommandContext(ctx, binaryPath, commandArgs...)
+	cmd.Env = offlineGitEnvironment()
 	cmd.Dir = workspaceRoot
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -312,7 +313,8 @@ func readGitBlobs(ctx context.Context, binaryPath, workspaceRoot string, entries
 	if len(entries) == 0 {
 		return result, nil
 	}
-	cmd := exec.CommandContext(ctx, binaryPath, "-C", workspaceRoot, "cat-file", "--batch")
+	cmd := exec.CommandContext(ctx, binaryPath, "--no-replace-objects", "-c", "core.fsmonitor=false", "-C", workspaceRoot, "cat-file", "--batch")
+	cmd.Env = offlineGitEnvironment()
 	cmd.Dir = workspaceRoot
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

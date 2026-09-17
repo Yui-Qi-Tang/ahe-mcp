@@ -173,6 +173,12 @@ func getCanonicalEvidenceByID(ctx context.Context, db sqlQueryer, canonicalID st
 		return CanonicalQueryResult{}, err
 	}
 	result.OriginProposal = origin
+	if result.CanonicalID == origin.CanonicalRef {
+		result.EndpointAdmission, err = loadEndpointAdmissionReceipt(ctx, db, origin.ProposalOccurrenceID)
+		if err != nil {
+			return CanonicalQueryResult{}, err
+		}
+	}
 	return result, nil
 }
 
@@ -991,6 +997,12 @@ func scanProposalQueryRow(row sqlRow, occurrenceID string) (ProposalQueryResult,
 const derivationAdmissionLockKey int64 = 4704080862826080598
 
 func validateDerivedAdmissionInvariant(ctx context.Context, tx sqlTx, mutation canonicalAdmissionMutation) error {
+	return validateDerivedAdmissionWithLock(ctx, tx, mutation, false)
+}
+
+// reviewedLock uses the schema-pinned, lock-only definer companion. The original
+// native path and its FOR KEY SHARE remain unchanged; no node UPDATE is granted.
+func validateDerivedAdmissionWithLock(ctx context.Context, tx sqlTx, mutation canonicalAdmissionMutation, reviewedLock bool) error {
 	if mutation.derivation == nil || len(mutation.nodes) != 1 {
 		return newDomainError(ErrorDerivationInvariant, "derived admission must create exactly one derived node")
 	}
@@ -1020,12 +1032,14 @@ func validateDerivedAdmissionInvariant(ctx context.Context, tx sqlTx, mutation c
 	}
 
 	requested := append([]string{derivation.NodeID}, derivation.Parents...)
-	rows, err := tx.query(ctx, `
-		SELECT canonical_node_id
-		FROM canonical_graph_nodes
-		WHERE canonical_node_id = ANY($1::text[])
-		FOR KEY SHARE
-	`, requested)
+	nodeQuery := `
+  SELECT canonical_node_id FROM canonical_graph_nodes
+  WHERE canonical_node_id = ANY($1::text[]) FOR KEY SHARE
+ `
+	if reviewedLock {
+		nodeQuery = "SELECT canonical_endpoint_lock_nodes_v1($1::text[])"
+	}
+	rows, err := tx.query(ctx, nodeQuery, requested)
 	if err != nil {
 		return fmt.Errorf("loading derivation admission nodes: %w", err)
 	}

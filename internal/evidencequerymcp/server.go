@@ -18,7 +18,6 @@ import (
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -393,16 +392,18 @@ type CanonicalEdgeInfo struct {
 
 // RelationProvenanceResponse preserves the distinct canonical and repository relation surfaces.
 type RelationProvenanceResponse struct {
-	RelationRef                 RecordRef                               `json:"relation_ref"`
-	Surface                     string                                  `json:"surface"`
-	RelationKind                string                                  `json:"relation_kind"`
-	OriginRecord                *GetEvidenceRecordResponse              `json:"origin_record,omitempty"`
-	OriginContradictionProposal *CanonicalContradictionProposalResponse `json:"origin_contradiction_proposal,omitempty"`
-	SourceRefs                  []evidenceingestion.ResolvedSourceRef   `json:"source_refs,omitempty"`
-	CodeRelation                *evidenceingestion.ResolvedCodeRelation `json:"code_relation,omitempty"`
-	CanonicalEdge               *CanonicalEdgeInfo                      `json:"canonical_edge,omitempty"`
-	FromRecord                  *GetEvidenceRecordResponse              `json:"from_record,omitempty"`
-	ToRecord                    *GetEvidenceRecordResponse              `json:"to_record,omitempty"`
+	ImplementsAdmission         *evidenceingestion.CanonicalImplementsAdmissionAuthority `json:"implements_admission,omitempty"`
+	ReferencesAdmission         *evidenceingestion.CanonicalReferencesAdmissionAuthority `json:"references_admission,omitempty"`
+	RelationRef                 RecordRef                                                `json:"relation_ref"`
+	Surface                     string                                                   `json:"surface"`
+	RelationKind                string                                                   `json:"relation_kind"`
+	OriginRecord                *GetEvidenceRecordResponse                               `json:"origin_record,omitempty"`
+	OriginContradictionProposal *CanonicalContradictionProposalResponse                  `json:"origin_contradiction_proposal,omitempty"`
+	SourceRefs                  []evidenceingestion.ResolvedSourceRef                    `json:"source_refs,omitempty"`
+	CodeRelation                *evidenceingestion.ResolvedCodeRelation                  `json:"code_relation,omitempty"`
+	CanonicalEdge               *CanonicalEdgeInfo                                       `json:"canonical_edge,omitempty"`
+	FromRecord                  *GetEvidenceRecordResponse                               `json:"from_record,omitempty"`
+	ToRecord                    *GetEvidenceRecordResponse                               `json:"to_record,omitempty"`
 }
 
 // ListEvidenceNeighborsRequest selects a canonical node or repository symbol as a one-hop root.
@@ -437,6 +438,7 @@ type ListEvidenceNeighborsResponse struct {
 
 // GetEvidenceRecordResponse preserves proposal lifecycle and provenance metadata.
 type GetEvidenceRecordResponse struct {
+	EndpointAdmission          *evidenceingestion.EndpointAdmissionReceipt    `json:"endpoint_admission,omitempty"`
 	RecordRef                  RecordRef                                      `json:"record_ref"`
 	ProposalLocalID            string                                         `json:"proposal_local_id,omitempty"`
 	ProposalFingerprint        string                                         `json:"proposal_fingerprint"`
@@ -1502,6 +1504,7 @@ func mapCanonicalResult(result evidenceingestion.CanonicalQueryResult) GetEviden
 	origin := result.OriginProposal
 	canonicalRef := result.CanonicalID
 	return GetEvidenceRecordResponse{
+		EndpointAdmission: result.EndpointAdmission,
 		RecordRef: RecordRef{
 			Kind: "canonical_evidence",
 			ID:   result.CanonicalID,
@@ -2568,9 +2571,11 @@ func mapCanonicalRelationProvenance(result evidenceingestion.CanonicalRelationQu
 	from := mapCanonicalResult(result.From)
 	to := mapCanonicalResult(result.To)
 	response := RelationProvenanceResponse{
-		RelationRef:  RecordRef{Kind: "canonical_relation", ID: result.Edge.ID},
-		Surface:      "canonical_evidence",
-		RelationKind: string(result.Edge.Relation),
+		ImplementsAdmission: result.ImplementsAdmission,
+		ReferencesAdmission: result.ReferencesAdmission,
+		RelationRef:         RecordRef{Kind: "canonical_relation", ID: result.Edge.ID},
+		Surface:             "canonical_evidence",
+		RelationKind:        string(result.Edge.Relation),
 		CanonicalEdge: &CanonicalEdgeInfo{
 			From:       RecordRef{Kind: "canonical_evidence", ID: result.Edge.From},
 			To:         RecordRef{Kind: "canonical_evidence", ID: result.Edge.To},

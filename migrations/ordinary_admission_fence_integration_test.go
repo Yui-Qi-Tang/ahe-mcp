@@ -75,7 +75,7 @@ func TestIntegrationOrdinaryAdmissionFreshSourceCaptureIsAllowed(t *testing.T) {
 	if err != nil || !changed {
 		t.Fatalf("source-only ApplyUpInSchema() = (%v, %v), want changed success", changed, err)
 	}
-	assertMigrationCount(t, ctx, pool, 46)
+	assertMigrationCount(t, ctx, pool, 49)
 	if _, err := VerifyCurrentInSchema(ctx, pool, schema); err != nil {
 		t.Fatalf("verify source-only upgrade: %v", err)
 	}

@@ -28,7 +28,7 @@ func encodeConfig(t *testing.T, fields map[string]string) []byte {
 }
 
 func TestParseConfigClosedContract(t *testing.T) {
-	for _, profile := range []string{"query", "intake", "source-claim-reviewer"} {
+	for _, profile := range []string{"query", "intake", "source-claim-reviewer", "relation-reviewer"} {
 		t.Run(profile, func(t *testing.T) {
 			fields := validConfigFields()
 			fields["profile"] = profile

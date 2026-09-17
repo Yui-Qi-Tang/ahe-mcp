@@ -54,12 +54,17 @@ that fraction of source information.
   frozen JSON contract.
 - If the source connector or required AHE tool is unavailable, stop and report
   the missing capability. Do not substitute a model-generated source.
-- The standard executable requires an explicitly selected `intake` or
-  `source-claim-reviewer` profile; it has no default profile. Intake exposes
+- The standard executable requires an explicitly selected `intake`,
+  `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer` or
+  `repository-intake` profile; it has no default
+  profile. Intake exposes
   `submit_external_source`, `get_extractor_input`, and `submit_extractor_output`.
   A separately authorized reviewer exposes `get_source_claim_review`,
   `admit_reviewed_source_claim`, and `record_reviewed_source_claim_disposition`.
-  Legacy admission/disposition and relation writers are not enabled. Do not
+  Independent implementation/reference review uses a separately authorized
+  `relation-reviewer`, described below. Legacy admission/disposition,
+  generic derived-node, contradiction and Supersession writers are not enabled.
+  Exact-reviewed endpoints use the separately authorized profile below. Do not
   enable a legacy profile, change a launcher, or use direct SQL to work around
   a missing capability. See [installation scope](../../../INSTALL.md#bounded-detective-to-pending-mcp-installation).
 
@@ -214,10 +219,68 @@ document's extraction. If a reason is missing, ask for it; do not invent one.
   decision. Missing saved inputs or conflicting state requires a stop.
 - Use Query readback for the final state; report missing readback explicitly.
 
+## Independent Implementation and Reference Review
+
+Use this only when the user authorized relation work and a separately
+provisioned `relation-reviewer` is actually available. Do not reconfigure
+another profile to obtain write access.
+
+1. Read both admitted endpoints through Query. For `implements`, the current
+   writer requires a derived specification and repository-backed Go code, with
+   explicit rules for every derived layer and the complete AND ancestry.
+   It does not create either endpoint or accept a source specification directly.
+   For `references`, both endpoints must have qualified external source
+   authority; v1 requires literal `[[ahe-ref:#anchor]]` or snapshot-pinned
+   markers and exact `[[ahe-anchor:...]]` targets in the original source.
+   Arbitrary URLs, Jira links and inferred mentions are unsupported. Never
+   change captured originals or manufacture markers to pass the gate.
+2. Discover schemas and call `get_implements_review` or
+   `get_references_review`. Show the **complete native display**, including
+   source excerpts, code path/revision where applicable, all rules, mapping,
+   coverage and limitations. Graph connectivity or a model-written card is
+   not a substitute.
+3. Ask the user to approve this exact directed relation with a reason.
+   Approval of the nodes, a prior relation or an instruction to continue is
+   not edge approval. Rejection/audit_only means no relation write; this
+   profile does not persist those relation decisions.
+4. Only after explicit approval call `admit_reviewed_implements` or
+   `admit_reviewed_references` with the returned `review`, unchanged
+   `subject` as `expected_subject`, `decision=approved`, reason and a stable
+   request ID. The launcher supplies reviewer identity. Do not submit a
+   caller-authored receipt or graph as authority. Save the exact inputs for
+   uncertain-outcome retries; a changed subject requires a new human review.
+5. Query `get_relation_provenance` and inspect `implements_admission` or
+   `references_admission`. Report the edge, independent receipt, replay state
+   and limitations. Structural navigation is not truth, causal support,
+   transitive implementation or currentness.
+
+## Exact Endpoint Review
+
+With the separately provisioned `endpoint-reviewer`, admit a source-backed
+statement as `kind=derived_spec` through `get_endpoint_review` → explicit
+human approval → `admit_reviewed_endpoint`. Supply the complete 1–8 sorted
+admitted AND parents and explicit method/producer/trace reference. Retain source
+bytes and qualifications; do not invent a manual source for the derivation.
+
+Show the complete native display and ancestor source context. Nested
+source-basis effects are provenance context, not source approval. Copy the
+exact request and subject, the human reason and a stable request ID. Reviewer
+identity comes from the launcher. Query the resulting node and
+`endpoint_admission`. Parser-grounded `kind=repository_code` uses the same
+reviewer without derivation.
+
+Repository capture needs its own authorized `repository-intake` launcher,
+fixed root/identity and exact commit. It stores tracked Go bytes and parses
+pending proposals without running code, fetching data, calling models or
+activating a generation. Query returned IDs or `lifecycle_scope=all`.
+Neither repository access nor launcher reconfiguration is implied by relation
+review permission. Endpoint tools currently support approval only; source
+`reject`/`audit_only` tools are not a workaround for code endpoints.
+
 ## Relations and Repository Extraction Are Separate
 
-The standard intake/reviewer installation does not expose derived admission,
-contradiction, Supersession, or repository activation writers. If the task
+Source intake/review does not itself expose endpoint admission. Generic derived
+admission, contradiction, Supersession and repository activation remain disabled. If the task
 needs these capabilities, report the unavailable workflow and stop. Do not
 substitute an ordinary statement, generic edge, fake replacement node, legacy
 profile, or direct SQL. Provider revision order alone does not prove semantic

@@ -20,6 +20,9 @@ type RuntimeProfile string
 
 const (
 	RuntimeProfileIntake              RuntimeProfile = "intake"
+	RuntimeProfileRelationReviewer    RuntimeProfile = "relation-reviewer"
+	RuntimeProfileEndpointReviewer    RuntimeProfile = "endpoint-reviewer"
+	RuntimeProfileRepositoryIntake    RuntimeProfile = "repository-intake"
 	RuntimeProfileSourceClaimReviewer RuntimeProfile = "source-claim-reviewer"
 	RuntimeProfileLegacyReviewer      RuntimeProfile = "legacy-reviewer"
 	RuntimeProfileLegacyOperator      RuntimeProfile = "legacy-operator"
@@ -29,7 +32,7 @@ const (
 // ParseRuntimeProfile rejects absent, unknown, or normalized-by-guess profiles.
 func ParseRuntimeProfile(value string) (RuntimeProfile, error) {
 	switch profile := RuntimeProfile(value); profile {
-	case RuntimeProfileIntake, RuntimeProfileSourceClaimReviewer, RuntimeProfileLegacyReviewer, RuntimeProfileLegacyOperator:
+	case RuntimeProfileIntake, RuntimeProfileSourceClaimReviewer, RuntimeProfileRelationReviewer, RuntimeProfileEndpointReviewer, RuntimeProfileRepositoryIntake, RuntimeProfileLegacyReviewer, RuntimeProfileLegacyOperator:
 		return profile, nil
 	default:
 		return "", runtimeauth.NewUnauthorizedError("an explicit supported ingestion runtime profile is required")
@@ -38,7 +41,7 @@ func ParseRuntimeProfile(value string) (RuntimeProfile, error) {
 
 // RuntimeProfileNames returns the exact supported ingestion profile names.
 func RuntimeProfileNames() []string {
-	return []string{string(RuntimeProfileIntake), string(RuntimeProfileSourceClaimReviewer), string(RuntimeProfileLegacyReviewer), string(RuntimeProfileLegacyOperator)}
+	return []string{string(RuntimeProfileIntake), string(RuntimeProfileSourceClaimReviewer), string(RuntimeProfileLegacyReviewer), string(RuntimeProfileLegacyOperator), string(RuntimeProfileRelationReviewer), string(RuntimeProfileEndpointReviewer), string(RuntimeProfileRepositoryIntake)}
 }
 
 // AuthorizedBackend binds one immutable launcher identity and capability set.
@@ -65,6 +68,9 @@ func NewAuthorizedBackend(backend mcpstdio.Backend, principal runtimeauth.Princi
 	}
 	if _, err := ParseRuntimeProfile(string(profile)); err != nil {
 		return nil, err
+	}
+	if profile == RuntimeProfileRelationReviewer || profile == RuntimeProfileEndpointReviewer || profile == RuntimeProfileRepositoryIntake {
+		return nil, errors.New("relation-reviewer requires its dedicated native backend")
 	}
 	if profile == RuntimeProfileSourceClaimReviewer {
 		bound, ok := backend.(interface{ SourceClaimReviewerPrincipal() runtimeauth.Principal })

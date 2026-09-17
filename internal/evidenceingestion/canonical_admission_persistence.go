@@ -8,7 +8,6 @@ import (
 	"slices"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
-
 	"github.com/jackc/pgx/v5"
 )
 
@@ -647,6 +646,10 @@ func validatePersistedOrdinaryAdmissionMutation(
 		return err
 	}
 	actualEdges, err := loadCanonicalEdgeIDsByOrigin(ctx, tx, proposal.ProposalOccurrenceID)
+	if err != nil {
+		return err
+	}
+	actualEdges, err = ordinaryAdmissionAttributedEdges(ctx, tx, proposal.ProposalOccurrenceID, expected, actualEdges, materializedEdges)
 	if err != nil {
 		return err
 	}

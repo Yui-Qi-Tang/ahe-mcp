@@ -10,7 +10,7 @@ import (
 )
 
 // PolicyVersion identifies the native ordinary/review authority policy, not Core's policy.
-const PolicyVersion = "ahe-mcp-database-role-policy/v3"
+const PolicyVersion = "ahe-mcp-database-role-policy/v5"
 
 // Profile identifies an implemented database capability set.
 type Profile string
@@ -28,6 +28,11 @@ const ProfileIntake Profile = "intake"
 // activate repositories. The Go entry point enforces the review-only routing;
 // table privileges alone are not an authenticated-human or row-level policy.
 const ProfileSourceClaimReviewer Profile = "source-claim-reviewer"
+
+// ProfileRelationReviewer only appends independently reviewed relation receipts and edges.
+const ProfileRelationReviewer Profile = "relation-reviewer"
+const ProfileEndpointReviewer Profile = "endpoint-reviewer"
+const ProfileRepositoryIntake Profile = "repository-intake"
 
 // Privilege is an effective PostgreSQL table privilege.
 type Privilege string
@@ -62,7 +67,8 @@ type Manifest struct {
 	Tables        []TableRule `json:"tables"`
 	// TrustedRawDML is true when Go writers, not the table ACL, enforce the
 	// admitted/pending values and exact-review routing of individual fields.
-	TrustedRawDML bool `json:"trusted_raw_dml"`
+	TrustedRawDML   bool     `json:"trusted_raw_dml"`
+	FunctionExecute []string `json:"function_execute,omitempty"`
 }
 
 // queryTables is intentionally target-native. A test compares this frozen list
@@ -73,11 +79,14 @@ var queryTables = []string{
 	"canonical_contradiction_proposals",
 	"canonical_derivation_parents",
 	"canonical_derivations",
+	"canonical_endpoint_review_bindings",
 	"canonical_graph_edges",
 	"canonical_graph_nodes",
+	"canonical_implements_admissions",
 	"canonical_ordinary_admission_edge_bindings",
 	"canonical_ordinary_admission_manifests",
 	"canonical_ordinary_admission_node_bindings",
+	"canonical_references_admissions",
 	"canonical_source_claim_review_bindings",
 	"canonical_supersession_admission_events",
 	"canonical_supersession_admission_head",
@@ -150,7 +159,7 @@ var queryTables = []string{
 
 // ProfileNames returns implemented profile names only.
 func ProfileNames() []string {
-	return []string{string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer)}
+	return []string{string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer), string(ProfileRelationReviewer), string(ProfileEndpointReviewer), string(ProfileRepositoryIntake)}
 }
 
 // ParseProfile accepts an exact implemented profile without normalization.
@@ -169,15 +178,41 @@ func BuildManifest(profile Profile) (Manifest, error) {
 	rules := make([]TableRule, 0, len(queryTables))
 	for _, table := range queryTables {
 		privileges := []Privilege{PrivilegeSelect}
-		if profile == ProfileIntake {
+		if profile == ProfileEndpointReviewer {
+			switch table {
+			case "canonical_graph_nodes", "canonical_graph_edges", "admission_decisions", "canonical_ordinary_admission_manifests",
+				"canonical_ordinary_admission_node_bindings", "canonical_ordinary_admission_edge_bindings",
+				"canonical_derivations", "canonical_derivation_parents", "canonical_endpoint_review_bindings":
+				privileges = append(privileges, PrivilegeInsert)
+			case "proposal_occurrences":
+				privileges = append(privileges, PrivilegeUpdate)
+			}
+		} else if profile == ProfileRepositoryIntake {
+			switch table {
+			case "source_blobs", "repository_snapshots", "source_file_snapshots", "repository_snapshot_intake_requests",
+				"extractor_definitions", "extraction_runs", "repository_extraction_run_requests", "proposal_occurrences",
+				"repository_source_generations":
+				privileges = append(privileges, PrivilegeInsert)
+			case "extraction_attempts", "proposal_batches", "repository_source_streams":
+				privileges = append(privileges, PrivilegeInsert, PrivilegeUpdate)
+			}
+		} else if profile == ProfileIntake {
 			privileges = append(privileges, intakeWrites(table)...)
+		} else if profile == ProfileRelationReviewer {
+			if table == "canonical_graph_edges" || table == "canonical_implements_admissions" || table == "canonical_references_admissions" {
+				privileges = append(privileges, PrivilegeInsert)
+			}
 		} else if profile == ProfileSourceClaimReviewer {
 			privileges = append(privileges, sourceClaimReviewerWrites(table)...)
 		}
 		slices.Sort(privileges)
 		rules = append(rules, TableRule{Table: table, Privileges: privileges})
 	}
-	return Manifest{SchemaVersion: PolicyVersion, Profile: profile, Tables: rules, TrustedRawDML: profile != ProfileQuery}, nil
+	manifest := Manifest{SchemaVersion: PolicyVersion, Profile: profile, Tables: rules, TrustedRawDML: profile != ProfileQuery}
+	if profile == ProfileEndpointReviewer {
+		manifest.FunctionExecute = []string{"canonical_endpoint_lock_nodes_v1(text[])"}
+	}
+	return manifest, nil
 }
 
 func sourceClaimReviewerWrites(table string) []Privilege {

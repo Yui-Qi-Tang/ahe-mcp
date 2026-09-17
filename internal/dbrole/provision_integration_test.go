@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -91,15 +92,9 @@ func TestIntegrationProvisionFreshRuntimeControls(t *testing.T) {
 			t.Fatal("failed provisioning left role authority")
 		}
 	}
-	for _, profile := range []Profile{ProfileQuery, ProfileIntake, ProfileSourceClaimReviewer} {
+	for _, profile := range []Profile{ProfileQuery, ProfileIntake, ProfileSourceClaimReviewer, ProfileRelationReviewer, ProfileRepositoryIntake, ProfileEndpointReviewer} {
 		t.Run(string(profile), func(t *testing.T) {
-			label := "query"
-			if profile == ProfileIntake {
-				label = "intake"
-			}
-			if profile == ProfileSourceClaimReviewer {
-				label = "reviewer"
-			}
+			label := strings.ReplaceAll(string(profile), "-", "_")
 			input := newInput(label, profile)
 			status, err := ProvisionRuntime(ctx, admin, input)
 			if err != nil {
@@ -172,6 +167,11 @@ func TestIntegrationProvisionFreshRuntimeControls(t *testing.T) {
 		}
 		if _, err := admin.Exec(ctx, "GRANT USAGE ON SCHEMA "+schemaID+" TO "+operatorID); err != nil {
 			t.Fatal("cannot prepare operator schema visibility")
+		}
+		// The negative must reach ProvisionRuntime even when PUBLIC CONNECT is
+		// closed. Grant only this owned fixture login access to this test DB.
+		if _, err := admin.Exec(ctx, "GRANT CONNECT ON DATABASE "+pgx.Identifier{database}.Sanitize()+" TO "+operatorID); err != nil {
+			t.Fatal("cannot prepare operator database connection")
 		}
 		operatorConfig := config.ConnConfig.Copy()
 		operatorConfig.User, operatorConfig.Password = operator, ""

@@ -56,9 +56,11 @@
 - Do not write arbitrary canonical edges. Contradiction uses its dedicated
   proposal lifecycle. Supersession uses a fresh external pending proposal plus
   its dedicated atomic admission and read-only currentness tools.
-- The standard ingestion executable enables only `intake` and
-  `source-claim-reviewer`. Derived, contradiction and Supersession writers
-  below describe internal domain contracts, not enabled standard MCP tools.
+- Standard ingestion profiles are separately authorized `intake`,
+  `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer` and
+  `relation-reviewer`. Bounded exact-reviewed derived/code endpoints use the
+  endpoint profile; generic, contradiction and Supersession writers remain
+  internal contracts, not enabled standard MCP tools.
   If the required tool is absent, stop and report the unavailable capability;
   never enable a legacy profile or substitute direct SQL to follow this guide.
 
@@ -104,6 +106,19 @@
   reviewer identity. Preserve the exact inputs for uncertain-outcome replay;
   do not fall back to `admit_pending_proposal` or legacy disposition tools.
   AHE records the binding but does not prove the human read the display.
+
+## Independent Relation Review
+
+A separately provisioned `relation-reviewer` exposes `get_implements_review`,
+`admit_reviewed_implements`, `get_references_review` and
+`admit_reviewed_references`. Follow the shared skill's exact review flow:
+node approval does not approve a relation. This profile only connects existing
+admitted endpoints; it does not enable derived/repository node creation.
+`implements` currently requires a derived specification with complete AND
+ancestry and repository-backed Go code. `references` requires supported
+markers already present in exact source bytes, not arbitrary URLs or inferred
+links. Do not manufacture markers. Relation reject/audit_only is a non-write
+human outcome, not a tool in this profile. See [setup and scope](INSTALL.md#independent-relation-reviewer).
 
 ## Internal Relation Contracts (Not Standard MCP Operations)
 
