@@ -22,11 +22,15 @@ CORE_BINARIES := $(addprefix $(BIN_DIR)/,$(CORE_COMMANDS))
 ADAPTER_BINARIES := $(addprefix $(BIN_DIR)/,$(ADAPTER_COMMANDS))
 ALL_BINARIES := $(CORE_BINARIES) $(ADAPTER_BINARIES)
 
-.PHONY: build adapters build-all detective frontend test verify desktop desktop-test desktop-startup-test desktop-dev desktop-trial force
+.PHONY: build adapters build-all detective frontend test verify evidence-boundary desktop desktop-test desktop-startup-test desktop-dev desktop-trial force
 
 build: $(CORE_BINARIES)
 
 adapters: $(ADAPTER_BINARIES)
+
+# Synthetic domain-contract experiment; no PostgreSQL, model or Desktop needed.
+evidence-boundary:
+	$(GO) test -mod=readonly -count=1 -run '^TestEvidenceBoundaryExperiment$$' -v ./internal/evidenceingestion
 
 build-all: $(ALL_BINARIES) detective
 

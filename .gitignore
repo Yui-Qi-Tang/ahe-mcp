@@ -16,3 +16,5 @@
 /docs/experiments/
 /docs/*.md
 !/docs/SYSTEM_DESIGN.md
+# Public executable contract methodology; raw lab records remain ignored.
+!/docs/EVIDENCE_BOUNDARY.md

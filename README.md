@@ -15,6 +15,84 @@ MCP and Detective share one root Go module, using Go `1.27.0`.
 > not offered for installation or acceptance. Stabilize Detective CLI first;
 > this does not disable the AHE MCP servers.
 
+## A citation is not an approval
+
+**AHE binds a review to the exact claim, source context and lifecycle state.**
+Finding relevant code or a quotation is the start of that process.
+
+Try the reproducible, synthetic evidence-boundary experiment:
+
+```sh
+make evidence-boundary
+```
+
+Requires Go 1.27 and the module dependencies; no database, model, API key or
+Desktop setup. It calls AHE's existing domain functions, with a SQL test double
+for the source-revision collision case.
+
+The source says **“Refunds for overseas orders must be completed within 7 days.”**
+Both that statement and **“Refunds for all orders must be completed within
+30 days.”** can cite the very same real span. AHE keeps both as **pending
+candidates**: a valid citation does not establish semantic truth or admission.
+Once a review package is built, changing its bound context invalidates that
+review, even when the quoted source bytes stay the same.
+
+| Controlled case | Observed domain result |
+| --- | --- |
+| Supported statement + exact citation | Pending; no canonical reference |
+| Unsupported statement + same exact citation | Also pending; semantic limitation exposed |
+| Unknown citation span | Rejected |
+| Unchanged exact review subject | Validation passes; this is not admission |
+| Changed claim, revision, coverage, or proposal state | Old review rejected in all four cases |
+| Changed review display bytes | Rejected |
+| Different source bytes under the same provider revision | Rejected; mock stored counts unchanged |
+
+**10/10 fixed contract cases passed** on 2026-09-18 with Go 1.27.1
+(`darwin/arm64`). This is a bounded contract check, not a hallucination-reduction
+rate, a PostgreSQL/MCP integration result, or an agent accuracy benchmark.
+The semantic counterexample is part of the result, not an excluded failure.
+See the [test](internal/evidenceingestion/evidence_boundary_test.go) and
+[method, limitations and next-stage comparison protocol](docs/EVIDENCE_BOUNDARY.md).
+
+### How this complements code graphs
+
+[codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp) and
+[CodeGraphContext](https://github.com/CodeGraphContext/CodeGraphContext) document
+code indexing, relationship queries and impact analysis. AHE adds a different
+contract: preserve sources, keep extraction pending, bind an explicit review,
+and retain provenance for admitted evidence. A code graph can supply structural
+context to that workflow.
+
+This experiment measures AHE's contract only. It does not measure those projects,
+claim they lack comparable safeguards, or establish that AHE improves an agent's
+answers. That requires a controlled agent study with the same source material.
+
+### One case: same call graph, different review validity
+
+A synthetic refund change from **7 to 30 days** preserves the parsed call graph
+`HandleRefund → Eligible`. The old source-claim review passes when unchanged,
+but AHE returns `review_contract_conflict` when it is reused for the new proposal.
+This is source-claim validation, not approval of the code change.
+
+A local `gemma4:12b` pilot on 2026-09-18 used one unchanged control and one changed
+condition, with four fixed input packets (eight calls, no generation retries):
+
+| Input packet | Old review matches the changed proposal? Model field; correct answer is **no** |
+| --- | --- |
+| A: source and review records | `yes` — incorrect; its explanation nevertheless recognized the mismatch |
+| B: A + parsed call graph | `yes` — incorrect |
+| C: B + the same provenance facts also organized as JSON | `no` — correct |
+| D: C + actual AHE domain validation result | `no` — correct |
+
+**C and D tied: this case does not establish an AHE-specific answer-quality gain.**
+All four arms correctly matched the unchanged review and recognized that neither
+pending proposal was canonically admitted. All four also incorrectly listed
+affected functions in the no-code-change control. These failures are retained.
+The call graph uses Go's standard parser, not a measured third-party product;
+this is a fixed-packet pilot, not an interactive agent/MCP benchmark.
+See [case method and reproduction](docs/EVIDENCE_BOUNDARY.md#single-case-local-model-pilot)
+and the [runnable pilot](scripts/evidence_boundary_case.py).
+
 ## Quick start
 
 ```sh
