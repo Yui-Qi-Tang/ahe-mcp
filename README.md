@@ -1,11 +1,34 @@
 # AHE MCP
 
-**Artifacts give rise to hypotheses; evidence determines which hypotheses may become part of the world.**
+**AHE provides traceable evidence and verified operation results for AI agents.**
 
-**The model may explore freely, but it cannot cross the evidential boundary.**
+[Quick start](#quick-start) · [Evaluation](#evaluation) · [MCP setup](INSTALL.md)
 
-Source-backed evidence for agents: preserve original material, review candidate
-claims, and query evidence with its provenance and lifecycle state.
+## Results on selected SWE-bench cases
+
+**These SWE-bench cases provide initial evidence that AHE can improve downstream
+problem-solving outcomes.**
+
+| Model | Structured/static evidence | With AHE results |
+| --- | ---: | ---: |
+| Gemma 4 E4B IT-QAT | 0/3 repairs passed | 1/3 repairs passed |
+| Gemma 4 31B IT-QAT | 1/3 repairs passed | 3/3 repairs passed |
+
+Three selected, familiar cases; the same models and source pool; one attempt per
+model, case and input condition. Passing repairs do not establish that every
+explanation is supported. See the [full evaluation](#evaluation) for all input
+groups, unsupported-assertion findings and limitations.
+
+## What AHE helps with
+
+- **Trace claims to their sources.** Preserve original material, versions and
+  exact excerpts so an agent can inspect the evidence behind a claim.
+- **Follow evidence relationships.** Query how claims depend on source material
+  and other claims, with their supporting context.
+- **Check review and operation state.** Distinguish pending claims from reviewed
+  evidence, and inspect recorded outcomes before relying on an earlier review.
+
+## Quick start
 
 Current version: `dev` preview. Retained Detective Desktop code: `0.1.0-preview.18`.
 MCP and Detective share one root Go module, using Go `1.27.0`.
@@ -15,7 +38,244 @@ MCP and Detective share one root Go module, using Go `1.27.0`.
 > not offered for installation or acceptance. Stabilize Detective CLI first;
 > this does not disable the AHE MCP servers.
 
+```sh
+git clone https://github.com/Yui-Qi-Tang/ahe-mcp.git
+cd ahe-mcp
+make build      # MCP and operator binaries
+make detective # Detective CLI and source tools
+```
+
+Follow [MCP installation](INSTALL.md) for PostgreSQL, migrations, runtime roles
+and protected launchers, and [Detective CLI](apps/detective/README.md) for the
+retained command-line capabilities and gaps. Building does not configure a DB
+or download a model. Desktop launch instructions are frozen reference material,
+not part of quick start.
+
+## Evaluation
+
+### Evidence-bounded answers and abstention
+
+The downstream objective is to reduce **unsupported factual claims**. When the
+available evidence cannot support an answer, an explicit, well-founded abstention
+is a useful outcome. When evidence supports a bounded answer, unnecessary
+abstention is a cost. Review the explanation as well as the decision: a model can
+decline to make a change while still inventing its cause.
+
+AHE provides provenance, lifecycle state and verified operation receipts; their
+presence does not guarantee that every model explanation is faithful.
+
+### Six-cases
+
+**In this fixed suite, supplying AHE results reduced unsupported assertions in
+the synthetic tasks and produced more passing repairs in the public tasks.
+Public-case explanations still contained unsupported or unresolved claims.**
+The question is whether AHE helps models answer within the available evidence.
+
+#### How to read the comparison
+
+Both local models, `gemma4:e4b-it-qat` (E4B) and `gemma4:31b-it-qat` (31B),
+answered the same tasks under these three input conditions:
+
+| Group | What the model receives |
+| --- | --- |
+| A — source/facts | Original source material, facts and task rules |
+| C — structured/static | The same material plus structured facts or static syntax associations |
+| D — AHE results | The same material plus actual AHE operation results and queried provenance |
+
+**C versus D is the main comparison for the added value beyond organizing
+source material.** D includes observed verification results. For SWE, a
+controller actually traversed the AHE relations; models read its frozen output
+instead of selecting live tool calls themselves. All SWE groups receive the
+same full source pool.
+
+Experiments 1–3 contain **14 synthetic questions per model and group**:
+four AND-support variants, five stale-review states and five independent
+`implements` states. Experiments 4–6 contain **three public SWE tasks per model
+and group**: Django 10914, Astropy 12907 and sklearn 25570, each requiring a
+diagnosis and patch.
+
+**110/110 calls completed** means that every request finished with a parseable,
+schema-valid answer. It does not mean every answer was correct. The total is
+84 synthetic A/C/D calls + 8 AND traversal-control B calls + 18 SWE calls.
+Each model/question/group combination had one attempt, with no retries,
+rewritten answers or fallback model.
+
+#### Primary outcome: answers containing unsupported assertions
+
+**Lower is better.** Count an answer once if it contains at least one factual
+assertion that is unsupported or contradicted by the supplied evidence. This
+includes explanations, invented old code and false claims that visible evidence
+is missing. The count is of **answers, not individual sentences**. Unknown or
+abstention alone does not count as an invention.
+
+| Synthetic tasks: affected answers / 14 attempts | A | C | D |
+| --- | ---: | ---: | ---: |
+| E4B | 7/14 | 6/14 | 3/14 |
+| 31B | 4/14 | 1/14 | 0/14 |
+
+For example, E4B's **C 6/14 → D 3/14** means three fewer answers contained
+unsupported assertions across the same fourteen questions. Improvement was
+uneven: E4B still had **3/4 affected AND answers in A, C and D**. 31B's D result
+of **0/14** applies only to these questions and this run.
+
+Public-case judgments include uncertainty, so the three categories are shown
+separately. **Each row contains exactly three answers**:
+
+| Public SWE tasks | Group | Confirmed unsupported | Unresolved | No unsupported assertion identified | Total |
+| --- | --- | ---: | ---: | ---: | ---: |
+| E4B | A | 2 | 0 | 1 | 3 |
+| E4B | C | 2 | 0 | 1 | 3 |
+| E4B | D | 1 | 1 | 1 | 3 |
+| 31B | A | 1 | 2 | 0 | 3 |
+| 31B | C | 3 | 0 | 0 | 3 |
+| 31B | D | 1 | 1 | 1 | 3 |
+
+For example, E4B D has **one confirmed finding, one unresolved answer and one
+answer with no unsupported assertion identified**. Unresolved answers are
+already included in the total and are not counted as clean. The last category
+does not establish that a patch is correct or every quotation is valid.
+
+One unblinded Codex reviewer assessed these claims. The four unresolved answers
+concern a cross-platform Django guarantee and sklearn explanations whose full
+fitted-state/output construction is absent from the packets. The reviewer
+corrected an initial sklearn branch interpretation that overlooked
+fitted-passthrough substitution; the correction and prior judgments are retained.
+These counts have no independent annotation.
+
+#### Secondary outcome: repairs passing the official tests
+
+**Higher is better.** The denominator includes all three public tasks, including
+attempts that produced no executable patch.
+
+| Public SWE tasks: resolved repairs / 3 attempts | A | C | D |
+| --- | ---: | ---: | ---: |
+| E4B | 0/3 | 0/3 | 1/3 |
+| 31B | 2/3 | 1/3 | 3/3 |
+
+**These SWE-bench cases provide initial evidence that AHE can improve downstream
+problem-solving outcomes.** With each model and its source pool held fixed,
+the AHE-assisted condition produced more passing repairs than the
+structured/static control.
+
+**31B D's 3/3 means all three repairs passed the selected official tests. It
+does not mean all three explanations were supported.** Its Astropy patch
+passed, but its explanation added an unsupported type/dimension diagnosis;
+its sklearn explanation remains unresolved.
+
+Invalid, empty or no-op patches remained unsuccessful attempts and were not
+manually repaired. E4B C unnecessarily abstained on Django. Fresh base/gold
+controls were valid for all three cases.
+
+The observed gains support using AHE evidence and operation results to help
+models stay within evidence boundaries on some tasks. The unchanged AND errors
+and the public explanation findings remain part of the result. These are
+familiar development cases with one attempt per condition, so they do not
+establish improved general reasoning or a general hallucination-reduction rate.
+No other code-graph product or service supplying equivalent verification
+results was measured.
+
+<details>
+<summary>Decision-field scores, per-case findings and fixed method</summary>
+
+**Decision-field errors are a separate secondary measure.** Any wrong decision
+field makes the answer incorrect under this contract; explanations are assessed
+separately by the primary assertion measure above.
+
+| Synthetic tasks: incorrect decision answers / 14 attempts — lower is better | A | C | D |
+| --- | ---: | ---: | ---: |
+| E4B | 7/14 | 7/14 | 3/14 |
+| 31B | 3/14 | 1/14 | 0/14 |
+
+This explains two apparent mismatches between tables. E4B C has **7/14**
+decision errors but **6/14** unsupported-assertion answers: one response selected
+`no_write` instead of `review_only` while correctly describing the read-only
+effect. Conversely, 31B A has **3/14** decision errors but **4/14**
+unsupported-assertion answers: one response selected `replay_conflict` correctly
+but described `exact_replay` in its explanation.
+
+Per-case primary findings follow. Fractions count confirmed affected answers
+over attempts. **Unresolved** marks the single answer for that public case;
+it is neither a confirmed finding nor an answer with no finding.
+
+| Model | Case | A: source/facts | C: structured/static | D: AHE result |
+| --- | --- | ---: | ---: | ---: |
+| E4B | 1. Declared AND support | 3/4 | 3/4 | 3/4 |
+| E4B | 2. Stale review | 2/5 | 2/5 | 0/5 |
+| E4B | 3. Independent `implements` | 2/5 | 1/5 | 0/5 |
+| E4B | 4. Django 10914 | 0/1 | 0/1 | 0/1 |
+| E4B | 5. Astropy 12907 | 1/1 | 1/1 | 1/1 |
+| E4B | 6. sklearn 25570 | 1/1 | 1/1 | Unresolved |
+| 31B | 1. Declared AND support | 3/4 | 0/4 | 0/4 |
+| 31B | 2. Stale review | 1/5 | 1/5 | 0/5 |
+| 31B | 3. Independent `implements` | 0/5 | 0/5 | 0/5 |
+| 31B | 4. Django 10914 | Unresolved | 1/1 | 0/1 |
+| 31B | 5. Astropy 12907 | 1/1 | 1/1 | 1/1 |
+| 31B | 6. sklearn 25570 | Unresolved | 1/1 | Unresolved |
+
+Submitted anchored patches were E4B **1/0/1** and 31B **2/2/3** for A/C/D:
+nine submissions, of which seven passed. An invented old-code anchor or an exact
+no-op edit was retained as a failed patch contract and was never submitted.
+
+For the public cases, a Python AST adapter supplies **syntax-navigation
+candidates**, with both caller and declaration excerpts as source parents.
+Actual standard stdio MCP intake/review/admission and Query operations persisted
+and traversed **26 derived candidates, 52 `derived_from` edges and 89 neighbor
+queries**, then read back **40 source records** with identical original bytes.
+Reviews are explicit **APPROVAL STUBS** in disposable databases, not real human
+approval or proof of a diagnosis. This exercises derivation provenance for
+external Python syntax candidates, not native Python semantic ingestion or
+Python `implements` admission.
+
+All SWE arms receive the **same full source pool**. C also receives the same
+external syntax associations; D adds actual persisted graph readback. The model
+receives the frozen output of that executed controller, rather than choosing
+live tool calls. Extra source discovery is not credited only to D. Django's
+single added syntax association is about `close`; its permission assignment was
+already visible in every arm, so the better D answer does not identify that
+relation as the causal reason for improvement.
+
+The adapter uses the original issue-only lexical chunks and uniform expansion
+bounds: depth three, at most sixteen added declarations and 32000 added
+characters. It was developed on these cases before generation, not held out.
+Source commits are Django `e7fd69d051eaa67cb17f172a39b57253e9cb831a`, Astropy
+`d16bfe05a744909de4b27f5875fe0d4ed41ce607`, and sklearn
+`cd25abee0ad0ac95225d4a9be8948eff69f49690`.
+
+Synthetic operations were also rerun: in-memory `PrepareTopology`/path checks,
+sequential PostgreSQL stale-review lifecycle checks, and restricted independent
+`implements` admission/query checks. D supplies observed operation outcomes;
+this is receipt-assisted interpretation, not independent prediction or a
+comparison against another service providing equivalent checks. Underdeclared
+AND support remains a native semantic limitation.
+
+Generation used temperature 0, seed 42, `num_ctx=32768`, `num_predict=4096`,
+streaming and `think:true`. E4B ran first, then 31B, with seed-619 shuffled cell
+order inside each model block. Requests, source/fixture/scoring hashes and
+oracles were frozen before generation. No HTTP, truncation or schema failures
+occurred; all synthetic answers used decided fields rather than `unknown`.
+Exact quotation/ID errors remain separate: SWE citation-error answers were
+E4B **2/3, 3/3, 2/3** and 31B **2/3, 1/3, 1/3** in A/C/D. Four synthetic B
+attempts per model produced E4B 3/4 errors and 31B 0/4.
+
+| Local tag | Frozen digest |
+| --- | --- |
+| `gemma4:e4b-it-qat` | `ee665637121887cf3befff38abbb1be4ee117c7db867d97a67e29049ecd7e15f` |
+| `gemma4:31b-it-qat` | `e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e` |
+
+The new [stdio integration fixture](internal/mcpintegration/swe_relation_packets_integration_test.go),
+`make verify` and focused scorer checks passed. Full final answers, raw captures,
+failed setup attempts, per-answer judgments and a hash-verifying recount bundle
+are retained in the private lab under this repository's artifact policy. The
+README is a quantitative summary, **not a standalone reproducible public
+benchmark**.
+
+</details>
+
 ## A citation is not an approval
+
+**Artifacts give rise to hypotheses; evidence determines which hypotheses may become part of the world.**
+
+**The model may explore freely, but it cannot cross the evidential boundary.**
 
 **AHE binds a review to the exact claim, source context and lifecycle state.**
 Finding relevant code or a quotation is the start of that process.
@@ -66,301 +326,6 @@ context to that workflow.
 This experiment measures AHE's contract only. It does not measure those projects,
 claim they lack comparable safeguards, or establish that AHE improves an agent's
 answers. That requires a controlled agent study with the same source material.
-
-### Current local experiment baseline
-
-**Use `gemma4:31b-it-qat` with the repaired v2 protocol for follow-up local
-experiments.** The 12B runs below are historical pilots and comparison controls.
-The selected configuration uses explicit field definitions and output schema,
-Ollama `generate` with streaming capture, `think:true`, temperature 0, seed 42,
-context 16384 and output limit 1024. Errors and partial output are retained;
-answers are neither retried nor rewritten.
-
-The [repaired AND replay](docs/EVIDENCE_BOUNDARY.md#repaired-replay-and-larger-local-model)
-records the exact model digest, reproduction command and scoring rules. New
-cases must freeze their inputs and scoring before generation; the observed
-16/16 result below applies only to the existing development packets.
-
-### Do verified receipts reduce wrong answers?
-
-**In two fixed admission-state cases, yes; in the AND-support case, E4B still
-misinterpreted the evidence.** A new 92-call replay on 2026-09-19 tested both
-`gemma4:e4b-it-qat` and `gemma4:31b-it-qat` across experiments 1–3.
-The goal is fewer incorrect answers when using AHE-MCP evidence.
-
-The table counts **incorrect answer objects / attempted**; any wrong decision
-field makes the answer incorrect. Lower is better. A supplies facts and rules;
-C repeats the facts as JSON (and includes a traversal witness in experiment 1);
-D adds AHE's verified validation result or operation receipt.
-
-**Quantitative summary across all 14 fixed variants:** E4B's incorrect answers
-fell from **8 to 4** with verified AHE results: **57.1% → 28.6% error rate**,
-a **28.6-percentage-point decrease** and **50.0% relative error reduction**.
-Against the structured-facts control, errors fell from **6 to 4**:
-**42.9% → 28.6%**, or **33.3% relative error reduction**. These are observed
-differences on this fixed suite, including the AND case that did not improve.
-
-| Model | A errors / 14 | C errors / 14 | D errors / 14 | A → D decrease | C → D decrease |
-| --- | --- | --- | --- | --- | --- |
-| E4B IT-QAT | 8/14 (57.1%) | 6/14 (42.9%) | 4/14 (28.6%) | 4 answers; 28.6 pp | 2 answers; 14.3 pp |
-| 31B IT-QAT | 1/14 (7.1%) | 1/14 (7.1%) | 0/14 (0%) | 1 answer; 7.1 pp | 1 answer; 7.1 pp |
-
-Each variant has equal weight in this descriptive summary: four AND variants,
-five stale-review variants and five implements variants. The table covers
-**84 primary A/C/D calls**; the eight secondary B calls bring the run to 92.
-Paired by the same variant, D corrected four of E4B's A errors and two of its C
-errors; it corrected one error from each 31B control. No previously correct
-answer became incorrect under D, using the all-decision-fields criterion.
-31B's zero observed errors under D means **0/14 in this run**, not zero future
-error risk. The explanation errors described below are scored separately.
-
-`Error rate = incorrect answer objects / attempted answers` (all attempts
-completed here). `Absolute decrease = control error rate − D error rate`;
-`relative reduction = (control errors − D errors) / control errors`, with
-equal denominators. **pp** denotes percentage points. Relative reduction is
-undefined when the control has zero errors; it is not a claim of statistical
-significance or an estimate for unseen tasks. Values are rounded to one decimal.
-
-The per-experiment breakdown retains the cases with no improvement:
-
-| Model | Experiment | A: facts | C: structured facts | D: verified result |
-| --- | --- | --- | --- | --- |
-| E4B IT-QAT | 1. AND support | 3/4 (75%) | 3/4 (75%) | 3/4 (75%) |
-| E4B IT-QAT | 2. Stale review | 3/5 (60%) | 2/5 (40%) | 1/5 (20%) |
-| E4B IT-QAT | 3. Independent `implements` approval | 2/5 (40%) | 1/5 (20%) | 0/5 (0%) |
-| 31B IT-QAT | 1. AND support | 0/4 (0%) | 0/4 (0%) | 0/4 (0%) |
-| 31B IT-QAT | 2. Stale review | 1/5 (20%) | 1/5 (20%) | 0/5 (0%) |
-| 31B IT-QAT | 3. Independent `implements` approval | 0/5 (0%) | 0/5 (0%) | 0/5 (0%) |
-
-All 92 requests completed without HTTP, truncation or schema failures; none
-answered `unknown`, and none was retried. The secondary traversal-only B arm
-in experiment 1 had E4B 3/4 errors and 31B 0/4. Scores were recomputed from raw
-responses after verifying the frozen inputs and source hashes.
-
-These results support **receipt-assisted error reduction in these state
-interpretation tasks**. They also preserve the limits: E4B still confuses path
-existence with AND completeness, and 31B's correct stale-review receipt answer
-invented a change in the decision reason. Correct fields do not guarantee a
-faithful explanation. The fourteen variants are reused authored cases, not a
-held-out benchmark or a general error-rate estimate. This measures the value of
-supplying verified outcomes, without isolating AHE from another service that
-supplies the same outcomes.
-
-See the [frozen method, failure accounting and reproduction](docs/EVIDENCE_BOUNDARY.md#three-case-error-reduction-replay--2026-09-19)
-and [suite runner](scripts/evidence_error_rate_suite.py).
-
-### One case: same call graph, different review validity
-
-A synthetic refund change from **7 to 30 days** preserves the parsed call graph
-`HandleRefund → Eligible`. The old source-claim review passes when unchanged,
-but AHE returns `review_contract_conflict` when it is reused for the new proposal.
-This is source-claim validation, not approval of the code change.
-
-A local `gemma4:12b` pilot on 2026-09-18 used one unchanged control and one changed
-condition, with four fixed input packets (eight calls, no generation retries):
-
-| Input packet | Old review matches the changed proposal? Model field; correct answer is **no** |
-| --- | --- |
-| A: source and review records | `yes` — incorrect; its explanation nevertheless recognized the mismatch |
-| B: A + parsed call graph | `yes` — incorrect |
-| C: B + the same provenance facts also organized as JSON | `no` — correct |
-| D: C + actual AHE domain validation result | `no` — correct |
-
-**C and D tied: this case does not establish an AHE-specific answer-quality gain.**
-All four arms correctly matched the unchanged review and recognized that neither
-pending proposal was canonically admitted. All four also incorrectly listed
-affected functions in the no-code-change control. These failures are retained.
-The call graph uses Go's standard parser, not a measured third-party product;
-this is a fixed-packet pilot, not an interactive agent/MCP benchmark.
-See [case method and reproduction](docs/EVIDENCE_BOUNDARY.md#single-case-local-model-pilot)
-and the [runnable pilot](scripts/evidence_boundary_case.py).
-
-### Experiment 1: a path is not complete AND support
-
-**Webhook readiness requires signature verification AND anti-replay evidence.**
-A path from signature verification to readiness exists in all four fixtures:
-
-```sh
-make evidence-and-case
-```
-
-| Controlled artifact | Generic path found | AHE `PrepareTopology` |
-| --- | --- | --- |
-| Both declared parents, nodes and edges present | Yes | Accepted |
-| Anti-replay parent declared, but its edge missing | Yes | Rejected |
-| Anti-replay parent declared, but its node missing | Yes | Rejected |
-| Anti-replay omitted from the manifest, nodes and edges | Yes | Accepted |
-
-**AHE enforces the declared parent set; it cannot discover a requirement omitted
-from that set.** All four expected outcomes passed on 2026-09-18. Temporarily
-bypassing artifact validation made both rejection tests fail. This demonstrates
-an executable contract beyond reachability, with an explicit semantic limit.
-The generic graph baseline is not a benchmark of third-party analyzers, and
-these synthetic artifacts prove neither actual admission nor runtime security.
-
-The accompanying `gemma4:12b` pilot attempted 16 fixed requests: 15 completed,
-one returned HTTP 500, and none was retried. C (repeated structured facts) and
-D (C plus AHE's result) each answered all five scored fields correctly in only
-**1/4 conditions**, on different conditions. D still misread the complete and
-underdeclared controls despite receiving `accepted` results. This run establishes
-no general answer-quality advantage; deterministic enforcement and model
-interpretation remain separate. See the [method and full score summary](docs/EVIDENCE_BOUNDARY.md#and-case-a-path-does-not-cover-every-prerequisite)
-and [runnable pilot](scripts/evidence_and_case.py).
-
-A [separate diagnosis](docs/EVIDENCE_BOUNDARY.md#follow-up-diagnosis-generation-failure-and-decision-field-errors)
-reproduced the HTTP 500 as Ollama's repeated-token abort. It also found
-path-versus-artifact confusion, conflated completeness checks and contradictions
-between JSON fields and explanations. Explicit field instructions improved some
-decisions while other errors remained; the original pilot scores are retained.
-
-The [repaired replay](docs/EVIDENCE_BOUNDARY.md#repaired-replay-results--2026-09-18)
-then tested all sixteen packets with explicit field definitions and complete
-error capture:
-
-| Configuration | All five fields correct / attempted | Execution failures |
-| --- | --- | --- |
-| Original 12B pilot | 2/16 | 1 |
-| Repaired 12B pilot | 10/16 | 0 |
-| Repaired `gemma4:31b-it-qat` pilot | 16/16 | 0 |
-
-Both repaired models received identical packets and settings. These are reused
-development cases. The 31B model also passed without AHE's validation result,
-so this demonstrates improved behavior of the tested configuration, not a
-general accuracy result or an AHE-specific advantage. The conditional Luna
-follow-up was not triggered.
-
-### Experiment 2: a review can become stale before submission
-
-**An unchanged citation does not let an old review override a later decision.**
-This experiment reads a pending native review, commits a controlled intervening
-decision, then submits the original request to AHE's actual PostgreSQL-backed
-reviewed writer.
-
-| State before the final request | Actual result | New authority records |
-| --- | --- | --- |
-| Still pending | New admission | Yes |
-| Rejected by another reviewer | `admission_state_conflict` | No |
-| Marked audit-only by another reviewer | `admission_state_conflict` | No |
-| Admitted by another reviewer | `admission_replay_conflict` | No |
-| Identical request already succeeded | Exact replay, same identifiers | No |
-
-**5/5 conditions passed** on 2026-09-18 using a fresh disposable PostgreSQL 18.6
-cluster, including a run with Go's race detector. Conflicts and replay left
-the tracked authority/lifecycle row counts and full-row hashes unchanged.
-Direct source readback confirmed unchanged bytes, hashes and
-exact quote spans. The existing canonical claim remains present in both
-already-admitted conditions.
-
-Run `make evidence-stale-review-case` with an explicitly selected disposable
-non-production `DATABASE_DSN`. See the [fixture, model protocol and limits](docs/EVIDENCE_BOUNDARY.md#stale-review-case-the-state-changes-after-review).
-All decisions are synthetic test stubs. This verifies the specified sequential
-read/change/submit schedule; it does not cover every concurrent interleaving,
-authenticate human approval or benchmark another analyzer.
-
-The fixed `gemma4:31b-it-qat` run completed all 15 requests without execution,
-truncation or schema failures:
-
-| Input | All five decision fields correct |
-| --- | --- |
-| A: old review plus complete latest-state records | 4/5 |
-| C: A plus the same facts repeated as JSON | 4/5 |
-| D: C plus actual writer receipt | 5/5 |
-
-In A and C, the model mistook another reviewer's existing admission for an
-exact replay of its own old request. D interpreted the conflict correctly, but
-its explanation also invented a change in decision reason: only the reviewer
-had changed. Correct fields therefore do not guarantee a faithful explanation.
-The writer rejected the conflicting request and preserved the existing decision.
-D receives the result directly, so this is not evidence of a general reasoning
-advantage. The triggered Luna task deviated from the frozen no-tools protocol;
-it is excluded from a strict model comparison. See the [full results and limits](docs/EVIDENCE_BOUNDARY.md#stale-review-results--2026-09-18).
-
-### Experiment 3: admitted endpoints do not admit an implements relation
-
-An admitted specification and an admitted code fact do not by themselves
-establish **“this code implements this specification.”** That directed relation
-needs its own exact review, explicit approval and independent admission receipt.
-
-**5/5 PostgreSQL boundary conditions passed** on 2026-09-19 through the actual
-restricted relation backend and public query API:
-
-| Client action with both endpoints admitted | Observed result |
-| --- | --- |
-| No relation operation | No `implements` edge or relation receipt |
-| Obtain relation review | Read-only; still no relation |
-| Submit without explicit approval | Rejected; tracked authority rows unchanged |
-| Approve with a mismatched review subject | Rejected; tracked authority rows unchanged |
-| Approve the exact relation review | One directed edge and one independent receipt; no new nodes |
-
-The query also confirmed that neither the reverse edge nor ancestor-to-code
-relations appeared. An exact retry preserved the original receipt without new
-rows. This is a reproducible authority boundary beyond merely finding two nodes
-or a call path; it is not proof that the implementation behaves correctly.
-
-Run `make evidence-implements-case` with an externally configured
-`AHE_DBROLE_ACCEPTANCE_DATABASE_DSN` for a separately owned disposable database.
-See the [fixture, role-policy prerequisites and model protocol](docs/EVIDENCE_BOUNDARY.md#independent-implements-case-admitted-endpoints-do-not-admit-a-relation).
-All approval decisions in this experiment are synthetic stubs.
-
-The repaired `gemma4:31b-it-qat` run completed **15/15**, with all four fields
-correct in **A 5/5, C 5/5 and D 5/5**. Review of all fifteen explanations found
-no material factual error in this scope; no execution failure occurred, and the
-Luna fallback was not triggered. **The arms tie:** this supports the enforced
-relation-admission boundary, not a model-accuracy gain or superiority over other
-parsers. See the [full results and limits](docs/EVIDENCE_BOUNDARY.md#implements-results--2026-09-19).
-
-A separate repeat with identical model digest, inputs and settings also scored
-**15/15** (A/C/D each 5/5); all fifteen generated answers, including explanations,
-matched the first run exactly. These are two runs of the same five variants,
-not thirty independent tasks or a second database trial.
-
-A matched-input run with **`gemma4:e4b-it-qat`** completed all fifteen requests,
-with **12/15** answer objects correct on all four fields:
-
-| Model | A: facts and rules | C: same facts as JSON | D: actual receipt |
-| --- | --- | --- | --- |
-| `gemma4:31b-it-qat` | 5/5 in each of two runs | 5/5 in each of two runs | 5/5 in each of two runs |
-| `gemma4:e4b-it-qat` | 3/5 | 4/5 | 5/5 |
-
-E4B once treated a submission without approval as admitted; twice it reported
-successful admission while also saying the relation did not exist. These were
-completed incorrect answers, with no HTTP, truncation or schema failure.
-
-**The practical question is whether AHE-MCP helps a model use evidence and
-answer with fewer errors.** In these five fixed variants, E4B produced an
-incorrect answer in **2/5 cases (40%)** with facts and rules alone, **1/5 (20%)**
-when the same facts were also supplied as JSON, and **0/5 (0%)** when supplied
-with AHE's verified operation receipts. An answer counts as incorrect if any
-of its four decision fields is wrong.
-
-This is initial evidence that the receipt-assisted workflow can reduce errors
-when interpreting admission state. The receipt gives the model a verified
-outcome to use; making that outcome available is part of the system's intended
-value. Five authored variants are not enough to establish a reliable error
-rate across other tasks, and this run does not isolate AHE from another system
-that supplies the same verified outcomes.
-
-The original Luna diagnostic received a truncated large tool message and did
-not answer the test; that attempt remains unscored. A subsequent delivery
-diagnosis reproduced the missing middle. Sending one complete record at a time
-then returned all fifteen verification tags and fifteen correct answer objects,
-without tool calls. This repair is a separate workflow diagnostic, not a fresh
-model comparison. See the [cause and repair](docs/EVIDENCE_BOUNDARY.md#luna-delivery-diagnosis-and-repair--2026-09-19).
-
-## Quick start
-
-```sh
-git clone https://github.com/Yui-Qi-Tang/ahe-mcp.git
-cd ahe-mcp
-make build      # MCP and operator binaries
-make detective # Detective CLI and source tools
-```
-
-Follow [MCP installation](INSTALL.md) for PostgreSQL, migrations, runtime roles
-and protected launchers, and [Detective CLI](apps/detective/README.md) for the
-retained command-line capabilities and gaps. Building does not configure a DB
-or download a model. Desktop launch instructions are frozen reference material,
-not part of quick start.
 
 ## Programs
 
