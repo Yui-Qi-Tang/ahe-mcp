@@ -88,6 +88,9 @@ controller actually traversed the AHE relations; models read its frozen output
 instead of selecting live tool calls themselves. All SWE groups receive the
 same full source pool.
 
+The review/admission workflow for the public cases uses test approval stubs
+rather than human approval.
+
 Experiments 1–3 contain **14 synthetic questions per model and group**:
 four AND-support variants, five stale-review states and five independent
 `implements` states. Experiments 4–6 contain **three public SWE tasks per model
@@ -275,7 +278,7 @@ benchmark**.
 
 **Artifacts give rise to hypotheses; evidence determines which hypotheses may become part of the world.**
 
-**The model may explore freely, but it cannot cross the evidential boundary.**
+**Models may explore freely; claims enter canonical evidence only through explicit review.**
 
 **AHE binds a review to the exact claim, source context and lifecycle state.**
 Finding relevant code or a quotation is the start of that process.
