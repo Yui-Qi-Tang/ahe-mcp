@@ -347,7 +347,7 @@ sequenceDiagram
     A->>H: Show complete targets, six-field basis and observed head
     H-->>A: Explicit approval, reviewer and reason
     A->>W: Proposal, basis, exact targets and expected head
-    W->>P: Begin transaction; read proposal and lock head
+    W->>P: Begin transaction, read proposal and lock head
     P-->>W: Stored source, proposal and current head
     W->>W: Check fresh replacement, targets, lineage, hashes and head
     W->>P: Atomically save replacement, relations, decision, event and new head
