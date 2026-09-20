@@ -77,7 +77,8 @@ dependencies and test-package limit described below.
 
 - Go 1.27.0 or a newer Go 1.27 patch release, matching the root `go.mod`;
 - Make and standard POSIX command-line tools;
-- a reachable PostgreSQL database;
+- a reachable PostgreSQL 16+ database; qualify the selected major version with
+  the migration and integration gates below;
 - Git to clone the source tree;
 - Git on `PATH` and a local workspace only when using the Detective Git source.
 
@@ -100,8 +101,7 @@ non-production database and an explicit private schema, retaining existing
 databases and their history unchanged. A new schema inside a shared database
 does not by itself establish isolation from that database's existing grants.
 
-All core programs that access PostgreSQL read the DSN from `DATABASE_DSN`. The
-name is intentionally `DATABASE_DSN`, not `DATABASE_DSN`.
+All core programs that access PostgreSQL read the DSN from `DATABASE_DSN`.
 
 The MCP executables additionally require launcher-owned configuration:
 
@@ -604,6 +604,10 @@ Keep the client configuration protected. The ingestion server must not be
 registered in an ordinary downstream consumer profile. Clients should call
 `tools/list` and use the returned input schemas instead of copying a frozen
 tool schema from documentation.
+
+After connecting the client, follow the [first evidence workflow](docs/FIRST_WORKFLOW.md)
+to check the tool inventories, pending/admitted states and exact source readback.
+An empty new database is expected; no search result alone is not a connection test.
 
 ## Legacy bundled Detective installation
 
