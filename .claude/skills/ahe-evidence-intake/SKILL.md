@@ -7,7 +7,11 @@ description: Collect exact Jira, Confluence, or other external provider objects,
 
 Use this workflow to turn connector-observed provider objects into reviewable
 AHE proposals without moving connector logic or admission judgment into AHE
-Core.
+Core. For existing-evidence lookup, relation traversal or state interpretation,
+use [the query skill](../ahe-evidence-query/SKILL.md) instead. The workflow below
+uses real human decisions. Test approval stubs are confined to explicitly
+authorized isolated experiments under the
+[experiment protocol](../ahe-evidence-query/references/experiments.md).
 
 ## Engineering Evidence Is Not a Brief
 
@@ -23,8 +27,10 @@ or a completeness assessment. Do not convert provider content to `manual_text`
 to bypass a missing revision, connector or capability. Repository code and git
 extraction remain separate workflows.
 
-The native small-model engineering path selects complete, verbatim units from
-its current source input instead of writing shorter replacement sentences.
+The retained legacy host's small-model engineering path is a comparison
+baseline, not the selected task-driven end state or a Desktop capability. It
+selects complete, verbatim units from its current source input instead of
+writing shorter replacement sentences.
 The controller verifies the selected text and its exact span reference even
 when the model's output matches the JSON schema. A unit may contain multiple
 conditions or table rows; selecting it is neither semantic validation nor proof
@@ -38,17 +44,15 @@ remain distinct operator choices; never silently enable proposal writing.
 This native runner contract is separate from Claude's grounded proposal
 workflow below. Do not label Claude-generated claims as native model selections.
 
-Do not use the withdrawn exploratory 88%/77% figures as a document-coverage or
-Brief-quality metric. They do not establish that either complete workflow lost
-that fraction of source information.
-
 ## Preconditions
 
 - Use the source scope from the current user request. When invoked explicitly,
   `$ARGUMENTS` may contain the source references and scope.
 - Confirm that the required source connector and the trusted AHE ingestion MCP
   are available. Use the read-only AHE query MCP for proposal enumeration,
-  review preparation, and final readback when available.
+  source context and final readback when available. Exact native source review
+  comes from `get_source_claim_review` in the separately authorized reviewer
+  profile; Query context is not a substitute for that review display.
 - Inspect the current MCP tool schemas before the first call. Treat the schemas
   as authoritative; this skill defines workflow and safety constraints, not a
   frozen JSON contract.
@@ -189,12 +193,16 @@ Include:
 - the extraction coverage notes, including known omissions, separately from
   the unmodified native display.
 
-Ask which proposal numbers the human approves, rejects, or retains as
-`audit_only`, then stop and wait for an explicit decision. Do not interpret
-silence, a request to continue analysis, or approval of the overall task as
-proposal admission approval.
-Approval of a selected claim does not certify the completeness of the entire
-document's extraction. If a reason is missing, ask for it; do not invent one.
+If a complete, valid human decision already exists for this exact unchanged
+native subject/display, apply it without requesting the same decision again.
+This includes an exact decision delegated by the parent agent with all required
+fields and the authorized reviewer binding. Otherwise ask which proposal
+numbers the human approves, rejects, or retains as `audit_only`, and wait for
+that explicit decision and reason. A changed subject requires fresh review.
+Do not interpret silence, a request to continue analysis, or approval of the
+overall task as proposal admission approval. Approval of a selected claim does
+not certify the completeness of the entire document's extraction. If a reason
+is missing, ask for it; do not invent one.
 
 ## Apply the Human Decision
 
@@ -239,9 +247,11 @@ another profile to obtain write access.
    source excerpts, code path/revision where applicable, all rules, mapping,
    coverage and limitations. Graph connectivity or a model-written card is
    not a substitute.
-3. Ask the user to approve this exact directed relation with a reason.
-   Approval of the nodes, a prior relation or an instruction to continue is
-   not edge approval. Rejection/audit_only means no relation write; this
+3. Obtain approval of this exact directed relation with a reason. Reuse a
+   complete, valid existing human decision for the unchanged native subject;
+   otherwise show the review and ask. Approval of the nodes, a prior relation
+   or an instruction to continue is not edge approval. Rejection/audit_only
+   means no relation write; this
    profile does not persist those relation decisions.
 4. Only after explicit approval call `admit_reviewed_implements` or
    `admit_reviewed_references` with the returned `review`, unchanged
@@ -285,7 +295,7 @@ needs these capabilities, report the unavailable workflow and stop. Do not
 substitute an ordinary statement, generic edge, fake replacement node, legacy
 profile, or direct SQL. Provider revision order alone does not prove semantic
 replacement. Internal relation theory remains in
-[system design](../../../docs/SYSTEM_DESIGN.md#graph); it is not permission to
+[system design](../../../docs/SYSTEM_DESIGN.md#graph-relations-and-versions); it is not permission to
 execute a disabled writer. Repository code extraction is outside this skill.
 
 ## Completion Report

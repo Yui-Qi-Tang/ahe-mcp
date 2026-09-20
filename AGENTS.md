@@ -1,116 +1,62 @@
 # AHE Agent Instructions
 
-## Shared Contract
+## Shared Contract and Task Routing
 
-- Read `CLAUDE.md` completely before changing or operating AHE. Despite its
-  filename, it is the shared operational contract for every cooperating agent.
-- Do not read all of `README.md` by default. Follow the targeted reading rules
-  in `CLAUDE.md`.
-- For Jira, Confluence, or other external evidence intake, use the repository
-  skill at `.agents/skills/ahe-evidence-intake/SKILL.md`.
-- Inspect the live MCP tool list and input schemas before calling tools. Names
-  and schemas observed from the server override remembered examples.
+- Read [CLAUDE.md](CLAUDE.md) completely before changing or operating AHE. It
+  owns the shared authority, capability, experiment and repository-work rules.
+- AHE supplies evidence to models and agents. Models may explore freely;
+  claims enter canonical evidence only through explicit review. Downstream
+  explanations still need their own evidence checks.
+- Read only the documentation relevant to the task, using the routing in
+  `CLAUDE.md`; do not load all of `README.md` by default.
+
+| Task | Codex entrypoint |
+| --- | --- |
+| Answer with existing AHE evidence, trace support or inspect state | [.agents/skills/ahe-evidence-query/SKILL.md](.agents/skills/ahe-evidence-query/SKILL.md) |
+| Collect external provider objects and prepare/apply exact source review | [.agents/skills/ahe-evidence-intake/SKILL.md](.agents/skills/ahe-evidence-intake/SKILL.md) |
+| Review independent relations or evidence endpoints | `CLAUDE.md`, then the relevant section of the shared intake workflow |
+| Design, run or report a controlled experiment | [Experiment protocol](.claude/skills/ahe-evidence-query/references/experiments.md) |
+
+Discover the live MCP tools and input schemas before calling them. Standard
+`relation-reviewer` and `endpoint-reviewer` capabilities are available only
+through their separately provisioned profiles. Contradiction and Supersession
+**writers**, generic derived admission and repository activation remain internal
+capabilities; their query/readback tools do not authorize writes. Do not enable
+a legacy profile or substitute direct SQL when a required operation is absent.
 
 ## Agent and Sub-Agent Authority
 
-- A task assignment defines work scope; it is not human approval for evidence
-  admission, rejection, or `audit_only` disposition.
-- A sub-agent may collect authorized source data, persist exact source as an
-  immutable snapshot, produce grounded proposals, and prepare review cards.
-- A sub-agent may apply an admission or disposition only when its assignment
-  includes the human's explicit decision, the exact proposal IDs, the selected
-  outcome, and every human-supplied decision field required by the live tool
-  schema. Otherwise it must return the review package to the parent agent and
-  stop at the review boundary.
-- Never infer approval from "continue", "finish", silence, approval of a code
-  change, or approval of the overall research task.
-- Keep company data inside its authorized environment. Do not copy private
-  source content into repository fixtures, commits, public issue text, or an
-  unrelated experiment environment.
-- Return compact, inspectable results. Do not rely on hidden sub-agent logs as
-  the only record of source identity, proposal IDs, review state, or failures.
+- A task assignment defines scope; it is not a human decision to admit, reject
+  or retain real evidence as `audit_only`. Approval of code changes, Git actions
+  or research is separate from evidence admission approval.
+- An authorized sub-agent may collect exact source data, prepare grounded
+  proposals and read back native review material. Without the exact human
+  decision it returns that material to the parent at the review boundary.
+- A delegated decision must carry the exact proposal/attempt or relation
+  coordinates, unchanged native review subject/display, outcome, human reason
+  and the authorized reviewer binding required by the live workflow. A valid
+  existing decision need not be requested again; changed subjects need new
+  review. Do not invent missing fields or inject launcher-owned identity.
+- Preserve exact inputs for uncertain-outcome retries. Do not infer a decision
+  from silence, "continue", "finish", or approval of the overall intake task.
+- Keep company data inside its authorized environment. Test approval stubs are
+  permitted only under the shared experiment protocol, never as substitutes for
+  a human decision in an operational evidence store.
 
-## Claude-Compatible Intake Behaviour
+## Handoff
 
-- Keep connectors and source collection outside AHE Core. The cooperating
-  agent supplies exact connector-observed source plus provider-controlled
-  identity and revision metadata.
-- Never replace source content with a summary, paraphrase, or inferred
-  reconstruction before `submit_external_source`.
-- Do not replace engineering evidence extraction with Brief or summary chunks.
-  Preserve in-scope facts and qualifiers and disclose omissions separately from
-  source coverage. Keeping raw content and observing no fabrication do not
-  establish extraction completeness. New Brief operations require a v2 source
-  declaring `news` or `public_event`; this is a caller declaration, not content
-  classification. Do not relabel engineering data to pass that gate.
-- Treat extraction output as candidate material. Only governed admission may
-  create canonical evidence.
-- Use the read-only query MCP for lookup and readback. Use the ingestion MCP
-  only inside a trusted intake and review workflow.
-- Show humans proposal sentences and grounded source context, not graph
-  fragments alone. Every review card must include exact excerpts, source title
-  and location, provider revision, coverage, limitations, and a version
-  difference when one is available.
-- Standard source decisions require `get_source_claim_review`, then explicit
-  approval/rejection/audit_only and a reason bound to its unchanged native
-  subject/display. Use only the exact-reviewed writer tools named in the shared
-  skill; a hand-written review card is not a substitute for that display.
-- A separately provisioned `relation-reviewer` exposes exact review/admission
-  for `implements` and `references`. Follow the shared skill; existing node
-  approval is not approval of the independent relation. Do not use its narrow
-  endpoint/marker contracts as permission to create nodes or invent references.
-- A separately provisioned `repository-intake` captures a launcher-fixed Git
-  commit and parses pending Go proposals. `endpoint-reviewer` reviews/adopts
-  `repository_code` or `derived_spec` candidates. Show the full native display,
-  complete AND parents and source/code context; obtain explicit approval and
-  reason. Do not invent sources for model-authored derivations or treat
-  endpoint approval as independent relation approval.
-- Use the dedicated proposal workflow for canonical `contradicts`. For
-  `supersedes`, keep the new external-source proposal pending, read its exact
-  older targets and the current Supersession head, then call
-  `admit_pending_supersession` only after explicit approval of the complete
-  target set and six-field source-object/slot basis.
-- Never write arbitrary relation edges or infer replacement from provider
-  revision order. Query currentness only with the lineage key returned by AHE;
-  do not supply completeness, members, a winner, status, head, or hashes.
-- The relation workflows above are internal contracts: standard ingestion
-  profiles do not expose contradiction or Supersession writers. Stop when a
-  required tool is unavailable; do not enable a legacy profile or use direct SQL.
+For intake/review work, return provider identity and revision; source and
+extraction IDs; exact native review material with source excerpts, coverage,
+limitations and available version differences; readback states; any missing
+decision or capability; and whether canonical mutation occurred. Preserve
+extraction omissions separately from source coverage.
 
-## Handoff Format
+For read-only evidence work, return the supported answer, source/record
+references, relevant relation or receipt findings, and unresolved limits. An
+answer or hypothesis is not a proposal submitted to AHE. Hidden sub-agent logs
+must not be the only inspectable record. Keep credentials, DSNs and private
+session text out of either handoff.
 
-When a sub-agent returns intake work to a parent agent, include:
-
-1. Provider object identity, revision, coverage, and limitations.
-2. Source snapshot and extraction view IDs.
-3. Extraction attempt and proposal occurrence IDs.
-4. A numbered human review card for each pending proposal or relation.
-5. Readback status and any capability that was unavailable.
-6. The exact next action requested from the human.
-7. An explicit statement of whether any canonical mutation occurred.
-
-Do not expose credentials, tokens, DSNs, or private session text in the
-handoff.
-
-## Repository Work
-
-- As of 2026-09-14, Detective Desktop is frozen and unavailable.
-  Do not resume UI/features, launch/trial/acceptance or Desktop publication
-  without explicit user approval to unfreeze it. Prior passing tests/builds
-  are historical, not usable-product acceptance. Retain code and saved work.
-  CLI-first review is the current priority; shared helpers and
-  regression tests remain, so this does not authorize deletion or refactoring.
-
-- Preserve unrelated user changes and respect the current worktree boundary.
-- Do not commit, push, merge, or change branches unless explicitly requested.
-- Use Go 1.27.0 semantics. For ordinary code changes run `make verify`; add
-  `go test -race ./...` when concurrency behaviour or CI is in scope.
-- Run integration tests only against an explicitly selected non-production
-  PostgreSQL database. Never print or commit `DATABASE_DSN`.
-- Keep `docs/` for current theory, algorithms, data structures and their
-  references. Keep experiment logs, raw captures and historical reviews in a
-  private lab outside this repository; never publish the lab's machine paths.
-- Maintainer status, release checklists and experiment records are private,
-  ignored files, not public product documentation. Never force-add them.
-- Before publication obtain the maintainer's release checklist and approval;
-  stop if it is unavailable. A local test pass does not authorize publication.
+Follow `CLAUDE.md` for Desktop availability, checks, artifact placement, Git
+authorization and releases. Routine repository work does not authorize evidence
+admission, and a test pass does not authorize a release.
