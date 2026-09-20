@@ -28,6 +28,19 @@ test('keeps portable instructions and synthetic coordinates valid', () => {
   ]) assert.equal(containsMachinePath(text), false);
 });
 
+test('does not treat quoted root prefixes as machine-specific paths', () => {
+  const prefixes = [
+    ['', 'Users', ''].join('/'),
+    ['', 'home', ''].join('/'),
+    ['', 'var', 'folders', 'fixture-shard', ''].join('/'),
+  ];
+  for (const prefix of prefixes) {
+    assert.equal(containsMachinePath(JSON.stringify(prefix)), false);
+    assert.equal(containsMachinePath(`'${prefix}'`), false);
+  }
+  assert.equal(containsMachinePath(JSON.stringify(prefixes)), false);
+});
+
 test('does not disclose a private path in a filename or inject log lines', () => {
   const privateName = ['backup', 'Users', 'fixture-account', 'report.txt'].join('/');
   assert.equal(publicFailureLabel(privateName), '[filename redacted]');
