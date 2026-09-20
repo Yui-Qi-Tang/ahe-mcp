@@ -5,10 +5,13 @@
 - Detective Desktop is **frozen / unavailable** as of 2026-09-14.
   CLI stabilization comes first. Do not request UI acceptance, start the app,
   extend Desktop or publish it unless the user explicitly unfreezes that work.
-  Keep existing code/tests/data. CLI end-to-end engineering intake remains incomplete.
+  Keep existing code/tests/data; historical passing tests are not product
+  acceptance. CLI end-to-end engineering intake remains incomplete.
 
-- Treat this file as the operational summary. Do not read all of `README.md` by
-  default.
+- This is the shared operational contract for all cooperating agents. AHE is
+  an evidence layer, not the downstream agent. Models may explore freely;
+  claims enter canonical evidence only through explicit review.
+- Use the task routing below. Do not read all of `README.md` by default.
 - For Detective extraction contracts, read `docs/SYSTEM_DESIGN.md` and the
   Detective README. Maintainer plans and experimental records are private;
   they are not available runtime capabilities or permission to write.
@@ -18,9 +21,16 @@
 - Consult only the matching `README.md` section when changing its contract:
   `Authority Model`, `Programs`, `External Model and Connector Intake`, `MCP
   Client`, or `Tests`.
-- Use the project skill at
-  `.claude/skills/ahe-evidence-intake/SKILL.md` for Jira, Confluence, or other
-  external evidence intake work.
+- For evidence lookup, support tracing or state interpretation, use the
+  [shared query skill](.claude/skills/ahe-evidence-query/SKILL.md).
+- For external provider intake, use the
+  [shared intake skill](.claude/skills/ahe-evidence-intake/SKILL.md). Its separate
+  relation and endpoint sections apply only to those authorized workflows.
+  Codex agents enter through the matching `.agents/skills/` wrappers so that
+  actual producer identity and delegation boundaries are preserved.
+- For experiment design, execution or scoring, read the
+  [experiment protocol](.claude/skills/ahe-evidence-query/references/experiments.md).
+  Consult `README.md`'s evaluation section only when its reported results matter.
 - Discover the currently exposed MCP input schemas before calling tools. Do not
   reconstruct schemas from memory or invent provider-specific AHE tool names.
 
@@ -59,8 +69,9 @@
 - Standard ingestion profiles are separately authorized `intake`,
   `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer` and
   `relation-reviewer`. Bounded exact-reviewed derived/code endpoints use the
-  endpoint profile; generic, contradiction and Supersession writers remain
-  internal contracts, not enabled standard MCP tools.
+  endpoint profile; generic derived admission, contradiction, Supersession
+  and repository activation writers remain internal contracts, not enabled
+  standard MCP tools. Their read-only tools do not authorize these writes.
   If the required tool is absent, stop and report the unavailable capability;
   never enable a legacy profile or substitute direct SQL to follow this guide.
 
@@ -150,17 +161,52 @@ report the missing capability rather than changing profiles or using SQL.
   key. Never supply or infer completeness, members, winner, status, head, or
   hashes. Snapshot currentness is not provider freshness or global truth.
 - Do not infer replacement or stable slot identity from revision order or
-  repository source-generation lifecycle. See `docs/SYSTEM_DESIGN.md#graph`.
+  repository source-generation lifecycle. See `docs/SYSTEM_DESIGN.md#graph-relations-and-versions`.
 - Never place credentials, tokens, DSNs, private conversation text, or other
   secrets in source metadata, extractor configuration, session references, or
   committed files.
 
+## Controlled Experiments
+
+Follow the [experiment protocol](.claude/skills/ahe-evidence-query/references/experiments.md)
+for test approval stubs, frozen comparisons, retained failures and separate
+scoring of unsupported assertions, abstention and downstream repair outcomes.
+An explicitly authorized experiment may simulate approval only for its declared
+synthetic/public cases in an isolated, disposable non-production database.
+Label the simulation; it is not human approval or permission to use stubs in
+an operational evidence store. AHE operations claimed by an experiment must
+actually run. Research authorization does not approve real evidence admission.
+
 ## Repository Work
 
-- Use Go 1.27.0 semantics.
-- Run `make verify` for ordinary code changes.
-- Run `go test -race ./...` when concurrency behavior or CI is in scope.
+- Use Go 1.27.0 semantics. Run `make verify` for ordinary code changes; add
+  `go test -race ./...` when concurrency behavior or CI is in scope.
+  For documentation or skill-only edits, validate links, skill structure and
+  agreement with the actual contracts; do not run models or broad code tests
+  solely because instructions changed.
 - Run integration tests only against an explicitly selected non-production
   PostgreSQL database. Never print or commit the value of `DATABASE_DSN`.
-- Preserve unrelated user changes. Do not commit, push, merge, or change
-  branches unless the user explicitly requests it.
+- Preserve unrelated changes and the current worktree boundary. Do not commit,
+  push, merge or change branches unless explicitly requested. Confirm the
+  actual target branch and stage only task-owned files. An existing explicit
+  Git request authorizes that scoped action; do not ask for it again.
+- Keep `docs/` for current theory, algorithms, data structures and references.
+  Keep raw experiment captures, historical reviews, maintainer status and
+  release checklists in private lab or ignored maintainer files. Never force-add
+  private files or publish machine paths, credentials or company source data.
+- Public synthetic fixtures, redistributable public samples, general methods
+  and quantitative summaries may be included within the user's requested
+  repository/publication scope. State source/license references, limitations
+  and any missing material needed for reproduction. Public summaries do not
+  make private raw captures publishable.
+
+## Releases
+
+An ordinary authorized commit or branch push is repository work. It does not
+require a release checklist and does not authorize a release. A formal release,
+release tag or distribution requires explicit release authorization and the
+maintainer's release checklist, supplied in the current task or at a designated
+private path. Do not invent the checklist or treat local test success as release
+approval. If the checklist is unavailable, stop that release step and report
+what is missing; complete other authorized preparation first. Desktop also
+remains subject to the explicit unfreeze requirement above.

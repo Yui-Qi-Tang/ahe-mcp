@@ -11,18 +11,19 @@ actual producer identity and the parent/sub-agent approval boundary.
 ## Load the Shared Workflow
 
 Before taking intake actions, read
-`../../../.claude/skills/ahe-evidence-intake/SKILL.md` completely. Treat it as
-the canonical detailed workflow for:
+[the shared intake workflow](../../../.claude/skills/ahe-evidence-intake/SKILL.md)
+completely. It owns the common tool sequence and detailed rules for:
 
 - exact connector collection and immutable source intake;
 - span-grounded proposal production;
 - human review cards and admission or disposition;
-- unavailable relation/repository workflow boundaries;
+- separately authorized relation/endpoint workflows and unavailable writers;
 - completion reporting.
 
 If that file is unavailable or conflicts with the live MCP schema, stop and
 report the mismatch. The live MCP schema controls call shape; the shared skill
-controls workflow and safety boundaries.
+controls workflow and safety boundaries. For existing-evidence lookup or support
+tracing, use [the query skill](../ahe-evidence-query/SKILL.md) instead.
 
 Inherit the shared restriction on summary-first engineering intake. Exact
 quotes, retained original bytes, or no observed fabrication do not establish
@@ -71,33 +72,18 @@ General instructions such as "finish the intake", "continue", or "do the next
 step" are not a valid decision. If any field is absent or ambiguous, perform no
 admission or terminal disposition.
 
-## Claude-Compatible Tool Sequence
+## Use the Shared Sequence
 
-Use this order, omitting only steps that the live server proves unnecessary:
+Execute the shared intake sequence with the Codex identities above. It owns
+exact source persistence, proposal enumeration, native review, the writer
+binding and readback. Do not maintain a second tool sequence in this wrapper.
+A complete, valid human decision already supplied for the unchanged native
+subject need not be requested again. A changed subject requires fresh review;
+missing or ambiguous decision fields still stop admission or disposition.
 
-1. Discover the connector and AHE MCP tools and inspect their schemas.
-2. Read one authorized provider object and preserve exact observed content.
-3. Call `submit_external_source` with provider identity, revision, coverage,
-   limitations, and a fresh delivery request ID.
-4. Call `get_extractor_input` for the returned extraction view.
-5. Produce zero or more span-grounded proposals without adding unsupported
-   facts or reconciling conflicts.
-6. Call `submit_extractor_output` with a fresh request ID and the Codex producer
-   definition above.
-7. Read back every pending proposal for the exact source snapshot.
-8. Call `get_source_claim_review` for each exact attempt/occurrence; retain and
-   show the complete native display and subject with separate coverage notes.
-9. Stop for a human decision unless a valid delegated decision already exists.
-10. Use `admit_reviewed_source_claim` (`approved`) or
-    `record_reviewed_source_claim_disposition` (`reject`/`audit_only`) only with
-    the unchanged subject and exact human decision/reason. Preserve them for
-    uncertain-outcome retries as described in the shared workflow.
-11. Read back final records and report the resulting IDs and states.
-
-Standard profiles do not expose legacy admission/disposition, contradiction,
-Supersession, or repository activation writers. Report missing capabilities;
-do not enable legacy profiles or substitute direct SQL. Ordinary external
-source review does not require converting the source to Brief.
+Test approval stubs belong only to an explicitly authorized isolated experiment
+under the [experiment protocol](../../../.claude/skills/ahe-evidence-query/references/experiments.md).
+They are not human decisions for operational intake.
 
 ## Parent Handoff
 
