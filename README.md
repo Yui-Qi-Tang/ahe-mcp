@@ -2,7 +2,7 @@
 
 **AHE provides traceable evidence and verified operation results for AI agents.**
 
-[Quick start](#quick-start) · [Evaluation](#evaluation) · [MCP setup](INSTALL.md)
+[Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [Evaluation](#evaluation) · [MCP setup](INSTALL.md)
 
 ## Results on selected SWE-bench cases
 
@@ -51,7 +51,25 @@ retained command-line capabilities and gaps. Building does not configure a DB
 or download a model. Desktop launch instructions are frozen reference material,
 not part of quick start.
 
+After setup, follow [your first evidence workflow](docs/FIRST_WORKFLOW.md) for
+a synthetic source, explicit review and a Query answer with source tracing.
+For a database-free introduction, run `make evidence-boundary`.
+
+## Agent workflows
+
+- **Read existing evidence:** [Codex query skill](.agents/skills/ahe-evidence-query/SKILL.md)
+  or [shared query workflow](.claude/skills/ahe-evidence-query/SKILL.md).
+- **Collect and prepare external evidence:** [Codex intake skill](.agents/skills/ahe-evidence-intake/SKILL.md)
+  or [shared intake workflow](.claude/skills/ahe-evidence-intake/SKILL.md).
+
+These repository instructions require configured MCP access; they do not install
+servers or grant admission authority. Ordinary answering needs only Query.
+
 ## Evaluation
+
+The tables below describe one fixed six-case run. See
+[reproduction and result interpretation](docs/EVALUATION.md) for public fixtures,
+missing replay materials and the distinction from earlier model pilots.
 
 ### Evidence-bounded answers and abstention
 
@@ -518,6 +536,9 @@ do not require Desktop's native libraries.
 
 ## Documentation
 
+- [First evidence workflow and Query example](docs/FIRST_WORKFLOW.md)
+- [Evaluation methods and reproduction limits](docs/EVALUATION.md)
+- [Runnable evidence-boundary fixtures](docs/EVIDENCE_BOUNDARY.md)
 - [MCP installation and upgrades](INSTALL.md)
 - [Detective CLI and Desktop](apps/detective/README.md)
 - [Frozen Desktop installation reference and CLI setup](apps/detective/INSTALL.md)
