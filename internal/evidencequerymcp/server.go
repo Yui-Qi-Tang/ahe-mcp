@@ -206,6 +206,7 @@ type GroundedEvidenceQueryAttempt struct {
 
 // GroundedEvidenceQueryExecution is the authoritative bounded query trace.
 type GroundedEvidenceQueryExecution struct {
+	RecoveryOptions               []GroundedEvidenceRecoveryOption       `json:"recovery_options,omitempty"`
 	OriginalQuery                 string                                 `json:"original_query"`
 	QueryMode                     string                                 `json:"query_mode"`
 	PlanVersion                   string                                 `json:"plan_version"`
@@ -227,6 +228,13 @@ type GroundedEvidenceQueryExecution struct {
 	RankingPolicy                 string                                 `json:"ranking_policy,omitempty"`
 	Multisurface                  *GroundedEvidenceMultisurfaceExecution `json:"multisurface,omitempty"`
 	PracticalRecovery             *GroundedEvidencePracticalRecovery     `json:"practical_recovery,omitempty"`
+}
+
+// GroundedEvidenceRecoveryOption suggests a separate read-only call, not an executed
+// recovery attempt or a guarantee that evidence will be found.
+type GroundedEvidenceRecoveryOption struct {
+	Tool      string                          `json:"tool"`
+	Arguments GetGroundedEvidenceBriefRequest `json:"arguments"`
 }
 
 // GroundedEvidenceBriefMatch preserves exact statement and provenance references.
@@ -631,7 +639,7 @@ func (s *Server) Tools() []ToolDefinition {
 		},
 		{
 			Name:        ToolSearchEvidenceRecords,
-			Description: "Run one exact bounded lexical lookup over persisted proposal statements and return complete grounded records.",
+			Description: "Run one exact bounded lexical lookup over persisted proposal statements and return complete grounded records. For information needs use get_grounded_evidence_brief; complete empty exact lookups include recovery_options for separate opt-in retries.",
 			ReadOnly:    true,
 		},
 		{
@@ -2349,6 +2357,7 @@ func mapGroundedEvidenceQueryExecution(execution evidenceingestion.EvidenceQuery
 		})
 	}
 	return GroundedEvidenceQueryExecution{
+		RecoveryOptions:            groundedEvidenceRecoveryOptions(execution),
 		OriginalQuery:              execution.OriginalQuery,
 		QueryMode:                  execution.QueryMode,
 		PlanVersion:                execution.PlanVersion,
@@ -2379,6 +2388,39 @@ func mapGroundedEvidenceQueryExecution(execution evidenceingestion.EvidenceQuery
 		Multisurface:                  mapGroundedEvidenceMultisurfaceExecution(execution.Multisurface),
 		PracticalRecovery:             mapGroundedEvidencePracticalRecovery(execution.PracticalRecovery),
 	}
+}
+
+func groundedEvidenceRecoveryOptions(execution evidenceingestion.EvidenceQueryExecution) []GroundedEvidenceRecoveryOption {
+	if execution.QueryMode != evidenceingestion.EvidenceQueryModeExactLexical ||
+		execution.CandidateCount != 0 || execution.Truncated ||
+		!execution.SearchCompleteWithinSurface ||
+		execution.CompletionReason != evidenceingestion.EvidenceQueryCompletionBoundedNoMatch {
+		return nil
+	}
+	options := make([]GroundedEvidenceRecoveryOption, 0, 3)
+	for _, route := range []struct{ mode, schema string }{
+		{evidenceingestion.EvidenceQueryModeDeterministicLexicalRecovery, GroundedEvidenceBriefSchemaV2},
+		{evidenceingestion.EvidenceQueryModeExperimentalMultisurfaceV1, GroundedEvidenceBriefSchemaV6},
+		{evidenceingestion.EvidenceQueryModePracticalMultisurfaceV1, GroundedEvidenceBriefSchemaV7},
+	} {
+		options = append(options, GroundedEvidenceRecoveryOption{
+			Tool: ToolGetGroundedEvidenceBrief,
+			Arguments: GetGroundedEvidenceBriefRequest{
+				Query:                execution.OriginalQuery,
+				QueryMode:            route.mode,
+				ResponseSchema:       route.schema,
+				SourceSnapshotID:     execution.Filters.SourceSnapshotID,
+				RepositorySnapshotID: execution.Filters.RepositorySnapshotID,
+				SourceGenerationID:   execution.Filters.SourceGenerationID,
+				SourceID:             execution.Filters.SourceID,
+				SourceVersion:        execution.Filters.SourceVersion,
+				AdmissionOutcome:     execution.Filters.AdmissionOutcome,
+				LifecycleScope:       execution.Filters.LifecycleScope,
+				Limit:                execution.Limit,
+			},
+		})
+	}
+	return options
 }
 
 func groundedEvidenceBriefObservationCodes(execution evidenceingestion.EvidenceQueryExecution) []string {

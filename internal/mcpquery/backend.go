@@ -280,7 +280,7 @@ func listEvidenceRecordsSchema() map[string]any {
 
 func searchEvidenceRecordsSchema() map[string]any {
 	properties := listEvidenceRecordsSchema()["properties"].(map[string]any)
-	properties["query"] = stringSchema("Required exact lexical query over persisted proposal statement text; at most 256 characters and 16 terms.")
+	properties["query"] = stringSchema("Required exact lexical query over persisted proposal statement text; at most 256 characters and 16 terms. No query_mode is accepted. For information needs use get_grounded_evidence_brief; a complete empty result includes query_execution.recovery_options for separate retries.")
 	schema := objectSchema(properties, []string{"query"})
 	schema["not"] = map[string]any{"required": []string{"source_snapshot_id", "repository_snapshot_id"}}
 	return schema
