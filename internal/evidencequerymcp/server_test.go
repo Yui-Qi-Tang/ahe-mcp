@@ -2689,6 +2689,10 @@ func (c *fakeQueryCore) SearchProposalRecordsPage(_ context.Context, input evide
 		LifecycleScope:       input.LifecycleScope,
 	}
 	execution.CandidateCount = len(c.searchResult)
+	if len(c.searchResult) == 0 {
+		execution.CompletionReason = evidenceingestion.EvidenceQueryCompletionBoundedNoMatch
+		execution.Attempts[0].CandidateCount = 0
+	}
 	return evidenceingestion.ProposalSearchQueryResult{
 		Matches:   append([]evidenceingestion.ProposalSearchResult(nil), c.searchResult...),
 		Execution: execution,
@@ -2717,4 +2721,94 @@ func (c *fakeQueryCore) ListRepositoryRelationNeighbors(_ context.Context, input
 		return nil, c.repositoryNeighborErr
 	}
 	return append([]evidenceingestion.RepositoryRelationNeighborResult(nil), c.repositoryNeighborResult...), nil
+}
+
+func TestEmptyExactSearchRecoveryOptionsPreserveScope(t *testing.T) {
+	core := &fakeQueryCore{}
+	server := newServer(core)
+	data, err := server.CallTool(context.Background(), ToolSearchEvidenceRecords, []byte(`{"query":"order-items","source_id":"synthetic-api","source_version":"rev-2","source_snapshot_id":"srcsnap:fixture","admission_outcome":"admitted","lifecycle_scope":"active","limit":3}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response SearchEvidenceRecordsResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		t.Fatal(err)
+	}
+	options := response.QueryExecution.RecoveryOptions
+	if len(options) != 3 || response.Count != 0 || response.QueryExecution.QueryCount != 1 || response.QueryExecution.GlobalAbsenceInferenceAllowed {
+		t.Fatalf("empty exact search = %+v", response)
+	}
+	// A sentinel from the core proves validation accepted each suggested route.
+	core.briefErr = errors.New("synthetic core reached")
+	for _, option := range options {
+		args := option.Arguments
+		if option.Tool != ToolGetGroundedEvidenceBrief || args.Query != "order-items" || args.SourceID != "synthetic-api" || args.SourceVersion != "rev-2" || args.SourceSnapshotID != "srcsnap:fixture" || args.AdmissionOutcome != "admitted" || args.LifecycleScope != "active" || args.Limit != 3 {
+			t.Fatalf("scope changed: %+v", option)
+		}
+		payload, err := json.Marshal(args)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := server.CallTool(context.Background(), option.Tool, payload); !errors.Is(err, core.briefErr) {
+			t.Fatalf("invalid suggested call %+v: %v", option, err)
+		}
+		if core.briefInput.QueryMode != args.QueryMode {
+			t.Fatalf("mode not preserved: %+v", core.briefInput)
+		}
+	}
+}
+
+func TestRecoveryOptionsOnlyForCompleteEmptyExactQuery(t *testing.T) {
+	baseline := testEvidenceQueryExecution("order-items", evidenceingestion.EvidenceQueryModeExactLexical, 3, "active", false, evidenceingestion.EvidenceQueryCompletionBoundedNoMatch)
+	baseline.Filters.RepositorySnapshotID = "repository-snapshot"
+	for _, tc := range []struct {
+		name   string
+		mutate func(*evidenceingestion.EvidenceQueryExecution)
+		want   bool
+	}{
+		{"empty exact", func(*evidenceingestion.EvidenceQueryExecution) {}, true},
+		{"candidates", func(e *evidenceingestion.EvidenceQueryExecution) { e.CandidateCount = 1 }, false},
+		{"truncated", func(e *evidenceingestion.EvidenceQueryExecution) { e.Truncated = true }, false},
+		{"incomplete", func(e *evidenceingestion.EvidenceQueryExecution) { e.SearchCompleteWithinSurface = false }, false},
+		{"unknown completion", func(e *evidenceingestion.EvidenceQueryExecution) { e.CompletionReason = "" }, false},
+		{"already recovery", func(e *evidenceingestion.EvidenceQueryExecution) {
+			e.QueryMode = evidenceingestion.EvidenceQueryModeDeterministicLexicalRecovery
+		}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			execution := baseline
+			tc.mutate(&execution)
+			mapped := mapGroundedEvidenceQueryExecution(execution)
+			if (len(mapped.RecoveryOptions) > 0) != tc.want {
+				t.Fatalf("options = %+v", mapped.RecoveryOptions)
+			}
+			if tc.want && mapped.RecoveryOptions[0].Arguments.RepositorySnapshotID != "repository-snapshot" {
+				t.Fatal("repository scope lost")
+			}
+			data, err := json.Marshal(mapped)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !tc.want && strings.Contains(string(data), "recovery_options") {
+				t.Fatalf("unexpected hint: %s", data)
+			}
+		})
+	}
+}
+
+func TestExplicitExactBriefExposesRecoveryOptions(t *testing.T) {
+	core := &fakeQueryCore{briefResult: evidenceingestion.GroundedEvidenceBriefQueryResult{
+		Execution: testEvidenceQueryExecution("order-items", evidenceingestion.EvidenceQueryModeExactLexical, 3, "active", false, evidenceingestion.EvidenceQueryCompletionBoundedNoMatch),
+	}}
+	data, err := newServer(core).CallTool(context.Background(), ToolGetGroundedEvidenceBrief, []byte(`{"query":"order-items","query_mode":"exact_lexical","limit":3}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response GroundedEvidenceBriefResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		t.Fatal(err)
+	}
+	if len(response.QueryExecution.RecoveryOptions) != 3 || response.QueryExecution.GlobalAbsenceInferenceAllowed {
+		t.Fatalf("brief execution = %+v", response.QueryExecution)
+	}
 }

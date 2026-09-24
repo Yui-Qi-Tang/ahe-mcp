@@ -23,7 +23,8 @@ Choose the smallest useful entry point for the question:
 | Need | Query tools to consider |
 | --- | --- |
 | A known record | `get_evidence_record` |
-| An information need or search phrase | `get_grounded_evidence_brief` or `search_evidence_records` |
+| An information need or search phrase | `get_grounded_evidence_brief` (defaults to `deterministic_lexical_recovery`) |
+| An intentionally exact lexical lookup over proposal statements | `search_evidence_records` (exact-only; no `query_mode`) |
 | Records for an exact source, revision or lifecycle scope | `list_evidence_records` |
 | Supporting links and their recorded basis | `list_evidence_neighbors`, `get_relation_provenance` |
 | A path or topology within a bounded snapshot | `open_canonical_read_view`, then `find_canonical_path` or `get_canonical_topology_diagnostics` |
@@ -33,6 +34,25 @@ Choose the smallest useful entry point for the question:
 not Detective's news Brief generation. Inspect its source context, record state,
 search surface and recovery trace when exposed. Do not silently change the
 user's source/revision scope or treat omitted context as absent source data.
+
+### Empty exact lookup and path terms
+
+A complete empty exact lookup exposes `query_execution.recovery_options` with
+separate `get_grounded_evidence_brief` calls. These are suggestions, not executed
+attempts or promised matches. Preserve their query, filters and limit. The first
+option uses the existing deterministic recovery default. Wider experimental
+routes require explicit paired parameters: `experimental_multisurface_lexical_v1`
+with response schema `grounded-evidence-brief-v6`, or
+`practical_multisurface_lexical_v1` with `grounded-evidence-brief-v7`.
+Inspect the live schema for the exact schema identifiers before calling.
+
+PostgreSQL full-text tokenization can keep `/v1/order-items` as a path token,
+while `order-items` becomes multiple required query lexemes. Thus a statement
+such as `Clients call POST /v1/order-items to create an order.` can miss an
+exact resource-name search even though the path contains that text. Recovery
+routes have different bounded surfaces; none guarantees a hit. An observed
+full path can also be tried within the same scope. An empty result never proves
+global absence.
 
 ## Follow the Evidence Needed for the Claim
 
