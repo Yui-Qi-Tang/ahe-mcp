@@ -163,6 +163,28 @@ unsupported assertions across the same fourteen questions. Improvement was
 uneven: E4B still had **3/4 affected AND answers in A, C and D**. 31B's D result
 of **0/14** applies only to these questions and this run.
 
+For those same four AND answers, separate decision-field scoring shows what the
+flat aggregate hides. **Higher is better in this table**; these are correct
+fields / four original answers, not additional model calls or replacement
+unsupported-assertion counts.
+
+| AND model | Group | Path | Declared-parent integrity | Original-requirement support |
+| --- | --- | ---: | ---: | ---: |
+| E4B | A | 2/4 | 1/4 | 3/4 |
+| E4B | C | 1/4 | 3/4 | 4/4 |
+| E4B | D | 1/4 | 3/4 | 4/4 |
+| 31B | A | 2/4 | 3/4 | 4/4 |
+| 31B | C | 4/4 | 4/4 | 4/4 |
+| 31B | D | 4/4 | 4/4 | 4/4 |
+
+E4B's error types changed from A to C even though its affected-answer count did
+not. D added no observed improvement over C on these fields; 31B was already
+correct in C. The frozen D inputs included full fixture records and validation
+results, so this finding does not establish missing graph data. Graph validation
+checks the declared set; whether it covers the original requirement is a
+separate source comparison. See the [per-variant errors, scoring boundaries and
+verification scope](docs/EVALUATION.md#and-support-score-each-question-separately).
+
 Public-case judgments include uncertainty, so the three categories are shown
 separately. **Each row contains exactly three answers**:
 
@@ -294,7 +316,8 @@ sequential PostgreSQL stale-review lifecycle checks, and restricted independent
 `implements` admission/query checks. D supplies observed operation outcomes;
 this is receipt-assisted interpretation, not independent prediction or a
 comparison against another service providing equivalent checks. Underdeclared
-AND support remains a native semantic limitation.
+artifacts can pass declared-parent validation while omitting an original
+requirement; that coverage comparison is outside the graph validator's contract.
 
 Generation used temperature 0, seed 42, `num_ctx=32768`, `num_predict=4096`,
 streaming and `think:true`. E4B ran first, then 31B, with seed-619 shuffled cell
