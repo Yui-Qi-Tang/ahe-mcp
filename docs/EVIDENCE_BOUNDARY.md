@@ -128,6 +128,29 @@ internally valid while omitting a requirement stated in the source. AHE checks
 the declared set; it does not recover missing requirements from prose. Even the
 complete synthetic artifact does not prove a working or secure webhook.
 
+### Bounded product queries
+
+The artifact interventions above describe complete fixture inputs. A product
+query has an additional boundary: root nodes, relation filters, traversal depth,
+node/edge budgets and the selected snapshot. A parent absent from that result
+may still exist in storage. Do not diagnose a stored structural defect solely
+from an incomplete query scope.
+
+The canonical reader refuses to materialize a derived node when its declared
+parent or matching edge is outside the bounded view. Its error is scoped to that
+view; a broader authorized query may succeed without any evidence mutation.
+Other valid bounded views can be returned with truncation metadata. Neither
+`truncated=false` nor a complete declared set establishes coverage beyond the
+requested scope or correspondence with every original requirement.
+
+The [read-layer tests](../internal/evidenceingestion/canonical_read_view_test.go)
+use a SQL test double to distinguish persisted derivations from depth, node and
+relation restrictions, including selected nodes whose connecting edge was not
+traversed. They check that the same stored data remains readable with sufficient
+scope. These checks exercise product assembly code, not a live database or a
+model's interpretation. See the [AND scoring boundaries](EVALUATION.md#and-support-score-each-question-separately)
+for separate structural, source-comparison and explanation measures.
+
 ## Stale-review case: the state changes after review
 
 An exact citation and a previously valid review do not guarantee that a later
