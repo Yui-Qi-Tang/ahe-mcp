@@ -4,20 +4,44 @@
 
 [Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [Evaluation](#evaluation) · [MCP setup](INSTALL.md)
 
+## Fewer unsupported assertions in a fixed synthetic suite
+
+**In this fixed run, the AHE-assisted condition produced fewer answers containing
+unsupported factual assertions than the structured/static control.** This is
+AHE's primary evaluation outcome; lower is better.
+
+| Model | C: structured/static evidence | D: with AHE results |
+| --- | ---: | ---: |
+| Gemma 4 E4B IT-QAT | 6/14 affected answers | 3/14 affected answers |
+| Gemma 4 31B IT-QAT | 1/14 affected answers | 0/14 affected answers |
+
+The same 14 synthetic questions per model and condition cover declared AND
+support, stale review and independent `implements`. These are familiar
+development cases, with one attempt per model/question/condition and one
+unblinded reviewer; there is no independent annotation. Count each answer once
+if it contains at least one unsupported assertion. Gains were uneven: the AND
+case showed no D-over-C improvement. These are results for this suite and run,
+not a general reliability rate. See the [full evaluation](#evaluation) for all
+input groups, per-case findings and reproduction limits.
+
 ## Results on selected SWE-bench cases
 
-**These SWE-bench cases provide initial evidence that AHE can improve downstream
-problem-solving outcomes.**
+**In three familiar SWE-bench cases, the AHE-assisted condition produced more
+passing repairs than the structured/static control.** Repair success is a
+secondary outcome; higher is better.
 
 | Model | Structured/static evidence | With AHE results |
 | --- | ---: | ---: |
 | Gemma 4 E4B IT-QAT | 0/3 repairs passed | 1/3 repairs passed |
 | Gemma 4 31B IT-QAT | 1/3 repairs passed | 3/3 repairs passed |
 
-Three selected, familiar cases; the same models and source pool; one attempt per
-model, case and input condition. Passing repairs do not establish that every
-explanation is supported. See the [full evaluation](#evaluation) for all input
-groups, unsupported-assertion findings and limitations.
+Only three cases, not held out; one attempt per model/case/condition, with the
+same models and source pool. The adapter was developed on these cases. D reads
+frozen output from a controller that traversed AHE, not model-selected live tool
+calls; reviews use test approval stubs. Explanation review used one unblinded
+reviewer with no independent annotation. Of 31B D's three passing repairs, one
+explanation contained an unsupported assertion and another remained unresolved.
+See the [secondary outcome](#secondary-outcome-repairs-passing-the-official-tests).
 
 ## What AHE helps with
 
@@ -166,17 +190,20 @@ These counts have no independent annotation.
 #### Secondary outcome: repairs passing the official tests
 
 **Higher is better.** The denominator includes all three public tasks, including
-attempts that produced no executable patch.
+attempts that produced no executable patch. These are familiar cases, not held
+out; the adapter was developed on them. Each model/case/condition had one attempt.
+D receives frozen controller output rather than choosing live tools; review and
+admission use test approval stubs. Explanation judgments come from one unblinded
+reviewer without independent annotation.
 
 | Public SWE tasks: resolved repairs / 3 attempts | A | C | D |
 | --- | ---: | ---: | ---: |
 | E4B | 0/3 | 0/3 | 1/3 |
 | 31B | 2/3 | 1/3 | 3/3 |
 
-**These SWE-bench cases provide initial evidence that AHE can improve downstream
-problem-solving outcomes.** With each model and its source pool held fixed,
-the AHE-assisted condition produced more passing repairs than the
-structured/static control.
+**In these three familiar SWE-bench cases, the AHE-assisted condition produced
+more passing repairs than the structured/static control.** Each model and its
+source pool were held fixed.
 
 **31B D's 3/3 means all three repairs passed the selected official tests. It
 does not mean all three explanations were supported.** Its Astropy patch
