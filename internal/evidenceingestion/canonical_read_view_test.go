@@ -209,14 +209,71 @@ func TestReadCanonicalGraphViewFailsClosedOnIncompleteDerivationScope(t *testing
 		t.Fatalf("admitPendingProposal() error = %v", err)
 	}
 
-	_, err = readCanonicalGraphView(ctx, db, CanonicalReadInput{
+	complete := CanonicalReadInput{
 		RootNodeIDs: []string{derived.CanonicalRef},
-		MaxDepth:    0,
-		MaxNodes:    1,
-		MaxEdges:    0,
-	})
-	if err == nil || !strings.Contains(err.Error(), "outside the bounded PostgreSQL view") {
-		t.Fatalf("error = %v, want incomplete derivation scope failure", err)
+		Relations:   []evidencegraph.CanonicalEdgeRelation{evidencegraph.CanonicalDerivedFrom},
+		MaxDepth:    1,
+		MaxNodes:    2,
+		MaxEdges:    1,
+	}
+	for _, tc := range []struct {
+		name      string
+		input     CanonicalReadInput
+		wantError string
+	}{
+		{
+			name:      "depth excludes parent",
+			input:     withCanonicalReadDepth(complete, 0),
+			wantError: "outside the bounded PostgreSQL view",
+		},
+		{
+			name:      "node budget excludes parent",
+			input:     withCanonicalReadNodes(complete, 1),
+			wantError: "outside the bounded PostgreSQL view",
+		},
+		{
+			name: "both nodes selected without edge traversal",
+			input: CanonicalReadInput{
+				RootNodeIDs: []string{derived.CanonicalRef, parent.CanonicalRef},
+				MaxDepth:    0,
+				MaxNodes:    2,
+				MaxEdges:    0,
+			},
+			wantError: "has no matching derived_from edge in the bounded PostgreSQL view",
+		},
+		{
+			name: "relation filter excludes parent edge",
+			input: CanonicalReadInput{
+				RootNodeIDs: []string{derived.CanonicalRef, parent.CanonicalRef},
+				Relations:   []evidencegraph.CanonicalEdgeRelation{evidencegraph.CanonicalContradicts},
+				MaxDepth:    1,
+				MaxNodes:    2,
+				MaxEdges:    1,
+			},
+			wantError: "has no matching derived_from edge in the bounded PostgreSQL view",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			view, err := readCanonicalGraphView(ctx, db, tc.input)
+			if err == nil || !strings.Contains(err.Error(), tc.wantError) {
+				t.Fatalf("error = %v, want %q", err, tc.wantError)
+			}
+			if !reflect.DeepEqual(view, CanonicalReadView{}) {
+				t.Fatalf("incomplete scope returned a usable view: %+v", view)
+			}
+
+			// Only query scope changed. The same stored derivation is valid
+			// when its parent and edge are included; no repair is necessary.
+			recovered, err := readCanonicalGraphView(ctx, db, complete)
+			if err != nil {
+				t.Fatalf("read complete scope: %v", err)
+			}
+			if recovered.Truncated || len(recovered.Artifact.Derivations) != 1 ||
+				!reflect.DeepEqual(recovered.Artifact.Derivations[0].Parents, []string{parent.CanonicalRef}) ||
+				len(recovered.Artifact.Edges) != 1 {
+				t.Fatalf("complete scope lost persisted derivation: %+v", recovered)
+			}
+		})
 	}
 }
 

@@ -28,10 +28,104 @@ system supplying equivalent verified results. Public review/admission uses
 **TEST APPROVAL STUBS**, not human approval.
 
 The README includes the fixed settings, model digests, source commits,
-per-case assertion findings and reviewer limitations. Its tables remain the
-single current result reference; historical pilot tables are omitted from the
-main documentation to avoid mixing protocols. Original records remain in the
-private lab and prior Git revisions.
+per-case assertion findings and reviewer limitations. Its headline counts are
+preserved; the AND breakdown below describes the same original answers.
+Historical pilot tables are omitted from the main documentation to avoid mixing
+protocols. Original records remain in the private lab and prior Git revisions.
+
+## AND support: score each question separately
+
+The original AND comparison uses four variants of a repository-authored synthetic
+webhook requirement and one answer per model/variant/arm. The public
+[fixture and methods](EVIDENCE_BOUNDARY.md#and-case-a-path-does-not-cover-every-prerequisite)
+define the structural interventions. The field breakdown is an offline reading
+of the same frozen six-case inputs, answers and manual assertion review used by
+the README. It adds no generations and does not pool subsequent summary or
+holdout experiments with the original run. Full raw answers and review records
+remain private, so these tables are not a standalone replay bundle.
+
+Classify the **question**, not the entire variant, by what the operation checks:
+
+| Question / answer field | Evidence needed and scoring boundary |
+| --- | --- |
+| Path: `path_exists` | A path between the specified endpoints in the stated relation scope. One path does not establish all parents. The original structural fixture has the signature path in all four variants. |
+| Declared integrity: `declared_and_integrity` | Every declared parent exists with the required direct edge. `complete` and `underdeclared` pass; `missing_edge` and `missing_parent` fail. |
+| Requirement support: `full_requirement_support` | Compare the original requirement with the declaration, nodes and edges. Only `complete` satisfies this fixture's full requirement rubric. The graph validator does not perform this source comparison. |
+| Missing branches: `missing_required_branches` | Compare against the original requirement, not merely the declared parent list. The expected list is empty for `complete` and contains `anti_replay` for all other variants. |
+| Runtime proof: `runtime_correctness_proven` | Execution evidence would be needed. `no` is correct for all four fixtures: runtime correctness is not established, not disproven. |
+| Explanation overclaim | Separately review factual claims in the explanation against visible evidence, including false denials of present data. A correct field does not certify its explanation. |
+
+`underdeclared` therefore has both a graph-verifiable answer (its declared set is
+complete) and a source-comparison answer (the declaration omits a requirement).
+Likewise, accepting `complete` verifies its declared structure without itself
+verifying requirement coverage. An operation not assessing coverage does not
+require the downstream model to abstain when the supplied original source and
+records support that separate comparison. Unsupported inference and unnecessary
+abstention must remain separate outcomes.
+
+### Original errors by variant
+
+Each A/C/D cell lists incorrect fields in **one original answer**. `P` = path,
+`I` = declared integrity, `R` = full requirement support, `M` = missing branches.
+`none` means these fields were correct. The final column reports the separate
+explanation-only label in A / C / D order; it is not the primary whole-answer
+assertion label.
+
+| Model | Variant | A wrong fields | C wrong fields | D wrong fields | Explanation overclaim A / C / D |
+| --- | --- | --- | --- | --- | --- |
+| E4B | `complete` | none | none | none | no / no / no |
+| E4B | `missing_edge` | I, R, M | P | P | no / no / no |
+| E4B | `missing_parent` | P, I | P | P | yes / no / no |
+| E4B | `underdeclared` | P, I | P, I | P, I | yes / no / no |
+| 31B | `complete` | none | none | none | no / no / no |
+| 31B | `missing_edge` | P | none | none | no / no / no |
+| 31B | `missing_parent` | P | none | none | no / no / no |
+| 31B | `underdeclared` | I | none | none | no / no / no |
+
+All 24 original A/C/D answers correctly declined to infer runtime proof. Missing
+branch lists were correct in 3/4 E4B A answers and 4/4 in each other model/arm.
+The original whole-answer unsupported-assertion counts remain E4B **3/4, 3/4,
+3/4** and 31B **3/4, 0/4, 0/4**. Explanation-only overclaims are E4B **2/4,
+0/4, 0/4** and 31B **0/4, 0/4, 0/4**. These measures must not be substituted
+for one another. The explanation labels are from one unblinded reviewer and
+have no independent annotation.
+
+The flat E4B aggregate conceals improved declared-set and requirement judgments
+alongside worse path judgments from A to C. C and D retain the same erroneous
+fields in these four cases. The frozen D packets already contained all fixture
+nodes, edges, derivations, temporal records, path results and validator outcomes;
+they were not merely a path to one parent. An explicit parent-count/missing-list
+summary was absent, but absence of that presentation has not been established as
+the cause of the remaining errors.
+
+Correct graph validation is an operation contract. Whether exposing its result
+improves a model answer beyond C is an experimental outcome, not a guarantee:
+C already contains enough structural information to answer, and 31B reaches
+the ceiling in C. The absence of a D-over-C gain here establishes neither a
+graph implementation defect nor general model reliability.
+
+### Fixture validation versus product queries
+
+The original AND packets exercise real in-memory `PrepareTopology` and path
+algorithms using synthetic artifacts. In rejected fixtures, the generic path
+check deliberately bypasses artifact validation; it is not a successful public
+Query operation over an invalid read view. A later independent fixture audit
+also cannot establish production PostgreSQL/MCP behavior or deployment status.
+
+Product contract checks have separate entry points:
+
+| Check | Public test source | Boundary |
+| --- | --- | --- |
+| Four AND variants and accepted prepared paths | [AND fixture](../internal/evidenceprojection/and_boundary_case_test.go) | Real Go graph preparation; in-memory synthetic artifacts. |
+| Persisted derivation reconstruction, omitted parents/edges and scope recovery | [Canonical read tests](../internal/evidenceingestion/canonical_read_view_test.go) | Real read/assembly code with a SQL test double; no live PostgreSQL. |
+| Read-view handle, path and diagnostic scope | [Query handler tests](../internal/evidencequerymcp/canonical_read_view_test.go) | Real handlers with a fake core; no subprocess transport or live database. |
+| PostgreSQL-backed read view | [Integration fixture](../internal/evidenceingestion/canonical_read_view_integration_test.go) | Opt-in live database check, separate from model scoring. |
+
+A bounded query can exclude a parent or edge that exists in storage. The reader
+refuses to assemble an incomplete declared derivation and identifies the bounded
+view in its error; widening the authorized scope can recover the valid artifact
+without repairing stored data. A successful truncated view also does not prove
+global completeness. See [bounded-query interpretation](EVIDENCE_BOUNDARY.md#bounded-product-queries).
 
 ## What a public checkout can reproduce
 
