@@ -185,7 +185,7 @@ func loadRecursiveImplementsHeader(ctx context.Context, tx sqlTx, nodeID string)
 		return header, fmt.Errorf("preflighting recursive implements node: %w", err)
 	}
 	header.kind = evidencegraph.CanonicalNodeKind(kind)
-	if size > derivedImplementsRecordBytes || refs > 64 || parents > derivedImplementsMaxParents || parents != incoming {
+	if size > derivedImplementsRecordBytes || refs > derivedImplementsMaxSourceRefs || parents > derivedImplementsMaxParents || parents != incoming {
 		return header, newDomainError(ErrorInvalidInput, "recursive implements native node exceeds bounded review limits or has unregistered parent edges")
 	}
 	if header.kind == evidencegraph.CanonicalSourceClaim {

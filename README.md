@@ -600,3 +600,9 @@ do not require Desktop's native libraries.
 
 [MIT](LICENSE). Third-party dependencies and materials remain subject to their
 respective licenses.
+
+## Local Pouch validation (unreleased)
+
+`pouch-finite-validation/v1` adds a bounded typed path/closure validator and an
+explicit native admission API. Local integration is opt-in; generic MCP admission
+does not imply Pouch validation. See [contract and limits](docs/pouch-finite-validation.md).
