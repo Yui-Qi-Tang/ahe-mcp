@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	derivedImplementsMaxParents  = 8
-	derivedImplementsSourceBytes = 1 << 20
-	derivedImplementsRecordBytes = 128 << 10
+	derivedImplementsMaxParents    = 8
+	derivedImplementsMaxSourceRefs = 128
+	derivedImplementsSourceBytes   = 1 << 20
+	derivedImplementsRecordBytes   = 128 << 10
 )
 
 // DerivedImplementsSourceLeaf preserves an admitted node and its reconstructed
@@ -140,7 +141,7 @@ func loadDerivedImplementsAdmittedNode(ctx context.Context, tx sqlTx, nodeID str
 	if err != nil {
 		return fail(fmt.Errorf("preflighting implements canonical node: %w", err))
 	}
-	if size > derivedImplementsRecordBytes || refs > 64 || parentCount > derivedImplementsMaxParents || incomingParents != parentCount {
+	if size > derivedImplementsRecordBytes || refs > derivedImplementsMaxSourceRefs || parentCount > derivedImplementsMaxParents || incomingParents != parentCount {
 		return fail(newDomainError(ErrorInvalidInput, "implements native node exceeds bounded review limits"))
 	}
 	node, err := loadCanonicalNode(ctx, tx, nodeID)
