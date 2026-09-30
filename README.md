@@ -601,8 +601,12 @@ do not require Desktop's native libraries.
 [MIT](LICENSE). Third-party dependencies and materials remain subject to their
 respective licenses.
 
-## Local Pouch validation (unreleased)
+## External result validation
 
-`pouch-finite-validation/v1` adds a bounded typed path/closure validator and an
-explicit native admission API. Local integration is opt-in; generic MCP admission
-does not imply Pouch validation. See [contract and limits](docs/pouch-finite-validation.md).
+Planning and domain-specific result validation belong to the consuming product.
+AHE provides bounded evidence queries and its ordinary authorized review,
+admission and readback contracts, without depending on an external planner.
+An AHE admission receipt records native admission; it does not establish that an
+external path, solver proof or recovery certificate was validated. A consumer
+must retain its validation evidence and bind it to the exact reviewed statement,
+sources and native receipt.
