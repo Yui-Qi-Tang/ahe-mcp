@@ -1,5 +1,7 @@
 # AHE MCP
 
+<img src="apps/detective/build/appicon.png" alt="AHE icon" width="160" height="160">
+
 **AHE provides traceable evidence and verified operation results for AI agents.**
 
 [Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [Evaluation](#evaluation) · [MCP setup](INSTALL.md)
