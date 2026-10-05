@@ -18,6 +18,7 @@ import (
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpcorerecords"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -605,8 +606,9 @@ type queryCore interface {
 
 // Server exposes bounded external read-only evidence queries.
 type Server struct {
-	core      queryCore
-	readViews *canonicalReadViewCache
+	recordsPool *pgxpool.Pool
+	core        queryCore
+	readViews   *canonicalReadViewCache
 }
 
 // NewServer constructs the external read-only query server over PostgreSQL.
@@ -614,7 +616,9 @@ func NewServer(pool *pgxpool.Pool) (*Server, error) {
 	if pool == nil {
 		return nil, errors.New("postgres pool is required")
 	}
-	return newServer(postgresCore{pool: pool}), nil
+	s := newServer(postgresCore{pool: pool})
+	s.recordsPool = pool
+	return s, nil
 }
 
 func newServer(core queryCore) *Server {
@@ -626,7 +630,7 @@ func newServer(core queryCore) *Server {
 
 // Tools returns the read-only query tool surface. It intentionally contains no write tools.
 func (s *Server) Tools() []ToolDefinition {
-	return []ToolDefinition{
+	result := []ToolDefinition{
 		{
 			Name:        ToolGetEvidenceRecord,
 			Description: "Read one proposal or admitted canonical evidence record by exact ID.",
@@ -693,10 +697,17 @@ func (s *Server) Tools() []ToolDefinition {
 			ReadOnly:    true,
 		},
 	}
+	for _, t := range mcpcorerecords.ReadTools() {
+		result = append(result, ToolDefinition{Name: t.Name, Description: t.Description, ReadOnly: true})
+	}
+	return result
 }
 
 // CallTool decodes one read-only query JSON request and encodes its response.
 func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]byte, error) {
+	if mcpcorerecords.IsReadTool(name) {
+		return mcpcorerecords.CallRead(ctx, s.recordsPool, name, payload)
+	}
 	switch name {
 	case ToolGetEvidenceRecord:
 		var req GetEvidenceRecordRequest

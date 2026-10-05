@@ -58,7 +58,7 @@ See the [secondary outcome](#secondary-outcome-repairs-passing-the-official-test
 
 ## Quick start
 
-Current version: `dev` preview. Retained Detective Desktop code: `0.1.0-preview.18`.
+Current version: `dev` preview; Core schema **52**, database role policy **v6**. Retained Detective Desktop code: `0.1.0-preview.18`.
 MCP and Detective share one root Go module, using Go `1.27.0`.
 
 > **Desktop frozen / unavailable — 2026-09-14.** Desktop is not a
@@ -438,6 +438,24 @@ This is a single-user controlled preview. Query visibility is schema-wide, not
 a per-row tenant policy; use a dedicated database and trusted operator.
 Unattended production writing is not qualified.
 
+## Core identity and external records
+
+Core can preserve an externally assigned proposition identity across independent
+source/derived claims, with append-only corrections, withdrawals and restorations.
+Each derivation and its original AND parents remain separate. An old successful
+request is a historical receipt, not evidence that its binding is still active.
+
+External check reports and versioned JSON representations are also immutable
+records. They retain actual declared inputs, unchecked dimensions, missing or
+supplied dependency identities and revision links. Core does not execute these
+representations, choose sufficient evidence, normalize semantics, resolve conflicts,
+or recompute conclusions. `supplied` means externally declared linked source bytes;
+it does not establish that the dependency is satisfied.
+
+Writes require the separately provisioned `core-records` profile; Query remains
+read-only. See [setup and upgrade](INSTALL.md#core-records-profile) and
+[record semantics](docs/SYSTEM_DESIGN.md#core-record-history).
+
 ## Graph Data Model
 
 AHE's `canonical-evidence-graph/v1` models evidence and claims, rather than
@@ -564,6 +582,13 @@ Use `tools/list` to discover the running server's schemas. The Query surface is:
 | `get_canonical_contradiction_proposal` | Read an exact contradiction review card |
 | `get_canonical_supersession_head` | Read the Supersession writer revision coordinate |
 | `get_canonical_supersession_currentness` | Derive snapshot-bound lineage currentness |
+| `get_proposition_members` | Current externally assigned members and bounded original graph |
+| `get_proposition_binding_history` | Current or explicitly selected binding revision |
+| `get_external_check_subject` | Immutable source/candidate coordinates |
+| `get_external_check`, `list_external_checks` | Historical reports, results and limitations |
+| `get_external_representation` | Exact stored declaration and dependency states |
+| `get_external_representation_material` | Complete declaration formatted as checker input |
+| `get_external_dependency_users` | Bounded registered dependency users and explicit check links |
 
 Query never invokes a model or writes evidence. Results are evidence packages,
 not answers: rank is not truth confidence, and no match is not global absence.

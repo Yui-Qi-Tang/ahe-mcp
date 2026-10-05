@@ -50,6 +50,7 @@ type QueryRuntimeAuthorization struct {
 }
 
 var queryRuntimeToolNames = []string{
+
 	evidencequerymcp.ToolGetEvidenceRecord,
 	evidencequerymcp.ToolListEvidenceRecords,
 	evidencequerymcp.ToolSearchEvidenceRecords,
@@ -63,6 +64,14 @@ var queryRuntimeToolNames = []string{
 	evidencequerymcp.ToolGetCanonicalContradictionProposal,
 	evidencequerymcp.ToolGetCanonicalSupersessionHead,
 	evidencequerymcp.ToolGetCanonicalSupersessionCurrentness,
+	"get_proposition_members",
+	"get_proposition_binding_history",
+	"get_external_check_subject",
+	"get_external_check",
+	"list_external_checks",
+	"get_external_representation",
+	"get_external_representation_material",
+	"get_external_dependency_users",
 }
 
 // NewQueryRuntimeAuthorization binds one exact launcher identity to a

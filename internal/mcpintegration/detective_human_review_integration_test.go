@@ -242,7 +242,7 @@ func TestIntegrationDetectiveHumanReviewProtectedLauncher(t *testing.T) {
 
 	process := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], detectiveCheckpointConfigPath(directory, dbrole.ProfileQuery), "ahe-query-mcp")
 	record := authorityProcessTool[evidencequerymcp.GetEvidenceRecordResponse](t, process, "get_evidence_record", map[string]any{"proposal_occurrence_id": receipt.Handoff.ProposalOccurrenceID})
-	if record.AdmissionOutcome != "admitted" || record.CanonicalRef == nil || *record.CanonicalRef != canonicalRef || record.StatementText != statement ||
+	if record.AdmissionOutcome != "admitted" || record.CanonicalRef == nil || *record.CanonicalRef != canonicalRef || record.StatementText != detectivePendingStatement(t, statement) ||
 		record.Source.SourceID != sourceID || record.Source.RawContentHash != stdioContentHash([]byte(source)) ||
 		len(record.SourceRefs) != 1 || record.SourceRefs[0].QuotedText != row || record.SourceRefs[0].QuotedTextHash != stdioContentHash([]byte(row)) {
 		t.Fatal("independent Query lost admitted identity or exact source provenance")

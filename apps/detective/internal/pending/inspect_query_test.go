@@ -383,7 +383,7 @@ func serveInspectQuery(mode string) int {
 			result = map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{"tools": map[string]any{}},
 				"serverInfo": map[string]string{"name": name, "version": "synthetic-test"}}
 		case "tools/list":
-			names := []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness"}
+			names := []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness", "get_proposition_members", "get_proposition_binding_history", "get_external_check_subject", "get_external_check", "list_external_checks", "get_external_representation", "get_external_representation_material", "get_external_dependency_users"}
 			tools := make([]map[string]any, 0, len(names))
 			for _, name := range names {
 				tools = append(tools, map[string]any{"name": name, "inputSchema": map[string]string{"type": "object"}})

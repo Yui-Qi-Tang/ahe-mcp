@@ -201,6 +201,9 @@ func (c *client) initialize() error {
 			"get_mcp_read_source_states": true, "open_canonical_read_view": true, "find_canonical_path": true,
 			"get_canonical_topology_diagnostics": true, "get_canonical_contradiction_proposal": true,
 			"get_canonical_supersession_head": true, "get_canonical_supersession_currentness": true,
+			"get_proposition_members": true, "get_proposition_binding_history": true,
+			"get_external_check_subject": true, "get_external_check": true, "list_external_checks": true,
+			"get_external_representation": true, "get_external_representation_material": true, "get_external_dependency_users": true,
 		}
 	}
 	if c.reviewerOnly {

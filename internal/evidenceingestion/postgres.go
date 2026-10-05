@@ -560,6 +560,8 @@ func persistAttemptStartWithOptions(ctx context.Context, db sqlDB, attemptCtx at
 				return err
 			}
 		}
+		// Identical definitions share both a content-derived ID and a unique
+		// name/version/config tuple. Arbitrate both during concurrent creation.
 		_, err = tx.exec(ctx, `
 			INSERT INTO extractor_definitions (
 				extractor_definition_id,
@@ -569,7 +571,7 @@ func persistAttemptStartWithOptions(ctx context.Context, db sqlDB, attemptCtx at
 				extractor_config
 			)
 			VALUES ($1, $2, $3, $4, $5::jsonb)
-			ON CONFLICT (extractor_definition_id) DO NOTHING
+			ON CONFLICT DO NOTHING
 		`,
 			attemptCtx.ExtractorDefinition.ID,
 			attemptCtx.ExtractorDefinition.Name,

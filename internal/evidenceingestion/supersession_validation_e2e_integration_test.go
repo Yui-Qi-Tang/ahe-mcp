@@ -380,7 +380,7 @@ func validationE2EPoolWithTimeout(t *testing.T, timeout time.Duration) (context.
 	if err != nil {
 		t.Fatalf("migrations.VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 49 || status.LatestMigration != "000049_evidence_ingestion_endpoint_review.up.sql" {
+	if status.AppliedMigrations != 52 || status.LatestMigration != "000052_evidence_ingestion_external_representations.up.sql" {
 		t.Fatalf("verified migration status = %+v", status)
 	}
 	return ctx, pool

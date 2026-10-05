@@ -66,7 +66,7 @@
 - Do not write arbitrary canonical edges. Contradiction uses its dedicated
   proposal lifecycle. Supersession uses a fresh external pending proposal plus
   its dedicated atomic admission and read-only currentness tools.
-- Standard ingestion profiles are separately authorized `intake`,
+- Standard ingestion profiles are separately authorized `core-records`, `intake`,
   `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer` and
   `relation-reviewer`. Bounded exact-reviewed derived/code endpoints use the
   endpoint profile; generic derived admission, contradiction, Supersession
@@ -74,6 +74,17 @@
   standard MCP tools. Their read-only tools do not authorize these writes.
   If the required tool is absent, stop and report the unavailable capability;
   never enable a legacy profile or substitute direct SQL to follow this guide.
+
+## Core Record Writes
+
+The separately provisioned `core-records` profile preserves external proposition
+identity decisions and immutable external checks/representations. It does not admit
+claims, select evidence, prove semantic equivalence or execute the stored logic.
+Read exact subjects/history through Query; obtain an explicit decision for identity
+bindings or corrections. Preserve request inputs for exact retries. Launcher-owned
+`decision_by` and `recorded_by` cannot be supplied by tools. Claimed checker/producer
+identity is separate, and database audit text alone is not authentication. Read
+[Core setup](INSTALL.md#core-records-profile) before operating this profile.
 
 ## External Evidence Invariants
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpcorerecords"
 	"os"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/dbrole"
@@ -34,7 +35,7 @@ func run(ctx context.Context, args []string) error {
 			fmt.Fprintln(os.Stdout, "Environment:")
 			fmt.Fprintln(os.Stdout, "  DATABASE_DSN  PostgreSQL DSN for the authoritative AHE store")
 			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PRINCIPAL_ID  Launcher-fixed identity (not proof of human review)")
-			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PROFILE       intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer or repository-intake (legacy writers remain disabled)")
+			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PROFILE       core-records, intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer or repository-intake (legacy writers remain disabled)")
 			fmt.Fprintln(os.Stdout, "  AHE_DATABASE_ROLE         Installed matching NOLOGIN role")
 			fmt.Fprintln(os.Stdout, "  AHE_DATABASE_SCHEMA       Explicit authoritative schema")
 			fmt.Fprintln(os.Stdout, "")
@@ -53,6 +54,8 @@ func run(ctx context.Context, args []string) error {
 	}
 	var databaseProfile dbrole.Profile
 	switch profile {
+	case mcpadmin.RuntimeProfileCoreRecords:
+		databaseProfile = dbrole.ProfileCoreRecords
 	case mcpadmin.RuntimeProfileIntake:
 		databaseProfile = dbrole.ProfileIntake
 	case mcpadmin.RuntimeProfileEndpointReviewer:
@@ -85,6 +88,18 @@ func run(ctx context.Context, args []string) error {
 	defer pool.Close()
 	if _, err := migrations.VerifyCurrentInSchema(ctx, pool, os.Getenv("AHE_DATABASE_SCHEMA")); err != nil {
 		return fmt.Errorf("verifying database schema: %w", err)
+	}
+
+	if profile == mcpadmin.RuntimeProfileCoreRecords {
+		backend, err := mcpcorerecords.NewBackend(pool, principal)
+		if err != nil {
+			return err
+		}
+		server, err := mcpstdio.NewServer("ahe-ingest-mcp", version, backend)
+		if err != nil {
+			return err
+		}
+		return server.Serve(ctx, os.Stdin, os.Stdout)
 	}
 
 	if profile == mcpadmin.RuntimeProfileEndpointReviewer || profile == mcpadmin.RuntimeProfileRepositoryIntake {

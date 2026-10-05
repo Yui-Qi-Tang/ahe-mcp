@@ -116,6 +116,7 @@ func TestIntegrationStdioMCPIngestAdmitAndQueryRoundTrip(t *testing.T) {
 		evidencequerymcp.ToolGetCanonicalContradictionProposal,
 		evidencequerymcp.ToolGetCanonicalSupersessionHead,
 		evidencequerymcp.ToolGetCanonicalSupersessionCurrentness,
+		"get_proposition_members", "get_proposition_binding_history", "get_external_check_subject", "get_external_check", "list_external_checks", "get_external_representation", "get_external_representation_material", "get_external_dependency_users",
 	})
 
 	gitRoot := t.TempDir()

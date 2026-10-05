@@ -4,6 +4,7 @@ package mcpquery
 import (
 	"context"
 	"encoding/json"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpcorerecords"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
@@ -43,7 +44,7 @@ func queryTools() []mcpstdio.Tool {
 	readOnly := true
 	destructive := false
 	idempotent := true
-	return []mcpstdio.Tool{
+	return append([]mcpstdio.Tool{
 		{
 			Name:        evidencequerymcp.ToolGetEvidenceRecord,
 			Title:       "Get Evidence Record",
@@ -202,7 +203,7 @@ func queryTools() []mcpstdio.Tool {
 				IdempotentHint:  &idempotent,
 			},
 		},
-	}
+	}, mcpcorerecords.ReadTools()...)
 }
 
 func openCanonicalReadViewSchema() map[string]any {

@@ -175,7 +175,7 @@ func TestIntegrationDetectiveCheckpointResumeProtectedLauncher(t *testing.T) {
 	readback := authorityProcessTool[evidencequerymcp.GetEvidenceRecordResponse](t, query, "get_evidence_record", map[string]any{"proposal_occurrence_id": resume.Handoff.ProposalOccurrenceID})
 	if readback.RecordRef.Kind != "proposal" || readback.RecordRef.ID != resume.Handoff.ProposalOccurrenceID ||
 		readback.AdmissionOutcome != "pending" || readback.CanonicalRef != nil || readback.Canonical != nil ||
-		readback.StatementText != statement || readback.Source.SourceSnapshotID != resume.Handoff.SourceSnapshotID ||
+		readback.StatementText != detectivePendingStatement(t, statement) || readback.Source.SourceSnapshotID != resume.Handoff.SourceSnapshotID ||
 		readback.ExtractionViewID != resume.Handoff.ExtractionViewID || readback.Source.SourceID != sourceID ||
 		readback.Source.SourceVersion != stdioContentHash([]byte(sourceText)) || readback.Source.RawContentHash != stdioContentHash([]byte(sourceText)) ||
 		len(readback.SourceRefs) != 1 || readback.SourceRefs[0].QuotedText != row || readback.SourceRefs[0].QuotedTextHash != stdioContentHash([]byte(row)) {
@@ -420,7 +420,7 @@ func decodeDetectiveCheckpoint(t *testing.T, body []byte, inputPath, sourceID, s
 	}
 	if json.Unmarshal(checkpoint.Batch, &batch) != nil || batch.SchemaVersion != "lab-status-row-batch/v0" ||
 		batch.Source.Path != inputPath || batch.Source.SHA256 != strings.TrimPrefix(stdioContentHash([]byte(sourceText)), "sha256:") ||
-		batch.Extractor.Name != "lab-status-extractor" || batch.Extractor.Version != "0.1.1" || batch.Extractor.Model != "mock-detective-model" ||
+		batch.Extractor.Name != "lab-status-extractor" || batch.Extractor.Version != "0.1.2" || batch.Extractor.Model != "mock-detective-model" ||
 		len(batch.Rows) != 1 || batch.Rows[0].Status != "validated" || batch.Rows[0].Result == nil || batch.Rows[0].Result.Outcome != "extracted" ||
 		len(batch.Rows[0].Result.Records) != 1 || batch.Rows[0].Result.Records[0].Statement != statement || batch.Rows[0].Result.Records[0].Citation.ExactQuote != row {
 		t.Fatal("prepared checkpoint lost the one exact validated candidate")

@@ -730,7 +730,7 @@ func hanQueryLabTools(t *testing.T, query *authorityProcess) json.RawMessage {
 	var listed struct {
 		Tools []mcpstdio.Tool `json:"tools"`
 	}
-	if response.Error != nil || json.Unmarshal(response.Result, &listed) != nil || len(listed.Tools) != 13 {
+	if response.Error != nil || json.Unmarshal(response.Result, &listed) != nil || len(listed.Tools) != 21 {
 		t.Fatal("compiled Query did not expose the expected tool catalog")
 	}
 	var names []string
@@ -750,7 +750,7 @@ func hanQueryLabTools(t *testing.T, query *authorityProcess) json.RawMessage {
 			found = found || value == hanQueryLabMode
 		}
 	}
-	wantNames := []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness"}
+	wantNames := []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness", "get_proposition_members", "get_proposition_binding_history", "get_external_check_subject", "get_external_check", "list_external_checks", "get_external_representation", "get_external_representation_material", "get_external_dependency_users"}
 	slices.Sort(names)
 	slices.Sort(wantNames)
 	if !slices.Equal(names, wantNames) {

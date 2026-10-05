@@ -10,7 +10,7 @@ import (
 )
 
 // PolicyVersion identifies the native ordinary/review authority policy, not Core's policy.
-const PolicyVersion = "ahe-mcp-database-role-policy/v5"
+const PolicyVersion = "ahe-mcp-database-role-policy/v6"
 
 // Profile identifies an implemented database capability set.
 type Profile string
@@ -33,6 +33,9 @@ const ProfileSourceClaimReviewer Profile = "source-claim-reviewer"
 const ProfileRelationReviewer Profile = "relation-reviewer"
 const ProfileEndpointReviewer Profile = "endpoint-reviewer"
 const ProfileRepositoryIntake Profile = "repository-intake"
+
+// ProfileCoreRecords appends external identity and check records; it cannot admit evidence.
+const ProfileCoreRecords Profile = "core-records"
 
 // Privilege is an effective PostgreSQL table privilege.
 type Privilege string
@@ -86,6 +89,9 @@ var queryTables = []string{
 	"canonical_ordinary_admission_edge_bindings",
 	"canonical_ordinary_admission_manifests",
 	"canonical_ordinary_admission_node_bindings",
+	"canonical_proposition_binding_events",
+	"canonical_proposition_bindings",
+	"canonical_propositions",
 	"canonical_references_admissions",
 	"canonical_source_claim_review_bindings",
 	"canonical_supersession_admission_events",
@@ -111,6 +117,9 @@ var queryTables = []string{
 	"detective_workspace_sources",
 	"detective_workspaces",
 	"evidence_ingestion_request_serializations",
+	"external_check_records",
+	"external_check_representation_links",
+	"external_representation_records",
 	"external_source_intake_receipts",
 	"extraction_attempts",
 	"extraction_runs",
@@ -159,7 +168,7 @@ var queryTables = []string{
 
 // ProfileNames returns implemented profile names only.
 func ProfileNames() []string {
-	return []string{string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer), string(ProfileRelationReviewer), string(ProfileEndpointReviewer), string(ProfileRepositoryIntake)}
+	return []string{string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer), string(ProfileRelationReviewer), string(ProfileEndpointReviewer), string(ProfileRepositoryIntake), string(ProfileCoreRecords)}
 }
 
 // ParseProfile accepts an exact implemented profile without normalization.
@@ -178,7 +187,15 @@ func BuildManifest(profile Profile) (Manifest, error) {
 	rules := make([]TableRule, 0, len(queryTables))
 	for _, table := range queryTables {
 		privileges := []Privilege{PrivilegeSelect}
-		if profile == ProfileEndpointReviewer {
+		if profile == ProfileCoreRecords {
+			switch table {
+			case "canonical_propositions", "canonical_proposition_bindings", "canonical_proposition_binding_events", "external_check_records", "external_representation_records", "external_check_representation_links":
+				privileges = append(privileges, PrivilegeInsert)
+			}
+			if table == "canonical_proposition_bindings" {
+				privileges = append(privileges, PrivilegeUpdate)
+			}
+		} else if profile == ProfileEndpointReviewer {
 			switch table {
 			case "canonical_graph_nodes", "canonical_graph_edges", "admission_decisions", "canonical_ordinary_admission_manifests",
 				"canonical_ordinary_admission_node_bindings", "canonical_ordinary_admission_edge_bindings",

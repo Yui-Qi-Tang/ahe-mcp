@@ -35,7 +35,7 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 180*time.Second)
 	defer cancel()
 	f := newAuthorityProcessFixture(t, ctx, dsn, dbrole.ProfileSourceClaimReviewer, dbrole.ProfileRelationReviewer, dbrole.ProfileEndpointReviewer, dbrole.ProfileRepositoryIntake)
-	directory := t.TempDir()
+	directory := provisioningProtectedDirectory(t, dsn)
 	binaries := buildProvisioningCommands(t, ctx, directory)
 	start := func(login authorityProcessLogin, profile, repositoryRoot string) *authorityProcess {
 		config, err := pgxpool.ParseConfig(login.dsn)

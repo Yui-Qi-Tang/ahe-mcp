@@ -464,6 +464,54 @@ flowchart TD
 
 <a id="search"></a>
 
+## Core record history
+
+Migrations 50–52 add storage contracts independent of admission and evidence selection.
+The four-field proposition identity (namespace, local ID, scope, definition revision)
+is assigned externally. Length-framed identity preserves exact field boundaries;
+Core never infers synonymy. Initial membership and correction/withdrawal/restoration
+are separate immutable records. Changes lock the membership row and compare the
+expected revision, previous reference and previous identity. Competing changes
+cannot both claim one next revision; the winner is not a semantic verdict.
+
+Read current state explicitly (`revision=-1`), initial state (`0`), or an event
+revision. Replaying an old request returns its historical receipt. Current member
+lookup distinguishes no event from an event with a null target, so a withdrawn
+binding does not fall back to its original identity. Event-list truncation does
+not alter the selected state. Current members and their bounded graph share one
+PostgreSQL snapshot; neighbouring graph nodes are not additional members.
+
+If conclusion E originally uses D, subsequently correcting D's proposition label
+does not rewrite D, E or E's parents. Read original nodes/statements and the desired
+binding revision separately. This interface does not provide whole-graph time travel.
+
+External checks retain source/proposal coordinates, named checker/version/config,
+claimed actual materials, per-dimension findings, limitations and revision links.
+Verbatim inputs must equal authoritative stored text. Other formats and checker
+results remain external assertions. No aggregate PASS, admission or latest winner
+is generated. The MCP recorder is launcher-bound; claimed checker identity is not.
+
+External representations preserve exact JSON text (including numeric literals),
+format/producer, authenticated MCP recorder, declared dependencies and previous
+version. Duplicate keys and unresolved JSON pointers are rejected. A dependency
+key contains exactly namespace/local_id/scope_ref/revision, including in direct
+SQL. `supplied` records a linked source snapshot/view/hash, not semantic satisfaction.
+Changing supply state requires a new representation; old checks stay historical.
+
+A check-to-representation link accepts only the complete exact envelope already
+present as that check's input. Storing a check and indexing the link are separate
+transactions. Dependency reverse lookup returns only registered representations
+and explicitly linked inputs for those returned representations; inspect both
+truncation flags. Unregistered users are not inferred. JSON scanning is not yet
+qualified at large scale; the returned limit does not bound all database work.
+
+The `core-records` role appends only these records. Existing profiles receive read
+access, not record writes. Query uses the same database/schema visibility boundary
+as its other tools. Database constraints enforce structural preservation, while
+recorder authentication is enforced by the protected MCP/Go entry point. Holders
+of raw writer credentials remain trusted; SQL audit names alone are not identity
+proof. Neither record acceptance nor structural validation proves source fidelity.
+
 ## Text search
 
 Search separates candidate eligibility from candidate ranking. Neither determines truth.

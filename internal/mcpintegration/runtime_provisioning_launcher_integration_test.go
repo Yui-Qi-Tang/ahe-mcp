@@ -44,7 +44,7 @@ func TestIntegrationRuntimeProvisioningLauncherRoundTrip(t *testing.T) {
 	fixture := newProvisioningLauncherFixture(t, ctx, databaseURL, binaries["ahe-runtime-admin"])
 	configs := make(map[dbrole.Profile]provisioningLauncherConfig)
 	paths := make(map[dbrole.Profile]string)
-	for _, profile := range []dbrole.Profile{dbrole.ProfileQuery, dbrole.ProfileIntake, dbrole.ProfileSourceClaimReviewer} {
+	for _, profile := range []dbrole.Profile{dbrole.ProfileQuery, dbrole.ProfileIntake, dbrole.ProfileSourceClaimReviewer, dbrole.ProfileCoreRecords} {
 		identity := fixture.identities[profile]
 		command := "ahe-ingest-mcp"
 		if profile == dbrole.ProfileQuery {
@@ -120,7 +120,7 @@ func TestIntegrationRuntimeProvisioningLauncherRoundTrip(t *testing.T) {
 	query := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], paths[dbrole.ProfileQuery], "ahe-query-mcp")
 	intake.assertTools(t, []string{"submit_manual_evidence", "submit_text_source", "submit_external_source", "submit_extractor_output", "get_extractor_input"})
 	reviewer.assertTools(t, []string{"get_source_claim_review", "admit_reviewed_source_claim", "record_reviewed_source_claim_disposition"})
-	query.assertTools(t, []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness"})
+	query.assertTools(t, []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness", "get_proposition_members", "get_proposition_binding_history", "get_external_check_subject", "get_external_check", "list_external_checks", "get_external_representation", "get_external_representation_material", "get_external_dependency_users"})
 	const statement = "合成啟動器測試：退款應於七日內完成。"
 	source := authorityProcessTool[evidenceingestionmcp.SubmitTextSourceResponse](t, intake, "submit_text_source", map[string]any{
 		"request_id": "provisioned-source", "source_id": "mock:provisioned-refunds", "source_version": "1", "raw_text": statement,
@@ -195,6 +195,24 @@ func TestIntegrationRuntimeProvisioningLauncherRoundTrip(t *testing.T) {
 	for table, count := range map[string]int{"source_snapshots": 1, "extraction_attempts": 1, "proposal_occurrences": 1, "canonical_graph_nodes": 2, "canonical_graph_edges": 1, "admission_decisions": 1, "canonical_ordinary_admission_manifests": 1, "canonical_ordinary_admission_node_bindings": 2, "canonical_ordinary_admission_edge_bindings": 1, "canonical_source_claim_review_bindings": 1, "canonical_contradiction_proposals": 0, "canonical_supersession_admission_events": 0} {
 		stdioAssertTableCount(t, ctx, fixture.pool, table, count)
 	}
+	recorder := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], paths[dbrole.ProfileCoreRecords], "ahe-ingest-mcp")
+	recorder.assertTools(t, []string{"bind_canonical_proposition", "change_proposition_binding", "record_external_check", "record_external_representation", "link_external_check_representation"})
+	key := evidenceingestion.PropositionKey{Namespace: "synthetic", LocalID: "refund-policy", ScopeRef: "launcher-fixture", Revision: "1"}
+	bind := map[string]any{"request_id": "launcher-binding", "node_id": admitted.CanonicalRef, "key": key, "definition": "Synthetic refund identity", "decision_reason": "TEST APPROVAL STUB identity decision"}
+	for _, process := range []*authorityProcess{intake, query, reviewer} {
+		process.assertDenied(t, "bind_canonical_proposition", bind)
+	}
+	bound := authorityProcessTool[evidenceingestion.PropositionBindingReceipt](t, recorder, "bind_canonical_proposition", bind)
+	if bound.Initial.DecisionBy != configs[dbrole.ProfileCoreRecords].PrincipalID {
+		t.Fatal("recording ignored protected launcher identity")
+	}
+	history := authorityProcessTool[evidenceingestion.PropositionBindingHistory](t, query, "get_proposition_binding_history", map[string]any{"node_id": admitted.CanonicalRef, "revision": -1, "limit": 10})
+	if !history.Active || history.PropositionID != key.ID() {
+		t.Fatal("launched Query lost binding")
+	}
+	recorder.assertDenied(t, "admit_reviewed_source_claim", approved)
+	recorder.finish(t)
+
 	query.finish(t)
 	reviewer.finish(t)
 	intake.finish(t)
@@ -318,7 +336,7 @@ func newProvisioningLauncherFixture(t *testing.T, ctx context.Context, databaseU
 		t.Fatalf("apply private native migrations: %v", err)
 	}
 	operatorURL := provisioningExplicitURL(cfg, fixture.database, cfg.ConnConfig.User, cfg.ConnConfig.Password)
-	for index, profile := range []dbrole.Profile{dbrole.ProfileQuery, dbrole.ProfileIntake, dbrole.ProfileSourceClaimReviewer} {
+	for index, profile := range []dbrole.Profile{dbrole.ProfileQuery, dbrole.ProfileIntake, dbrole.ProfileSourceClaimReviewer, dbrole.ProfileCoreRecords} {
 		identity := provisioningIdentity{group: "ahe_launch_group_" + strconv.Itoa(index) + "_" + suffix, login: "ahe_launch_login_" + strconv.Itoa(index) + "_" + suffix, profile: profile}
 		var existing int
 		if err := admin.QueryRow(ctx, `SELECT count(*) FROM pg_roles WHERE rolname=ANY($1::text[])`, []string{identity.group, identity.login}).Scan(&existing); err != nil || existing != 0 {
@@ -404,7 +422,7 @@ func runProvisioningAdmin(t *testing.T, ctx context.Context, command, operation,
 		return provisioningAdminResult{}
 	}
 	var result provisioningAdminResult
-	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.SessionUser != identity.login || result.AppliedMigrations != 49 || result.LatestMigration != "000049_evidence_ingestion_endpoint_review.up.sql" {
+	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.SessionUser != identity.login || result.AppliedMigrations != 52 || result.LatestMigration != "000052_evidence_ingestion_external_representations.up.sql" {
 		t.Fatalf("compiled runtime admin %s did not return its exact credential-free receipt (output suppressed)", operation)
 	}
 	if strings.Contains(stdout.String(), dsn) {

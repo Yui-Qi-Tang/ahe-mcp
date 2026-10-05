@@ -208,7 +208,9 @@ func TestIntegrationHostExtractsMCPReadSourceWithBoundedModelAndReplays(t *testi
 			t.Errorf("model prompt is not bounded: %s", request.Prompt)
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"response": `{"proposals":[{"proposal_local_id":"stmt-1","statement_text":"Refunds must be completed within 7 days.","evidence_refs":["span:S1"]}]}`,
+			"response":    `{"proposals":[{"proposal_local_id":"stmt-1","statement_text":"Refunds must be completed within 7 days.","evidence_refs":["span:S1"]}]}`,
+			"done":        true,
+			"done_reason": "stop",
 		})
 	}))
 	defer modelServer.Close()

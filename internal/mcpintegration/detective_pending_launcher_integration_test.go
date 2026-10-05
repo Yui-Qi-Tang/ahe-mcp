@@ -76,7 +76,7 @@ func TestIntegrationDetectivePendingProtectedLauncherRoundTrip(t *testing.T) {
 	query := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], paths[dbrole.ProfileQuery], "ahe-query-mcp")
 	t.Run("bounded_tool_inventories", func(t *testing.T) {
 		intake.assertTools(t, []string{"submit_manual_evidence", "submit_text_source", "submit_external_source", "submit_extractor_output", "get_extractor_input"})
-		query.assertTools(t, []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness"})
+		query.assertTools(t, []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness", "get_proposition_members", "get_proposition_binding_history", "get_external_check_subject", "get_external_check", "list_external_checks", "get_external_representation", "get_external_representation_material", "get_external_dependency_users"})
 	})
 	first := runDetectivePendingCommand(t, ctx, detective, wrapper, inputPath, model.URL, sourceID)
 	handoff := first.Handoff
@@ -111,7 +111,7 @@ func TestIntegrationDetectivePendingProtectedLauncherRoundTrip(t *testing.T) {
 	})
 	readback := authorityProcessTool[evidencequerymcp.GetEvidenceRecordResponse](t, query, "get_evidence_record", map[string]any{"proposal_occurrence_id": handoff.ProposalOccurrenceID})
 	if readback.RecordRef.Kind != "proposal" || readback.RecordRef.ID != handoff.ProposalOccurrenceID || readback.AdmissionOutcome != "pending" || readback.CanonicalRef != nil || readback.Canonical != nil ||
-		readback.StatementText != statement || readback.Source.SourceSnapshotID != handoff.SourceSnapshotID || readback.ExtractionViewID != handoff.ExtractionViewID ||
+		readback.StatementText != detectivePendingStatement(t, statement) || readback.Source.SourceSnapshotID != handoff.SourceSnapshotID || readback.ExtractionViewID != handoff.ExtractionViewID ||
 		readback.Source.SourceID != sourceID || readback.Source.SourceVersion != stdioContentHash([]byte(sourceText)) || readback.Source.RawContentHash != stdioContentHash([]byte(sourceText)) ||
 		readback.Source.ExternalSource != nil || readback.Source.MCPRead != nil || len(readback.SourceRefs) != 1 || readback.SourceRefs[0].QuotedText != row || readback.SourceRefs[0].QuotedTextHash != stdioContentHash([]byte(row)) {
 		t.Fatal("Query did not preserve pending-only lifecycle, manual snapshot identity and exact source quote")
@@ -264,17 +264,20 @@ func newDetectivePendingModel(t *testing.T, row, statement string) (*httptest.Se
 		defer r.Body.Close()
 		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
 		var request struct {
-			Model string `json:"model"`
-			Think *bool  `json:"think"`
+			Model     string          `json:"model"`
+			Think     json.RawMessage `json:"think"`
+			Reasoning struct {
+				Effort string `json:"effort"`
+			} `json:"reasoning"`
 		}
-		if err != nil || json.Unmarshal(body, &request) != nil || request.Model != "mock-detective-model" || request.Think == nil || *request.Think || !bytes.Contains(body, []byte(row)) {
+		if err != nil || json.Unmarshal(body, &request) != nil || request.Model != "mock-detective-model" || request.Think != nil || request.Reasoning.Effort != "none" || !bytes.Contains(body, []byte(row)) {
 			t.Error("Detective did not send its selected synthetic row with thinking disabled")
 			http.Error(w, "invalid synthetic model request", http.StatusBadRequest)
 			return
 		}
 		requests.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		response := map[string]any{"id": "mock-detective-response", "model": "mock-detective-model", "output": []any{map[string]any{"type": "message", "content": []any{map[string]string{"type": "output_text", "text": string(encoded)}}}}}
+		response := map[string]any{"id": "mock-detective-response", "model": "mock-detective-model", "status": "completed", "output": []any{map[string]any{"type": "message", "role": "assistant", "status": "completed", "content": []any{map[string]string{"type": "output_text", "text": string(encoded)}}}}}
 		if err := json.NewEncoder(w).Encode(response); err != nil {
 			t.Error("cannot return synthetic Detective candidate response")
 		}
@@ -282,4 +285,15 @@ func newDetectivePendingModel(t *testing.T, row, statement string) (*httptest.Se
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 	return server, &requests
+}
+
+// The candidate remains raw in the checkpoint, but current native statements
+// include the complete classified context. Check exact bytes independently.
+func detectivePendingStatement(t *testing.T, statement string) string {
+	t.Helper()
+	projected, err := detectiveLiveStatement("0.1.2", detectiveLiveRecord{Statement: statement, RecordType: "capability_state", Subject: "pending_intake", EpistemicClass: "claim", Status: "lab_proven", Scope: "lab_contract", SelectionState: "unspecified", BlockedBy: []string{}, DoesNotEstablish: []string{}, Qualifiers: []string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return projected
 }

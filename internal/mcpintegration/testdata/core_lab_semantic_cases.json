@@ -1,0 +1,1081 @@
+{
+  "source_commit": "18d9a79a9",
+  "source_sha256": {
+    "research-20261002-core-boundary": "8044ce30c45951e3f6fc06999868efd3ed6b737de80282ec5b54dc6d98ba7427",
+    "research-20261002-core-stress-v2": "097a960ea3c4f2057adce75141dcdb607c4916accdff6d5823f82e89fd0fe742"
+  },
+  "scope": "Synthetic Lab declarations; fidelity labels are not a Core oracle",
+  "cases": [
+    {
+      "id": "boundary-actor-faithful",
+      "source": "取得核准後，僅值班工程師可以發布正式環境。",
+      "statement": "取得核准後，僅值班工程師可以發布正式環境。",
+      "source_ir": {
+        "actor": "on_call",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "approved"
+      },
+      "candidate_ir": {
+        "actor": "on_call",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "approved"
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "boundary-actor-mutant",
+      "source": "取得核准後，僅值班工程師可以發布正式環境。",
+      "statement": "取得核准後，任何工程師都可以發布正式環境。",
+      "source_ir": {
+        "actor": "on_call",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "approved"
+      },
+      "candidate_ir": {
+        "actor": "any_engineer",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "approved"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "boundary-action-faithful",
+      "source": "值班人員可以封存正式環境的事件紀錄。",
+      "statement": "值班人員可以封存正式環境的事件紀錄。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "archive",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "archive",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "boundary-action-mutant",
+      "source": "值班人員可以封存正式環境的事件紀錄。",
+      "statement": "值班人員可以刪除正式環境的事件紀錄。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "archive",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "delete",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "boundary-grouping-faithful",
+      "source": "正式環境允許發布的充要條件是：A 成立，且 B 或 C 至少一者成立。",
+      "statement": "正式環境允許發布的充要條件是：A 成立，且 B 或 C 至少一者成立。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "A",
+          [
+            "or",
+            "B",
+            "C"
+          ]
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "A",
+          [
+            "or",
+            "B",
+            "C"
+          ]
+        ]
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "boundary-grouping-mutant",
+      "source": "正式環境允許發布的充要條件是：A 成立，且 B 或 C 至少一者成立。",
+      "statement": "正式環境允許發布的充要條件是：A 與 B 同時成立，或 C 成立。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "A",
+          [
+            "or",
+            "B",
+            "C"
+          ]
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "or",
+          [
+            "and",
+            "A",
+            "B"
+          ],
+          "C"
+        ]
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "boundary-exception-faithful",
+      "source": "正式環境允許發布的充要條件是已核准且不在凍結期間。",
+      "statement": "正式環境允許發布的充要條件是已核准且不在凍結期間。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "approved",
+          [
+            "not",
+            "frozen"
+          ]
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "approved",
+          [
+            "not",
+            "frozen"
+          ]
+        ]
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "boundary-exception-mutant",
+      "source": "正式環境允許發布的充要條件是已核准且不在凍結期間。",
+      "statement": "正式環境允許發布的充要條件是已核准。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "approved",
+          [
+            "not",
+            "frozen"
+          ]
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "approved"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "boundary-exception-shared-mapping-error",
+      "source": "正式環境允許發布的充要條件是已核准且不在凍結期間。",
+      "statement": "正式環境允許發布的充要條件是已核准。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "approved",
+          [
+            "not",
+            "frozen"
+          ]
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "approved"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "boundary-scope-faithful",
+      "source": "這條規則僅適用於測試環境：值班人員可以發布。",
+      "statement": "這條規則僅適用於測試環境：值班人員可以發布。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "staging",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "staging",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "boundary-scope-mutant",
+      "source": "這條規則僅適用於測試環境：值班人員可以發布。",
+      "statement": "這條規則適用於所有環境：值班人員可以發布。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "staging",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "all",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "boundary-modality-faithful",
+      "source": "值班人員應該檢查正式環境的發布紀錄，但這不是強制要求。",
+      "statement": "值班人員應該檢查正式環境的發布紀錄，但這不是強制要求。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "inspect_logs",
+        "scope": "prod",
+        "modality": "should",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "inspect_logs",
+        "scope": "prod",
+        "modality": "should",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "boundary-modality-mutant",
+      "source": "值班人員應該檢查正式環境的發布紀錄，但這不是強制要求。",
+      "statement": "值班人員必須檢查正式環境的發布紀錄。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "inspect_logs",
+        "scope": "prod",
+        "modality": "should",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "inspect_logs",
+        "scope": "prod",
+        "modality": "must",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "boundary-unknown-faithful",
+      "source": "正式環境的發布條件依附件甲決定；本次資料未提供附件甲。",
+      "statement": "正式環境的發布條件依附件甲決定；本次資料未提供附件甲。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": {
+          "unknown": "attachment_A_unavailable"
+        }
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": {
+          "unknown": "attachment_A_unavailable"
+        }
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "boundary-unknown-mutant",
+      "source": "正式環境的發布條件依附件甲決定；本次資料未提供附件甲。",
+      "statement": "正式環境可以無條件發布。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": {
+          "unknown": "attachment_A_unavailable"
+        }
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "boundary-time-faithful",
+      "source": "值班人員可以發布正式環境；這項授權只在 2026-10-02 當天有效。",
+      "statement": "值班人員可以發布正式環境；這項授權只在 2026-10-02 當天有效。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "2026-10-02",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "2026-10-02",
+        "condition": true
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "boundary-time-mutant",
+      "source": "值班人員可以發布正式環境；這項授權只在 2026-10-02 當天有效。",
+      "statement": "值班人員可以發布正式環境；這項授權永久有效。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "2026-10-02",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-d01-grouping",
+      "source": "允許發布的充要條件是 A 成立，且 B、C 至少一者成立。",
+      "statement": "允許發布的充要條件是 A 與 B 同時成立，或 C 成立。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "A",
+          [
+            "or",
+            "B",
+            "C"
+          ]
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "or",
+          [
+            "and",
+            "A",
+            "B"
+          ],
+          "C"
+        ]
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-d02-exception-scope",
+      "source": "核准的充要條件是身分通過，且風險通過或取得緊急豁免；緊急豁免不免除身分檢查。",
+      "statement": "身分與風險都通過，或取得緊急豁免，即可核准。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "identity",
+          [
+            "or",
+            "risk",
+            "waiver"
+          ]
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "or",
+          [
+            "and",
+            "identity",
+            "risk"
+          ],
+          "waiver"
+        ]
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-d03-role",
+      "source": "只有本週值班工程師可以發布。",
+      "statement": "所有工程師都可以發布。",
+      "source_ir": {
+        "actor": "on_call",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "all_engineers",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-d04-action",
+      "source": "操作員可以暫停排程；不得刪除排程定義。",
+      "statement": "操作員可以刪除排程定義。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "pause_schedule",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "delete_schedule",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-d05-modality",
+      "source": "這是建議而非義務：操作員應檢查紀錄。",
+      "statement": "操作員必須檢查紀錄。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "inspect",
+        "scope": "prod",
+        "modality": "should",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "inspect",
+        "scope": "prod",
+        "modality": "must",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-d06-scope",
+      "source": "本規則只適用於租戶甲：操作員可重試工作。",
+      "statement": "所有租戶的操作員均可重試工作。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "retry",
+        "scope": "tenant_A",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "retry",
+        "scope": "all_tenants",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-u01-units",
+      "source": "單筆金額上限為 100 萬元，1 萬元等於 10000 元。",
+      "statement": "單筆金額上限為 100 元。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "approve",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "amount": {
+          "value": 100,
+          "unit": "ten_thousand_TWD"
+        }
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "approve",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "amount": {
+          "value": 100,
+          "unit": "TWD"
+        }
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-u02-quantifier",
+      "source": "每一個審核人都簽名後才能核准。",
+      "statement": "至少一個審核人簽名後即可核准。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "quantifier": "all"
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "quantifier": "exists"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-u03-distinct",
+      "source": "必須取得兩位不同人員的批准。",
+      "statement": "取得兩次批准即可，同一人可批准兩次。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "approvals": 2,
+        "distinct_approvers": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "approvals": 2,
+        "distinct_approvers": false
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-u04-order",
+      "source": "必須先完成備份，再部署。",
+      "statement": "先部署，再完成備份即可。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "event_order": [
+          "backup",
+          "deploy"
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "event_order": [
+          "deploy",
+          "backup"
+        ]
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-u05-aggregation",
+      "source": "每個帳戶每日累計最多轉出 100 元。",
+      "statement": "每筆轉帳最多 100 元，不限制每日累計。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "transfer",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "limit": 100,
+        "aggregation": "account_day"
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "transfer",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "limit": 100,
+        "aggregation": "per_transfer"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-u06-priority",
+      "source": "一般情況允許下載；遇到封存標記時禁止，禁止優先於允許。",
+      "statement": "遇到允許與禁止衝突時，以允許優先。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "download",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "priority": "deny_overrides"
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "download",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true,
+        "priority": "allow_overrides"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-x01-distant-exception",
+      "source": "申請通過核准後可發布。\n\n監控資料保留三十日。\n\n補充：前述發布權限不適用於凍結期間。",
+      "statement": "申請通過核准後可發布，包含凍結期間。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "approved"
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "approved"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-x02-unavailable-attachment",
+      "source": "附件乙決定發布條件；附件乙未隨本資料提供。",
+      "statement": "發布不需要任何條件。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-x03-negation",
+      "source": "當 A 不成立時禁止發布。",
+      "statement": "當 A 成立時禁止發布。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "A"
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "A"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-x04-nested-unknown",
+      "source": "必須先核准，其他條件依缺少的附件甲決定。",
+      "statement": "必須先核准，其他條件依缺少的附件乙決定。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "approved",
+          {
+            "unknown": "appendix_A"
+          }
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "approved",
+          {
+            "unknown": "appendix_B"
+          }
+        ]
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-x05-only-if",
+      "source": "只有 A 成立才可能核准；A 成立並不保證核准。",
+      "statement": "只要 A 成立即會核准。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "A"
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "A"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-x06-quote-not-support",
+      "source": "所有核准都須通過身分與風險檢查。\n背景：申請人須先建立帳戶。",
+      "statement": "只要建立帳戶就能核准。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "account"
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "account"
+      },
+      "authored_fidelity": false
+    },
+    {
+      "id": "stress-e01-commute",
+      "source": "允許發布的充要條件是 A 且 B。",
+      "statement": "允許發布的充要條件是 B 且 A。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "A",
+          "B"
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          "B",
+          "A"
+        ]
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "stress-e02-demorgan",
+      "source": "允許發布的充要條件是 A 與 B 都不成立。",
+      "statement": "允許發布的充要條件是 A 或 B 成立這件事為假。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "and",
+          [
+            "not",
+            "A"
+          ],
+          [
+            "not",
+            "B"
+          ]
+        ]
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "not",
+          [
+            "or",
+            "A",
+            "B"
+          ]
+        ]
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "stress-e03-double-negation",
+      "source": "A 是已知布林值；允許發布的充要條件是 A。",
+      "statement": "A 是已知布林值；允許發布的充要條件是並非 A 不成立。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": "A"
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": [
+          "not",
+          [
+            "not",
+            "A"
+          ]
+        ]
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "stress-e04-role-alias",
+      "source": "本文件中『值班工程師』與『當班工程師』指同一群人。值班工程師可以發布。",
+      "statement": "依本文件同義定義，當班工程師可以發布。",
+      "source_ir": {
+        "actor": "on_call_engineer",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "duty_engineer",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "stress-e05-time-unit",
+      "source": "計時採秒，1 分鐘等於 60 秒；操作須在 30 秒內完成。",
+      "statement": "依相同計時定義，操作須在 0.5 分鐘內完成。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "30_seconds",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "0.5_minutes",
+        "condition": true
+      },
+      "authored_fidelity": true
+    },
+    {
+      "id": "stress-e06-scope-alias",
+      "source": "本文件中 production 與 prod 都是同一個正式環境的名稱。此環境允許發布。",
+      "statement": "依本文件環境名稱定義，prod 允許發布。",
+      "source_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "production",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "candidate_ir": {
+        "actor": "operator",
+        "action": "release",
+        "scope": "prod",
+        "modality": "may",
+        "time": "any",
+        "condition": true
+      },
+      "authored_fidelity": true
+    }
+  ]
+}

@@ -22,7 +22,7 @@ func TestRuntimeProfileRequiresExplicitExactName(t *testing.T) {
 			t.Fatalf("invalid profile did not fail closed with a safe error: %v", err)
 		}
 	}
-	if got := RuntimeProfileNames(); !reflect.DeepEqual(got, []string{"intake", "source-claim-reviewer", "legacy-reviewer", "legacy-operator", "relation-reviewer", "endpoint-reviewer", "repository-intake"}) {
+	if got := RuntimeProfileNames(); !reflect.DeepEqual(got, []string{"core-records", "intake", "source-claim-reviewer", "legacy-reviewer", "legacy-operator", "relation-reviewer", "endpoint-reviewer", "repository-intake"}) {
 		t.Fatalf("unexpected accepted profile inventory: %v", got)
 	}
 }
@@ -97,6 +97,11 @@ func TestAuthorizedBackendRejectsIncompleteConfigurationAndRegistryDrift(t *test
 	}
 	if _, err := NewAuthorizedBackend(&authorityRecorder{tools: ingestionTools()}, principal, ""); !errors.Is(err, runtimeauth.ErrUnauthorized) {
 		t.Fatalf("missing profile accepted: %v", err)
+	}
+	for _, profile := range []RuntimeProfile{RuntimeProfileCoreRecords, RuntimeProfileRelationReviewer, RuntimeProfileEndpointReviewer, RuntimeProfileRepositoryIntake} {
+		if _, err := NewAuthorizedBackend(&authorityRecorder{tools: ingestionTools()}, principal, profile); err == nil {
+			t.Fatalf("dedicated profile %s accepted by generic backend", profile)
+		}
 	}
 	for _, tc := range []struct {
 		name   string

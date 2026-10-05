@@ -418,6 +418,39 @@ prepare `implements`. Generic, contradiction and Supersession writers remain
 disabled. There is no new endpoint `reject`/`audit_only` writer; never relabel
 code as a source claim to use source-disposition tools.
 
+## Core records profile
+
+`core-records` is a separate `ahe-ingest-mcp` profile for externally authorized
+identity decisions and external reports. Provision a fresh role pair with
+`AHE_RUNTIME_PROFILE=core-records ./bin/ahe-runtime-admin provision` using the
+same protected operator setup as the other profiles. Its protected launcher
+configuration uses `ahe-ingest-mcp`, `profile: core-records` and a fixed principal.
+Do not share its credentials with Query, intake, automatic extractors or reviewers.
+
+Its five tools are `bind_canonical_proposition`, `change_proposition_binding`,
+`record_external_check`, `record_external_representation` and
+`link_external_check_representation`. Read subjects, current bindings, explicit
+history and stored checker material through Query before preparing writes. Show
+an identity decision's original claim, exact identity/definition and reason;
+record only an explicitly authorized decision. A correction requires the exact
+previous revision/reference/from_id; stale changes fail rather than being ranked.
+Exact retries preserve their original request IDs and content.
+
+The launcher sets `decision_by` / `recorded_by`; those fields are forbidden in
+MCP input. Claimed checker/producer names remain separate external assertions.
+These are trusted Go writer guarantees: database credentials grant raw DML and
+SQL alone does not authenticate the claimed recorder. Database constraints do
+enforce immutable history, exact subjects, transition ordering, dependency shape
+and complete checker-input links. The binding table's UPDATE privilege exists
+only for row locking; its trigger rejects actual UPDATE. This profile cannot
+collect sources, admit claims or write canonical graph nodes/edges.
+
+External declarations do not prove equivalence, faithful extraction, executed
+checks, freshness, sufficiency or approval. Missing/supplied state and linked
+checks do not trigger automatic invalidation/recomputation. Dependency lookup
+bounds output but has no large-dataset latency qualification. Ordinary downstream
+agents should retain Query access only.
+
 ## Independent relation reviewer
 
 This optional profile is separate from source intake and source-claim review.
@@ -795,16 +828,26 @@ semantic extraction completeness or the truth of source assertions.
 
 ## Upgrade
 
-For an MCP **binary-only** replacement against an already qualified schema 49
-deployment, record the old and new commits and protect a backup before the
-maintenance window. Stop the affected MCP processes, build and verify the new
-source, update the reviewed binary paths in the existing protected launcher
-configuration, verify the same runtime identity and schema policy, then reconnect
-the client and rediscover `tools/list`. This procedure does not authorize new
-roles, ACL changes, data conversion or DB clearing. An older schema, including
-46 or 48, needs separately authorized migration and runtime-role qualification
-before using this build; it is not a binary-only upgrade.
-Do not print or copy credentials into the repository while updating paths.
+This build requires schema **52** and database role policy **v6**. Updating a
+schema-49 installation is **not** a binary-only replacement: migrations 50–52 add
+Core record tables, and all existing profiles need SELECT on the six new tables.
+
+For a separately authorized upgrade, protect a backup, stop serving processes,
+record old/new commits, apply the product's `ahe-migrate`, and refresh the same
+existing group roles using `internal/dbrole.InstallPolicy` with their original
+profiles. The current operator CLI only provisions fresh pairs or verifies them;
+it does **not** expose existing-role policy refresh. Do not run `provision` as an
+upgrade workaround or recreate LOGIN/group identities. Use a reviewed operator
+integration of `InstallPolicy`, then verify each existing runtime pair before
+restarting and rediscovering `tools/list`. Old ACLs fail startup until refreshed.
+The preserved-role integration fixture covers this Go operator API; there is no
+claim that a deployed installation was upgraded by these repository changes.
+
+Provision `core-records` separately only if its writes are authorized. Existing
+profiles gain reads, not the new write capability. For an already qualified
+schema-52/policy-v6 installation, a binary-only replacement retains existing
+protected launcher paths, identities and credentials; verify them before reconnecting.
+Never copy credentials into repository artifacts.
 
 Historical Detective procedure only (Desktop remains frozen): preserve its
 existing private workspace and original receipts;
@@ -849,7 +892,7 @@ embedded migration names and checksums.
 - missing/invalid runtime principal, profile, role or schema: configure the
   protected launcher; do not inject replacement identity through tool arguments.
 - `legacy writer runtime profiles are not enabled`: this executable currently
-  accepts only `intake`, `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer` or `repository-intake`; do not weaken the gate to recover old writer exposure.
+  accepts `core-records`, `intake`, `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer` or `repository-intake`; do not weaken the gate to recover old writer exposure.
 - schema/search-path rejection: pre-provision the exact private schema and
   remove fallback from the migration connection configuration, not from an
   existing database's ACLs.
