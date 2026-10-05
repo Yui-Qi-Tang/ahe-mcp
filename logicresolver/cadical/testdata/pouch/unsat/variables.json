@@ -1,0 +1,86 @@
+[
+  {
+    "id": 1,
+    "kind": "state",
+    "time": 0,
+    "field": "cipher_A",
+    "value": "A@K0"
+  },
+  {
+    "id": 2,
+    "kind": "state",
+    "time": 0,
+    "field": "cipher_A",
+    "value": "A@K1"
+  },
+  {
+    "id": 3,
+    "kind": "state",
+    "time": 0,
+    "field": "cipher_B",
+    "value": "B@K0"
+  },
+  {
+    "id": 4,
+    "kind": "state",
+    "time": 0,
+    "field": "cipher_B",
+    "value": "B@K1"
+  },
+  {
+    "id": 5,
+    "kind": "state",
+    "time": 0,
+    "field": "manifest",
+    "value": "draft"
+  },
+  {
+    "id": 6,
+    "kind": "state",
+    "time": 0,
+    "field": "manifest",
+    "value": "published_v1"
+  },
+  {
+    "id": 7,
+    "kind": "state",
+    "time": 0,
+    "field": "new_key",
+    "value": "K1_absent"
+  },
+  {
+    "id": 8,
+    "kind": "state",
+    "time": 0,
+    "field": "new_key",
+    "value": "K1_present"
+  },
+  {
+    "id": 9,
+    "kind": "state",
+    "time": 0,
+    "field": "old_key",
+    "value": "K0_absent"
+  },
+  {
+    "id": 10,
+    "kind": "state",
+    "time": 0,
+    "field": "old_key",
+    "value": "K0_present"
+  },
+  {
+    "id": 11,
+    "kind": "state",
+    "time": 0,
+    "field": "validation",
+    "value": "A@K1+B@K1"
+  },
+  {
+    "id": 12,
+    "kind": "state",
+    "time": 0,
+    "field": "validation",
+    "value": "none"
+  }
+]

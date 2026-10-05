@@ -6,6 +6,8 @@
 
 [Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [Evaluation](#evaluation) · [MCP setup](INSTALL.md)
 
+The [logic resolver foundation](logicresolver/README.md) exposes an experimental **v0** Go API for explicit SAT and bounded linear-integer formulas. It is not connected to evidence queries or admission.
+
 ## Fewer unsupported assertions in a fixed synthetic suite
 
 **In this fixed run, the AHE-assisted condition produced fewer answers containing
