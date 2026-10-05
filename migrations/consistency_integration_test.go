@@ -19,7 +19,7 @@ func rollbackConsistencyForTest(t *testing.T, ctx context.Context, pool *pgxpool
 	if _, err = pool.Exec(ctx, string(down)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = pool.Exec(ctx, `DELETE FROM schema_migrations WHERE migration_name=$1`, consistencyMigration); err != nil {
+	if _, err = pool.Exec(ctx, `DELETE FROM schema_migrations WHERE migration_name=ANY($1::text[])`, []string{consistencyMigration, consistencyContractMigration}); err != nil {
 		t.Fatal(err)
 	}
 }

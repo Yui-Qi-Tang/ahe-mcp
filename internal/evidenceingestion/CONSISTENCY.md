@@ -2,8 +2,8 @@
 
 Native Go APIs in `internal/evidenceingestion` check one exact proposition
 namespace and scope. The [product workflow](../../docs/CONSISTENCY.md) exposes
-readback through Query and configuration through core-records. Schema 53 and role policy
-v7 add diagnostic history; canonical admission remains separate. Pouch and
+readback through Query and configuration through core-records. The current contract is schema 54 and role policy
+v7; diagnostic history remains separate from canonical admission. Pouch and
 Detective are unchanged.
 
 ## Participation policy
@@ -82,7 +82,10 @@ positive revision or -1 for the latest in its snapshot. MCP binds optional
 `recorded_by` to its launcher principal; old/native records may omit it, and it
 is audit text, never authentication or admission authority. Exact request retries return a historical
 receipt; replay is not proof that a configuration is still active. Pausing is a
-new configuration revision. `cadical.Runner.Identity()` binds binary digests and
+new configuration revision. Configuration transactions use a short journal lock
+separate from the worker lock, so an update may commit during solving. Pausing
+does not cancel the in-flight historical run; the next tick observes the pause.
+`cadical.Runner.Identity()` binds binary digests and
 resource limits, excluding storage paths.
 
 A native consumer or `ahe-consistency-worker run` explicitly starts
@@ -150,4 +153,9 @@ and explicit `AHE_CONSISTENCY_REPORT_DIR`, `AHE_CONSISTENCY_CADICAL`,
 `AHE_CONSISTENCY_DRAT`. Missing prepared-suite prerequisites fail, not skip.
 Migration and role integration must run serially in an isolated database because
 role verification checks authority beyond the selected schema. Preserved-role
-fixtures cover schema 49 and 52 upgrades without replacing users or groups.
+fixtures cover schema 49, 52 and 53 upgrades without replacing users or groups.
+
+Schema 54 validates the original JSON number tokens for configuration predecessor,
+run revision and artifact byte counts, plus the configured-event hash. This is
+not complete validation of arbitrary raw SQL payloads. Migration rejects incompatible
+history atomically and preserves existing function identities and grants.

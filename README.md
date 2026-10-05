@@ -8,7 +8,7 @@
 
 [Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [Evaluation](#evaluation) · [MCP setup](INSTALL.md)
 
-Current development version: **unreleased**, schema **53**, database role policy **v7**,
+Current development version: **unreleased**, schema **54**, database role policy **v7**,
 consistency watch contract **v1**. Query exposes 26 read-only tools; the separate
 core-records profile exposes six record/configuration tools.
 
@@ -67,7 +67,7 @@ See the [secondary outcome](#secondary-outcome-repairs-passing-the-official-test
 
 ## Quick start
 
-Current version: `dev` preview; Core schema **53**, database role policy **v7**. Retained Detective Desktop code: `0.1.0-preview.18`.
+Current version: `dev` preview; Core schema **54**, database role policy **v7**. Retained Detective Desktop code: `0.1.0-preview.18`.
 MCP and Detective share one root Go module, using Go `1.27.0`.
 
 > **Desktop frozen / unavailable — 2026-09-14.** Desktop is not a

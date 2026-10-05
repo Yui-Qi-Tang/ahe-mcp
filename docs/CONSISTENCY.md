@@ -5,7 +5,7 @@ together in one named evidence scope. External code supplies the conditions and
 rules. AHE preserves the original evidence and reports the formal result; it
 does not infer those conditions, choose which statement is true, or repair data.
 
-Current contract: schema **53**, role policy **v7**, `consistency-watch/v1`.
+Current contract: schema **54**, role policy **v7**, `consistency-watch/v1`.
 The generic resolver API remains v0. This product path uses checked SAT and DRAT;
 the generic bounded SMT adapter is not used here.
 
@@ -153,6 +153,11 @@ append the full configuration with the desired `paused` value, a new request ID
 and the latest expected revision. To retry a recorded solver failure, likewise
 append a new revision even when its formula is unchanged. An exact replay returns
 the original historical receipt; it never restores an old active configuration.
+Configuration writes use a short journal lock, independent of the worker lock.
+A pause can commit during solving: it prevents subsequent ticks, but does not
+cancel the in-flight run. That run remains readable as stale history after the
+configuration changes. A cancelled write waiting for the journal lock creates
+no revision or notification; retry the exact request.
 
 To retrieve proof bytes, call `get_consistency_artifact` with immutable `run_id`,
 `artifact_id`, `offset=0`, and `limit` at most 65536. Decode `data_base64`, continue
@@ -196,3 +201,13 @@ then `verify` with each original serving LOGIN. Update each applicable profile;
 new readable tables require policy refresh even for Query. Do not use fresh
 users as a substitute for an upgrade. Starting the worker is an explicit
 operator action after schema/role verification.
+
+Schema 54 tightens SQL storage checks without changing policy v7 or adding tables.
+Version fields and artifact byte counts require canonical nonnegative integer
+JSON numbers; strings, decimal/exponent notation and negative zero are rejected.
+Configured notifications must name the corresponding configuration hash.
+Stop all serving and writing processes before migration. If existing history
+violates these checks, migration fails with SQLSTATE 23514 and rolls back;
+it does not rewrite immutable records. Preserve the history and review the
+upgrade plan. Downgrading guards requires a compatible binary and restores the
+old checks; mixed-version operation is not an upgrade guarantee.

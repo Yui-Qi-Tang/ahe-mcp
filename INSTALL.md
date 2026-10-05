@@ -17,10 +17,10 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 ## Installation scope
 
 Build the reviewed source commit using the steps below. The current MCP schema
-is 53. Query/intake/source-reviewer inventories are 26/5/3. Separate
+is 54. Query/intake/source-reviewer inventories are 26/5/3. Separate
 `relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
 4/2/2 tools; `core-records` exposes six record/configuration tools. The full
-migration chain through 53 and role policy v7 are required. Do not perform a
+migration chain through 54 and role policy v7 are required. Do not perform a
 binary-only replacement against an older schema or reuse source-review
 credentials for endpoint/relation writes.
 
@@ -243,7 +243,7 @@ DATABASE_DSN="$(cat /absolute/private/ahe/migration-database-dns)" \
 Success returns credential-free JSON containing `schema_version`, `schema`,
 `changed`, `applied_migrations`, and `latest_migration`. Repeating the command is
 safe when the selected schema, migration ledger and checksums match. The current
-native schema is 49; migrations 1–48 retain their original checksums.
+native schema is 54; migrations 1–53 retain their original checksums.
 Migration 43 retains the partial unique source-extraction request index.
 Migration 44 requires no proposal/canonical/admission authority and exactly the
 native empty Supersession head before adding ordinary admission manifests;
@@ -837,7 +837,7 @@ semantic extraction completeness or the truth of source assertions.
 
 ## Upgrade
 
-This build requires schema **53** and database role policy **v7**. Updating a
+This build requires schema **54** and database role policy **v7**. Updating a
 schema-49 installation is **not** a binary-only replacement: migrations 50–53 add
 Core record and consistency-history tables. From schema 49, all profiles need
 SELECT on eleven new tables; from schema 52, five new diagnostic tables. Refresh
@@ -861,9 +861,15 @@ pair, then verify every serving login. Coordinate all role administration while
 services are stopped; concurrent privileged role deletion/recreation is outside
 this operator contract. Repository validation does not deploy this upgrade.
 
+Schema 53 requires migration 54 before this binary starts. Stop all writers and
+workers, then migrate and verify the original LOGINs. This guard-only upgrade
+keeps policy v7 and existing ACLs. It refuses incompatible historical JSON integer
+representations or configured-event hashes with SQLSTATE 23514; preserve those
+records for review rather than deleting or rewriting history to force an upgrade.
+
 Provision `core-records` separately only if its writes are authorized. Existing
 profiles gain reads, not the new write capability. For an already qualified
-schema-53/policy-v7 installation, a binary-only replacement retains existing
+schema-54/policy-v7 installation, a binary-only replacement retains existing
 protected launcher paths, identities and credentials; verify them before reconnecting.
 Never copy credentials into repository artifacts.
 

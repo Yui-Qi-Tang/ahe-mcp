@@ -17,6 +17,10 @@ import (
 
 const consistencyWatchLock = `hashtextextended(current_database() || ':' || current_schema() || ':consistency:' || $1, 0)`
 
+// Keep the worker lock key stable across upgrades. Configuration writes use a
+// separate short lock; the existing anchor-row lock orders journal commits.
+const consistencyJournalLock = `hashtextextended(current_database() || ':' || 'consistency_watches'::regclass::oid::text || ':consistency-journal:' || $1, 0)`
+
 // ConsistencyWatchInput registers immutable, externally normalized inputs.
 // Evidence is a catalog: withdrawn/excluded nodes can remain for future history.
 // New eligible nodes without an entry block recomputation until a new revision.
@@ -179,7 +183,7 @@ func RegisterConsistencyWatch(ctx context.Context, pool *pgxpool.Pool, in Consis
 		return ConsistencyWatchReceipt{}, err
 	}
 	defer tx.Rollback(context.Background())
-	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(`+consistencyWatchLock+`)`, in.WatchID); err != nil {
+	if _, err = tx.Exec(ctx, `SELECT pg_advisory_xact_lock(`+consistencyJournalLock+`)`, in.WatchID); err != nil {
 		return ConsistencyWatchReceipt{}, err
 	}
 	if _, err = tx.Exec(ctx, `SET LOCAL row_security=off`); err != nil {

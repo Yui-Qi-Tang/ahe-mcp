@@ -3,6 +3,7 @@
 package evidenceingestion
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -35,11 +36,8 @@ func consistencyPausedRunner(t *testing.T) (*cadical.Runner, string, string) {
 }
 
 func TestIntegrationConsistencyWorkerInterleaving(t *testing.T) {
-	for _, disconnect := range []bool{false, true} {
-		name := "source_changes_during_solve"
-		if disconnect {
-			name = "lost_connection_cannot_publish"
-		}
+	for _, name := range []string{"source_changes_during_solve", "configuration_changes_during_solve", "pause_changes_during_solve", "lost_connection_cannot_publish"} {
+		disconnect := name == "lost_connection_cannot_publish"
 		t.Run(name, func(t *testing.T) {
 			ctx, pool := integrationPoolWithMigrations(t)
 			runner, started, release := consistencyPausedRunner(t)
@@ -68,7 +66,20 @@ func TestIntegrationConsistencyWorkerInterleaving(t *testing.T) {
 				err  error
 			}
 			done := make(chan reply, 1)
-			go func() { out, err := worker.Tick(ctx); done <- reply{out, err} }()
+			workerCtx, cancelWorker := context.WithCancel(ctx)
+			finished := false
+			defer func() {
+				cancelWorker()
+				_ = os.WriteFile(release, nil, 0600)
+				if !finished {
+					select {
+					case <-done:
+					case <-time.After(5 * time.Second):
+						t.Error("worker did not stop after test cancellation")
+					}
+				}
+			}()
+			go func() { out, err := worker.Tick(workerCtx); done <- reply{out, err} }()
 			deadline := time.NewTimer(5 * time.Second)
 			defer deadline.Stop()
 			ticker := time.NewTicker(10 * time.Millisecond)
@@ -91,6 +102,16 @@ func TestIntegrationConsistencyWorkerInterleaving(t *testing.T) {
 				if err := pool.QueryRow(ctx, `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE application_name=$1`, label).Scan(&killed); err != nil || !killed {
 					t.Fatal(killed, err)
 				}
+			} else if name == "configuration_changes_during_solve" || name == "pause_changes_during_solve" {
+				in.ExpectedRevision = 1
+				in.RequestID = "configuration-2"
+				in.Request.RuleVersion = "2"
+				in.Paused = name == "pause_changes_during_solve"
+				updateCtx, cancelUpdate := context.WithTimeout(ctx, 2*time.Second)
+				defer cancelUpdate()
+				if _, err := RegisterConsistencyWatch(updateCtx, pool, in); err != nil {
+					t.Fatal("configuration blocked behind solver", err)
+				}
 			} else {
 				if _, err := ChangePropositionBinding(ctx, pool, propositionTestChange(b, "withdraw-during-solve", 0, "membership:b", kb.ID(), "withdraw", PropositionKey{})); err != nil {
 					t.Fatal(err)
@@ -100,6 +121,7 @@ func TestIntegrationConsistencyWorkerInterleaving(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := <-done
+			finished = true
 			if disconnect {
 				if got.err == nil {
 					t.Fatal("lost worker published")
@@ -118,7 +140,19 @@ func TestIntegrationConsistencyWorkerInterleaving(t *testing.T) {
 				}
 			}
 			next, err := worker.Tick(ctx)
-			if err != nil || next[0].State != "computed" {
+			if name == "pause_changes_during_solve" {
+				if err != nil || len(next) != 1 || next[0].State != "paused" {
+					t.Fatal("paused configuration started another calculation", next, err)
+				}
+				in.ExpectedRevision = 2
+				in.RequestID = "configuration-3"
+				in.Paused = false
+				if _, err := RegisterConsistencyWatch(ctx, pool, in); err != nil {
+					t.Fatal(err)
+				}
+				next, err = worker.Tick(ctx)
+			}
+			if err != nil || len(next) != 1 || next[0].State != "computed" {
 				t.Fatal(next, err)
 			}
 			read, err := ReadConsistencyRun(ctx, pool, next[0].RunID)
@@ -126,8 +160,11 @@ func TestIntegrationConsistencyWorkerInterleaving(t *testing.T) {
 				t.Fatal(read.Freshness, err)
 			}
 			want := ConsistencyCompatible
-			if disconnect {
+			if name != "source_changes_during_solve" {
 				want = ConsistencyConflict
+			}
+			if name == "configuration_changes_during_solve" && (read.Run.Revision != 2 || read.Run.Request.RuleVersion != "2") {
+				t.Fatal("new configuration was not recomputed")
 			}
 			if read.Run.Diagnosis.Outcome != want {
 				t.Fatal(read.Run.Diagnosis.Outcome)

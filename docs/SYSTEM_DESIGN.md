@@ -468,7 +468,10 @@ flowchart TD
 
 Migrations 50–52 add storage contracts independent of admission and evidence selection.
 Migration 53 adds immutable consistency watch versions, runs, proof artifacts and
-per-watch notifications. The native worker applies an explicit currentness policy,
+per-watch notifications. Migration 54 tightens integer-token and configured-event
+integrity checks without adding tables or changing policy v7. Configuration
+writes and workers use separate locks, allowing a new version during solving.
+The native worker applies an explicit currentness policy,
 localizes one contradictory condition set and recomputes changed snapshots.
 The `ahe-consistency-worker` command requires explicit startup and database role
 policy v7. Query exposes five consistency read tools; core-records appends watch configuration

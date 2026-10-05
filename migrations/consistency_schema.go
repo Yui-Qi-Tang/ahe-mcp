@@ -2,9 +2,11 @@ package migrations
 
 const consistencyMigration = "000053_evidence_consistency_lifecycle.up.sql"
 
+const consistencyContractMigration = "000054_evidence_consistency_contract.up.sql"
+
 func init() {
 	for _, name := range []string{"consistency_version_guard", "consistency_run_guard", "consistency_artifact_guard", "consistency_event_guard"} {
-		requiredFixedCoreFunctions = append(requiredFixedCoreFunctions, requiredFixedCoreFunction{Migration: consistencyMigration, Name: name, Result: "trigger", SecurityDefiner: true, Config: []string{"search_path=pg_catalog", "row_security=off"}, RequirePublicExecuteRevoked: true})
+		requiredFixedCoreFunctions = append(requiredFixedCoreFunctions, requiredFixedCoreFunction{Migration: consistencyContractMigration, Name: name, Result: "trigger", SecurityDefiner: true, Config: []string{"search_path=pg_catalog", "row_security=off"}, RequirePublicExecuteRevoked: true})
 	}
 	for _, t := range []requiredFixedCoreTrigger{
 		{Name: "consistency_version_insert", Table: "consistency_watch_versions", Function: "consistency_version_guard", TriggerType: 7},

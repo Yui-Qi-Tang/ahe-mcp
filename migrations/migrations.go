@@ -20,6 +20,7 @@ import (
 var upFiles embed.FS
 
 var requiredTablesByMigration = map[string][]string{
+	consistencyContractMigration:    nil, // Guard-only migration; no new tables.
 	consistencyMigration:            {"consistency_watches", "consistency_watch_versions", "consistency_runs", "consistency_run_artifacts", "consistency_events"},
 	propositionBindingMigration:     {"canonical_propositions", "canonical_proposition_bindings", "canonical_proposition_binding_events"},
 	externalCheckMigration:          {"external_check_records"},
