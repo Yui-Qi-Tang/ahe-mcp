@@ -10,7 +10,7 @@ import (
 )
 
 // PolicyVersion identifies the native ordinary/review authority policy, not Core's policy.
-const PolicyVersion = "ahe-mcp-database-role-policy/v6"
+const PolicyVersion = "ahe-mcp-database-role-policy/v7"
 
 // Profile identifies an implemented database capability set.
 type Profile string
@@ -34,7 +34,7 @@ const ProfileRelationReviewer Profile = "relation-reviewer"
 const ProfileEndpointReviewer Profile = "endpoint-reviewer"
 const ProfileRepositoryIntake Profile = "repository-intake"
 
-// ProfileCoreRecords appends external identity and check records; it cannot admit evidence.
+// ProfileCoreRecords appends external identity, checks and consistency history; it cannot admit evidence.
 const ProfileCoreRecords Profile = "core-records"
 
 // Privilege is an effective PostgreSQL table privilege.
@@ -99,6 +99,11 @@ var queryTables = []string{
 	"canonical_supersession_lineages",
 	"canonical_supersession_members",
 	"canonical_supersession_replacement_targets",
+	"consistency_events",
+	"consistency_run_artifacts",
+	"consistency_runs",
+	"consistency_watch_versions",
+	"consistency_watches",
 	"detective_connector_inbox_deliveries",
 	"detective_connector_inbox_processing_attempts",
 	"detective_connector_inbox_processing_recovery_requests",
@@ -189,10 +194,10 @@ func BuildManifest(profile Profile) (Manifest, error) {
 		privileges := []Privilege{PrivilegeSelect}
 		if profile == ProfileCoreRecords {
 			switch table {
-			case "canonical_propositions", "canonical_proposition_bindings", "canonical_proposition_binding_events", "external_check_records", "external_representation_records", "external_check_representation_links":
+			case "consistency_watches", "consistency_watch_versions", "consistency_runs", "consistency_run_artifacts", "consistency_events", "canonical_propositions", "canonical_proposition_bindings", "canonical_proposition_binding_events", "external_check_records", "external_representation_records", "external_check_representation_links":
 				privileges = append(privileges, PrivilegeInsert)
 			}
-			if table == "canonical_proposition_bindings" {
+			if table == "canonical_proposition_bindings" || table == "consistency_watches" {
 				privileges = append(privileges, PrivilegeUpdate)
 			}
 		} else if profile == ProfileEndpointReviewer {

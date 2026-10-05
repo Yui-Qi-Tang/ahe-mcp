@@ -23,6 +23,7 @@ const ConsistencyProfile = "bound-declarations/cnf-v0"
 // across all proposition definition revisions, regardless of graph connectivity.
 // Zero limits use the maxima (256 nodes and 4096 internal edges).
 type ConsistencyScope struct {
+	Policy    string `json:"policy,omitempty"`
 	Namespace string `json:"namespace"`
 	ScopeRef  string `json:"scope_ref"`
 	MaxNodes  int    `json:"max_nodes"`
@@ -39,18 +40,26 @@ type ConsistencyMember struct {
 }
 
 // ConsistencyView is a read-only snapshot, not a claim of global completeness.
-// ID covers scope, binding heads, definitions and the entire returned artifact.
-// Snapshot is the PostgreSQL receipt; unrelated transactions do not change ID.
+// ID covers scope, binding heads, definitions, artifact and policy dependencies.
+// Snapshot is a PostgreSQL receipt; it is excluded from the semantic fingerprint.
 type ConsistencyView struct {
-	Profile  string                          `json:"profile"`
-	Scope    ConsistencyScope                `json:"scope"`
-	Members  []ConsistencyMember             `json:"members"`
-	Artifact evidencegraph.CanonicalArtifact `json:"artifact"`
-	ID       string                          `json:"id"`
-	Snapshot string                          `json:"snapshot"`
+	Profile     string                          `json:"profile"`
+	Scope       ConsistencyScope                `json:"scope"`
+	Members     []ConsistencyMember             `json:"members"`
+	Artifact    evidencegraph.CanonicalArtifact `json:"artifact"`
+	ID          string                          `json:"id"`
+	Snapshot    string                          `json:"snapshot"`
+	Selection   []ConsistencySelection          `json:"selection,omitempty"`
+	Currentness []ConsistencyLineage            `json:"currentness,omitempty"`
 }
 
 func (s ConsistencyScope) normalized() (ConsistencyScope, error) {
+	if s.Policy == ConsistencyProfile {
+		s.Policy = ""
+	}
+	if s.Policy != "" && s.Policy != ConsistencyFrontierPolicy {
+		return s, fmt.Errorf("%w: consistency selection policy", logicresolver.ErrInput)
+	}
 	if !consistencyText(s.Namespace) || !consistencyText(s.ScopeRef) {
 		return s, fmt.Errorf("%w: namespace and scope_ref required", logicresolver.ErrInput)
 	}
@@ -147,6 +156,12 @@ func readConsistencyScopeTx(ctx context.Context, tx pgx.Tx, scope ConsistencySco
 		view.Artifact, err = assembleCanonicalReadArtifact(ctx, pgxTx{tx: tx}, nodeIDs, edges, nodeIDs)
 		if err != nil {
 			return view, fmt.Errorf("incomplete consistency scope: %w", err)
+		}
+	}
+	if scope.Policy == ConsistencyFrontierPolicy {
+		view.Profile = ConsistencyFrontierPolicy
+		if err := selectConsistencyFrontier(ctx, tx, &view); err != nil {
+			return view, err
 		}
 	}
 	view.ID, err = consistencyHash(view) // ID and transaction receipt are blanked below.

@@ -78,8 +78,9 @@
 ## Core Record Writes
 
 The separately provisioned `core-records` profile preserves external proposition
-identity decisions and immutable external checks/representations. It does not admit
-claims, select evidence, prove semantic equivalence or execute the stored logic.
+identity decisions and immutable external checks/representations. It also registers explicit consistency watches for the separately started worker.
+The MCP recorder does not admit claims, prove semantic equivalence or execute
+a solver during a tool call. See [consistency operation](docs/CONSISTENCY.md).
 Read exact subjects/history through Query; obtain an explicit decision for identity
 bindings or corrections. Preserve request inputs for exact retries. Launcher-owned
 `decision_by` and `recorded_by` cannot be supplied by tools. Claimed checker/producer

@@ -1,12 +1,21 @@
 # AHE MCP
 
-<img src="apps/detective/build/appicon.png" alt="AHE icon" width="160" height="160">
+<p align="center">
+  <img src="apps/detective/build/appicon.png" alt="AHE icon" width="160" height="160">
+</p>
 
 **AHE provides traceable evidence and verified operation results for AI agents.**
 
 [Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [Evaluation](#evaluation) · [MCP setup](INSTALL.md)
 
-The [logic resolver foundation](logicresolver/README.md) exposes an experimental **v0** Go API for explicit SAT and bounded linear-integer formulas. It is not connected to evidence queries or admission.
+Current development version: **unreleased**, schema **53**, database role policy **v7**,
+consistency watch contract **v1**. Query exposes 26 read-only tools; the separate
+core-records profile exposes six record/configuration tools.
+
+The [logic resolver foundation](logicresolver/README.md) exposes an experimental
+**v0** Go API for explicit SAT and bounded linear-integer formulas. The product's
+[scoped consistency workflow](docs/CONSISTENCY.md) uses its checked SAT path;
+neither it nor the generic SMT path admits evidence.
 
 ## Fewer unsupported assertions in a fixed synthetic suite
 
@@ -58,7 +67,7 @@ See the [secondary outcome](#secondary-outcome-repairs-passing-the-official-test
 
 ## Quick start
 
-Current version: `dev` preview; Core schema **52**, database role policy **v6**. Retained Detective Desktop code: `0.1.0-preview.18`.
+Current version: `dev` preview; Core schema **53**, database role policy **v7**. Retained Detective Desktop code: `0.1.0-preview.18`.
 MCP and Detective share one root Go module, using Go `1.27.0`.
 
 > **Desktop frozen / unavailable — 2026-09-14.** Desktop is not a
@@ -409,7 +418,8 @@ answers. That requires a controlled agent study with the same source material.
 | `ahe-query-mcp` | Read-only evidence queries over stdio |
 | `ahe-ingest-mcp` | Separate intake, source, endpoint and relation-review profiles |
 | `ahe-migrate` | Apply and verify PostgreSQL migrations |
-| `ahe-runtime-admin` | Provision or verify bounded runtime roles |
+| `ahe-runtime-admin` | Provision, verify or upgrade existing bounded runtime roles |
+| `ahe-consistency-worker` | Run explicit consistency watches and persist checked diagnostics |
 | `ahe-mcp-launch` | Start an MCP profile with protected external credentials |
 | `detective` | Source collection, extraction, queries and review workflows |
 | `AHE Detective.app` | Frozen / unavailable; retained code, not a supported workflow |
@@ -639,3 +649,12 @@ An AHE admission receipt records native admission; it does not establish that an
 external path, solver proof or recovery certificate was validated. A consumer
 must retain its validation evidence and bind it to the exact reviewed statement,
 sources and native receipt.
+
+### Native consistency lifecycle
+
+Schema 53 / role policy v7 adds explicit currentness selection, one irreducible
+conflict set, and durable diagnostics with a consumer-started polling worker.
+Query reads scopes, configurations, events, diagnostics and proof bytes;
+core-records registers or revises watches. The separately started
+`ahe-consistency-worker` computes them. See the [complete workflow](docs/CONSISTENCY.md)
+and [native contracts and limitations](internal/evidenceingestion/CONSISTENCY.md).

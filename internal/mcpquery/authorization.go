@@ -72,6 +72,11 @@ var queryRuntimeToolNames = []string{
 	"get_external_representation",
 	"get_external_representation_material",
 	"get_external_dependency_users",
+	"get_consistency_scope",
+	"get_consistency_watch",
+	"get_consistency_events",
+	"get_consistency_run",
+	"get_consistency_artifact",
 }
 
 // NewQueryRuntimeAuthorization binds one exact launcher identity to a

@@ -12,6 +12,7 @@ import (
 
 func rollbackExternalRepresentationsForTest(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	t.Helper()
+	rollbackConsistencyForTest(t, ctx, pool)
 	down, err := os.ReadFile("000052_evidence_ingestion_external_representations.down.sql")
 	if err != nil {
 		t.Fatal(err)

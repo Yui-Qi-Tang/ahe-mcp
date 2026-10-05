@@ -407,7 +407,7 @@ func detectiveLiveReadback(t *testing.T, ctx context.Context, command, configPat
 	var inventory struct {
 		Tools []mcpstdio.Tool `json:"tools"`
 	}
-	if listed.Error != nil || json.Unmarshal(listed.Result, &inventory) != nil || len(inventory.Tools) != 21 {
+	if listed.Error != nil || json.Unmarshal(listed.Result, &inventory) != nil || len(inventory.Tools) != 26 {
 		t.Fatal("independent live Query did not expose its complete inventory")
 	}
 	want := mcpquery.NewBackend(&evidencequerymcp.Server{}).Tools()

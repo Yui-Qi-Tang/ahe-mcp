@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>org.ahe.consistency-worker</string>
+  <key>ProgramArguments</key><array>
+    <string>/bin/sh</string><string>/opt/ahe/deploy/consistency/worker.sh</string>
+    <string>/opt/ahe/etc/consistency-worker.env</string><string>/opt/ahe/bin/ahe-consistency-worker</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><dict><key>SuccessfulExit</key><false/></dict>
+  <key>ThrottleInterval</key><integer>5</integer>
+  <key>ExitTimeOut</key><integer>15</integer>
+  <key>Umask</key><integer>63</integer>
+</dict></plist>

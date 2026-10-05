@@ -33,8 +33,8 @@ type ConsistencyCondition struct {
 }
 
 // ConsistencyRequest requires a previously inspected view and exactly one
-// condition per member. Conditions are supplied normalization, never extracted
-// or inferred from graph relations by this API.
+// condition per policy-selected member. Conditions are supplied normalization;
+// this API never extracts them or infers them from graph relations.
 type ConsistencyRequest struct {
 	Scope          ConsistencyScope       `json:"scope"`
 	ExpectedViewID string                 `json:"expected_view_id"`
@@ -67,13 +67,19 @@ type ConsistencyResult struct {
 
 // CheckCanonicalConsistency rereads the complete scope before consuming a pinned
 // SAT runner. queryID must be unique within that runner. Both calls share a
-// 30-second deadline. No DB writes, inference of causality, or evidence filtering
-// occur. Callers must inspect err AND Outcome; a raw solver answer is insufficient.
+// 30-second deadline. Scope.Policy determines participation; this call does not
+// write or infer causality. Inspect err AND Outcome, not just a raw solver answer.
 func CheckCanonicalConsistency(ctx context.Context, pool *pgxpool.Pool, runner *cadical.Runner, queryID string, in ConsistencyRequest) (ConsistencyResult, error) {
+	return checkConsistency(ctx, runner, queryID, in, func(ctx context.Context, scope ConsistencyScope) (ConsistencyView, error) {
+		return ReadConsistencyScope(ctx, pool, scope)
+	})
+}
+
+func checkConsistency(ctx context.Context, runner *cadical.Runner, queryID string, in ConsistencyRequest, read func(context.Context, ConsistencyScope) (ConsistencyView, error)) (ConsistencyResult, error) {
 	out := ConsistencyResult{Outcome: ConsistencyInconclusive, Reason: "read_failed"}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	view, err := ReadConsistencyScope(ctx, pool, in.Scope)
+	view, err := read(ctx, in.Scope)
 	if err != nil {
 		return out, err
 	}
@@ -86,18 +92,23 @@ func CheckCanonicalConsistency(ctx context.Context, pool *pgxpool.Pool, runner *
 		out.Reason = "stale_view"
 		return out, nil
 	}
-	if len(view.Members) == 0 {
+	selected, complete := consistencySelectedView(view)
+	if !complete {
+		out.Reason = "unknown_currentness"
+		return out, nil
+	}
+	if len(selected.Members) == 0 {
 		out.Reason = "empty_scope"
 		return out, nil
 	}
-	rules, declarations, err := compileConsistency(view, in)
+	rules, declarations, err := compileConsistency(selected, in)
 	if err != nil {
 		return out, err
 	}
 	out.InputID, err = consistencyHash(struct {
 		Profile, ViewID, Version string
 		Rules, Declarations      logicresolver.CNF
-	}{ConsistencyProfile, view.ID, in.RuleVersion, rules, declarations})
+	}{view.Profile, view.ID, in.RuleVersion, rules, declarations})
 	if err != nil {
 		return out, err
 	}

@@ -7,6 +7,7 @@ DETECTIVE_COMMANDS := detective detective-source-demo detective-news-source
 DETECTIVE_BINARIES := $(addprefix $(BIN_DIR)/,$(DETECTIVE_COMMANDS))
 
 CORE_COMMANDS := \
+	ahe-consistency-worker \
 	ahe-migrate \
 	ahe-runtime-admin \
 	ahe-mcp-launch \

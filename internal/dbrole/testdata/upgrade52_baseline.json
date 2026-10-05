@@ -1,0 +1,3822 @@
+{
+  "source_commit": "38d90f5c7d4cc0a57c788f74866e5462e1075b95",
+  "migration_checksums": {
+    "000001_evidence_ingestion_slice1.up.sql": "sha256:bacde61ebaeff92763932ccc417f075afa660f16c7a814c76c5278d6515eac80",
+    "000002_evidence_ingestion_admission_slice.up.sql": "sha256:dba21038abd771960e714670f754233b0b5d9fa575494309b1fca279b646b9f4",
+    "000003_evidence_ingestion_repository_snapshots.up.sql": "sha256:548d84cedc791ef5c7648bd894a3ef8231ce55259f894d49e3e9cb7e60b241b9",
+    "000004_evidence_ingestion_repository_extraction_runs.up.sql": "sha256:70aa4ed3982e1ecd156430a9418719dcb469f7a70b853f68db00532427e1e110",
+    "000005_evidence_ingestion_repository_run_requests.up.sql": "sha256:65e076c63a4ae7e5dde571e44159a696c3a0deea805bf9e97070a5f698f5274a",
+    "000006_evidence_ingestion_source_generations.up.sql": "sha256:fa1666f3f6d58257483b0419fdca3a9f467e4387097900d54ac3cf4822831b08",
+    "000007_evidence_ingestion_generation_reconciliation.up.sql": "sha256:91cb2302397cfdbd622270276b894fb1148966badf555ff9a133da7f2d276ae9",
+    "000008_evidence_ingestion_repository_change_observations.up.sql": "sha256:dade03f63ab17ed7652efbe774c4f1bf07414756c97867e16b9fa8cea7cb82f1",
+    "000009_evidence_ingestion_repository_extraction_work.up.sql": "sha256:d1190cc268a64f48fb8dc4b615a848dd9b0218531bee7aae40a9e1eff58f4765",
+    "000010_evidence_ingestion_repository_extraction_work_results.up.sql": "sha256:483d03b92e1941d45713949ca23b75b905cc6e90340d3f231571211a02bd3275",
+    "000011_evidence_ingestion_repository_extraction_work_claim_attempts.up.sql": "sha256:2a1373eabb3e0c160f7f304b446743abd72650eba0fecbf6377ee8756a06e49e",
+    "000012_evidence_ingestion_repository_extraction_work_recovery.up.sql": "sha256:1705d6d93c2d673d3e13d98938824bd6fd8d982b485725cf70dd858fa4c59d7b",
+    "000013_evidence_ingestion_repository_extraction_work_retry.up.sql": "sha256:74f78d764c1f4899a0c397266256d8bebe4ff6c07ade33b06e03a69d827e8709",
+    "000014_evidence_ingestion_repository_extraction_work_lease_renewal.up.sql": "sha256:acb74110e1d0f8b4144d558289aaeaec3a2ea16a83047bb6abeeb0edd8ed6e99",
+    "000015_evidence_ingestion_repository_extraction_work_execution.up.sql": "sha256:b94a226880a513640a174efc0beaed93fb7329acc141ac31d86f413b4355315d",
+    "000016_evidence_ingestion_repository_extraction_work_execution_heartbeat.up.sql": "sha256:5639fc26490153be16f24902eb7c43303e75ba47a8c80cbdbd7c2641373d5d75",
+    "000017_evidence_ingestion_repository_extraction_worker_tick.up.sql": "sha256:de3c66703d69d2927afbf9971081486f74025ee2417636c1a4b6afcab03032b6",
+    "000018_evidence_ingestion_repository_extraction_work_failure_policy.up.sql": "sha256:2746b34ab34615fa99c94d3261b1b9e7abe8d7b3ce196b7ace2a8799f56b62c7",
+    "000019_evidence_ingestion_repository_extraction_work_retry_decision.up.sql": "sha256:f9f531290af51d46ca2a1079b27e4646b61045fb581044e90585906d2296332d",
+    "000020_evidence_ingestion_repository_extraction_work_execution_repair.up.sql": "sha256:7f4fa3a8d0a30c3a28106543065b97a70b3e5914352f84fb1930f09ad3eefa1c",
+    "000021_evidence_ingestion_repository_extraction_work_expired_execution_discovery.up.sql": "sha256:d884675a8f85974deed60468192f25a1b233dd7cc81ec87f3dd59aba8416b8d2",
+    "000022_evidence_ingestion_repository_extraction_work_retry_controller_tick.up.sql": "sha256:a4f8f4a8bac0dd76c7929d8ba772f98d15397feb67a2b1215f6e6c49940c16d8",
+    "000023_evidence_ingestion_repository_extraction_work_expired_maintenance_tick.up.sql": "sha256:6b3c191cb9a05271ffce1d8fbe1e940317efa623ab6c255bb2607d8cbd210bac",
+    "000024_evidence_ingestion_source_stream_arbitration.up.sql": "sha256:01e1b1efdb50538c3017c3233381e0d49e35ca05b6270a891aaae10a0529f055",
+    "000025_detective_workspace_registry.up.sql": "sha256:f76befa32b68cb1d08f05a4bc9082558b7810a65333172320d7d765b15ef4640",
+    "000026_detective_orchestration_audit.up.sql": "sha256:f05c7f1f40c3c7aba2ccef14b7046a0111f978d1bb87dbc728da6729ef874049",
+    "000027_detective_planner_recommendation_consumption.up.sql": "sha256:660c7a5de75d4a87170a8a192fd1b0424c0246e95eba0dda1599b6258491522c",
+    "000028_detective_periodic_runtime.up.sql": "sha256:34bba38fcbfe3c8a1945a2b8230137b50f70252dc7a3883a16d283e8c2baa05c",
+    "000029_detective_connector_inbox_receipt.up.sql": "sha256:6a3fdc8b0eb0c558d3cc701331aa03fa8a36933e61fc8822b879dba41155ef33",
+    "000030_detective_connector_text_processing.up.sql": "sha256:c1ab452cb4ff0a53c21c1a9776cc38d5d874eb8f56b2d3d7542c94ee030ff89d",
+    "000031_evidence_ingestion_repository_delta_extraction.up.sql": "sha256:9b0f34f336a52df19d39ceb39eea7477e445185bd8353d889834297a401ad909",
+    "000032_evidence_query_p5_indexes.up.sql": "sha256:25188e2993164475471e88f88fb5639c1d11a65bcdfb7487683ded8efcb290c6",
+    "000033_evidence_query_lexical_recovery.up.sql": "sha256:3afcf3dfdc1a29b4dbf4cca7c7ad31a182ca7a92d636e2be8c4c50543f2a1cd5",
+    "000034_evidence_ingestion_repository_extraction_execution_failure_audit.up.sql": "sha256:eb77fa1616c6245b9e8a2d4138b22971c174d2c8ba24ff0840120412d26c100e",
+    "000035_detective_mcp_read_runtime.up.sql": "sha256:bf4535fb28558e06d72c30dbb62bad1ba5cb3731e7d26af979c8114f49af291c",
+    "000036_evidence_ingestion_derivations.up.sql": "sha256:de24acb3c35c394414f515af3f520a5441c51595270ef930a4937be52a018b9b",
+    "000037_evidence_ingestion_external_source_receipts.up.sql": "sha256:a1db65aeaa1a5136b56259fab95088d9b454e539307fd8e3e6d31094cc44565d",
+    "000038_evidence_ingestion_producer_session_ref.up.sql": "sha256:4515c0967dcd0f692b9ad9937f7628e9b97bca77f1e729cd61a3bc0f6c1317dd",
+    "000039_evidence_ingestion_external_agent_core_contract.up.sql": "sha256:db64e12ea9e9abde111037844d70508185c45c8d5522a3336661f810331e77ce",
+    "000040_evidence_ingestion_canonical_contradictions.up.sql": "sha256:b385eda96598f065fae4a2699df34132b17f9098a96c416d51ee4e488f690c41",
+    "000041_evidence_ingestion_canonical_supersessions.up.sql": "sha256:b5e52c98eb88079ee26c21c506225ba954b0ba6fbf511e2b43daa45038b41daa",
+    "000042_evidence_ingestion_canonical_supersession_v2.up.sql": "sha256:888a78c0ba161f497c26c506e8038a382b021aa64765f5652303ba9acab94709",
+    "000043_evidence_ingestion_source_run_request_identity.up.sql": "sha256:06d1f9c977f68d9c4d49b86b43cb0719ac982123e1750e4c6078a8bd32e472a8",
+    "000044_evidence_ingestion_ordinary_admission_integrity.up.sql": "sha256:a50cdeaf5cb680282d69c6d78db1f059a2677bb0d653be3917b29e6e59e72f91",
+    "000045_evidence_ingestion_source_claim_review_binding.up.sql": "sha256:82e61ebdbb599b55df49a52919a7ef110b4812abec74c1e77b16b7fd7e469331",
+    "000046_evidence_ingestion_reviewed_disposition.up.sql": "sha256:1c18c31bbe692a9c460e6137da1c088f522173db05b158a404d953d36c7c4820",
+    "000047_evidence_ingestion_implements_admission.up.sql": "sha256:9f7aead6c0c515822c24524b40d55f4efe6ffaee2e29480cea523974bdc2db78",
+    "000048_evidence_ingestion_references_admission.up.sql": "sha256:121030e8eaa4496f41750cf0aa05f126d0560419896d0d6d1cb175ebe0687a32",
+    "000049_evidence_ingestion_endpoint_review.up.sql": "sha256:27f534ad9d90e72d79bffb151a6ee3c95c02b102eb83d9157c4b78afc2463491",
+    "000050_evidence_ingestion_proposition_bindings.up.sql": "sha256:0aeddbc9132d582c64a9b868db6bcdd120108fdf00d818f0e5673d15419c9337",
+    "000051_evidence_ingestion_external_checks.up.sql": "sha256:23c9f697ff26bab3615f60f44045aa5c87217c700a1cbbb34aa3d17590da57c2",
+    "000052_evidence_ingestion_external_representations.up.sql": "sha256:b6a8f5a2edfc30cc23ab120bd08d049eac3d81a06300175bfaf6ad7f51f6918e"
+  },
+  "manifests": {
+    "core-records": {
+      "schema_version": "ahe-mcp-database-role-policy/v6",
+      "profile": "core-records",
+      "tables": [
+        {
+          "table": "admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_proposals",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivation_parents",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_endpoint_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_edges",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_nodes",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_implements_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_edge_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_manifests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_node_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_binding_events",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_bindings",
+          "privileges": [
+            "INSERT",
+            "SELECT",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "canonical_propositions",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_references_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_source_claim_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_head",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_lineages",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_members",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_replacement_targets",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_deliveries",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_work",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_receive_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_collection_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_source_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_steps",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_transition_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cursors",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_planner_recommendation_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_registration_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_sources",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspaces",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "evidence_ingestion_request_serializations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_records",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_representation_links",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_representation_records",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_source_intake_receipts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_views",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extractor_definitions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "git_repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_batches",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_occurrences",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_delta_extractions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_run_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_repairs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_failure_policy_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_finish_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_lease_renewal_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_decision_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_schedule_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_worker_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_activation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_proposal_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshot_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_generations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_heads",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "schema_migrations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_blobs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_claim_disposition_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_file_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "span_catalog_entries",
+          "privileges": [
+            "SELECT"
+          ]
+        }
+      ],
+      "trusted_raw_dml": true
+    },
+    "endpoint-reviewer": {
+      "schema_version": "ahe-mcp-database-role-policy/v6",
+      "profile": "endpoint-reviewer",
+      "tables": [
+        {
+          "table": "admission_decisions",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_proposals",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivation_parents",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivations",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_endpoint_review_bindings",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_edges",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_nodes",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_implements_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_edge_bindings",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_manifests",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_node_bindings",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_binding_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_propositions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_references_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_source_claim_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_head",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_lineages",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_members",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_replacement_targets",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_deliveries",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_work",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_receive_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_collection_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_source_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_steps",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_transition_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cursors",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_planner_recommendation_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_registration_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_sources",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspaces",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "evidence_ingestion_request_serializations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_representation_links",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_representation_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_source_intake_receipts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_views",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extractor_definitions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "git_repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_batches",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_occurrences",
+          "privileges": [
+            "SELECT",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "repository_change_observation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_delta_extractions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_run_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_repairs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_failure_policy_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_finish_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_lease_renewal_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_decision_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_schedule_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_worker_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_activation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_proposal_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshot_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_generations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_heads",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "schema_migrations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_blobs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_claim_disposition_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_file_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "span_catalog_entries",
+          "privileges": [
+            "SELECT"
+          ]
+        }
+      ],
+      "trusted_raw_dml": true,
+      "function_execute": [
+        "canonical_endpoint_lock_nodes_v1(text[])"
+      ]
+    },
+    "intake": {
+      "schema_version": "ahe-mcp-database-role-policy/v6",
+      "profile": "intake",
+      "tables": [
+        {
+          "table": "admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_proposals",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivation_parents",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_endpoint_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_edges",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_nodes",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_implements_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_edge_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_manifests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_node_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_binding_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_propositions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_references_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_source_claim_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_head",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_lineages",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_members",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_replacement_targets",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_deliveries",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_work",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_receive_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_collection_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_source_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_steps",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_transition_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cursors",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_planner_recommendation_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_registration_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_sources",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspaces",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "evidence_ingestion_request_serializations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_representation_links",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_representation_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_source_intake_receipts",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_attempts",
+          "privileges": [
+            "INSERT",
+            "SELECT",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "extraction_runs",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_views",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extractor_definitions",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "git_repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_batches",
+          "privileges": [
+            "INSERT",
+            "SELECT",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "proposal_occurrences",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_delta_extractions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_run_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_repairs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_failure_policy_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_finish_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_lease_renewal_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_decision_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_schedule_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_worker_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_activation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_proposal_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshot_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_generations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_heads",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "schema_migrations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_blobs",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_claim_disposition_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_file_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_intake_requests",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_snapshots",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "span_catalog_entries",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        }
+      ],
+      "trusted_raw_dml": true
+    },
+    "query": {
+      "schema_version": "ahe-mcp-database-role-policy/v6",
+      "profile": "query",
+      "tables": [
+        {
+          "table": "admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_proposals",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivation_parents",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_endpoint_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_edges",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_nodes",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_implements_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_edge_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_manifests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_node_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_binding_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_propositions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_references_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_source_claim_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_head",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_lineages",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_members",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_replacement_targets",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_deliveries",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_work",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_receive_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_collection_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_source_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_steps",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_transition_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cursors",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_planner_recommendation_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_registration_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_sources",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspaces",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "evidence_ingestion_request_serializations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_representation_links",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_representation_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_source_intake_receipts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_views",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extractor_definitions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "git_repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_batches",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_occurrences",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_delta_extractions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_run_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_repairs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_failure_policy_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_finish_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_lease_renewal_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_decision_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_schedule_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_worker_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_activation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_proposal_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshot_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_generations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_heads",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "schema_migrations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_blobs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_claim_disposition_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_file_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "span_catalog_entries",
+          "privileges": [
+            "SELECT"
+          ]
+        }
+      ],
+      "trusted_raw_dml": false
+    },
+    "relation-reviewer": {
+      "schema_version": "ahe-mcp-database-role-policy/v6",
+      "profile": "relation-reviewer",
+      "tables": [
+        {
+          "table": "admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_proposals",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivation_parents",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_endpoint_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_edges",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_nodes",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_implements_admissions",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_edge_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_manifests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_node_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_binding_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_propositions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_references_admissions",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_source_claim_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_head",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_lineages",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_members",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_replacement_targets",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_deliveries",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_work",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_receive_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_collection_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_source_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_steps",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_transition_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cursors",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_planner_recommendation_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_registration_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_sources",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspaces",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "evidence_ingestion_request_serializations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_representation_links",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_representation_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_source_intake_receipts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_views",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extractor_definitions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "git_repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_batches",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_occurrences",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_delta_extractions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_run_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_repairs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_failure_policy_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_finish_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_lease_renewal_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_decision_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_schedule_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_worker_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_activation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_proposal_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshot_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_generations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_heads",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "schema_migrations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_blobs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_claim_disposition_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_file_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "span_catalog_entries",
+          "privileges": [
+            "SELECT"
+          ]
+        }
+      ],
+      "trusted_raw_dml": true
+    },
+    "repository-intake": {
+      "schema_version": "ahe-mcp-database-role-policy/v6",
+      "profile": "repository-intake",
+      "tables": [
+        {
+          "table": "admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_proposals",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivation_parents",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_endpoint_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_edges",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_nodes",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_implements_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_edge_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_manifests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_node_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_binding_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_propositions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_references_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_source_claim_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_head",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_lineages",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_members",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_replacement_targets",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_deliveries",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_work",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_receive_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_collection_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_source_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_steps",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_transition_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cursors",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_planner_recommendation_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_registration_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_sources",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspaces",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "evidence_ingestion_request_serializations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_representation_links",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_representation_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_source_intake_receipts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_attempts",
+          "privileges": [
+            "INSERT",
+            "SELECT",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "extraction_runs",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_views",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extractor_definitions",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "git_repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_batches",
+          "privileges": [
+            "INSERT",
+            "SELECT",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "proposal_occurrences",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_delta_extractions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_run_requests",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_repairs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_failure_policy_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_finish_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_lease_renewal_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_decision_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_schedule_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_worker_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_activation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_proposal_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshot_intake_requests",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshots",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_generations",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_heads",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_streams",
+          "privileges": [
+            "INSERT",
+            "SELECT",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "schema_migrations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_blobs",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_claim_disposition_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_file_snapshots",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "span_catalog_entries",
+          "privileges": [
+            "SELECT"
+          ]
+        }
+      ],
+      "trusted_raw_dml": true
+    },
+    "source-claim-reviewer": {
+      "schema_version": "ahe-mcp-database-role-policy/v6",
+      "profile": "source-claim-reviewer",
+      "tables": [
+        {
+          "table": "admission_decisions",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_admission_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_contradiction_proposals",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivation_parents",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_derivations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_endpoint_review_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_edges",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_graph_nodes",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_implements_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_edge_bindings",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_manifests",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_ordinary_admission_node_bindings",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_binding_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_proposition_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_propositions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_references_admissions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_source_claim_review_bindings",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_events",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_admission_head",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_lineages",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_members",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "canonical_supersession_replacement_targets",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_deliveries",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_processing_work",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_connector_inbox_receive_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_collection_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_mcp_read_source_bindings",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_steps",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_orchestration_transition_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cursors",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_periodic_source_cycles",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_planner_recommendation_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_registration_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspace_sources",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "detective_workspaces",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "evidence_ingestion_request_serializations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_check_representation_links",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_representation_records",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "external_source_intake_receipts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_runs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extraction_views",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "extractor_definitions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "git_repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_batches",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "proposal_occurrences",
+          "privileges": [
+            "SELECT",
+            "UPDATE"
+          ]
+        },
+        {
+          "table": "repository_change_observation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_change_observations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_delta_extractions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_run_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_attempts",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_claim_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_repairs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_execution_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_expired_maintenance_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_failure_policy_decisions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_finish_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_lease_renewal_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_recovery_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_items",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_controller_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_decision_consumptions",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_retry_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_work_schedule_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_extraction_worker_tick_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_activation_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_proposal_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_generation_reconciliations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshot_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_generations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_heads",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "repository_source_streams",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "schema_migrations",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_blobs",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_claim_disposition_review_bindings",
+          "privileges": [
+            "INSERT",
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_file_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_intake_requests",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "source_snapshots",
+          "privileges": [
+            "SELECT"
+          ]
+        },
+        {
+          "table": "span_catalog_entries",
+          "privileges": [
+            "SELECT"
+          ]
+        }
+      ],
+      "trusted_raw_dml": true
+    }
+  }
+}

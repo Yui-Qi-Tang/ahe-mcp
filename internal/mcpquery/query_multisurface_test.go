@@ -21,7 +21,7 @@ func TestMultisurfaceAndV6AreExplicitInToolSchema(t *testing.T) {
 	if !strings.Contains(mode["description"].(string), "Defaults to deterministic_lexical_recovery") ||
 		!strings.Contains(mode["description"].(string), "requires response_schema grounded-evidence-brief-v6") ||
 		!strings.Contains(response["description"].(string), "v6 requires query_mode experimental_multisurface_lexical_v1") ||
-		schema["additionalProperties"] != false || len(queryTools()) != 21 {
+		schema["additionalProperties"] != false || len(queryTools()) != 26 {
 		t.Fatal("schema changed defaults, authority or lost explicit pairing")
 	}
 	if len(schema["allOf"].([]map[string]any)) != 4 {

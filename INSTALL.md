@@ -17,9 +17,10 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 ## Installation scope
 
 Build the reviewed source commit using the steps below. The current MCP schema
-is 49. Query/intake/source-reviewer inventories remain 13/5/3. Separate
+is 53. Query/intake/source-reviewer inventories are 26/5/3. Separate
 `relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
-4/2/2 tools. Migrations 47–49 and role policy v5 are required. Do not perform a
+4/2/2 tools; `core-records` exposes six record/configuration tools. The full
+migration chain through 53 and role policy v7 are required. Do not perform a
 binary-only replacement against an older schema or reuse source-review
 credentials for endpoint/relation writes.
 
@@ -134,6 +135,7 @@ make build
 
 - `ahe-migrate`;
 - `ahe-runtime-admin`;
+- `ahe-consistency-worker`;
 - `ahe-mcp-launch`;
 - `ahe-detective`;
 - `ahe-query-mcp`;
@@ -294,6 +296,10 @@ existing role. Database/schema preparation and PostgreSQL authentication remain
 external operator responsibilities. Do not substitute an operator DSN to make a
 serving runtime start. See the [runtime authority boundary](docs/SYSTEM_DESIGN.md#authority).
 
+For existing installations, use `ahe-runtime-admin upgrade` with the original
+pair/profile after migration; see [Upgrade](#upgrade). This is distinct from
+fresh provisioning and never creates a missing role.
+
 This first role-creation entrypoint requires a separately authorized PostgreSQL
 16+ superuser connection whose session identity is unchanged. Non-superuser
 role creation can introduce creator-admin memberships; this slice refuses that
@@ -364,7 +370,7 @@ transferred to a different process/visibility cut.
 These are separately provisioned profiles, not extra source-reviewer tools.
 Apply migration 49 and provision/verify matching roles with the operator
 workflow above. A schema upgrade also changes the required runtime policy.
-The operator CLI does not upgrade existing role pairs: provision distinct fresh
+For fresh installations, provision distinct fresh
 pairs for the new installation and verify each one, rather than rerunning
 `provision` on old names or manually adding a missing grant.
 
@@ -427,9 +433,12 @@ same protected operator setup as the other profiles. Its protected launcher
 configuration uses `ahe-ingest-mcp`, `profile: core-records` and a fixed principal.
 Do not share its credentials with Query, intake, automatic extractors or reviewers.
 
-Its five tools are `bind_canonical_proposition`, `change_proposition_binding`,
+Its six tools are `bind_canonical_proposition`, `change_proposition_binding`,
 `record_external_check`, `record_external_representation` and
-`link_external_check_representation`. Read subjects, current bindings, explicit
+`link_external_check_representation` and `register_consistency_watch`. The last
+registers externally supplied normalized conditions for the separately started
+[consistency worker](docs/CONSISTENCY.md); it does not execute a solver in the
+MCP request or admit evidence. Read subjects, current bindings, explicit
 history and stored checker material through Query before preparing writes. Show
 an identity decision's original claim, exact identity/definition and reason;
 record only an explicitly authorized decision. A correction requires the exact
@@ -828,24 +837,33 @@ semantic extraction completeness or the truth of source assertions.
 
 ## Upgrade
 
-This build requires schema **52** and database role policy **v6**. Updating a
-schema-49 installation is **not** a binary-only replacement: migrations 50–52 add
-Core record tables, and all existing profiles need SELECT on the six new tables.
+This build requires schema **53** and database role policy **v7**. Updating a
+schema-49 installation is **not** a binary-only replacement: migrations 50–53 add
+Core record and consistency-history tables. From schema 49, all profiles need
+SELECT on eleven new tables; from schema 52, five new diagnostic tables. Refresh
+the authorized core-records writer grants as well.
 
 For a separately authorized upgrade, protect a backup, stop serving processes,
 record old/new commits, apply the product's `ahe-migrate`, and refresh the same
-existing group roles using `internal/dbrole.InstallPolicy` with their original
-profiles. The current operator CLI only provisions fresh pairs or verifies them;
-it does **not** expose existing-role policy refresh. Do not run `provision` as an
-upgrade workaround or recreate LOGIN/group identities. Use a reviewed operator
-integration of `InstallPolicy`, then verify each existing runtime pair before
-restarting and rediscovering `tools/list`. Old ACLs fail startup until refreshed.
-The preserved-role integration fixture covers this Go operator API; there is no
-claim that a deployed installation was upgraded by these repository changes.
+existing group roles using `ahe-runtime-admin upgrade` with their original
+profile, group, LOGIN, database and schema environment settings. Use the separate
+operator credential for this step. The command rejects missing roles, wrong
+memberships and unsafe identities, and applies/checks policy in one transaction.
+It never recreates users, changes passwords or grants a new membership.
+
+Then run `ahe-runtime-admin verify` with each original bounded LOGIN credential
+before restarting and rediscovering `tools/list`. A successful upgrade reports
+`updated_existing_pair=true` and `runtime_login_verified=false`: it does not
+claim that the operator authenticated as that LOGIN. An uncertain result must be
+resolved with verify; do not run provision or replace identities. Old ACLs fail
+startup until refreshed. For a group shared by multiple logins, upgrade one exact
+pair, then verify every serving login. Coordinate all role administration while
+services are stopped; concurrent privileged role deletion/recreation is outside
+this operator contract. Repository validation does not deploy this upgrade.
 
 Provision `core-records` separately only if its writes are authorized. Existing
 profiles gain reads, not the new write capability. For an already qualified
-schema-52/policy-v6 installation, a binary-only replacement retains existing
+schema-53/policy-v7 installation, a binary-only replacement retains existing
 protected launcher paths, identities and credentials; verify them before reconnecting.
 Never copy credentials into repository artifacts.
 
@@ -858,9 +876,11 @@ copied into the public source tree to transfer saved settings.
 
 ### Separate database-adoption procedure
 
-The current adoption is **not an in-place upgrade of an existing database**.
-The following operational checklist is conditional on separate environment and
-role provisioning; it does not authorize data conversion or ACL changes.
+Use this procedure when adopting retained evidence into a separately provisioned
+target database. For an existing native ahe-mcp installation, use the in-place
+schema and role upgrade above. This separate-target checklist is conditional on
+environment and role provisioning; it does not authorize data conversion or ACL
+changes.
 
 1. Back up the PostgreSQL database.
 2. Select and record the reviewed AHE commit.

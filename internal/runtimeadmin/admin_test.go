@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/dbrole"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/runtimeconfig"
 	"github.com/Yui-Qi-Tang/ahe-mcp/migrations"
 )
 
@@ -65,7 +66,7 @@ func TestConfigurationClosedBindings(t *testing.T) {
 func TestExplicitDatabaseURLDoesNotUseImplicitCredentialFiles(t *testing.T) {
 	for _, mode := range []string{"disable", "require", "verify-full"} {
 		t.Run(mode, func(t *testing.T) {
-			value, err := explicitDatabaseURL("postgres://fixture:synthetic@localhost/new_pilot?sslmode="+mode, "new_pilot")
+			value, err := runtimeconfig.PostgresURL("postgres://fixture:synthetic@localhost/new_pilot?sslmode="+mode, "new_pilot")
 			if err != nil {
 				t.Fatal("explicit fixture URL rejected")
 			}
@@ -87,14 +88,14 @@ func TestExplicitDatabaseURLDoesNotUseImplicitCredentialFiles(t *testing.T) {
 			}
 		})
 	}
-	if _, err := explicitDatabaseURL("postgres:///new_pilot?host=/private/tmp/fixture&sslmode=disable", "new_pilot"); err == nil {
+	if _, err := runtimeconfig.PostgresURL("postgres:///new_pilot?host=/private/tmp/fixture&sslmode=disable", "new_pilot"); err == nil {
 		t.Fatal("implicit OS username accepted")
 	}
-	if _, err := explicitDatabaseURL("postgres://fixture@/new_pilot?host=/private/tmp/fixture&port=55488&sslmode=disable", "new_pilot"); err != nil {
+	if _, err := runtimeconfig.PostgresURL("postgres://fixture@/new_pilot?host=/private/tmp/fixture&port=55488&sslmode=disable", "new_pilot"); err != nil {
 		t.Fatal("explicit private-socket URL rejected")
 	}
 	for _, mode := range []string{"require", "verify-full"} {
-		if _, err := explicitDatabaseURL("postgres://fixture@/new_pilot?host=/private/tmp/fixture&sslmode="+mode, "new_pilot"); err == nil {
+		if _, err := runtimeconfig.PostgresURL("postgres://fixture@/new_pilot?host=/private/tmp/fixture&sslmode="+mode, "new_pilot"); err == nil {
 			t.Fatal("Unix socket must not accept a TLS promise that pgx cannot enforce")
 		}
 	}
@@ -112,7 +113,7 @@ func TestExplicitDatabaseURLRejectsAmbiguityWithoutEcho(t *testing.T) {
 		strings.Replace(base, "new_pilot", "other", 1), base + "\n",
 		strings.Replace(base, "disable", "prefer", 1), strings.Replace(base, "localhost", "", 1),
 	} {
-		_, err := explicitDatabaseURL(value, "new_pilot")
+		_, err := runtimeconfig.PostgresURL(value, "new_pilot")
 		if err == nil || strings.Contains(err.Error(), secret) {
 			t.Fatal("ambiguous credential accepted or reflected in error")
 		}
@@ -159,7 +160,7 @@ func TestLostResultDoesNotInviteAutomaticProvisionRetry(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "may have completed, use verify") || strings.Contains(err.Error(), "synthetic writer detail") {
 		t.Fatal("lost output did not retain the ambiguous commit boundary")
 	}
-	for _, operation := range []string{"provision", "verify"} {
+	for _, operation := range []string{"provision", "verify", "upgrade"} {
 		if err := writeResult(io.Discard, operation, configuration{}, dbrole.RuntimeBinding{}, migrations.SchemaStatus{}); err != nil {
 			t.Fatal(err)
 		}

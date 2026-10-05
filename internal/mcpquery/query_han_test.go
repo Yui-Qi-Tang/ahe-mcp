@@ -15,7 +15,7 @@ func TestHanModeIsExplicitInQuerySchema(t *testing.T) {
 	if !slices.Contains(values, evidenceingestion.EvidenceQueryModeExperimentalHanRecoveryV1) || !strings.Contains(mode["description"].(string), "Defaults to deterministic_lexical_recovery") {
 		t.Fatalf("experimental opt-in or unchanged default missing: %+v", mode)
 	}
-	if len(queryTools()) != 21 {
+	if len(queryTools()) != 26 {
 		t.Fatal("experimental query mode changed the tool set")
 	}
 }

@@ -40,7 +40,7 @@ func tool(name, desc string, schema map[string]any, read bool) mcpstdio.Tool {
 
 // ReadTools returns the closed read-only Core record surface.
 func ReadTools() []mcpstdio.Tool {
-	return []mcpstdio.Tool{
+	return append([]mcpstdio.Tool{
 		tool("get_proposition_members", "Read current externally assigned proposition members and bounded original graph from one snapshot. Does not establish equivalence or merge derivations. Graph neighbours are not additional members; inspect truncation.", object(map[string]any{"key": keySchema(), "limit": integer(1, 32)}), true),
 		tool("get_proposition_binding_history", "Read an explicit binding revision (-1=current, 0=initial). A historical receipt is not current validity. This is not whole-graph time travel; original evidence and parents never change with a binding correction.", object(map[string]any{"node_id": text(512), "revision": integer(-1, 9007199254740991), "limit": integer(1, 100)}), true),
 		tool("get_external_check_subject", "Read immutable subject coordinates of a successful source-backed text proposal. No approval or freshness assertion.", object(map[string]any{"proposal_occurrence_id": text(1024)}), true),
@@ -49,7 +49,7 @@ func ReadTools() []mcpstdio.Tool {
 		tool("get_external_representation", "Read one exact external JSON declaration and its declared missing or supplied dependencies. Supplied means linked bytes, not sufficient evidence.", object(map[string]any{"representation_id": text(128)}), true),
 		tool("get_external_representation_material", "Return the complete stored declaration as checker material. Use this exact content in an external check; it includes dependency states and versions, not only the condition tree.", object(map[string]any{"representation_id": text(128), "input_id": text(128)}), true),
 		tool("get_external_dependency_users", "Read registered representations using one exact four-field dependency identity and explicitly linked checker inputs. Links cover only returned representations; inspect both truncation flags. No automatic invalidation or recomputation. Bounded output does not bound total scan cost.", object(map[string]any{"key": keySchema(), "limit": integer(1, 100)}), true),
-	}
+	}, consistencyReadTools()...)
 }
 
 // Tools returns separately authorized record writes; none admit evidence.
@@ -61,6 +61,7 @@ func (b *Backend) Tools() []mcpstdio.Tool {
 	finding := object(map[string]any{"dimension": text(256), "criterion": text(8192), "input_ids": array(text(128), 32), "result": map[string]any{"type": "string", "enum": []string{"pass", "fail", "inconclusive", "not_checked", "unsupported"}}, "detail": text(8192)})
 	dep := object(map[string]any{"key": keySchema(), "status": map[string]any{"type": "string", "enum": []string{"missing", "supplied"}}, "pointers": array(text(2048), 32), "reason": text(8192), "source_snapshot_id": text(1024), "extraction_view_id": text(1024), "rendered_content_hash": text(1024)}, "source_snapshot_id", "extraction_view_id", "rendered_content_hash")
 	return []mcpstdio.Tool{
+		consistencyWriteTool(),
 		tool("bind_canonical_proposition", "Record an explicitly authorized external identity decision for an admitted source or derived claim. Show the original claim, four-field identity, definition and reason before requesting a decision. Launcher binds the recorder; no semantic equivalence is proved. Exact retry returns historical initial receipt, never current validity.", object(map[string]any{"request_id": text(512), "key": keySchema(), "definition": text(8192), "node_id": text(512), "decision_reason": text(2048)}), false),
 		tool("change_proposition_binding", "Record an explicitly authorized correction, withdrawal or restoration using the exact prior revision/reference/from_id read from history. Do not infer approval. Withdrawal requires empty target/definition; restoration uses only the last withdrawn target. Stale concurrent changes fail. Original evidence and parents remain immutable.", object(map[string]any{"request_id": text(512), "node_id": text(512), "expected_revision": integer(0, 9007199254740991), "previous_ref": text(1024), "from_id": text(128), "operation": map[string]any{"type": "string", "enum": []string{"correct", "withdraw", "restore"}}, "target": keySchema(), "definition": text(8192), "reason": text(2048), "evidence_ref": text(2048)}, "target", "definition"), false),
 		tool("record_external_check", "Append an externally supplied report; contract=external-check/v1. Launcher records recorder identity separately from claimed checker. Verbatim materials must equal stored source/candidate bytes. Explicitly retain not_checked, unsupported and limitations. No admission, aggregate pass, currentness, or automatic invalidation.", object(map[string]any{"contract": text(128), "request_id": text(512), "subject": subjectSchema(), "checker_name": text(1024), "checker_version": text(1024), "checker_configuration": text(8192), "run_ref": text(1024), "materials": array(material, 32), "findings": array(finding, 128), "limitations": array(text(8192), 32), "revises_id": text(128), "revision_reason": text(8192)}, "revises_id", "revision_reason"), false),

@@ -51,13 +51,13 @@ func TestCoreRecordsRoleCannotAdmitOrCollect(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := map[string]int{"canonical_propositions": 1, "canonical_proposition_bindings": 2, "canonical_proposition_binding_events": 1, "external_check_records": 1, "external_representation_records": 1, "external_check_representation_links": 1}
+	expected := map[string]int{"consistency_watches": 2, "consistency_watch_versions": 1, "consistency_runs": 1, "consistency_run_artifacts": 1, "consistency_events": 1, "canonical_propositions": 1, "canonical_proposition_bindings": 2, "canonical_proposition_binding_events": 1, "external_check_records": 1, "external_representation_records": 1, "external_check_representation_links": 1}
 	for _, table := range m.Tables {
 		n := 0
 		for _, p := range table.Privileges {
 			if p != dbrole.PrivilegeSelect {
 				n++
-				if p != dbrole.PrivilegeInsert && !(table.Table == "canonical_proposition_bindings" && p == dbrole.PrivilegeUpdate) {
+				if p != dbrole.PrivilegeInsert && !((table.Table == "canonical_proposition_bindings" || table.Table == "consistency_watches") && p == dbrole.PrivilegeUpdate) {
 					t.Fatalf("unexpected write %s %s", table.Table, p)
 				}
 			}

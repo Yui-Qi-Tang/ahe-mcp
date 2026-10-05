@@ -183,7 +183,7 @@ URLs, provider links and manual-review-profile admission are not supported.
 Product migrations 47–48 preserve the product's existing ordinary and
 Supersession authority contracts while adding these independent receipts.
 Startup verifies receipt columns, constraints, guarded functions and triggers;
-role policy v5 permits relation-reviewer INSERT only on the edge and two receipt
+role policy v7 permits relation-reviewer INSERT only on the edge and two receipt
 tables. Trusted role credentials still do not authenticate a human conversation.
 
 The graph adapter obtains AHE-selected relations and a bounded scope from one read
@@ -467,6 +467,14 @@ flowchart TD
 ## Core record history
 
 Migrations 50–52 add storage contracts independent of admission and evidence selection.
+Migration 53 adds immutable consistency watch versions, runs, proof artifacts and
+per-watch notifications. The native worker applies an explicit currentness policy,
+localizes one contradictory condition set and recomputes changed snapshots.
+The `ahe-consistency-worker` command requires explicit startup and database role
+policy v7. Query exposes five consistency read tools; core-records appends watch configuration
+with a launcher-bound recorder. Neither endpoint executes semantic extraction or
+admission. See [product operation](CONSISTENCY.md) and
+[consistency contracts](../internal/evidenceingestion/CONSISTENCY.md).
 The four-field proposition identity (namespace, local ID, scope, definition revision)
 is assigned externally. Length-framed identity preserves exact field boundaries;
 Core never infers synonymy. Initial membership and correction/withdrawal/restoration
@@ -928,7 +936,8 @@ No papers are invented for theoretical keywords without a specific bibliographic
   Specification background for text boundaries and language-specific tailoring.
   AHE does not claim a complete segmenter for this revision.
 - Clark Barrett, Pascal Fontaine, Cesare Tinelli, [The SMT-LIB Standard, Version 2.7, 2025-07-07](https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-07-07.pdf).
-  Historical formal-consistency research. No SMT solver is integrated; an unsat core
+  Historical formal-consistency research. The product evidence path uses SAT; the
+  generic resolver has a separate bounded SMT adapter. An unsat core
   does not determine natural-language facts.
 - PostgreSQL 18 documentation: [Full-text search](https://www.postgresql.org/docs/18/textsearch-controls.html), [Transaction isolation](https://www.postgresql.org/docs/18/transaction-iso.html),
   [`ON CONFLICT`](https://www.postgresql.org/docs/18/sql-insert.html#SQL-ON-CONFLICT),

@@ -84,19 +84,19 @@ func TestIntegrationRoleUpgradePreservesIdentityAndEvidence(t *testing.T) {
 	rows := roleUpgradeRows(t, ctx, pool, baseline)
 	readBaseline := map[string]json.RawMessage{}
 	stages := map[string]any{}
-	for _, stage := range []string{"schema49", "schema52_old_policy", "schema52_current_policy"} {
+	for _, stage := range []string{"schema49", "schema53_old_policy", "schema53_current_policy"} {
 		if !t.Run(stage, func(t *testing.T) {
-			if stage == "schema52_old_policy" {
+			if stage == "schema53_old_policy" {
 				changed, err := migrations.ApplyUp(ctx, pool)
 				if err != nil || !changed {
 					t.Fatalf("upgrade through ApplyUp: changed=%t err=%v", changed, err)
 				}
 				status, err := migrations.VerifyCurrent(ctx, pool)
-				if err != nil || status.AppliedMigrations != 52 {
+				if err != nil || status.AppliedMigrations != 53 {
 					t.Fatalf("upgraded schema: %+v %v", status, err)
 				}
 			}
-			if stage == "schema52_current_policy" {
+			if stage == "schema53_current_policy" {
 				for _, actor := range actors {
 					if actor.Group == "" || actor.Label == "query_b" {
 						continue
@@ -113,12 +113,12 @@ func TestIntegrationRoleUpgradePreservesIdentityAndEvidence(t *testing.T) {
 			stageResult := map[string]any{}
 			for _, actor := range actors {
 				if !t.Run(actor.Label, func(t *testing.T) {
-					if stage == "schema52_old_policy" && actor.Group != "" {
+					if stage == "schema53_old_policy" && actor.Group != "" {
 						roleUpgradeRejectOldPolicy(t, ctx, actor, baseline.Manifests[actor.Profile])
 					}
 					var runtime *pgxpool.Pool
 					var err error
-					if stage == "schema52_current_policy" && actor.Group != "" {
+					if stage == "schema53_current_policy" && actor.Group != "" {
 						runtime, _, err = OpenRuntimePool(ctx, actor.Config, RuntimePoolInput{Role: actor.Group, Schema: "evidence", Profile: actor.Profile})
 					} else {
 						raw := actor.Config.Copy()
@@ -289,13 +289,17 @@ func roleUpgradeFixture(t *testing.T, baseline roleUpgradeBaseline) (context.Con
 		t.Fatal("open disposable owner pool failed")
 	}
 	t.Cleanup(pool.Close)
-	roleUpgradeApply49(t, ctx, pool, baseline)
+	roleUpgradeApplyBaseline(t, ctx, pool, baseline)
 	relations, err := loadRelationInventory(ctx, owner, "evidence")
 	if err != nil {
 		t.Fatal(err)
 	}
 	groups := map[Profile]string{}
-	for i, profile := range []Profile{ProfileQuery, ProfileSourceClaimReviewer, ProfileIntake, ProfileRelationReviewer, ProfileEndpointReviewer, ProfileRepositoryIntake} {
+	profiles := []Profile{ProfileQuery, ProfileSourceClaimReviewer, ProfileIntake, ProfileRelationReviewer, ProfileEndpointReviewer, ProfileRepositoryIntake}
+	if _, ok := baseline.Manifests[ProfileCoreRecords]; ok {
+		profiles = append(profiles, ProfileCoreRecords)
+	}
+	for i, profile := range profiles {
 		group := fmt.Sprintf("ahe_ru_%s_g%d", nonce, i)
 		if _, err := admin.Exec(ctx, "CREATE ROLE "+pgx.Identifier{group}.Sanitize()+" NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS"); err != nil {
 			t.Fatal(err)
@@ -316,7 +320,10 @@ func roleUpgradeFixture(t *testing.T, baseline roleUpgradeBaseline) (context.Con
 	for _, entry := range []struct {
 		label   string
 		profile Profile
-	}{{"query_a", ProfileQuery}, {"query_b", ProfileQuery}, {"reviewer", ProfileSourceClaimReviewer}, {"collector", ProfileIntake}, {"relations", ProfileRelationReviewer}, {"endpoints", ProfileEndpointReviewer}, {"repository", ProfileRepositoryIntake}, {"no_scope", ""}} {
+	}{{"query_a", ProfileQuery}, {"query_b", ProfileQuery}, {"reviewer", ProfileSourceClaimReviewer}, {"collector", ProfileIntake}, {"relations", ProfileRelationReviewer}, {"endpoints", ProfileEndpointReviewer}, {"repository", ProfileRepositoryIntake}, {"no_scope", ""}, {"core", ProfileCoreRecords}} {
+		if entry.profile == ProfileCoreRecords && groups[ProfileCoreRecords] == "" {
+			continue
+		}
 		login := "ahe_ru_" + nonce + "_" + entry.label
 		password := policyRandomHex(t, 24)
 		if _, err := admin.Exec(ctx, "CREATE ROLE "+pgx.Identifier{login}.Sanitize()+" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS PASSWORD '"+password+"'"); err != nil {
@@ -362,7 +369,7 @@ func roleUpgradeFixture(t *testing.T, baseline roleUpgradeBaseline) (context.Con
 	return ctx, owner, pool, actors
 }
 
-func roleUpgradeApply49(t *testing.T, ctx context.Context, pool *pgxpool.Pool, baseline roleUpgradeBaseline) {
+func roleUpgradeApplyBaseline(t *testing.T, ctx context.Context, pool *pgxpool.Pool, baseline roleUpgradeBaseline) {
 	t.Helper()
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -397,7 +404,7 @@ func roleUpgradeApply49(t *testing.T, ctx context.Context, pool *pgxpool.Pool, b
 	}
 	var count int
 	var latest string
-	if err := pool.QueryRow(ctx, "SELECT count(*),max(migration_name) FROM schema_migrations").Scan(&count, &latest); err != nil || count != 49 || !strings.HasPrefix(latest, "000049_") {
+	if err := pool.QueryRow(ctx, "SELECT count(*),max(migration_name) FROM schema_migrations").Scan(&count, &latest); err != nil || count != len(names) || latest != names[len(names)-1] {
 		t.Fatalf("initial schema count=%d latest=%s err=%v", count, latest, err)
 	}
 }
@@ -419,7 +426,7 @@ func roleUpgradeIdentities(t *testing.T, ctx context.Context, pool *pgxpool.Pool
 		t.Fatal(err)
 	}
 	var count int
-	if err := pool.QueryRow(ctx, "SELECT count(*) FROM pg_roles WHERE rolname=ANY($1::text[])", names).Scan(&count); err != nil || count != 14 {
+	if err := pool.QueryRow(ctx, "SELECT count(*) FROM pg_roles WHERE rolname=ANY($1::text[])", names).Scan(&count); err != nil || count != len(names) {
 		t.Fatalf("identity count=%d err=%v", count, err)
 	}
 	return body

@@ -1,5 +1,5 @@
 // Package mcpcorerecords exposes immutable external records and identity history.
-// It never selects evidence, admits claims, or evaluates external logic.
+// MCP requests never admit claims or execute a solver.
 package mcpcorerecords
 
 import (
@@ -34,7 +34,7 @@ func NewBackend(pool *pgxpool.Pool, principal runtimeauth.Principal) (*Backend, 
 	return &Backend{pool: pool, principal: p}, nil
 }
 
-// CallTool appends only the five declared record types. Identity is launcher-owned.
+// CallTool appends declared records and watch configurations. Identity is launcher-owned.
 func (b *Backend) CallTool(ctx context.Context, name string, args json.RawMessage) (json.RawMessage, error) {
 	if b == nil || b.principal.ID == "" {
 		return nil, runtimeauth.NewUnauthenticatedError("core recorder unavailable")
@@ -56,6 +56,13 @@ func (b *Backend) CallTool(ctx context.Context, name string, args json.RawMessag
 	var value any
 	var err error
 	switch name {
+	case "register_consistency_watch":
+		var in evidenceingestion.ConsistencyWatchInput
+		if err = decodeRequest(args, &in); err != nil {
+			break
+		}
+		in.RecordedBy = b.principal.ID
+		value, err = evidenceingestion.RegisterConsistencyWatch(ctx, b.pool, in)
 	case "bind_canonical_proposition":
 		var in evidenceingestion.PropositionBindingInput
 		if err = decodeRequest(args, &in); err != nil {
@@ -106,6 +113,9 @@ func (b *Backend) CallTool(ctx context.Context, name string, args json.RawMessag
 
 // IsReadTool recognizes only the closed, read-only Core record surface.
 func IsReadTool(name string) bool {
+	if isConsistencyRead(name) {
+		return true
+	}
 	switch name {
 	case "get_proposition_members", "get_proposition_binding_history", "get_external_check_subject", "get_external_check", "list_external_checks", "get_external_representation", "get_external_dependency_users", "get_external_representation_material":
 		return true
@@ -121,6 +131,9 @@ func CallRead(ctx context.Context, pool *pgxpool.Pool, name string, args json.Ra
 	}
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	if isConsistencyRead(name) {
+		return callConsistencyRead(ctx, pool, name, args)
+	}
 	var value any
 	var err error
 	switch name {
