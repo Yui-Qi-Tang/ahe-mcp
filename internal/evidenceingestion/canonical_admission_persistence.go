@@ -672,6 +672,8 @@ func ordinaryAdmissionMutationKind(mutation canonicalAdmissionMutation) (string,
 	switch mutation.nodes[0].Kind {
 	case evidencegraph.CanonicalDerivedClaim:
 		return ordinaryAdmissionDerived, nil
+	case evidencegraph.CanonicalCandidate:
+		return "candidate", nil
 	default:
 		return "", newDomainError(
 			ErrorCanonicalAdmissionInvariant,

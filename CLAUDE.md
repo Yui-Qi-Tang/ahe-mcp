@@ -167,6 +167,14 @@ actually run. Research authorization does not approve real evidence admission.
 
 ## Repository Work
 
+- Identify the checkout before editing or testing. This repository and all
+  its worktrees belong to AHE MCP, including those under `lab/worktrees/`.
+  Their `lab/` folders contain private verification artifacts.
+- Reports must identify checkout, branch/HEAD, dirty state, source hashes, test
+  selection and PASS/FAIL/SKIP plus excluded scopes. Preserve earlier failures;
+  archives, feature adoption, verification, merge, push and deployment are
+  separate states. Never transfer a passing result between environments.
+
 - Use Go 1.27.0 semantics. Run `make verify` for ordinary code changes; add
   `go test -race ./...` when concurrency behavior or CI is in scope.
   For documentation or skill-only edits, validate links, skill structure and
@@ -180,7 +188,7 @@ actually run. Research authorization does not approve real evidence admission.
   Git request authorizes that scoped action; do not ask for it again.
 - Keep `docs/` for current theory, algorithms, data structures and references.
   Keep raw experiment captures, historical reviews, maintainer status and
-  release checklists in private lab or ignored maintainer files. Never force-add
+  release checklists in private Product verification directories or ignored maintainer files. Never force-add
   private files or publish machine paths, credentials or company source data.
 - Public synthetic fixtures, redistributable public samples, general methods
   and quantitative summaries may be included within the user's requested

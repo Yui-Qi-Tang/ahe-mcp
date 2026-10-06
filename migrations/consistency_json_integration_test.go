@@ -112,6 +112,7 @@ func TestIntegrationConsistencyJSONUpgrade(t *testing.T) {
 			if _, err := ApplyUp(ctx, pool); err != nil {
 				t.Fatal(err)
 			}
+			rollbackCandidateRelationSourceForTest(t, ctx, pool)
 			down, err := os.ReadFile("000054_evidence_consistency_contract.down.sql")
 			if err != nil {
 				t.Fatal(err)

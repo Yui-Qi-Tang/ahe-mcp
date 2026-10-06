@@ -823,7 +823,7 @@ func hanQueryLabCodeHashes(t *testing.T) map[string]string {
 		t.Fatal("cannot identify Han lab source root")
 	}
 	root := filepath.Dir(filepath.Dir(filepath.Dir(file)))
-	paths := []string{"internal/mcpintegration/han_query_integration_test.go", "internal/mcpintegration/runtime_authority_integration_test.go", "internal/evidencequerymcp/server.go", "internal/evidenceingestion/query_execution.go", "internal/evidenceingestion/query_recovery.go", "internal/evidenceingestion/query_records.go", "internal/evidenceingestion/query_grounded_brief.go", "internal/mcpquery/backend.go", "internal/mcpquery/authorization.go", "internal/dbrole/runtime.go", "internal/dbrole/policy.go", "internal/dbrole/manifest.go", "cmd/ahe-query-mcp/main.go", "cmd/ahe-ingest-mcp/main.go", "go.mod", "go.sum"}
+	paths := []string{"internal/mcpintegration/query_lab_schema_integration_test.go", "internal/mcpintegration/han_query_integration_test.go", "internal/mcpintegration/runtime_authority_integration_test.go", "internal/evidencequerymcp/server.go", "internal/evidenceingestion/query_execution.go", "internal/evidenceingestion/query_recovery.go", "internal/evidenceingestion/query_records.go", "internal/evidenceingestion/query_grounded_brief.go", "internal/mcpquery/backend.go", "internal/mcpquery/authorization.go", "internal/dbrole/runtime.go", "internal/dbrole/policy.go", "internal/dbrole/manifest.go", "cmd/ahe-query-mcp/main.go", "cmd/ahe-ingest-mcp/main.go", "go.mod", "go.sum"}
 	// Include new Han implementation files without assuming their final name.
 	for _, pattern := range []string{"internal/evidenceingestion/*han*.go", "migrations/*.up.sql"} {
 		matches, err := filepath.Glob(filepath.Join(root, pattern))

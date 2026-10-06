@@ -3,6 +3,14 @@
 Use this protocol for an explicitly requested experiment or evaluation report.
 It does not start model calls during ordinary repository work or evidence lookup.
 
+## Identify the Execution Environment
+
+This repository and every worktree belong to AHE MCP, including worktrees stored
+under `lab/worktrees/`. Their `lab/` directories hold private test artifacts.
+Record checkout, revision, uncommitted changes and exact test selection. Each
+reported pass must come from the stated checkout and execution; archives alone
+do not establish that a feature was implemented or tested.
+
 ## Test Approval Stubs
 
 An authorized experiment may use synthetic approval decisions for synthetic
@@ -66,9 +74,31 @@ Passing tests does not validate every explanation; no observed error does not
 establish general reliability. Claims about improved downstream outcomes must
 remain bounded to the evaluated setup.
 
-Keep raw captures and historical reviews in the private lab. Publish synthetic
+Keep raw captures and historical reviews in Product’s private `lab/` directory. Publish synthetic
 fixtures, redistributable public samples, general methodology or quantitative
 summaries only within the user's requested repository/publication scope, with
 source/license references and limitations. State when the repo lacks inputs,
 runners or judgments needed to reproduce a reported result. Never include
 credentials, private machine paths or company data in public artifacts.
+
+## Historical Query Replay on the Current Runtime
+
+A frozen source/archive and frozen query expectations do not require running
+the current binary against an obsolete schema or role policy. Restore the
+archive only into a separately owned disposable PostgreSQL cluster. Before
+read-only replay, explicitly run `ahe-migrate`, then `ahe-runtime-admin upgrade`
+for the original group/LOGIN/profile and `verify` using the original bounded
+LOGIN. Keep Query read-only; it must not migrate or refresh policy itself.
+
+For an upgrade witness, keep role OIDs, attributes and memberships unchanged.
+Compare every original table projected onto its original columns; check the
+original migration ledger entries remain unchanged while new entries append.
+Retain the original source hashes, query plans, expected answers and deadlines.
+The replay checks current schema readiness and the complete Query table
+inventory, followed by source readback and before/after hashes of all current
+tables. A table count alone does not establish the correct schema.
+
+Report actual completed queries against the original denominator. An old
+archive rejected before explicit upgrade is not a failed evidence query, and a
+successful upgrade alone is not a successful replay. Keep the old failed run
+and identify the new run as an operator-upgraded clone.

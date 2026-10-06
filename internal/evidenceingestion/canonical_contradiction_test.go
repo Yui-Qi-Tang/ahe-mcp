@@ -116,6 +116,7 @@ func TestLoadCanonicalContradictionProposalForUpdateRefreshesDecisionSnapshot(t 
 				"canon-edge:1",
 				"reviewer@example.test",
 				"The contradiction was confirmed.",
+				"",
 			}},
 		},
 	}
@@ -163,4 +164,15 @@ func (db *scriptedCanonicalContradictionQueryer) queryRow(_ context.Context, que
 	row := db.rows[0]
 	db.rows = db.rows[1:]
 	return row
+}
+
+// Golden values were recorded on schema 54 before the optional source field existed.
+func TestCanonicalContradictionLegacyFingerprintUnchanged(t *testing.T) {
+	got, err := prepareCanonicalContradictionProposal(CanonicalContradictionProposalInput{RequestID: "research-REPEATABLE READ", NodeAID: "canon-node:517109e131949c99", NodeBID: "canon-node:dd66704fb8a81adb", Rationale: "The supplied statements disagree.", ProducerName: "frozen-lab-fixture", ProducerVersion: "v1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.proposalID != "contradiction-proposal:6edcfd35743707fe4603f3a60a574d028c80165962c0b114e8c92aaa94445eaa" || got.fingerprint != "contradiction-fp:2151f07380d13f9d163a5c3451bab17fed0c3bbbd2f6b747cdcd842cec1c3b6c" || got.payloadHash != "sha256:c3e99a98554589907adfe78a49d13496212fb3ab9dd228aa5a7a09174e8d8283" {
+		t.Fatalf("legacy identity drift: %+v", got)
+	}
 }

@@ -311,9 +311,16 @@ and Supersession writers remain disabled. Do not bypass the entry point with
   enforces this parent-count limit; the database schema does not enforce the same
   64-parent limit. Transactional locks and cycle preflight validate the set; loose
   binary edges do not establish required premises.
+- **Candidate recording**: the internal admission API can record a hypothesis with
+  complete parents as `candidate`. Recording it does not establish the claim;
+  proposition binding and promotion through a derived-claim parent reject candidates.
 - **Contradiction**: create a complete proposal before approval. Node-pair identity is
   single-use, including `rejected` and `audit_only` terminal states. Changing the rationale
   does not create a new version. Do not duplicate nodes to bypass this rule.
+  The internal API optionally binds an independent source proposal whose statement
+  exactly matches the rationale. Query reads its quoted source alongside both
+  endpoints in the same transaction. This preserves relation provenance, not proof
+  of semantic correctness. Existing proposals without that source retain their identity.
 - **Supersession**: approve a new external-source pending proposal, fresh replacement,
   complete targets and head conditions together. Provider revision order does not
   automatically create a replacement relation.

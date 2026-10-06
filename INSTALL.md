@@ -9,10 +9,10 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 ## Installation scope
 
 Build the reviewed source commit using the steps below. The current MCP schema
-is 54. Query/intake/source-reviewer inventories are 26/5/3. Separate
+is 55. Query/intake/source-reviewer inventories are 26/5/3. Separate
 `relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
 4/2/2 tools; `core-records` exposes six record/configuration tools. The full
-migration chain through 54 and role policy v7 are required. Do not perform a
+migration chain through 55 and role policy v7 are required. Do not perform a
 binary-only replacement against an older schema or reuse source-review
 credentials for endpoint/relation writes.
 
@@ -176,7 +176,7 @@ DATABASE_DSN="$(cat /absolute/private/ahe/migration-database-dns)" \
 Success returns credential-free JSON containing `schema_version`, `schema`,
 `changed`, `applied_migrations`, and `latest_migration`. Repeating the command is
 safe when the selected schema, migration ledger and checksums match. The current
-native schema is 54; migrations 1–53 retain their original checksums.
+native schema is 55; migrations 1–54 retain their original checksums.
 Migration 43 retains the partial unique source-extraction request index.
 Migration 44 requires no proposal/canonical/admission authority and exactly the
 native empty Supersession head before adding ordinary admission manifests;
@@ -197,7 +197,13 @@ that denial in the selected AHE schema (for example,
 `REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA ahe FROM PUBLIC;`).
 Do not grant missing runtime privileges or weaken the migration verifier to
 make a restored database pass. Then migrate and provision fresh runtime
-identities. Keep the original database and launchers unchanged until a separate
+identities. That fresh-identity restore procedure does not test upgrades of
+existing roles. To qualify an existing-role upgrade on an isolated clone, retain
+the original ownership, ACLs and role definitions; record role OIDs, attributes,
+memberships and evidence hashes, migrate, and run `ahe-runtime-admin upgrade`
+for each original pair/profile followed by `verify` with each bounded LOGIN.
+Check that the same identities and original evidence remain before replaying
+queries. Keep the original database and launchers unchanged until a separate
 client cutover is approved.
 Failed preflight stops application atomically without deleting or rewriting data.
 It does not import Core's diverged migration ledger or move historical data.
@@ -575,7 +581,7 @@ An empty new database is expected; no search result alone is not a connection te
 
 ## Upgrade
 
-This build requires schema **54** and database role policy **v7**. Updating a
+This build requires schema **55** and database role policy **v7**. Updating a
 schema-49 installation is **not** a binary-only replacement: migrations 50–53 add
 Core record and consistency-history tables. From schema 49, all profiles need
 SELECT on eleven new tables; from schema 52, five new diagnostic tables. Refresh
@@ -605,9 +611,15 @@ keeps policy v7 and existing ACLs. It refuses incompatible historical JSON integ
 representations or configured-event hashes with SQLSTATE 23514; preserve those
 records for review rather than deleting or rewriting history to force an upgrade.
 
+Schema 54 also requires migration 55 before this binary starts. It preserves old
+admission and relation records, adds a nullable relation-source binding, and extends
+the admission guards for explicitly typed candidate hypotheses. Policy v7 and the
+existing role identities remain unchanged; migrate, then verify the original
+LOGINs. Rollback refuses to discard candidate or source-bound relation history.
+
 Provision `core-records` separately only if its writes are authorized. Existing
 profiles gain reads, not the new write capability. For an already qualified
-schema-54/policy-v7 installation, a binary-only replacement retains existing
+schema-55/policy-v7 installation, a binary-only replacement retains existing
 protected launcher paths, identities and credentials; verify them before reconnecting.
 Never copy credentials into repository artifacts.
 

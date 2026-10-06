@@ -197,7 +197,17 @@ func normalizeAdmissionInput(input AdmissionInput) AdmissionInput {
 		derivation.TraceRef = strings.TrimSpace(derivation.TraceRef)
 		input.Derivation = &derivation
 	}
-	if input.DecisionReason == "" && input.Derivation != nil {
+	if input.Candidate != nil {
+		candidate := *input.Candidate
+		candidate.ParentNodeIDs = append([]string(nil), candidate.ParentNodeIDs...)
+		candidate.Method = strings.TrimSpace(candidate.Method)
+		candidate.Producer = strings.TrimSpace(candidate.Producer)
+		candidate.TraceRef = strings.TrimSpace(candidate.TraceRef)
+		input.Candidate = &candidate
+	}
+	if input.DecisionReason == "" && input.Candidate != nil {
+		input.DecisionReason = "candidate hypothesis recorded with complete canonical parent set"
+	} else if input.DecisionReason == "" && input.Derivation != nil {
 		input.DecisionReason = "derived statement admitted with complete canonical parent set"
 	} else if input.DecisionReason == "" {
 		input.DecisionReason = "source-backed statement proposal admitted"
@@ -233,6 +243,12 @@ type admissionDecisionMetadata struct {
 }
 
 func buildCanonicalAdmissionMutation(proposal ProposalQueryResult, input AdmissionInput) (canonicalAdmissionMutation, error) {
+	if input.Derivation != nil && input.Candidate != nil {
+		return canonicalAdmissionMutation{}, newDomainError(ErrorInvalidInput, "derivation and candidate are mutually exclusive")
+	}
+	if input.Candidate != nil {
+		return buildDerivationBackedAdmissionMutation(proposal, DerivationAdmissionInput(*input.Candidate), evidencegraph.CanonicalCandidate)
+	}
 	if input.Derivation != nil {
 		return buildDerivedAdmissionMutation(proposal, *input.Derivation)
 	}
@@ -303,6 +319,14 @@ func buildDerivedAdmissionMutation(
 	proposal ProposalQueryResult,
 	input DerivationAdmissionInput,
 ) (canonicalAdmissionMutation, error) {
+	return buildDerivationBackedAdmissionMutation(proposal, input, evidencegraph.CanonicalDerivedClaim)
+}
+
+func buildDerivationBackedAdmissionMutation(proposal ProposalQueryResult, input DerivationAdmissionInput, kind evidencegraph.CanonicalNodeKind) (canonicalAdmissionMutation, error) {
+	sourceType, title, source := "derived", "derived claim", "ahe:derivation"
+	if kind == evidencegraph.CanonicalCandidate {
+		sourceType, title, source = "candidate", "derived candidate", "ahe:candidate"
+	}
 	parents, err := normalizeDerivationParents(input.ParentNodeIDs)
 	if err != nil {
 		return canonicalAdmissionMutation{}, err
@@ -317,7 +341,7 @@ func buildDerivedAdmissionMutation(
 	parentIdentity := strings.Join(parents, "\x00")
 	nodeID := evidencegraph.StableCanonicalID(
 		"canon-node",
-		string(evidencegraph.CanonicalDerivedClaim),
+		string(kind),
 		proposal.ProposalOccurrenceID,
 		proposal.StatementText,
 		parentIdentity,
@@ -327,9 +351,9 @@ func buildDerivedAdmissionMutation(
 	)
 	payload := evidencegraph.EvidencePayload{
 		ID:         evidencegraph.StableCanonicalID("payload", nodeID),
-		SourceType: "derived",
-		Title:      "derived claim",
-		Source:     "ahe:derivation",
+		SourceType: sourceType,
+		Title:      title,
+		Source:     source,
 		Claim:      proposal.StatementText,
 	}
 	provenance := evidencegraph.ProvenanceRecord{
@@ -347,7 +371,7 @@ func buildDerivedAdmissionMutation(
 	}
 	node := CanonicalGraphNode{
 		ID:         nodeID,
-		Kind:       evidencegraph.CanonicalDerivedClaim,
+		Kind:       kind,
 		Payload:    payload,
 		Provenance: provenance,
 		Temporal: evidencegraph.TemporalRecord{
@@ -1007,7 +1031,7 @@ func validateDerivedAdmissionWithLock(ctx context.Context, tx sqlTx, mutation ca
 		return newDomainError(ErrorDerivationInvariant, "derived admission must create exactly one derived node")
 	}
 	derivation := *mutation.derivation
-	if mutation.nodes[0].ID != derivation.NodeID || mutation.nodes[0].Kind != evidencegraph.CanonicalDerivedClaim {
+	if mutation.nodes[0].ID != derivation.NodeID || (mutation.nodes[0].Kind != evidencegraph.CanonicalDerivedClaim && mutation.nodes[0].Kind != evidencegraph.CanonicalCandidate) {
 		return newDomainError(ErrorDerivationInvariant, "derivation target must be the new derived claim")
 	}
 	if derivation.ProvenanceRef != mutation.nodes[0].Provenance.ID {

@@ -5,7 +5,8 @@ together in one named evidence scope. External code supplies the conditions and
 rules. AHE preserves the original evidence and reports the formal result; it
 does not infer those conditions, choose which statement is true, or repair data.
 
-Current contract: schema **54**, role policy **v7**, `consistency-watch/v1`.
+Current contract: schema **55**, role policy **v7**, `consistency-watch/v1`.
+The consistency record guards were introduced in schema 54 and remain active.
 The generic resolver API remains v0. This product path uses checked SAT and DRAT;
 the generic bounded SMT adapter is not used here.
 

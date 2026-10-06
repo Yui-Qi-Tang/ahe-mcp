@@ -52,7 +52,9 @@ func createRepositoryExtractionRun(ctx context.Context, db sqlDB, request Reposi
 	}
 	inserted := false
 	err = withTx(ctx, db, func(tx sqlTx) error {
-		if _, err := tx.exec(ctx, `INSERT INTO extractor_definitions (extractor_definition_id, extractor_name, extractor_version, extractor_config_hash, extractor_config) VALUES ($1,$2,$3,$4,$5::jsonb) ON CONFLICT (extractor_definition_id) DO NOTHING`, definition.ID, definition.Name, definition.Version, definition.ConfigHash, string(configData)); err != nil {
+		// Concurrent registration can conflict on either the ID or the natural
+		// identity (name, version, config hash); both must participate in arbitration.
+		if _, err := tx.exec(ctx, `INSERT INTO extractor_definitions (extractor_definition_id, extractor_name, extractor_version, extractor_config_hash, extractor_config) VALUES ($1,$2,$3,$4,$5::jsonb) ON CONFLICT DO NOTHING`, definition.ID, definition.Name, definition.Version, definition.ConfigHash, string(configData)); err != nil {
 			return fmt.Errorf("upserting extractor definition: %w", err)
 		}
 		result, err := tx.exec(ctx, `INSERT INTO extraction_runs (extraction_run_id, extractor_definition_id, repository_snapshot_id, request_id) VALUES ($1,$2,$3,$4) ON CONFLICT (extraction_run_id) DO NOTHING`, run.ID, definition.ID, run.RepositorySnapshotID, run.RequestID)

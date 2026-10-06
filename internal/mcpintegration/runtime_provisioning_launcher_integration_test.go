@@ -424,7 +424,7 @@ func runProvisioningAdmin(t *testing.T, ctx context.Context, command, operation,
 		return provisioningAdminResult{}
 	}
 	var result provisioningAdminResult
-	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.UpdatedExistingPair != (operation == "upgrade") || result.RuntimeLoginVerified != (operation == "verify") || result.SessionUser != identity.login || result.AppliedMigrations != 54 || result.LatestMigration != "000054_evidence_consistency_contract.up.sql" {
+	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.UpdatedExistingPair != (operation == "upgrade") || result.RuntimeLoginVerified != (operation == "verify") || result.SessionUser != identity.login || result.AppliedMigrations != 55 || result.LatestMigration != "000055_evidence_ingestion_candidate_relation_source.up.sql" {
 		t.Fatalf("compiled runtime admin %s did not return its exact credential-free receipt (output suppressed)", operation)
 	}
 	if strings.Contains(stdout.String(), dsn) {

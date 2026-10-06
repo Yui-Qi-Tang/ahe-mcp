@@ -32,7 +32,7 @@ func TestIntegrationPropositionBindingMigrationRollbackAndReadiness(t *testing.T
 	if _, err := ApplyUp(ctx, pool); err != nil {
 		t.Fatal(err)
 	}
-	if status, err := VerifyCurrent(ctx, pool); err != nil || status.AppliedMigrations != 54 {
+	if status, err := VerifyCurrent(ctx, pool); err != nil || status.AppliedMigrations != 55 {
 		t.Fatalf("reapply=%+v %v", status, err)
 	}
 	// A broken uniqueness guard would permit two events claiming one revision.

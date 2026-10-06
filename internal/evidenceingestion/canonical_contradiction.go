@@ -83,23 +83,29 @@ func submitCanonicalContradictionProposal(
 	}
 
 	proposal := CanonicalContradictionProposal{
-		ID:                  prepared.proposalID,
-		RequestID:           prepared.input.RequestID,
-		RequestPayloadHash:  prepared.payloadHash,
-		ProposalFingerprint: prepared.fingerprint,
-		NodeAID:             prepared.input.NodeAID,
-		NodeBID:             prepared.input.NodeBID,
-		Relation:            evidencegraph.CanonicalContradicts,
-		Rationale:           prepared.input.Rationale,
-		ProducerName:        prepared.input.ProducerName,
-		ProducerVersion:     prepared.input.ProducerVersion,
-		ProducerSessionRef:  prepared.input.ProducerSessionRef,
-		AdmissionOutcome:    admissionOutcomePending,
+		ID:                         prepared.proposalID,
+		SourceProposalOccurrenceID: prepared.input.SourceProposalOccurrenceID,
+		RequestID:                  prepared.input.RequestID,
+		RequestPayloadHash:         prepared.payloadHash,
+		ProposalFingerprint:        prepared.fingerprint,
+		NodeAID:                    prepared.input.NodeAID,
+		NodeBID:                    prepared.input.NodeBID,
+		Relation:                   evidencegraph.CanonicalContradicts,
+		Rationale:                  prepared.input.Rationale,
+		ProducerName:               prepared.input.ProducerName,
+		ProducerVersion:            prepared.input.ProducerVersion,
+		ProducerSessionRef:         prepared.input.ProducerSessionRef,
+		AdmissionOutcome:           admissionOutcomePending,
 	}
 	result := CanonicalContradictionProposalResult{Proposal: proposal}
 	err = withTx(ctx, db, func(tx sqlTx) error {
 		if err := requireCanonicalContradictionEndpoints(ctx, tx, proposal.NodeAID, proposal.NodeBID); err != nil {
 			return err
+		}
+		if proposal.SourceProposalOccurrenceID != "" {
+			if _, err := loadContradictionSource(ctx, tx, proposal); err != nil {
+				return err
+			}
 		}
 		tag, err := tx.exec(ctx, `
 			INSERT INTO canonical_contradiction_proposals (
@@ -114,9 +120,10 @@ func submitCanonicalContradictionProposal(
 				producer_name,
 				producer_version,
 				producer_session_ref,
+				source_proposal_occurrence_id,
 				admission_outcome
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, 'contradicts', $7, $8, $9, NULLIF($10, ''), 'pending')
+			VALUES ($1, $2, $3, $4, $5, $6, 'contradicts', $7, $8, $9, NULLIF($10, ''), NULLIF($11, ''), 'pending')
 			ON CONFLICT DO NOTHING
 		`,
 			proposal.ID,
@@ -129,6 +136,7 @@ func submitCanonicalContradictionProposal(
 			proposal.ProducerName,
 			proposal.ProducerVersion,
 			proposal.ProducerSessionRef,
+			proposal.SourceProposalOccurrenceID,
 		)
 		if err != nil {
 			return fmt.Errorf("inserting canonical contradiction proposal: %w", err)
@@ -169,6 +177,10 @@ func submitCanonicalContradictionProposal(
 func prepareCanonicalContradictionProposal(
 	input CanonicalContradictionProposalInput,
 ) (preparedCanonicalContradictionProposal, error) {
+	input.SourceProposalOccurrenceID = strings.TrimSpace(input.SourceProposalOccurrenceID)
+	if input.SourceProposalOccurrenceID != "" && (!strings.HasPrefix(input.SourceProposalOccurrenceID, "occ:") || len(input.SourceProposalOccurrenceID) > 512 || !utf8.ValidString(input.SourceProposalOccurrenceID) || strings.ContainsRune(input.SourceProposalOccurrenceID, 0)) {
+		return preparedCanonicalContradictionProposal{}, newDomainError(ErrorInvalidRecordID, "invalid relation source proposal occurrence")
+	}
 	input.RequestID = strings.TrimSpace(input.RequestID)
 	input.NodeAID = strings.TrimSpace(input.NodeAID)
 	input.NodeBID = strings.TrimSpace(input.NodeBID)
@@ -221,15 +233,17 @@ func prepareCanonicalContradictionProposal(
 		return preparedCanonicalContradictionProposal{}, err
 	}
 	fingerprintFields := struct {
-		Identity        any    `json:"identity"`
-		Rationale       string `json:"rationale"`
-		ProducerName    string `json:"producer_name"`
-		ProducerVersion string `json:"producer_version"`
+		SourceProposalOccurrenceID string `json:"source_proposal_occurrence_id,omitempty"`
+		Identity                   any    `json:"identity"`
+		Rationale                  string `json:"rationale"`
+		ProducerName               string `json:"producer_name"`
+		ProducerVersion            string `json:"producer_version"`
 	}{
-		Identity:        identity,
-		Rationale:       input.Rationale,
-		ProducerName:    input.ProducerName,
-		ProducerVersion: input.ProducerVersion,
+		SourceProposalOccurrenceID: input.SourceProposalOccurrenceID,
+		Identity:                   identity,
+		Rationale:                  input.Rationale,
+		ProducerName:               input.ProducerName,
+		ProducerVersion:            input.ProducerVersion,
 	}
 	fingerprint, err := stableID("contradiction-fp:", "canonical_contradiction_proposal_fingerprint", fingerprintFields)
 	if err != nil {
@@ -291,11 +305,20 @@ func hydrateCanonicalContradictionProposal(
 	if err != nil {
 		return CanonicalContradictionQueryResult{}, err
 	}
+	var source *ProposalQueryResult
+	if proposal.SourceProposalOccurrenceID != "" {
+		loaded, err := loadContradictionSource(ctx, db, proposal)
+		if err != nil {
+			return CanonicalContradictionQueryResult{}, err
+		}
+		source = &loaded
+	}
 	return CanonicalContradictionQueryResult{
-		Proposal: proposal,
-		NodeA:    nodeA,
-		NodeB:    nodeB,
-		Decision: decision,
+		SourceProposal: source,
+		Proposal:       proposal,
+		NodeA:          nodeA,
+		NodeB:          nodeB,
+		Decision:       decision,
 	}, nil
 }
 
@@ -571,7 +594,8 @@ const canonicalContradictionProposalSelect = `
 		COALESCE(d.outcome, ''),
 		COALESCE(d.canonical_edge_id, ''),
 		COALESCE(d.decision_by, ''),
-		COALESCE(d.decision_reason, '')
+		COALESCE(d.decision_reason, ''),
+		COALESCE(p.source_proposal_occurrence_id, '')
 	FROM canonical_contradiction_proposals p
 	LEFT JOIN canonical_contradiction_admission_decisions d
 		ON d.canonical_contradiction_proposal_id = p.canonical_contradiction_proposal_id
@@ -602,6 +626,7 @@ func scanCanonicalContradictionProposal(
 		&decision.CanonicalEdgeID,
 		&decision.DecisionBy,
 		&decision.DecisionReason,
+		&proposal.SourceProposalOccurrenceID,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -741,4 +766,16 @@ func markCanonicalContradictionProposalDecided(
 		return newDomainError(ErrorAdmissionStateConflict, "canonical contradiction proposal %s is no longer pending", proposalID)
 	}
 	return nil
+}
+
+// The optional relation source is provenance, not an automatically admitted claim.
+func loadContradictionSource(ctx context.Context, db sqlQueryer, proposal CanonicalContradictionProposal) (ProposalQueryResult, error) {
+	source, err := getProposalByOccurrenceID(ctx, db, proposal.SourceProposalOccurrenceID)
+	if err != nil {
+		return ProposalQueryResult{}, err
+	}
+	if source.ProposalKind != ProposalKindStatement || source.ExtractionAttemptStatus != attemptStatusSucceeded || len(source.SourceRefs) == 0 || source.SourceSnapshotID == "" || source.ExtractionViewID == "" || source.StatementText != proposal.Rationale {
+		return ProposalQueryResult{}, newDomainError(ErrorInvalidInput, "relation source must be a grounded statement matching the exact rationale")
+	}
+	return source, nil
 }

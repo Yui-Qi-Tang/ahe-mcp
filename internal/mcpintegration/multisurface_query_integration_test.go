@@ -53,7 +53,8 @@ type multisurfaceLabPlan struct {
 
 type multisurfaceLabReport struct {
 	hanOutcomeReport
-	FrozenPlan    multisurfaceLabPlan
+	FrozenPlan multisurfaceLabPlan
+	// Decode the frozen prior-result fixture used by v2; never select a live v1 strategy.
 	PracticalPlan *practicalLabPlan          `json:",omitempty"`
 	AnchorPlan    *practicalAnchorLabPlan    `json:",omitempty"`
 	RawResponses  map[string]json.RawMessage `json:",omitempty"`
@@ -212,12 +213,12 @@ func multisurfaceSavedViews(t *testing.T, snapshot map[string]json.RawMessage) m
 }
 
 func TestIntegrationMultisurfaceReadOnlyLab(t *testing.T) {
-	runMultisurfaceReadOnlyLab(t, false, false)
+	runMultisurfaceReadOnlyLab(t, false)
 }
 
-func runMultisurfaceReadOnlyLab(t *testing.T, practical, anchors bool) {
+func runMultisurfaceReadOnlyLab(t *testing.T, anchors bool) {
 	socket, port := os.Getenv("AHE_MULTISURFACE_LAB_SOCKET"), os.Getenv("AHE_MULTISURFACE_LAB_PORT")
-	if !practical && socket == "" && port == "" && os.Getenv("AHE_MULTISURFACE_LAB_SYSTEM_IDENTIFIER") == "" && os.Getenv("AHE_MULTISURFACE_LAB_REPORT") == "" && os.Getenv("AHE_MULTISURFACE_LAB_PLAN") == "" {
+	if !anchors && socket == "" && port == "" && os.Getenv("AHE_MULTISURFACE_LAB_SYSTEM_IDENTIFIER") == "" && os.Getenv("AHE_MULTISURFACE_LAB_REPORT") == "" && os.Getenv("AHE_MULTISURFACE_LAB_PLAN") == "" {
 		t.Skip("set the five dedicated AHE_MULTISURFACE_LAB settings for the restored read-only lab")
 	}
 	report := multisurfaceLabReport{hanOutcomeReport: hanOutcomeReport{Contract: "multisurface-read-only-v1", Phase: "configuration", StartedAt: time.Now().UTC().Format(time.RFC3339Nano), Limitations: []string{
@@ -291,17 +292,10 @@ func runMultisurfaceReadOnlyLab(t *testing.T, practical, anchors bool) {
 	modes := slices.Clone(report.FrozenPlan.Modes)
 	var frozenResponses map[string]evidencequerymcp.GroundedEvidenceBriefResponse
 	var practicalFileHashes map[string]string
-	practicalPlanVersion := "practical-multisurface-lexical-v1"
-	if practical {
-		if anchors {
-			report.AnchorPlan, frozenResponses, practicalFileHashes = practicalAnchorReadPlan(t, planData)
-			modes = append(modes, report.AnchorPlan.Mode)
-			report.Contract, practicalPlanVersion = "practical-han-anchor-read-only-v1", "practical-multisurface-lexical-v2"
-		} else {
-			report.PracticalPlan, frozenResponses, practicalFileHashes = practicalReadPlan(t, planData)
-			modes = append(modes, report.PracticalPlan.Mode)
-			report.Contract = "practical-multisurface-read-only-v1"
-		}
+	if anchors {
+		report.AnchorPlan, frozenResponses, practicalFileHashes = practicalAnchorReadPlan(t, planData)
+		modes = append(modes, report.AnchorPlan.Mode)
+		report.Contract = "practical-han-anchor-read-only-v1"
 		report.RawResponses = map[string]json.RawMessage{}
 	}
 	report.Planned = len(report.Plan.Cases) * len(modes) * report.Plan.Replays
@@ -353,8 +347,8 @@ func runMultisurfaceReadOnlyLab(t *testing.T, practical, anchors bool) {
 	hanOutcomeCompareSnapshot(t, ctx, observer, snapshot, report.Plan)
 	report.SnapshotVerified = true
 	report.Before = hanQueryLabTableDigests(t, ctx, observer, "ahe_brief")
-	if len(report.Before) != 78 {
-		t.Fatal("restored outcome schema does not have the frozen 78-table inventory")
+	if err := queryLabVerifyCurrent(ctx, observer, "ahe_brief", report.Before); err != nil {
+		t.Fatal(err)
 	}
 	for table, count := range map[string]int{"source_snapshots": 4, "proposal_occurrences": 4, "admission_decisions": 4, "canonical_graph_nodes": 6, "canonical_graph_edges": 4} {
 		if report.Before[table].Rows != count {
@@ -392,12 +386,12 @@ func runMultisurfaceReadOnlyLab(t *testing.T, practical, anchors bool) {
 	report.Policy, err = dbrole.VerifyRuntimeConnection(ctx, policyConn, dbrole.RuntimeVerificationInput{Role: "brief_query_group", SessionUser: "brief_query_login", Schema: "ahe_brief", Profile: dbrole.ProfileQuery})
 	closeErr := policyConn.Close(ctx)
 	if err != nil || closeErr != nil {
-		t.Fatal("restored query policy failed read-only verification")
+		t.Fatalf("restored query policy failed read-only verification: %v; close: %v", err, closeErr)
 	}
 	report.Phase = "query_start"
 	query := startAuthorityProcess(t, ctx, "ahe-query-mcp", authorityProcessLogin{group: "brief_query_group", profile: dbrole.ProfileQuery, dsn: queryConfig.ConnString()}, "ahe_brief", "")
 	report.LiveQueryTools = multisurfaceLabTools(t, query)
-	if practical {
+	if anchors {
 		practicalCheckCatalog(t, report.LiveQueryTools)
 	}
 	report.CatalogCalls++
@@ -440,17 +434,13 @@ func runMultisurfaceReadOnlyLab(t *testing.T, practical, anchors bool) {
 				report.Phase = "query/" + tc.ID + "/" + name
 				if !t.Run(fmt.Sprintf("%s/%s/replay-%d", tc.ID, name, replay), func(t *testing.T) {
 					if mode == multisurfaceLabMode || mode == practicalLabMode {
-						multisurfaceObserve(t, query, tc, replay, modePlan, practicalPlanVersion, wants, views, created, first, &report.hanOutcomeReport)
+						multisurfaceObserve(t, query, tc, replay, modePlan, wants, views, created, first, &report.hanOutcomeReport)
 					} else {
 						hanOutcomeObserve(t, query, tc, mode, name, replay, wants, report.Records, first, &report.hanOutcomeReport)
 					}
-					if practical {
+					if anchors {
 						observation := report.Observations[len(report.Observations)-1]
-						if anchors {
-							practicalAnchorCheckObservation(t, observation, tc, frozenResponses)
-						} else {
-							practicalCheckObservation(t, observation, tc, frozenResponses)
-						}
+						practicalAnchorCheckObservation(t, observation, tc, frozenResponses)
 						practicalCheckRawResponse(t, observation, query.lastToolContent, frozenResponses, report.RawResponses)
 					}
 				}) {
@@ -465,7 +455,7 @@ func runMultisurfaceReadOnlyLab(t *testing.T, practical, anchors bool) {
 	report.Phase = "completed"
 }
 
-func multisurfaceObserve(t *testing.T, query *authorityProcess, tc hanOutcomeCase, replay int, mode multisurfaceLabModePlan, practicalPlanVersion string, wants map[string]hanOutcomeProposal, views map[string]multisurfaceSavedView, created map[string]time.Time, first map[string]evidencequerymcp.GroundedEvidenceBriefResponse, report *hanOutcomeReport) {
+func multisurfaceObserve(t *testing.T, query *authorityProcess, tc hanOutcomeCase, replay int, mode multisurfaceLabModePlan, wants map[string]hanOutcomeProposal, views map[string]multisurfaceSavedView, created map[string]time.Time, first map[string]evidencequerymcp.GroundedEvidenceBriefResponse, report *hanOutcomeReport) {
 	t.Helper()
 	o := hanOutcomeObservation{CaseID: tc.ID, Kind: tc.Kind, Mode: mode.Name, Replay: replay, Stage: "request", Request: tc.Request, StartedAt: time.Now().UTC().Format(time.RFC3339Nano)}
 	o.Request.QueryMode, o.Request.ResponseSchema = mode.QueryMode, mode.ResponseSchema
@@ -492,7 +482,7 @@ func multisurfaceObserve(t *testing.T, query *authorityProcess, tc hanOutcomeCas
 	meta := e.Multisurface
 	planVersion, extraQueries := evidenceingestion.EvidenceQueryPlanExperimentalMultisurfaceV1, 1
 	if mode.QueryMode == practicalLabMode {
-		planVersion = practicalPlanVersion
+		planVersion = "practical-multisurface-lexical-v2"
 		extraQueries += practicalFallbackCount(t, r)
 	}
 	fields := []string{evidenceingestion.EvidenceQuerySearchSurfaceProposalStatement, "extraction_views.rendered_content"}

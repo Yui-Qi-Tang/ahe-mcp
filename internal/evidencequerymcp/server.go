@@ -344,6 +344,7 @@ type GetCanonicalContradictionProposalRequest struct {
 
 // CanonicalContradictionProposalInfo exposes proposal and producer audit metadata.
 type CanonicalContradictionProposalInfo struct {
+	SourceProposalOccurrenceID       string `json:"source_proposal_occurrence_id,omitempty"`
 	CanonicalContradictionProposalID string `json:"canonical_contradiction_proposal_id"`
 	RequestID                        string `json:"request_id"`
 	ProposalFingerprint              string `json:"proposal_fingerprint"`
@@ -370,10 +371,11 @@ type CanonicalContradictionDecisionInfo struct {
 // CanonicalContradictionProposalResponse is the minimum human review card:
 // the proposal rationale, both complete grounded claims, and any decision.
 type CanonicalContradictionProposalResponse struct {
-	Proposal CanonicalContradictionProposalInfo  `json:"proposal"`
-	NodeA    GetEvidenceRecordResponse           `json:"node_a"`
-	NodeB    GetEvidenceRecordResponse           `json:"node_b"`
-	Decision *CanonicalContradictionDecisionInfo `json:"decision,omitempty"`
+	SourceProposal *GetEvidenceRecordResponse          `json:"source_proposal,omitempty"`
+	Proposal       CanonicalContradictionProposalInfo  `json:"proposal"`
+	NodeA          GetEvidenceRecordResponse           `json:"node_a"`
+	NodeB          GetEvidenceRecordResponse           `json:"node_b"`
+	Decision       *CanonicalContradictionDecisionInfo `json:"decision,omitempty"`
 }
 
 // GetCanonicalSupersessionCurrentnessRequest selects one deterministic lineage.
@@ -2654,6 +2656,7 @@ func mapCanonicalContradictionProposal(result evidenceingestion.CanonicalContrad
 	proposal := result.Proposal
 	response := CanonicalContradictionProposalResponse{
 		Proposal: CanonicalContradictionProposalInfo{
+			SourceProposalOccurrenceID:       proposal.SourceProposalOccurrenceID,
 			CanonicalContradictionProposalID: proposal.ID,
 			RequestID:                        proposal.RequestID,
 			ProposalFingerprint:              proposal.ProposalFingerprint,
@@ -2669,6 +2672,10 @@ func mapCanonicalContradictionProposal(result evidenceingestion.CanonicalContrad
 		},
 		NodeA: mapCanonicalResult(result.NodeA),
 		NodeB: mapCanonicalResult(result.NodeB),
+	}
+	if result.SourceProposal != nil {
+		source := mapProposalResult(*result.SourceProposal)
+		response.SourceProposal = &source
 	}
 	if result.Decision != nil {
 		response.Decision = &CanonicalContradictionDecisionInfo{

@@ -8,7 +8,7 @@
 
 [Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [Evaluation](#evaluation) · [MCP setup](INSTALL.md)
 
-Current development version: **unreleased**, schema **54**, database role policy **v7**,
+Current development version: **unreleased**, schema **55**, database role policy **v7**,
 consistency watch contract **v1**. Query exposes 26 read-only tools; the separate
 core-records profile exposes six record/configuration tools.
 
@@ -16,6 +16,19 @@ The [logic resolver foundation](logicresolver/README.md) exposes an experimental
 **v0** Go API for explicit SAT and bounded linear-integer formulas. The product's
 [scoped consistency workflow](docs/CONSISTENCY.md) uses its checked SAT path;
 neither it nor the generic SMT path admits evidence.
+
+Migration 55 adds explicitly recorded candidate hypotheses and optional grounded
+relation sources to the internal domain API. Candidate records remain ineligible
+for proposition membership and cannot serve as parents of an established derived
+claim. Existing relation proposals keep their identity and may have no separate
+relation source; readback does not fabricate one. These additions do not enable
+new standard MCP writers or perform semantic extraction.
+
+The current practical API mode remains `practical_multisurface_lexical_v1`;
+its execution plan is `practical-multisurface-lexical-v2`. Retiring the old
+execution plan does not retire the API name or the frozen comparison data used
+by v2. Record checkout, source revision, test selection and exclusions in each
+private verification report; public documentation uses repository-relative paths.
 
 ## Fewer unsupported assertions in a fixed synthetic suite
 
@@ -67,7 +80,7 @@ See the [secondary outcome](#secondary-outcome-repairs-passing-the-official-test
 
 ## Quick start
 
-Current version: `dev` preview; Core schema **54**, database role policy **v7**.
+Current version: `dev` preview; Product schema **55**, database role policy **v7**.
 The MCP module uses Go `1.27.0`.
 
 ```sh
@@ -461,7 +474,7 @@ bounded, read-consistent snapshot, not a second database.
 | `raw_evidence` | Source material backing a claim |
 | `source_claim` | A claim grounded in source material |
 | `derived_claim` | A claim derived from an explicit parent set |
-| `candidate` | Task-candidate vocabulary in the graph schema |
+| `candidate` | Recorded hypothesis with complete parents; internal writer only |
 
 Node kinds are not admission states. Pending proposals are stored separately;
 their existence does not create admitted canonical evidence. A schema type

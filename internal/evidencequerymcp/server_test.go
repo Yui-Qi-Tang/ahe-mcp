@@ -2813,3 +2813,17 @@ func TestExplicitExactBriefExposesRecoveryOptions(t *testing.T) {
 		t.Fatalf("brief execution = %+v", response.QueryExecution)
 	}
 }
+
+func TestMapCanonicalContradictionPreservesIndependentSource(t *testing.T) {
+	source := evidenceingestion.ProposalQueryResult{ProposalOccurrenceID: "occ:relation-source", StatementText: "Synthetic relation rationale.", SourceRefs: []evidenceingestion.ResolvedSourceRef{{QuotedText: "Synthetic relation rationale."}}}
+	result := evidenceingestion.CanonicalContradictionQueryResult{Proposal: evidenceingestion.CanonicalContradictionProposal{ID: "contradiction-proposal:source-bound", SourceProposalOccurrenceID: source.ProposalOccurrenceID}, SourceProposal: &source}
+	got := mapCanonicalContradictionProposal(result)
+	if got.Proposal.SourceProposalOccurrenceID != source.ProposalOccurrenceID || got.SourceProposal == nil || len(got.SourceProposal.SourceRefs) != 1 || got.SourceProposal.SourceRefs[0].QuotedText != source.SourceRefs[0].QuotedText {
+		t.Fatalf("relation source omitted from query response: %+v", got)
+	}
+	result.Proposal.SourceProposalOccurrenceID = ""
+	result.SourceProposal = nil
+	if got := mapCanonicalContradictionProposal(result); got.SourceProposal != nil {
+		t.Fatal("legacy relation gained a fabricated source")
+	}
+}

@@ -195,9 +195,6 @@ func TestResearch20261003BindingLifecycle(t *testing.T) {
 	propositionLabWrite(t, filepath.Join(out, "database.json"), map[string]string{"version": version})
 	admit := func(name string, parents []string, candidate bool) AdmissionResult {
 		t.Helper()
-		if candidate {
-			return AdmissionResult{}
-		} // Product has no candidate admission contract.
 		statement := "Synthetic assertion " + name + "."
 		input := ManualTextInput{SourceID: "binding-lab-" + name, SourceVersion: "v1", Raw: []byte(statement + "\n"), RequestID: "source-" + name, AttemptNumber: 1}
 		fixture := FrozenExtractorOutput{Proposals: []ExtractorProposalOutput{{ProposalLocalID: "assertion", StatementText: statement, EvidenceRefs: []string{"span:S1"}}}}
@@ -208,7 +205,12 @@ func TestResearch20261003BindingLifecycle(t *testing.T) {
 		in := AdmissionInput{ProposalOccurrenceID: ingested.ProposalOccurrenceID, DecisionBy: "synthetic-lab", DecisionReason: "frozen input, not human authorization"}
 		if len(parents) > 0 {
 			d := DerivationAdmissionInput{ParentNodeIDs: parents, Method: "declared-lab-rule", Producer: "main-agent-fixture", TraceRef: "binding-trace:" + name}
-			in.Derivation = &d
+			if candidate {
+				c := CandidateAdmissionInput(d)
+				in.Candidate = &c
+			} else {
+				in.Derivation = &d
+			}
 		}
 		got, err := AdmitPendingProposal(ctx, pool, in)
 		if err != nil {
@@ -220,6 +222,10 @@ func TestResearch20261003BindingLifecycle(t *testing.T) {
 	ab := admit("Q-AB", []string{a.CanonicalRef, b.CanonicalRef}, false)
 	qc := admit("Q-C", []string{c.CanonicalRef}, false)
 	candidate := admit("candidate", []string{c.CanonicalRef}, true)
+	persistedCandidate, err := GetCanonicalEvidenceByID(ctx, pool, candidate.CanonicalRef)
+	if err != nil || persistedCandidate.NodeKind != evidencegraph.CanonicalCandidate {
+		t.Fatalf("candidate fixture not durably recorded: %+v %v", persistedCandidate, err)
+	}
 	unbound := admit("unbound", nil, false)
 	spares := make([]AdmissionResult, 10)
 	for i := range spares {

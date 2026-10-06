@@ -43,6 +43,12 @@ a legacy profile or substitute direct SQL when a required operation is absent.
   permitted only under the shared experiment protocol, never as substitutes for
   a human decision in an operational evidence store.
 
+## Environment
+
+This repository and all its worktrees belong to AHE MCP. Their private `lab/`
+folders contain verification artifacts. Record the exact checkout, revision and
+test selection; follow the reporting rules in `CLAUDE.md` before comparing runs.
+
 ## Handoff
 
 For intake/review work, return provider identity and revision; source and

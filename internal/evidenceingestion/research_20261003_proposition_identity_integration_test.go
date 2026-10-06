@@ -21,6 +21,7 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -233,9 +234,6 @@ func TestResearch20261003PropositionIdentity(t *testing.T) {
 	// operations below never call a native writer or modify a canonical row.
 	admit := func(name, statement string, parents []string, candidate bool) AdmissionResult {
 		t.Helper()
-		if candidate {
-			return AdmissionResult{}
-		} // Product has no candidate admission contract.
 		input := ManualTextInput{SourceID: "proposition-lab-" + name, SourceVersion: "v1",
 			Raw: []byte(statement + "\n"), RequestID: "proposition-source-" + name, AttemptNumber: 1,
 			OriginMetadata: map[string]string{"fixture": "synthetic-proposition-identity"}}
@@ -251,7 +249,12 @@ func TestResearch20261003PropositionIdentity(t *testing.T) {
 		if len(parents) > 0 {
 			d := DerivationAdmissionInput{ParentNodeIDs: parents, Method: "declared-lab-rule",
 				Producer: "main-agent-fixture", TraceRef: "lab-trace:" + name}
-			request.Derivation = &d
+			if candidate {
+				c := CandidateAdmissionInput(d)
+				request.Candidate = &c
+			} else {
+				request.Derivation = &d
+			}
 		}
 		result, err := AdmitPendingProposal(ctx, pool, request)
 		if err != nil {
@@ -268,6 +271,10 @@ func TestResearch20261003PropositionIdentity(t *testing.T) {
 	duplicate := admit("Q-copy", "Q@prod holds.", []string{a.CanonicalRef, b.CanonicalRef}, false)
 	n := admit("not-Q", "not-Q@prod holds.", nil, false)
 	candidate := admit("candidate", "Q@prod is a candidate.", []string{c.CanonicalRef}, true)
+	persistedCandidate, err := GetCanonicalEvidenceByID(ctx, pool, candidate.CanonicalRef)
+	if err != nil || persistedCandidate.NodeKind != evidencegraph.CanonicalCandidate {
+		t.Fatalf("candidate fixture not durably recorded: %+v %v", persistedCandidate, err)
+	}
 	spares := make([]AdmissionResult, 18)
 	for i := range spares {
 		spares[i] = admit(fmt.Sprintf("spare-%02d", i), "Q holds in the externally declared scope.", nil, false)
@@ -470,22 +477,29 @@ func TestResearch20261003PropositionIdentity(t *testing.T) {
 		})
 	}
 	run("15-immutable-records", func(t *testing.T) any {
-		before := propositionLabCounts(t, ctx, pool)
+		before := bindingLabTables(t, ctx, pool)
 		commands := []string{
 			"UPDATE canonical_propositions SET definition=definition", "DELETE FROM canonical_propositions",
 			"TRUNCATE canonical_propositions CASCADE", "UPDATE canonical_proposition_bindings SET decision_reason=decision_reason",
 			"DELETE FROM canonical_proposition_bindings", "TRUNCATE canonical_proposition_bindings",
+			"TRUNCATE canonical_proposition_bindings CASCADE",
 		}
 		var rejected []string
 		for _, command := range commands {
 			_, err := pool.Exec(ctx, command)
-			if err == nil || !strings.Contains(err.Error(), "append-only") {
-				t.Fatalf("immutability guard: %s: %v", command, err)
+			var pgerr *pgconn.PgError
+			valid := errors.As(err, &pgerr) && ((pgerr.Code == "23514" && strings.Contains(pgerr.Message, "append-only")) ||
+				(command == "TRUNCATE canonical_proposition_bindings" && pgerr.Code == "0A000" && strings.Contains(pgerr.Message, "foreign key")))
+			if !valid {
+				t.Errorf("immutability guard: %s: %v", command, err)
 			}
-			rejected = append(rejected, err.Error())
+			if !reflect.DeepEqual(bindingLabTables(t, ctx, pool), before) {
+				t.Errorf("mutation changed registry contents: %s", command)
+			}
+			rejected = append(rejected, fmt.Sprint(err))
 		}
-		if propositionLabCounts(t, ctx, pool) != before {
-			t.Fatal("mutation changed registry counts")
+		if !reflect.DeepEqual(bindingLabTables(t, ctx, pool), before) {
+			t.Fatal("mutation changed registry contents")
 		}
 		return rejected
 	})

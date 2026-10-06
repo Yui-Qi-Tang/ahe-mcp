@@ -10,10 +10,11 @@ import (
 )
 
 type fullLabRelationMaterial struct {
-	Proposal  CanonicalContradictionProposal
-	Endpoints []CanonicalQueryResult
-	Decision  *CanonicalContradictionDecision
-	Sources   []BoundedSourceViewResult
+	Proposal       CanonicalContradictionProposal
+	Endpoints      []CanonicalQueryResult
+	Decision       *CanonicalContradictionDecision
+	Sources        []BoundedSourceViewResult
+	SourceProposal *ProposalQueryResult
 }
 
 func fullLabReadRelation(ctx context.Context, tx sqlTx, id string) (fullLabRelationMaterial, error) {
@@ -43,12 +44,41 @@ func fullLabReadRelation(ctx context.Context, tx sqlTx, id string) (fullLabRelat
 		}
 		m.Sources = append(m.Sources, v)
 	}
+	if p.SourceProposalOccurrenceID != "" {
+		source, err := loadContradictionSource(ctx, tx, p)
+		if err != nil {
+			return m, err
+		}
+		view, err := loadBoundedSourceViewFromQueryer(ctx, tx, source.SourceSnapshotID, source.ExtractionViewID)
+		if err != nil {
+			return m, err
+		}
+		if view.Input == nil {
+			return m, errors.New("relation source unavailable")
+		}
+		for _, ref := range source.SourceRefs {
+			text := view.Input.RenderedText
+			if ref.StartByte < 0 || ref.EndByte < ref.StartByte || ref.EndByte > len(text) || text[ref.StartByte:ref.EndByte] != ref.QuotedText {
+				return m, errors.New("relation quote/source mismatch")
+			}
+		}
+		m.SourceProposal = &source
+		m.Sources = append(m.Sources, view)
+	}
 	return m, fullLabValidateProductRelation(m, 128<<10)
 }
 
-// Supplemental native contract: product provides two endpoint sources, not the Lab third relation-source claim.
+// Source-bound relations include their exact third source in the same transaction.
+// Legacy relations retain the two endpoint sources and do not invent a third.
 func fullLabValidateProductRelation(m fullLabRelationMaterial, limit int) error {
-	if len(m.Endpoints) != 2 || len(m.Sources) != 2 {
+	sources := 2
+	if m.Proposal.SourceProposalOccurrenceID != "" {
+		sources = 3
+		if m.SourceProposal == nil || m.SourceProposal.ProposalOccurrenceID != m.Proposal.SourceProposalOccurrenceID || m.SourceProposal.StatementText != m.Proposal.Rationale || len(m.SourceProposal.SourceRefs) == 0 {
+			return errors.New("missing or mixed relation source")
+		}
+	}
+	if len(m.Endpoints) != 2 || len(m.Sources) != sources {
 		return errors.New("incomplete endpoints")
 	}
 	for i, id := range []string{m.Proposal.NodeAID, m.Proposal.NodeBID} {
@@ -86,12 +116,21 @@ func TestFullLabOriginalRelationContract(t *testing.T) {
 		}
 		return a
 	}
-	a := makeClaim("research-relation-a", "The refund window is seven days.")
-	b := makeClaim("research-relation-b", "The refund window is not seven days.")
 	reports := []map[string]any{}
 	for _, isolation := range []string{"REPEATABLE READ", "READ COMMITTED"} {
 		t.Run(isolation, func(t *testing.T) {
-			f := fullLabContradictionProposal(t, ctx, pool, "research-"+isolation, a.CanonicalRef, b.CanonicalRef, "The supplied statements disagree.")
+			// Each isolation probe starts pending. A terminal pair is intentionally single-use.
+			a := makeClaim("research-relation-a-"+isolation, "The refund window is seven days.")
+			b := makeClaim("research-relation-b-"+isolation, "The refund window is not seven days.")
+			rationale := "The supplied statements disagree."
+			source, e := IngestManualText(ctx, pool, ManualTextInput{SourceID: "relation-source-" + isolation, SourceVersion: "v1", Raw: []byte(rationale + "\n"), RequestID: "relation-source-" + isolation, AttemptNumber: 1}, FrozenExtractorOutput{Proposals: []ExtractorProposalOutput{{ProposalLocalID: "relation", StatementText: rationale, EvidenceRefs: []string{"span:S1"}}}})
+			if e != nil {
+				t.Fatal(e)
+			}
+			f, e := SubmitCanonicalContradictionProposal(ctx, pool, CanonicalContradictionProposalInput{RequestID: "research-" + isolation, NodeAID: a.CanonicalRef, NodeBID: b.CanonicalRef, Rationale: rationale, ProducerName: "frozen-lab-fixture", ProducerVersion: "v1", SourceProposalOccurrenceID: source.ProposalOccurrenceID})
+			if e != nil {
+				t.Fatal(e)
+			}
 			tx, e := (pgxDB{pool: pool}).begin(ctx)
 			if e != nil {
 				t.Fatal(e)
@@ -104,9 +143,15 @@ func TestFullLabOriginalRelationContract(t *testing.T) {
 			if e != nil {
 				t.Fatal(e)
 			}
-			row := map[string]any{"isolation": isolation, "before": first, "original_three_source_contract": "PRODUCT_CAPABILITY_MISSING"}
+			row := map[string]any{"isolation": isolation, "before": first, "original_three_source_contract": "source_bound_native"}
 			reports = append(reports, row)
-			t.Error("original relation claim requires its own source snapshot and quotes; native relation proposal has only two grounded endpoint sources")
+			if len(first.Sources) != 3 || first.SourceProposal == nil {
+				t.Fatal("original three-source contract incomplete")
+			}
+			native, e := GetCanonicalContradictionProposal(ctx, pool, f.Proposal.ID)
+			if e != nil || native.SourceProposal == nil || native.SourceProposal.ProposalOccurrenceID != source.ProposalOccurrenceID {
+				t.Fatalf("native source readback: %+v %v", native, e)
+			}
 			if first.Proposal.AdmissionOutcome != admissionOutcomePending {
 				row["snapshot_sequence"] = "initial relation was not pending"
 				t.Error("initial material wrong: original same-pair second request reused terminal proposal")
@@ -163,8 +208,13 @@ func TestFullLabOriginalRelationContract(t *testing.T) {
 			if e == nil {
 				t.Error("accepted absent proposal")
 			}
-			row["supplemental_native_contract_controls_completed"] = 5
+			noRelationSource := current
+			noRelationSource.SourceProposal = nil
+			if fullLabValidateProductRelation(noRelationSource, 128<<10) == nil {
+				t.Error("accepted missing relation source")
+			}
+			row["native_contract_controls_completed"] = 6
 		})
 	}
-	researchOutput(t, "relation.json", map[string]any{"reports": reports, "original_contract_passed": false, "scope": "original relation data and isolation sequence attempted; missing third source is retained as failure; two-source assertions are supplemental, not original PASS"})
+	researchOutput(t, "relation.json", map[string]any{"reports": reports, "original_contract_passed": !t.Failed(), "scope": "native source-bound relation plus endpoint sources, same-snapshot reads, independent isolation fixtures; TEST APPROVAL STUB"})
 }

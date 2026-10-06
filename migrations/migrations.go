@@ -20,11 +20,12 @@ import (
 var upFiles embed.FS
 
 var requiredTablesByMigration = map[string][]string{
-	consistencyContractMigration:    nil, // Guard-only migration; no new tables.
-	consistencyMigration:            {"consistency_watches", "consistency_watch_versions", "consistency_runs", "consistency_run_artifacts", "consistency_events"},
-	propositionBindingMigration:     {"canonical_propositions", "canonical_proposition_bindings", "canonical_proposition_binding_events"},
-	externalCheckMigration:          {"external_check_records"},
-	externalRepresentationMigration: {"external_representation_records", "external_check_representation_links"},
+	candidateRelationSourceMigration: nil,
+	consistencyContractMigration:     nil, // Guard-only migration; no new tables.
+	consistencyMigration:             {"consistency_watches", "consistency_watch_versions", "consistency_runs", "consistency_run_artifacts", "consistency_events"},
+	propositionBindingMigration:      {"canonical_propositions", "canonical_proposition_bindings", "canonical_proposition_binding_events"},
+	externalCheckMigration:           {"external_check_records"},
+	externalRepresentationMigration:  {"external_representation_records", "external_check_representation_links"},
 
 	"000047_evidence_ingestion_implements_admission.up.sql": {"canonical_implements_admissions"},
 	"000048_evidence_ingestion_references_admission.up.sql": {"canonical_references_admissions"},
@@ -333,7 +334,7 @@ var requiredAdmissionFunctions = []requiredAdmissionFunction{
 		Name:         "canonical_ordinary_admission_assert_decision_v1",
 		Arguments:    "text",
 		Result:       "void",
-		SourceSHA256: "sha256:d288459a62116f9d2ae18daa152cf5b05179fa3a1a00cab5f3483b398b7fb60e",
+		SourceSHA256: "sha256:504d6ad07b0dd806437cfdd930c8ebdcd839b2c56fe3d75fa2604b1a768e5b08",
 		OwnerTable:   "canonical_ordinary_admission_manifests",
 	},
 	{
@@ -393,7 +394,7 @@ var requiredAdmissionFunctions = []requiredAdmissionFunction{
 	{
 		Name:            "canonical_ordinary_admission_derivation_trigger_v1",
 		Result:          "trigger",
-		SourceSHA256:    "sha256:1376d6495b53d16aa1020a77141644b1e513ee9773725766d7b7d8edcc7ec30d",
+		SourceSHA256:    "sha256:67618e264b3b4b0b9c8cf61cc7e7d2b2366dcde973224990e7299a23bf6d567c",
 		SecurityDefiner: true,
 		SearchPath:      "search_path=pg_catalog",
 		OwnerTable:      "canonical_ordinary_admission_manifests",
@@ -904,7 +905,7 @@ var requiredAdmissionConstraints = []requiredCanonicalSupersessionConstraint{
 		Name:       "canonical_ordinary_admission_manifests_kind_ck",
 		Table:      "canonical_ordinary_admission_manifests",
 		Type:       "c",
-		Definition: "CHECK ((mutation_kind = ANY (ARRAY['source_backed_claim'::text, 'derived_claim'::text])))",
+		Definition: "CHECK ((mutation_kind = ANY (ARRAY['source_backed_claim'::text, 'derived_claim'::text, 'candidate'::text])))",
 	},
 	{
 		Name:       "canonical_ordinary_admission_manifests_outcome_ck",

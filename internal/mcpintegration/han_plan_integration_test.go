@@ -648,8 +648,8 @@ func hanPlanAnalyze(ctx context.Context, pool *pgxpool.Pool, schema string) erro
 	if rows.Err() != nil {
 		return rows.Err()
 	}
-	if len(names) != 78 {
-		return errors.New("unexpected full schema table count")
+	if err := queryLabValidateTables(names); err != nil {
+		return err
 	}
 	for _, name := range names {
 		if _, err := pool.Exec(ctx, "ANALYZE "+pgx.Identifier{schema, name}.Sanitize()); err != nil {
@@ -781,7 +781,10 @@ func hanPlanRunBlock(t *testing.T, ctx context.Context, schema string, observer,
 		return err
 	}
 	block.BeforeTables = hanQueryLabTableDigests(t, ctx, observer, schema)
-	if len(block.BeforeTables) != 78 || block.BeforeTables["proposal_occurrences"].Rows != block.Block.Rows || block.BeforeTables["canonical_graph_nodes"].Rows != 0 || block.BeforeTables["canonical_graph_edges"].Rows != 0 || block.BeforeTables["admission_decisions"].Rows != 0 {
+	if err := queryLabVerifyCurrent(ctx, observer, schema, block.BeforeTables); err != nil {
+		return err
+	}
+	if block.BeforeTables["proposal_occurrences"].Rows != block.Block.Rows || block.BeforeTables["canonical_graph_nodes"].Rows != 0 || block.BeforeTables["canonical_graph_edges"].Rows != 0 || block.BeforeTables["admission_decisions"].Rows != 0 {
 		return errors.New("diagnostic block violates pending-only table boundaries")
 	}
 	block.Phase = "timing"

@@ -293,8 +293,8 @@ func TestIntegrationHanOutcomeReadOnlyLab(t *testing.T) {
 	hanOutcomeCompareSnapshot(t, ctx, observer, snapshot, report.Plan)
 	report.SnapshotVerified = true
 	report.Before = hanQueryLabTableDigests(t, ctx, observer, "ahe_brief")
-	if len(report.Before) != 78 {
-		t.Fatal("restored outcome schema does not have the frozen 78-table inventory")
+	if err := queryLabVerifyCurrent(ctx, observer, "ahe_brief", report.Before); err != nil {
+		t.Fatal(err)
 	}
 	for table, count := range map[string]int{"source_snapshots": 4, "proposal_occurrences": 4, "admission_decisions": 4, "canonical_graph_nodes": 6, "canonical_graph_edges": 4} {
 		if report.Before[table].Rows != count {
@@ -330,7 +330,7 @@ func TestIntegrationHanOutcomeReadOnlyLab(t *testing.T) {
 	report.Policy, err = dbrole.VerifyRuntimeConnection(ctx, policyConn, dbrole.RuntimeVerificationInput{Role: "brief_query_group", SessionUser: "brief_query_login", Schema: "ahe_brief", Profile: dbrole.ProfileQuery})
 	closeErr := policyConn.Close(ctx)
 	if err != nil || closeErr != nil {
-		t.Fatal("restored query policy failed read-only verification")
+		t.Fatalf("restored query policy failed read-only verification: %v; close: %v", err, closeErr)
 	}
 	report.Phase = "query_start"
 	query := startAuthorityProcess(t, ctx, "ahe-query-mcp", authorityProcessLogin{group: "brief_query_group", profile: dbrole.ProfileQuery, dsn: queryConfig.ConnString()}, "ahe_brief", "")

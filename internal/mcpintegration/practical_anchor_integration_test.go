@@ -111,7 +111,7 @@ func practicalAnchorReadPlan(t *testing.T, researchPlanData []byte) (*practicalA
 func practicalAnchorCheckObservation(t *testing.T, o hanOutcomeObservation, tc hanOutcomeCase, frozen map[string]evidencequerymcp.GroundedEvidenceBriefResponse) {
 	t.Helper()
 	if o.Mode != "practical" {
-		practicalCheckObservation(t, o, tc, frozen)
+		practicalCheckResearchObservation(t, o, frozen)
 		return
 	}
 	previous, ok := frozen[o.CaseID+"/practical"]
@@ -191,7 +191,7 @@ func TestIntegrationPracticalAnchorReadOnlyLab(t *testing.T) {
 	if os.Getenv("AHE_PRACTICAL_ANCHOR_LAB_PLAN") == "" {
 		t.Skip("set the frozen anchor plan and dedicated multisurface DB settings")
 	}
-	runMultisurfaceReadOnlyLab(t, true, true)
+	runMultisurfaceReadOnlyLab(t, true)
 }
 
 func TestPracticalAnchorPlanContract(t *testing.T) {

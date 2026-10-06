@@ -12,6 +12,7 @@ import (
 
 func rollbackConsistencyForTest(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	t.Helper()
+	rollbackCandidateRelationSourceForTest(t, ctx, pool)
 	down, err := os.ReadFile("000053_evidence_consistency_lifecycle.down.sql")
 	if err != nil {
 		t.Fatal(err)

@@ -941,12 +941,17 @@ type DerivationAdmissionInput struct {
 	TraceRef      string
 }
 
+// CandidateAdmissionInput records a hypothesis with its complete parent set.
+// Admission accepts the record, not the hypothesis as an established claim.
+type CandidateAdmissionInput DerivationAdmissionInput
+
 // AdmissionInput admits one pending proposal occurrence into the canonical graph tables.
 type AdmissionInput struct {
 	ProposalOccurrenceID string
 	DecisionBy           string
 	DecisionReason       string
 	Derivation           *DerivationAdmissionInput
+	Candidate            *CandidateAdmissionInput
 }
 
 // ProposalDispositionInput records a terminal non-canonical outcome for one pending proposal.
@@ -983,31 +988,35 @@ type ProposalDispositionResult struct {
 // CanonicalContradictionProposalInput proposes one symmetric contradiction
 // between two already-admitted canonical nodes.
 type CanonicalContradictionProposalInput struct {
-	RequestID          string
-	NodeAID            string
-	NodeBID            string
-	Rationale          string
-	ProducerName       string
-	ProducerVersion    string
-	ProducerSessionRef string
+	// SourceProposalOccurrenceID grounds the rationale in an exact persisted statement.
+	SourceProposalOccurrenceID string
+	RequestID                  string
+	NodeAID                    string
+	NodeBID                    string
+	Rationale                  string
+	ProducerName               string
+	ProducerVersion            string
+	ProducerSessionRef         string
 }
 
 // CanonicalContradictionProposal is the durable pending or decided relation proposal.
 // NodeAID is always lexicographically smaller than NodeBID.
 type CanonicalContradictionProposal struct {
-	ID                  string
-	RequestID           string
-	RequestPayloadHash  string
-	ProposalFingerprint string
-	NodeAID             string
-	NodeBID             string
-	Relation            evidencegraph.CanonicalEdgeRelation
-	Rationale           string
-	ProducerName        string
-	ProducerVersion     string
-	ProducerSessionRef  string
-	AdmissionOutcome    string
-	CanonicalEdgeID     string
+	// SourceProposalOccurrenceID grounds the rationale in an exact persisted statement.
+	SourceProposalOccurrenceID string
+	ID                         string
+	RequestID                  string
+	RequestPayloadHash         string
+	ProposalFingerprint        string
+	NodeAID                    string
+	NodeBID                    string
+	Relation                   evidencegraph.CanonicalEdgeRelation
+	Rationale                  string
+	ProducerName               string
+	ProducerVersion            string
+	ProducerSessionRef         string
+	AdmissionOutcome           string
+	CanonicalEdgeID            string
 }
 
 // CanonicalContradictionProposalResult reports proposal persistence or replay.
@@ -1121,10 +1130,11 @@ type CanonicalQueryResult struct {
 // CanonicalContradictionQueryResult returns the proposal, both grounded
 // canonical endpoints, and its optional terminal decision.
 type CanonicalContradictionQueryResult struct {
-	Proposal CanonicalContradictionProposal
-	NodeA    CanonicalQueryResult
-	NodeB    CanonicalQueryResult
-	Decision *CanonicalContradictionDecision
+	SourceProposal *ProposalQueryResult
+	Proposal       CanonicalContradictionProposal
+	NodeA          CanonicalQueryResult
+	NodeB          CanonicalQueryResult
+	Decision       *CanonicalContradictionDecision
 }
 
 // CanonicalGraphEdge is the DB-facing persisted form of an evidencegraph canonical edge.
