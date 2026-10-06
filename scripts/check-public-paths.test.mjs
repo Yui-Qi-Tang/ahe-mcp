@@ -23,8 +23,8 @@ test('keeps portable instructions and synthetic coordinates valid', () => {
   for (const text of [
     '/path/to/ahe-query-launcher', '/synthetic/ahe-core/docs/STATUS.md',
     '/redacted/home/Library/Caches', '/redacted/runtime-temp/go-build',
-    '/private/tmp/detective-desktop-trial.XXXXXX', '/private/tmp/fixture',
-    'github.com/Yui-Qi-Tang/ahe-mcp', 'apps/detective/README.md',
+    '/private/tmp/ahe-trial.XXXXXX', '/private/tmp/fixture',
+    'github.com/Yui-Qi-Tang/ahe-mcp', 'docs/FIRST_WORKFLOW.md',
   ]) assert.equal(containsMachinePath(text), false);
 });
 

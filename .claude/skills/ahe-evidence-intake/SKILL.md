@@ -27,23 +27,6 @@ or a completeness assessment. Do not convert provider content to `manual_text`
 to bypass a missing revision, connector or capability. Repository code and git
 extraction remain separate workflows.
 
-The retained legacy host's small-model engineering path is a comparison
-baseline, not the selected task-driven end state or a Desktop capability. It
-selects complete, verbatim units from its current source input instead of
-writing shorter replacement sentences.
-The controller verifies the selected text and its exact span reference even
-when the model's output matches the JSON schema. A unit may contain multiple
-conditions or table rows; selecting it is neither semantic validation nor proof
-that all requested information was selected. Explicit section processing covers
-the supplied adapter-selected text, not uncollected provider fields or every
-fact in the full document. Oversized or invalid output must fail visibly.
-
-Atlassian/Codegraph model extraction is not categorically disabled.
-`proposal_extraction`, deterministic `proposal_conversion`, and collection-only
-remain distinct operator choices; never silently enable proposal writing.
-This native runner contract is separate from Claude's grounded proposal
-workflow below. Do not label Claude-generated claims as native model selections.
-
 ## Preconditions
 
 - Use the source scope from the current user request. When invoked explicitly,
@@ -70,7 +53,7 @@ workflow below. Do not label Claude-generated claims as native model selections.
   generic derived-node, contradiction and Supersession writers are not enabled.
   Exact-reviewed endpoints use the separately authorized profile below. Do not
   enable a legacy profile, change a launcher, or use direct SQL to work around
-  a missing capability. See [installation scope](../../../INSTALL.md#bounded-detective-to-pending-mcp-installation).
+  a missing capability. See [installation scope](../../../INSTALL.md#bounded-external-intake-mcp-installation).
 
 ## Collect One Provider Object
 

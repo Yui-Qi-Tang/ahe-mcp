@@ -7,11 +7,6 @@ progress are not current capabilities. Historical experiment logs, reviews and r
 measurements are not product documentation. This document is not proof of deployment
 readiness or model quality.
 
-**Status: Desktop has been frozen and unavailable since 2026-09-14.** Desktop UI and
-Service descriptions refer to retained code, not a working or complete workflow.
-CLI completion and acceptance come first. The freeze does not change MCP/Core query
-algorithms, data structures or admission boundaries.
-
 ## Contents
 
 - [System responsibilities](#architecture)
@@ -19,7 +14,6 @@ algorithms, data structures or admission boundaries.
 - [Review and state transitions](#review)
 - [Graph relations and versions](#graph)
 - [Text search](#search)
-- [Detective extraction and recovery](#detective)
 - [Runtime authority and integrity](#authority)
 - [References](#references)
 
@@ -28,16 +22,16 @@ algorithms, data structures or admission boundaries.
 ## System responsibilities
 
 ```text
-Data source / source MCP → Detective → Intake MCP → sources, extraction records, pending
+Data source / source MCP → external client → Intake MCP → sources, extraction records, pending
                                            ↓
                              exact review subject → human decision
                                            ↓
                                     Review MCP → PostgreSQL
                                            ↑
-Detective / downstream agent ← read-only evidence package ← Query MCP
+External client / downstream agent ← read-only evidence package ← Query MCP
 ```
 
-- **Detective** connects to sources, preserves original content, runs model extraction
+- **External client** connects to sources, preserves original content, runs model extraction
   and provides the human workflow. Source collection stays outside Core.
 - **MCP domain / PostgreSQL** stores source identity, proposals, review decisions and
   the canonical graph. Model output does not authorize writes.
@@ -46,10 +40,9 @@ Detective / downstream agent ← read-only evidence package ← Query MCP
 - **Topology kernel** handles nodes, edges and structural algorithms. AHE defines
   the evidence meaning, temporal semantics and admission rules of relations.
 
-Detective and MCP share one Go module but communicate through separate stdio processes.
-The new Desktop does not hold DB credentials directly; the old `ahe-detective` collector
-is a separate program. Collected sources, pending proposals, admitted canonical evidence,
-active repository generations and downstream answers are five distinct states or layers.
+External clients communicate through separately authorized MCP processes.
+Collected sources, pending proposals, admitted canonical evidence, active repository
+generations and downstream answers remain distinct states or layers.
 
 <a id="data-model"></a>
 
@@ -311,7 +304,7 @@ and relation approvals remain independent.
 The domain registry is broader than the standard runtime. Only the bounded
 exact-reviewed endpoint subset above is exposed; generic derived, contradiction
 and Supersession writers remain disabled. Do not bypass the entry point with
-`source-claim-reviewer` credentials or treat these paths as Desktop buttons.
+`source-claim-reviewer` credentials or treat these internal paths as enabled client operations.
 
 - **Derived admission**: each new immutable derived claim requires 1–64 admitted
   direct parents and the complete exact `parent → target` edges. Go admission validation
@@ -535,7 +528,7 @@ grounded brief; their defaults are not interchangeable.
 | `deterministic_lexical_recovery` | Grounded brief default; records the simple attempt, then uses English morphology. Only if results remain empty and English yields at least 3 terms does it relax to at least 2 overlapping terms |
 | `experimental_han_lexical_recovery_v1` | Adds literal Han all-term matching only after recovery-v2 ends with zero results; mixed ASCII follows separate rules |
 | `experimental_multisurface_lexical_v1` | Research mode; unions baseline candidates with statement/bounded-source-body candidates |
-| `practical_multisurface_lexical_v1` | Detective practical mode; conditional zero-hit expansion and restrictions on auxiliary Han terms |
+| `practical_multisurface_lexical_v1` | Explicit practical query mode; conditional zero-hit expansion and restrictions on auxiliary Han terms |
 
 A `simple` match does not stop recovery-v2 early; English morphology still runs.
 Literal Han fallback and multisurface bigrams are different algorithms. Neither is a
@@ -560,7 +553,7 @@ general Chinese word segmenter, translator or semantic inference engine.
 
 The practical mode name remains v1, its plan is `practical-multisurface-lexical-v2`,
 and its response is `grounded-evidence-brief-v7`. These versions identify different
-contracts. Detective explicitly selects the mode/schema and reports incompatibility
+contracts. The client explicitly selects the mode/schema and reports incompatibility
 instead of silently falling back. Research v6 remains a separate mode. Fixed-case results
 are not a general quality guarantee.
 
@@ -587,247 +580,6 @@ Code: [query modes](../internal/evidenceingestion/query_execution.go),
 [source bounds](../internal/evidenceingestion/source_view_bounded.go).
 See [search references](#search-references) for background. Current ranking does not
 implement BM25, PathSim or a paper's scoring model.
-
-<a id="detective"></a>
-
-## Detective extraction and recovery
-
-### Task-driven selection and local-model boundaries
-
-[taskextract](../apps/detective/internal/taskextract) accepts a frozen task and source.
-It does not collect or ingest data; the caller supplies the model interface.
-[ExtractTask](../apps/detective/internal/desktop/task_model.go) provides controlled local
-integration: it calls `Prepare`, rejects input without a readable scope, then obtains
-the explicitly selected model and generates once without opening a Desktop workspace.
-Loopback restrictions and environment credential isolation remain. There are no tools,
-retries or fallback models. The schema binds paragraph IDs; incomplete generation or
-protocol mismatch yields no candidates.
-
-Dependencies run `CLI / Desktop Service → desktop.ExtractTask → taskextract`.
-Offline parsing and inspection share `taskextract`. The model integration itself does
-not open a Desktop workspace. Desktop Service manages active work and private storage;
-external intake is not connected yet.
-
-`detective-task-input/v1` stores caller-declared Task/Source data.
-`detective-task-run/v1` binds complete input, model, InputID and result; it is not an AHE
-attempt or source receipt. `task inspect` freezes input for the explicitly selected model
-and displays original text without connecting to the model. `task run` reserves a fresh
-private output before one selection run. `task read` only verifies saved content; it
-does not fetch a source or call a model. Successful results must pass existing `Replay`
-checks. Failures store bounded error codes and raw responses without candidates. Reading
-them again does not decode failed responses into success. Escaping terminal control and
-format characters affects display only. Inspection retains all original text, fields
-provided/not obtained/not provided, unselected paragraphs and separate model notes.
-This is not the native exact-review display, does not collect a human decision and grants
-no intake/admission authority.
-
-The retained Desktop Service stores the objective, InputID, model settings, complete
-input, Scope and run record in a separate `TaskWork`. It does not convert them into old
-STATUS CandidateView/RowBatch or Brief records. `PrepareTask` checks the UI-selected
-source path/SHA against saved bytes before freezing. `RunTask` requires the same prepared
-InputID and model settings, respects Service busy/cancellation boundaries, runs once and
-saves a fresh private record. Failure or cancellation yields no candidates; unconfirmed
-storage cannot publish success. Changing the source or applying settings clears active
-TaskWork without deleting earlier files. Changing the objective requires preparation
-again, not relabeling old candidates. A new source version cannot reuse old results.
-
-Ordinary saved text maps to one `body` or `tool_return` field, with revision `unknown`
-and coverage `exact_excerpt`. Known capture references and limitations are retained;
-Jira description/comments and provider identity are not invented. Selection rejects
-saved text over 32 KiB or 128 paragraphs without silent truncation. `OpenTaskRecord`
-remains an offline recovery service that checks a private workspace task-run without
-rereading the source or calling a model. The ordinary Desktop UI has no entry point to
-open local sources, saved records or synthetic demos, and mounts neither a separate
-`TaskWorkspace` page nor a workbench selection card. Selection components, Service, CLI
-and regression tests remain. Source MCP collection, chat and evidence queries remain
-separate operations; chat is not connected to task selection. `NewWork` clears only the
-active source, candidates, chat and query. It creates no synthetic source and preserves
-applied settings, tool lists and login. Old write/extraction entry points still reject
-active tasks.
-
-Source settings are followed by an optional AHE evidence store; advanced connection
-settings are collapsed by default. The query program is read-only. The intake program
-creates pending proposals, not admissions. The human review program requires an explicit
-decision before writing. These labels do not change MCP profiles or authority, and do
-not configure the DB automatically. Removing the workbench's persistent inactive-model
-warning does not start a model automatically. Existing workflows still check prerequisites
-and failures.
-
-`Task` fixes the objective, version, source ID and requested fields. `Source` preserves
-all supplied field text and declared identity/version/coverage/limitations. `InputID`
-binds the complete task, source, model and selection contract. A task label or source
-hash alone does not define replay identity. Source metadata gains no provider certification.
-
-Model units are split at blank lines and use half-open byte ranges within each field.
-CRLF, indentation and HTML are not normalized or interpreted. The model returns only
-start/end paragraph IDs within one field; the controller restores all original characters
-between them as a candidate. Different fields can yield separate candidates, but cannot
-be joined into a new source sentence. Necessary context may overlap; it is not independent
-support. Units locate text for reading, not proof of atomic claims, grammar or semantic sufficiency.
-
-The controller separately records requested fields not obtained, obtained fields not
-provided, and supplied paragraphs not selected. "Unselected" does not mean "read and
-unimportant". Successful abstention requires an explicit reason and no candidates.
-Incomplete, over-limit, mismatched-reference, duplicate and cancelled responses fail
-without partial successful candidates. All results remain `not_reviewed` with
-`authority_effect=none`.
-
-Source coverage and model execution completeness are separate dimensions. Prompt v3
-asks the model to complete selection only over supplied units. Controller `Task.parts`
-describes requested collection scope; `Scope.ProvidedParts` and units describe available
-content. Missing other fields alone should not cause `incomplete`, but successful selection
-does not complete the whole collection task. No relevant supplied paragraphs allows
-explicit abstention. Failure to process all supplied content or exceeding the candidate
-limit still requires an incomplete result. These are model instructions, not semantic
-judgments the controller can prove. Every `incomplete` response is rejected as a whole;
-callers cannot turn it directly into success. Values such as `full_document` are source
-declarations and do not override recorded missing fields.
-
-Model input contains only `version/objective/source_title/units`. Collection identity,
-revision, coverage, limitations and complete requested/provided/missing scope remain in
-Request/Scope for human inspection. `ModelInputVersion` is separate from the paragraph
-ProjectionVersion. Both bind into InputID with the complete source/task, PromptVersion
-and result contract. Identical model input cannot replace complete replay identity;
-results from old contracts cannot be mixed in.
-
-Result contract v2 allows `selected.reason` to be empty or a bounded model note, matching
-the schema's text field. Notes allow at most 512 Unicode characters / 2,048 bytes. Nonempty
-notes cannot be whitespace-only or contain control characters. A note is not a source
-quote, semantic support or a human approval reason, and is not appended to Candidate.Text.
-Changing a note also breaks exact replay. Abstention/incomplete responses still require
-a nonempty reason and empty ranges. Notes do not relax reference or completion checks.
-Ordinary tests use synthetic responses only. Real-model tests require explicit enablement,
-a named model and endpoint, and one synthetic task. Valid citations or passing code tests
-do not establish model quality.
-
-`Replay` rechecks the same input, original model text and all derived candidates. It
-neither calls the model nor replays AHE writes. CLI and the retained Desktop Service can
-save frozen task/source data. External handoff is not implemented. It will require mapping
-local paragraph coordinates to AHE-persisted views/spans; local unit IDs cannot serve
-directly as database citations.
-
-### Short summaries and readable evidence
-
-Brief is a separately selected news/event reading workflow, not a general replacement
-for Jira, Confluence or code/git engineering evidence collection. New operations require
-`detective-brief-source/v2` with `source_kind` explicitly set to `news` or `public_event`.
-CLI, Desktop and submission entry points check this before starting a model or MCP.
-The kind is caller-declared, not semantic classification or source certification.
-Engineering sources must preserve source identity, revision and exact-reference contracts;
-`manual_text` cannot bypass external-source requirements.
-
-Source preservation, candidate grounding and information retention are separate checks.
-A small model may invent nothing yet omit substantial information when selecting material
-for a summary. Retaining the original does not compensate for omissions in the candidate
-set. Engineering extraction must be checked against the user's requested scope and disclose
-unprocessed content and known omissions. `full_document` and exact quotes do not prove
-extraction completeness.
-
-The retained legacy host document-model path uses `whole-span-exact-quote-selection-v1`.
-This integration remains in the working draft as a comparison baseline, not completed
-task-driven extraction or a Desktop entry point. The constraints below describe it;
-they do not select it as the new engineering direction. The model can select only complete
-supplied spans, without summarizing, rewriting or removing conditions, exceptions or
-table rows. JSON Schema binds full text and a unique span ID. The controller separately
-checks verbatim equality, one correct reference, no duplicate selections and count limits;
-it does not assume the provider obeys the schema. A unit is limited to 64 KiB. Over-limit
-or incomplete output fails without truncation or automatic repair. Existing decoder and
-historical contracts remain compatible.
-
-The new Ollama mode also requires `done=true` and `done_reason=stop`. Token-limit stops,
-missing completion markers or other stop reasons return the unchanged response and an
-error. Valid JSON alone is not normal completion or abstention. Older providers that
-omit the completion reason do not meet the new contract; old-mode compatibility is unchanged.
-
-Default units are adapter-selected values. Explicit `heading_sections_v1` selection
-processes existing sections in sequence without adding sentence splitting or summarization.
-`selection_coverage` distinguishes supplied, selected and unselected unit counts;
-`fact_completeness_assessed=false`. Processing every section does not prove that all facts
-were found, each unit is an atomic claim, or claims are true. The runner does not rewrite
-model responses. Runner/parser rejection persists only the response hash. Success or
-some later validation failures persist decoded candidate JSON, not the raw response packet.
-The section workflow also stores per-section response hashes and an aggregate result;
-it does not claim to save per-section or failed raw responses in full.
-
-Models are not categorically banned based on the Atlassian/Codegraph name. For compatible
-document paths, the operator must explicitly choose model extraction or `proposal_conversion`
-to copy all adapter-selected values verbatim: at most 128 values, each at most 64 KiB.
-Collection-only settings do not automatically enable proposal writes. This preserves
-selected text, not all provider information. Jira currently selects description and
-Confluence selects body; unselected fields and uncollected content must still be disclosed.
-Codegraph candidate and typed code/git paths do not thereby become general MCP document inputs.
-
-Current Brief uses a WorldMonitor-style workflow: send a bounded body to the model and
-generate one short summary of 1–2 sentences. Prompt v2 asks it to preserve the subject,
-action/state, scope and unknowns without added analysis. One call, no tools, no automatic
-retries. Body limits are 32 KiB and 64 nonblank paragraphs; the CLI input file limit is
-64 KiB. Requests allow 768 output tokens and 2 minutes. Limit errors name the resource,
-limit and observed amount. Rejection before a model call is not a model-quality failure.
-Original content, projection, source/input hashes and raw output are saved. A summary is
-neither the source nor review approval.
-
-`brief select` can select a contiguous UTF-8 byte range, start-inclusive and end-exclusive,
-offline from a v2 news/event parent explicitly declared as a full document. It creates a
-new `coverage=exact_excerpt` file without overwriting the parent. Parent JSON is limited
-to 1 MiB and body to 512 KiB; the selected child remains subject to model-input limits.
-`detective-brief-excerpt/v1` stores parent source ID/revision, body hash/bytes, range and
-selection reason. It participates in existing report/submission digests and is retained
-in pending declared-origin metadata. New excerpts use `brief-excerpt:` plus the full
-origin hash as their manual_text storage ID, while separately preserving the declared
-parent source ID. This prevents reuse of the first source's coordinates when body text
-matches but parent revision or selection reason differs. Identical input replays to the
-same ID. Existing sources without provenance fields and old receipt IDs remain unchanged;
-Core's manual-metadata first-writer rule is unchanged. Checking a child alone verifies only
-structure. `brief verify-excerpt` also needs the parent file to verify the actual slice.
-Desktop displays the original text supplied for this run and saved coordinates. Opening
-a file is not verification, and excerpt completeness is not assumed.
-
-Readability means a person can understand the complete claim: who did what, with necessary
-objects, conditions and scope, rather than isolated keywords. Original evidence wording
-is not localized into regional vocabulary. This is an extraction and review principle,
-not a claim that code validates all semantics or English grammar. An unchanged model
-answer after text deletion does not prove that the remaining fragment is sufficient;
-see [Feng et al.](#extraction-references). Older summary-guided, multi-step reasoning and
-persona comparisons are research background, not extra steps in this Brief workflow.
-
-A person chooses a readable statement and an exact quote of 1–12 consecutive lines.
-The controller checks lines/bytes against the stored source; semantic support remains
-a human judgment. The original Brief body is saved through `submit_text_source` as
-`manual_text`, with a body hash identifying its version. Model summaries are stored
-separately as candidate material. External URL/revision fields on this path are
-caller-declared metadata, not provider-qualified external-source identity.
-
-### Local state and uncertain outcomes
-
-```text
-Save source / Brief → submit pending → exact Query readback → obtain native review display
-→ human selects outcome / reason → save frozen decision first → call writer → independent Query check
-```
-
-Checkpoints, source receipts, Briefs and decision files are private immutable data, not
-substitutes for DB readback. Legacy Brief v1 did not record source kind. Preserve its
-original JSON, digest and existing review/decision replay without guessing a kind or
-adding fields. Old sources cannot start new extraction, candidates or intake submissions.
-Unconfirmed legacy intake requires human inspection; editing receipts cannot bypass the
-new restrictions. Reopened files default to `historical_not_rechecked`. App restart returns
-to offline mode without automatically connecting to a source, model or MCP. Offline chat
-prompts grant no approval; typing `admit` does not change the DB.
-
-A remote operation may succeed without a local receipt. Recovery permits only the frozen
-original decision and an explicitly selected launcher. Exact replay requires the complete
-original subject, reason and confirmation conditions. Conflicts, missing required data
-or unsupported contracts stop recovery. Reading a terminal state through Query does not
-verify the original decision ID/reason and cannot justify inventing a missing receipt.
-
-Workspaces use protected directories, fixed directory handles and nonblocking file locks.
-Locks coordinate only local processes that follow the protocol; they are neither a
-permission sandbox nor multi-user/distributed coordination. Workspace settings and
-launcher/DB credentials stay outside the product repository.
-
-See [Brief extractor](../apps/detective/internal/sourcepilot/brief.go),
-[source-to-pending adapter](../apps/detective/internal/ahemcp/brief.go),
-[Desktop workflow](../apps/detective/internal/desktop/brief_workflow.go),
-[query client](../apps/detective/internal/ahemcp/search.go).
 
 <a id="authority"></a>
 
@@ -866,7 +618,7 @@ this design document does not replace operational checks.
 
 ## References
 
-These sources are traceable to existing AHE/Detective design and research records.
+These sources are traceable to existing AHE design and research records.
 Papers, textbooks, specifications and external engineering methods are identified separately.
 They provide design background, not implemented features or formal proof of AHE.
 No papers are invented for theoretical keywords without a specific bibliographic source.
@@ -947,7 +699,3 @@ No papers are invented for theoretical keywords without a specific bibliographic
   [`SECURITY DEFINER`](https://www.postgresql.org/docs/18/sql-createfunction.html#SQL-CREATEFUNCTION-SECURITY), [prepared statements](https://www.postgresql.org/docs/18/sql-prepare.html).
   Database references for search, transactions and replay. Database mechanisms alone
   do not prove application-protocol correctness.
-- WorldMonitor: [Summary prompt construction at a pinned revision](https://github.com/koala73/worldmonitor/blob/af4e6da5642f0fe6ddba62fd52ebe6dbcc341ef5/server/worldmonitor/news/v1/_shared.ts#L38-L108).
-  An external engineering method, not a paper. The previously checked revision is retained;
-  the upstream page could not be reloaded during the recorded review. Detective borrows
-  the short-summary workflow without claiming the same full data flow or model quality.

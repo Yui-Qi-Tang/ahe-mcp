@@ -31,7 +31,7 @@ Choose the smallest useful entry point for the question:
 | Source revision or governed lineage state | `get_mcp_read_source_states`, or `get_canonical_supersession_currentness` with an observed `lineage_key` |
 
 `get_grounded_evidence_brief` is a deterministic read-only evidence package,
-not Detective's news Brief generation. Inspect its source context, record state,
+not a model-generated news summary. Inspect its source context, record state,
 search surface and recovery trace when exposed. Do not silently change the
 user's source/revision scope or treat omitted context as absent source data.
 

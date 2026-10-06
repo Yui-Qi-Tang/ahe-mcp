@@ -1,7 +1,7 @@
 # AHE MCP
 
 <p align="center">
-  <img src="apps/detective/build/appicon.png" alt="AHE icon" width="160" height="160">
+  <img src="assets/ahe-icon.png" alt="AHE icon" width="160" height="160">
 </p>
 
 **AHE provides traceable evidence and verified operation results for AI agents.**
@@ -67,26 +67,17 @@ See the [secondary outcome](#secondary-outcome-repairs-passing-the-official-test
 
 ## Quick start
 
-Current version: `dev` preview; Core schema **54**, database role policy **v7**. Retained Detective Desktop code: `0.1.0-preview.18`.
-MCP and Detective share one root Go module, using Go `1.27.0`.
-
-> **Desktop frozen / unavailable — 2026-09-14.** Desktop is not a
-> supported working product. Its code and previous test results are retained,
-> not offered for installation or acceptance. Stabilize Detective CLI first;
-> this does not disable the AHE MCP servers.
+Current version: `dev` preview; Core schema **54**, database role policy **v7**.
+The MCP module uses Go `1.27.0`.
 
 ```sh
 git clone https://github.com/Yui-Qi-Tang/ahe-mcp.git
 cd ahe-mcp
 make build      # MCP and operator binaries
-make detective # Detective CLI and source tools
 ```
 
 Follow [MCP installation](INSTALL.md) for PostgreSQL, migrations, runtime roles
-and protected launchers, and [Detective CLI](apps/detective/README.md) for the
-retained command-line capabilities and gaps. Building does not configure a DB
-or download a model. Desktop launch instructions are frozen reference material,
-not part of quick start.
+and protected launchers. Building does not configure a database or download a model.
 
 After setup, follow [your first evidence workflow](docs/FIRST_WORKFLOW.md) for
 a synthetic source, explicit review and a Query answer with source tracing.
@@ -371,7 +362,7 @@ make evidence-boundary
 ```
 
 Requires Go 1.27 and the module dependencies; no database, model, API key or
-Desktop setup. It calls AHE's existing domain functions, with a SQL test double
+UI setup. It calls AHE's existing domain functions, with a SQL test double
 for the source-revision collision case.
 
 The source says **“Refunds for overseas orders must be completed within 7 days.”**
@@ -421,28 +412,19 @@ answers. That requires a controlled agent study with the same source material.
 | `ahe-runtime-admin` | Provision, verify or upgrade existing bounded runtime roles |
 | `ahe-consistency-worker` | Run explicit consistency watches and persist checked diagnostics |
 | `ahe-mcp-launch` | Start an MCP profile with protected external credentials |
-| `detective` | Source collection, extraction, queries and review workflows |
-| `AHE Detective.app` | Frozen / unavailable; retained code, not a supported workflow |
-| `detective-source-demo` | Synthetic, read-only source MCP for local testing |
-| `detective-news-source` | Explicitly selected public-source adapter |
-| `ahe-detective` | Legacy collection host; not the new CLI or Desktop |
 
 `make adapters` builds the optional Atlassian and CodeGraph preview adapters.
-`make build-all` builds all CLI programs and adapters, but not the native app.
-See [Detective](apps/detective/README.md) for the application workflow and
-[legacy host setup](INSTALL.md#legacy-bundled-detective-installation) for older
-collection configurations.
+`make build-all` builds all MCP/operator programs and adapters.
 
 ## Authority Model
 
-- Detective owns source acquisition and connector orchestration.
+- External clients own source acquisition and connector orchestration.
 - PostgreSQL is authoritative; source snapshots, pending proposals and admitted
   canonical evidence are distinct states.
 - Extraction produces candidates, not approval. Only an explicit review may
   admit a claim; `reject` and `audit_only` record noncanonical decisions.
 - Query, intake and review run as separate MCP processes with separate
   credentials. Ordinary downstream agents receive only Query access.
-- Sharing a Go module does not give Desktop direct DB access or writer authority.
 
 This is a single-user controlled preview. Query visibility is schema-wide, not
 a per-row tenant policy; use a dedicated database and trusted operator.
@@ -520,7 +502,7 @@ immutable Git/Go code endpoints and explicitly reviewed derived specifications.
 Capture/extraction stays pending; endpoint admission binds exact source context,
 complete AND parents and the human reason. Query retains the endpoint receipt.
 See [setup and bounds](INSTALL.md#repository-and-derived-endpoint-writers).
-These tools do not enable Desktop or approve independent relations.
+These tools do not approve independent relations.
 
 ## Independent Relation Review
 
@@ -556,7 +538,7 @@ do not edit receipt IDs or reinterpret a changed request as a retry.
 
 Intake cannot admit evidence. The review profile does not expose general
 relation writers or repository activation. See the
-[profile and launcher contract](INSTALL.md#bounded-detective-to-pending-mcp-installation).
+[profile and launcher contract](INSTALL.md#bounded-external-intake-mcp-installation).
 
 ## MCP Client
 
@@ -611,28 +593,19 @@ that every pair contradicts. Lineage currentness does not prove source freshness
 From the repository root:
 
 ```sh
-make verify               # Frontend tests, Go tests, build and vet
-go test -race ./...        # Full-module race tests; not Desktop acceptance
+make verify               # Go tests, build and vet
+go test -race ./...        # Full-module race tests
 ```
 
 Ordinary tests use deterministic fixtures. Live model/DB tests require a separately
 selected opt-in environment; see [database/process tests](INSTALL.md#optional-database-and-process-tests).
-Retained Desktop tests may run as regression checks; passing them does not
-unfreeze Desktop or establish interactive usability.
-Linux full-module verification needs the native dependencies and build tag in
-[INSTALL.md](INSTALL.md#shared-module-verification-on-linux). MCP-only builds
-do not require Desktop's native libraries.
-
 ## Documentation
 
 - [First evidence workflow and Query example](docs/FIRST_WORKFLOW.md)
 - [Evaluation methods and reproduction limits](docs/EVALUATION.md)
 - [Runnable evidence-boundary fixtures](docs/EVIDENCE_BOUNDARY.md)
 - [MCP installation and upgrades](INSTALL.md)
-- [Detective CLI and Desktop](apps/detective/README.md)
-- [Frozen Desktop installation reference and CLI setup](apps/detective/INSTALL.md)
 - [System design: theory, algorithms, data structures and references](docs/SYSTEM_DESIGN.md)
-- [Optional macOS service setup](deploy/macos/README.md)
 - [Changelog](CHANGELOG.md)
 
 ## License

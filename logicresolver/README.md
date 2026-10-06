@@ -1,7 +1,7 @@
 # Logic resolver foundation
 
 Current API: **experimental v0**, unreleased. This public Go package lives in the
-AHE module but has no dependency on AHE storage, MCP, Detective or Pouch planning.
+AHE module but has no dependency on AHE storage, MCP or Pouch planning.
 It operates on explicitly supplied formulas. It does not retrieve evidence,
 infer causality, locate application conflicts, choose winners or authorize writes.
 

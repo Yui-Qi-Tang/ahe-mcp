@@ -57,6 +57,6 @@ answer or hypothesis is not a proposal submitted to AHE. Hidden sub-agent logs
 must not be the only inspectable record. Keep credentials, DSNs and private
 session text out of either handoff.
 
-Follow `CLAUDE.md` for Desktop availability, checks, artifact placement, Git
+Follow `CLAUDE.md` for checks, artifact placement, Git
 authorization and releases. Routine repository work does not authorize evidence
 admission, and a test pass does not authorize a release.

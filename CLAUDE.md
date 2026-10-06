@@ -2,22 +2,11 @@
 
 ## Read First
 
-- Detective Desktop is **frozen / unavailable** as of 2026-09-14.
-  CLI stabilization comes first. Do not request UI acceptance, start the app,
-  extend Desktop or publish it unless the user explicitly unfreezes that work.
-  Keep existing code/tests/data; historical passing tests are not product
-  acceptance. CLI end-to-end engineering intake remains incomplete.
-
 - This is the shared operational contract for all cooperating agents. AHE is
   an evidence layer, not the downstream agent. Models may explore freely;
   claims enter canonical evidence only through explicit review.
 - Use the task routing below. Do not read all of `README.md` by default.
-- For Detective extraction contracts, read `docs/SYSTEM_DESIGN.md` and the
-  Detective README. Maintainer plans and experimental records are private;
-  they are not available runtime capabilities or permission to write.
-- For installation or operating-system support, read `INSTALL.md`. The
-  `deploy/macos` directory is optional `launchd` packaging, not an AHE Core
-  platform requirement.
+- For installation or operating-system support, read `INSTALL.md`.
 - Consult only the matching `README.md` section when changing its contract:
   `Authority Model`, `Programs`, `External Model and Connector Intake`, `MCP
   Client`, or `Tests`.
@@ -94,19 +83,6 @@ identity is separate, and database audit text alone is not authentication. Read
   not compensate for omitted in-scope information. Preserve requirements,
   conditions, exceptions and status details; disclose extraction omissions
   separately from source coverage. No observed fabrication is not completeness.
-- New Brief operations require `detective-brief-source/v2` with `source_kind`
-  equal to `news` or `public_event`. The declaration is not automatic content
-  classification; do not relabel engineering sources or use `manual_text` to
-  bypass external-source identity, provider revision or capability requirements.
-- The retained legacy host's small-model engineering path selects complete
-  verbatim source units, then independently checks text and span identity.
-  This whole-span mode is still wired in the working draft; it is a comparison
-  baseline, not the selected task-driven end state or a Desktop capability. It does not
-  replace engineering content with Brief summaries. Explicit section processing
-  describes the supplied input, not semantic completeness or uncollected fields.
-  Model extraction, deterministic conversion and collection-only are separate
-  operator choices; do not silently enable proposal writing or categorically
-  prohibit a model because the provider is Atlassian/Codegraph.
 - Submit connector-observed text or JSON exactly. Never replace source content
   with a model summary or paraphrase.
 - Use provider identity and revision metadata from the connector. Never invent
@@ -220,5 +196,4 @@ release tag or distribution requires explicit release authorization and the
 maintainer's release checklist, supplied in the current task or at a designated
 private path. Do not invent the checklist or treat local test success as release
 approval. If the checklist is unavailable, stop that release step and report
-what is missing; complete other authorized preparation first. Desktop also
-remains subject to the explicit unfreeze requirement above.
+what is missing; complete other authorized preparation first.

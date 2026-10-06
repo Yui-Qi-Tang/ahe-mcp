@@ -1,16 +1,8 @@
 # Installing AHE
 
-> **Desktop frozen / unavailable — 2026-09-14.** Do not install, launch,
-> upgrade or accept Desktop as a working product using this guide. Desktop
-> procedures below are retained references only. MCP remains available;
-> Detective CLI end-to-end engineering intake remains incomplete.
-
-This guide installs the current controlled-pilot source tree, including the MCP
-programs and Detective CLI/Desktop in one Go module. AHE does not yet publish
-stable release binaries, packages, or a semantic-versioned release, so
-deployments should build and record a reviewed Git commit. The frozen Desktop
-code is `0.1.0-preview.18`; its historical installation reference is in
-[apps/detective/INSTALL.md](apps/detective/INSTALL.md).
+This guide installs the MCP and operator programs from source. AHE does not yet
+publish stable release binaries or a semantic-versioned release. Build and
+record a reviewed Git commit for each deployment.
 
 For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DESIGN.md).
 
@@ -32,22 +24,13 @@ server; an older binary lacking this contract must not be treated as equivalent
 or silently replaced with another search mode. The research v6 route remains
 separate. See [search contracts and limits](docs/SYSTEM_DESIGN.md#search).
 
-Detective source is now included under `apps/detective/` and uses this
-repository's root `go.mod` and `go.sum`. It has no nested Go module and does not
-require the former separate checkout. `make detective` builds its CLI and
-synthetic source tools; `make desktop` builds its macOS arm64 app and local
-launcher. This is a source installation, not a prebuilt or notarized installer.
-This repository's `bin/ahe-detective` is still the **legacy collector**, not the
-new `bin/detective` CLI or Desktop. Do not use the legacy launchd instructions
-below to install Desktop. Follow [Desktop installation and verification](apps/detective/INSTALL.md).
-
 The current MCP implementation uses explicit
 launcher and database authority. Query is read-only; the ingestion executable
 separates five source/extractor intake tools from a three-tool
 `source-claim-reviewer`, a four-tool `relation-reviewer`, and two-tool
 `endpoint-reviewer` and `repository-intake` profiles.
 Its legacy reviewer/operator profiles remain
-disabled. Existing typed writers and collector code remain legacy
+disabled. Existing internal typed writers remain retained
 implementation assets, not newly enabled MCP entrypoints. See
 [runtime authority](docs/SYSTEM_DESIGN.md#authority). This guide describes
 installation requirements, not completed deployment acceptance.
@@ -60,19 +43,11 @@ The core AHE path is not macOS-only.
 | --- | --- | --- | --- |
 | Build the six core/operator programs | Supported | Supported | Not qualified |
 | `ahe-migrate`, `ahe-query-mcp`, `ahe-ingest-mcp` | Supported | Supported | Not qualified |
-| Legacy `ahe-detective` with local Git or text sources | Supported | Supported | Not qualified |
 | Offline `gopls` extraction | Supported | Supported, with an additional OS sandbox | Not qualified |
-| Legacy Detective MCP-read sources | Not currently supported | Supported preview | Not qualified |
 | Atlassian and CodeGraph preview adapters | Not currently supported | Supported preview | Not qualified |
-| Included supervised-service packaging | Not included | `launchd` packaging included | Not included |
-| New Detective Desktop (`apps/detective`) | Unavailable / frozen | Unavailable / frozen | Unavailable / frozen |
 
-The legacy macOS-only collectors and adapters require AHE's exact `sandbox-exec` loopback policy.
-The frozen Desktop code retains a separate [official Atlassian OAuth connection](apps/detective/INSTALL.md#connect-directly-to-atlassian-rovo-mcp-with-oauth),
-not a currently supported connection route.
-They do not limit the external-agent intake path or the Query MCP. The CI
-configuration runs the shared-module race checks on Linux with the native build
-dependencies and test-package limit described below.
+The optional preview adapters require macOS sandbox support. They do not limit
+the external-agent intake path or Query MCP. CI verifies the MCP module on Linux.
 
 ## Requirements
 
@@ -81,14 +56,10 @@ dependencies and test-package limit described below.
 - a reachable PostgreSQL 16+ database; qualify the selected major version with
   the migration and integration gates below;
 - Git to clone the source tree;
-- Git on `PATH` and a local workspace only when using the Detective Git source.
 
-For the combined verification suite, also install Node.js 22.22.2 or newer and
-npm. Building only the MCP/operator binaries with `make build` does not require
-Node.js. Building Desktop additionally requires macOS 13+ on Apple silicon and
-Xcode Command Line Tools. PostgreSQL is not needed for offline Desktop source
-inspection or deterministic tests. Neither model weights nor external MCP
-servers are downloaded or configured automatically.
+The CI public-file path check also requires Node.js; `make verify` and MCP
+builds require only the Go toolchain. Models and external MCP servers are not
+downloaded or configured automatically.
 
 AHE does not provision PostgreSQL databases or authentication credentials. The
 new `ahe-runtime-admin provision` command creates a fresh bounded role pair in
@@ -137,7 +108,6 @@ make build
 - `ahe-runtime-admin`;
 - `ahe-consistency-worker`;
 - `ahe-mcp-launch`;
-- `ahe-detective`;
 - `ahe-query-mcp`;
 - `ahe-ingest-mcp`.
 
@@ -153,69 +123,32 @@ To place binaries in a reviewed deployment directory:
 make BIN_DIR=/absolute/release/ahe/bin build
 ```
 
-From the same repository root, build the Detective CLI for development:
-
-```sh
-make detective
-```
-
-This produces `bin/detective`, `bin/detective-source-demo` and
-`bin/detective-news-source`. The Desktop build target remains in the tree but
-is outside the current installation/acceptance path. All share the root Go module;
-do not run `go mod init` or restore the former Detective `go.mod` beneath it.
-The [Desktop installation document](apps/detective/INSTALL.md) retains historical
-workspace and signing information, not instructions to resume its use.
-
-Before deployment, verify the checkout, including the frontend required by the
-shared module:
+Before deployment, run the Go tests, build and vet:
 
 ```sh
 make verify
+go test -mod=readonly -p 2 -race -count=1 ./...
 ```
 
-`make verify` installs the locked frontend dependencies with npm, builds its
-embedded assets, and runs frontend tests plus the Go tests/build/vet. Go and npm
-dependency downloads require network access on a fresh machine; a local model,
-source account, or live DB is not part of this ordinary gate. Optional live
-integration-test environment variables must be configured only for explicitly
-selected disposable environments.
-
-### Shared-module verification on Linux
-
-The root module now contains the Wails Desktop package, so full-module Go
-verification on Linux needs a C toolchain, `pkg-config`, GTK 3 and WebKitGTK 4.1
-development libraries as well as Node.js. The repository's Ubuntu CI installs
-`libgtk-3-dev`, `libwebkit2gtk-4.1-dev` and `pkg-config`, then runs:
-
-```sh
-GOFLAGS=-tags=webkit2_41 make verify
-GOFLAGS=-tags=webkit2_41 go test -mod=readonly -p 2 -race -count=1 ./...
-```
-
-Use that tag when the installed WebKit development library is 4.1. This is a
-shared-module build/test path, not a qualified Linux Desktop distribution.
-MCP-only `make build` remains independent of the frontend/native Desktop build.
-The verification commands limit simultaneous Go test packages to two. Test
-assertions, individual deadlines and the race detector remain unchanged.
+These commands work without frontend assets or native UI libraries on Linux
+and macOS. Dependency downloads require network access on a fresh machine.
+Optional live-test variables must target explicitly selected disposable environments.
 
 ### Optional database and process tests
 
 Configure `DATABASE_DSN` only for an explicitly selected disposable test database,
-then run from the repository root after `make frontend`:
+then run from the repository root:
 
 ```sh
 go test -mod=readonly -count=1 -tags=integration -p 1 -parallel 1 ./...
-go test -mod=readonly -count=1 -tags=acceptance -p 1 -parallel 1 ./cmd/ahe-detective
 ```
 
-On Linux, combine the relevant test tag with `webkit2_41`. Real `gopls` tests
-also require an explicit `AHE_GOPLS_PATH`; otherwise they skip. DB-role and
+Real `gopls` tests also require an explicit `AHE_GOPLS_PATH`; otherwise they skip. DB-role and
 Query/intake subprocess acceptance separately require
 `AHE_DBROLE_ACCEPTANCE_DATABASE_DSN`, targeting a fresh disposable database with
 closed database/public-schema PUBLIC privileges. Do not share that database
 with simultaneous migration tests. Use `GOFLAGS=-race` in addition to
-`go test -race` when subprocess builds must also be instrumented; preserve any
-required Linux build tag. Skipped opt-in tests are not deployment acceptance.
+`go test -race` when subprocess builds must also be instrumented;  Skipped opt-in tests are not deployment acceptance.
 
 ## Configure PostgreSQL
 
@@ -226,7 +159,7 @@ If its DSN specifies `search_path`, it must select only that schema, optionally
 followed by `pg_catalog`. The command does not create the database or schema.
 
 Keep separate migration, query and intake DSNs in operator-managed files
-outside the repository and outside MCP/Detective JSON. The example paths below
+outside the repository and outside MCP JSON. The example paths below
 must already contain the corresponding credentials, with directory mode `0700`
 and file mode `0600`; do not overwrite an existing credential file. Do not print
 their contents or place credentials directly in a launcher or tool payload.
@@ -275,9 +208,7 @@ not authorization to upgrade an existing deployment or change its client configu
 The MCP executables verify that exact schema and refuse to serve when its
 migrations or authority are missing or drifted. AHE does not ship
 application-level downgrade migrations; restoring a separately qualified
-database backup is not an automatic application rollback. The legacy
-`ahe-detective --migrate` path is not the new explicit-schema provisioning path.
-
+database backup is not an automatic application rollback.
 ### Runtime role provisioning gate
 
 Migration success does not install runtime roles. Query, intake and reviewer each need
@@ -502,17 +433,17 @@ Supported scope:
 These checks bind exact content and the trusted reviewer principal. They do
 not authenticate the human conversation or prove semantic correctness.
 
-## Bounded Detective-to-pending MCP installation
+## Bounded external intake MCP installation
 
-Source acquisition belongs solely to Detective, including its authorized
-connectors and delegated extractors. The current MCP boundary consists of:
+Source acquisition belongs to the separately authorized external client and its
+connectors and extractors. The current MCP boundary consists of:
 
 - `ahe-ingest-mcp` with `AHE_RUNTIME_PROFILE=intake`, exposing only
   `submit_manual_evidence`, `submit_text_source`, `submit_external_source`,
   `get_extractor_input` and `submit_extractor_output`;
 - `ahe-query-mcp` for read-only proposal review and evidence queries;
 - a separately controlled `source-claim-reviewer` process for exact source review
-  and admit/reject/audit_only, never shared with Detective's intake credentials;
+  and admit/reject/audit_only, never shared with the intake client's credentials;
 - the separately migrated and role-qualified private schema.
 
 Intake writes source/extraction/pending-proposal state; it is not read-only and
@@ -527,7 +458,7 @@ binding. Tool arguments cannot supply reviewer identity. Its canonical writes
 require the exact complete display/subject, explicit approval and reason.
 Reviewed `reject`/`audit_only` also require the exact review and explicit human
 decision, but create no canonical nodes or edges. `pending` is a local pause,
-not a reviewer write. Intake/reviewer/Query inventories are 5/3/13.
+not a reviewer write. Intake/reviewer/Query inventories are 5/3/26.
 
 Preserve exact connector-observed text/JSON and provider identity/revision.
 `exact_excerpt` and `truncated_document` coverage require limitations;
@@ -552,18 +483,9 @@ intake, but with its own reviewer credential file, installed
 `AHE_RUNTIME_PROFILE=source-claim-reviewer`. Never reuse intake or migration-owner
 credentials. The environment table above describes intake; reviewer uses the
 same variable names with these distinct bindings. No real launcher is provisioned
-by this guide. See the [exact review contract](docs/SYSTEM_DESIGN.md#review) and
-the [included Detective workflow](apps/detective/README.md#authority-and-review).
+by this guide. See the [exact review contract](docs/SYSTEM_DESIGN.md#review).
 Qualify provisioning, authentication and review operations in the selected
 environment before use; a source build is not that acceptance.
-
-This MCP boundary does not require the legacy bundled `ahe-detective` binary,
-Ollama, host-v4, the preview adapters or macOS. That packaging fact does not
-create a second source owner. The included Detective application retains bounded
-pending checkpoint/resume and exact-review integration. It calls the separately
-configured MCP launchers over stdio rather than sharing the server's DB
-credentials or writing directly to PostgreSQL. Sharing source and dependencies
-does not qualify a deployment. See the [checkpoint and recovery boundary](docs/SYSTEM_DESIGN.md#detective).
 
 Both MCP programs use JSON-RPC over stdio. Configure the MCP client to launch
 them; do not run them as shared TCP services, and do not allow logs on stdout.
@@ -629,7 +551,7 @@ An ordinary read-only consumer should receive only the query launcher:
 }
 ```
 
-A separately authorized Detective intake workflow may receive this different
+A separately authorized external intake workflow may receive this different
 pending-only process:
 
 ```json
@@ -650,190 +572,6 @@ tool schema from documentation.
 After connecting the client, follow the [first evidence workflow](docs/FIRST_WORKFLOW.md)
 to check the tool inventories, pending/admitted states and exact source readback.
 An empty new database is expected; no search result alone is not a connection test.
-
-## Legacy bundled Detective installation
-
-The retained host configuration below describes the older bundled collector,
-not the included `apps/detective` CLI/Desktop or a new MCP entrypoint. Its
-startup and database path have not been converted to the new query/intake role
-contract. Use only in a separately qualified legacy environment; do not reuse
-the migration-owner or current bounded MCP credentials for this path.
-
-For an already approved legacy local Git/text collection environment:
-
-```sh
-cp configs/detective.example.json /absolute/private/ahe/detective.json
-chmod 0600 /absolute/private/ahe/detective.json
-```
-
-Edit the copied file with absolute deployment identities and workspace paths,
-using the [example configuration](configs/detective.example.json).
-Workspace registration is immutable: changing its root or source set requires
-new `workspace_id` and `registration_request_id` values. Git sources require
-`relative_path="."`, `source_interval` of at least one second, `max_steps` of
-at least two, and enabled repository maintenance. A `local-prd-text/v1`-only
-host may disable repository maintenance. Then start the foreground process:
-
-```sh
-DATABASE_DSN="$(cat /absolute/private/ahe/legacy-detective-database-dns)" \
-  ./bin/ahe-detective \
-  --config /absolute/private/ahe/detective.json
-```
-
-The default host-v1 configuration is model-free. The v2-v4 planner, MCP-read,
-and local-model contracts are opt-in previews. On macOS, optional per-user
-`launchd` packaging is documented in
-[deploy/macos/README.md](deploy/macos/README.md). No Linux `systemd` unit or
-Windows service definition is currently included.
-
-### Legacy MCP engineering source with whole-unit model selection
-
-This macOS-only preview applies to `bin/ahe-detective`, not the included
-`apps/detective` CLI/Desktop. The original `configs/detective.example.json`
-collects a Git repository; it enables neither an Ollama planner nor model
-proposal extraction. A planner chooses work; it does not extract proposals.
-MCP read sources require the planner to remain disabled.
-
-This walkthrough describes the retained whole-unit baseline, not the selected
-task-driven engineering workflow. Its wiring is still present; the replacement
-is not yet an available end-to-end workflow.
-
-Opt-in `proposal_extraction` uses `whole-span-exact-quote-selection-v1`: the
-model selects complete supplied units, not summaries or shortened quotations.
-The controller independently checks complete text, the matching reference, and
-duplicates. Conditions and table rows cannot be dropped within a selected unit.
-Unselected units remain possible; this is not an all-facts completeness test.
-Provider names do not impose a blanket model ban. Explicit
-`proposal_conversion: true` remains a model-free alternative that copies every
-adapter-selected value. Collection-only configurations are not changed.
-
-The worked configuration uses `ahe-mcp-atlassian-adapter` because its
-`read_atlassian_document` tool returns `ahe-mcp-read-document-v1`. CodeGraph's
-`query_codegraph_function` returns `ahe-codegraph-candidate-v1` instead and
-cannot be used as this document source, even with the correct tool name/hash.
-Git-source model extraction and CodeGraph-to-document conversion are separate
-capabilities; these examples do not add them.
-
-**Prerequisites.** Build with `make build adapters`. Have an explicitly selected
-non-production AHE PostgreSQL database provisioned with `ahe-migrate` and the
-adapter's pinned `sooperset/mcp-atlassian@v0.23.0` provider installed in a private
-environment.
-
-For official remote MCP with OAuth in Desktop, use the
-[direct connection workflow](apps/detective/INSTALL.md#connect-directly-to-atlassian-rovo-mcp-with-oauth).
-The following restrictions apply to the legacy local-provider walkthrough.
-
-**Network boundary: local fixtures, not a direct Cloud connection.** This
-preview restricts both the adapter and provider to loopback networking. There
-is no supported config flag, environment variable or alternate outbound profile
-that enables direct Atlassian Cloud access. The exact sandbox profile is
-checked independently by the [Atlassian adapter](internal/atlassianmcp/adapter.go),
-[MCP read runtime](internal/detective/mcp_read_runtime.go), and
-[host configuration](internal/detectivehost/config.go), using
-[`IsMacOSLoopbackOnlyCommand`](internal/mcpstdio/sandbox.go). Editing the profile
-in the example will be rejected; the host also wraps its adapter command.
-
-An authorized local Jira/Confluence test service can run within this boundary.
-Reaching a real Cloud tenant requires **operator-built infrastructure outside
-AHE**, not a bundled or qualified AHE gateway. For transparent HTTPS forwarding,
-that typically means a hostname/DNS override that resolves the tenant to
-loopback inside the provider's environment, plus a separately operated TCP/TLS
-relay that forwards to the real tenant while preserving TLS SNI, the request
-hostname and certificate verification. Changing the URL to `localhost` alone
-does not preserve those properties. A purpose-built local HTTP API facade is
-another operator-owned design, with its own authentication, exact-response and
-revision-preservation requirements. Neither design is supplied or validated by
-this walkthrough. Avoid global DNS changes and do not disable TLS verification.
-
-The relay/facade itself must have authorized outbound access and enforce the
-intended tenant/destination and credential boundaries. A loopback connection to
-a relay does not make the remote destination loopback-only; the operator owns
-that additional trust boundary. Without such infrastructure, use a local fixture
-and treat real Cloud extraction as unavailable in this preview. A direct-Cloud
-opt-in profile would need a separate network-policy design and qualification;
-this release does not introduce one.
-
-1. Copy these three examples to a private directory and replace all absolute
-   placeholder paths:
-   - [adapter configuration](configs/atlassian-adapter.example.json) →
-     `atlassian-adapter.json`;
-   - [discovery command](configs/detective.mcp-command.example.json) →
-     `mcp-command.json`;
-   - [host-v4 model selection configuration](configs/detective.mcp-extraction.example.json)
-     → `detective-extraction.json`.
-   Create the configured workspace directory and keep private config files mode
-   `0600`. Give a new pilot its own host/workspace/registration identifiers.
-2. Supply `run-atlassian-provider`, a private executable launcher that loads
-   credentials from your external secret store, sets `JIRA_URL` or
-   `CONFLUENCE_URL` for the authorized fixture/facade, and `exec`s the absolute
-   installed `mcp-atlassian` executable. A transparent TLS relay instead retains
-   the original tenant hostname in that URL and uses the provider-scoped
-   loopback resolution described above. Preserve the fixed read-only environment
-   in the adapter example. Do not put credentials in the examples or shell
-   command arguments. Process environment is not inherited. The nested
-   `provider_command` is already sandbox-wrapped; the host and discovery command
-   configurations specify the **unwrapped** adapter executable because the CLI
-   wraps those automatically.
-3. Discover the actual adapter contract before starting collection:
-
-   ```sh
-   ./bin/ahe-detective --discover-tools /absolute/private/ahe/mcp-command.json
-   ```
-
-   This command needs no `DATABASE_DSN` or host configuration. It starts the
-   selected adapter, initializes MCP, follows `tools/list` pages, prints JSON,
-   and exits without `tools/call`, collection or model invocation. It does
-   execute the selected adapter's startup code. Child stderr is suppressed to
-   avoid exposing provider credentials. A timeout, duplicate tool name, missing
-   schema or repeated pagination cursor is an error.
-
-   Copy `provider_tool_name` and `provider_tool_input_schema_hash` from the
-   selected result into `mcp_read_sources[0]`. The example pin is checked against
-   the repository adapter schema in tests; discovery is the check for your
-   actual binary. The hash is `sha256:` plus SHA-256 of Go `json.Marshal` on the
-   decoded `inputSchema` map, exactly as `mcpstdio.ToolInputSchemaHash` computes
-   it. Do not hash pretty-printed JSON or use the upstream `jira_get_issue`
-   schema hash: the host calls the AHE adapter's tool. Annotations are provider
-   hints, not proof of safety or result-contract compatibility. Discovery does
-   not overwrite pins; a later schema mismatch still fails closed.
-4. In the host configuration, set `arguments.object_id` and `source_id` for an
-   authorized Jira issue (the example `DEMO-1` is a placeholder). For Confluence,
-   use `product: "confluence"` and its page ID. The example explicitly enables
-   model extraction and disables conversion; choose a model already installed
-   at the selected loopback endpoint. No model is downloaded automatically.
-   By default a unit is a complete adapter-selected value. To process existing
-   heading-based sections individually, explicitly set `section_mode` to
-   `"heading_sections_v1"` and `max_sections`; the product of `max_sections`
-   and `max_proposals` must not exceed 32. A unit may contain several facts.
-   Each unit is limited to 64 KiB; oversized units and shortened model output
-   fail without truncation or repair. Ensure `num_predict` permits the chosen
-   unit size; the example's 1024-token budget is not sufficient for every unit.
-   The provider must report `done: true` and `done_reason: "stop"`; a token-limit
-   stop or missing completion metadata fails even if the text is valid JSON.
-   The adapter selects Jira description or Confluence content, not unselected
-   fields, comments, history, linked documents or descendants. Collection
-   coverage remains separate from selection and factual completeness.
-5. With `DATABASE_DSN` supplied externally for the selected test database:
-
-   ```sh
-   ./bin/ahe-detective --config /absolute/private/ahe/detective-extraction.json
-   ```
-
-   This is a periodic collector; `max_steps` is not a one-shot exit flag. Stop
-   with Ctrl-C after observing a completed extraction. Inspect the structured
-   `mcp_read_proposal_extraction_completed` event and its selection counts,
-   attempt/status/reason, and proposal IDs. A repeated snapshot may be replayed
-   without a model call. Inspect failure events too; valid syntax or an exact
-   quotation alone is not a successful complete-unit selection.
-
-The flow persists exact source and grounded candidate proposals for human
-review. It does not admit canonical nodes/edges. Use the read-only query MCP's
-live tools for supported readback and the trusted proposal-review workflow for
-pending cards. Compare grounded statements and excerpts before any explicit
-admission. A successful discovery only verifies advertised metadata; a complete
-runtime qualification additionally needs the actual provider and selected test
-database. Selection preserves selected source text; it does not establish
-semantic extraction completeness or the truth of source assertions.
 
 ## Upgrade
 
@@ -872,13 +610,6 @@ profiles gain reads, not the new write capability. For an already qualified
 schema-54/policy-v7 installation, a binary-only replacement retains existing
 protected launcher paths, identities and credentials; verify them before reconnecting.
 Never copy credentials into repository artifacts.
-
-Historical Detective procedure only (Desktop remains frozen): preserve its
-existing private workspace and original receipts;
-replace only the app/launcher binaries from the reviewed build. Follow
-[Desktop upgrade](apps/detective/INSTALL.md#upgrade-and-existing-workspaces).
-The historical source repository is not an installed workspace and must not be
-copied into the public source tree to transfer saved settings.
 
 ### Separate database-adoption procedure
 
