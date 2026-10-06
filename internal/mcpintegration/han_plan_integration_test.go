@@ -651,12 +651,23 @@ func hanPlanAnalyze(ctx context.Context, pool *pgxpool.Pool, schema string) erro
 	if err := queryLabValidateTables(names); err != nil {
 		return err
 	}
+	// Fixture maintenance has its own budget; query limits remain unchanged.
+	analyzeCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	tx, err := pool.Begin(analyzeCtx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+	if _, err := tx.Exec(analyzeCtx, "SET LOCAL statement_timeout = '30s'"); err != nil {
+		return err
+	}
 	for _, name := range names {
-		if _, err := pool.Exec(ctx, "ANALYZE "+pgx.Identifier{schema, name}.Sanitize()); err != nil {
+		if _, err := tx.Exec(analyzeCtx, "ANALYZE "+pgx.Identifier{schema, name}.Sanitize()); err != nil {
 			return err
 		}
 	}
-	return nil
+	return tx.Commit(analyzeCtx)
 }
 
 func hanPlanObserve(ctx context.Context, pool *pgxpool.Pool, schema string) (snapshot hanPlanSnapshot, resultErr error) {

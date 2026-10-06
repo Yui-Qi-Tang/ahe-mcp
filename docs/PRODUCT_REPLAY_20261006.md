@@ -1,5 +1,9 @@
 # Product replay — 2026-10-06
 
+This is the earlier run. The [subsequent supplement](PRODUCT_REPLAY_20261006_SUPPLEMENT.md)
+adds fresh model/SWE results, historical query experiments, and the later
+test-timeout fixes and revalidation. Results below retain their original run scope.
+
 Report version: **1**. Product source: **cd1419cbebf4d99f8e0cc2e02b26755f2df6aeae**;
 branch: `codex/product-lab-replay-20261006`; unreleased schema **55**, role policy
 **v7**, consistency watch contract **v1**. The Product implementation was unchanged

@@ -1,8 +1,10 @@
 # Evaluation and reproduction
 
 The [README evaluation](../README.md#evaluation) separates the
-[2026-10-06 Product replay](PRODUCT_REPLAY_20261006.md) from the historical
-six-case benchmark. The rest of this page documents that six-case benchmark:
+[earlier Product replay](PRODUCT_REPLAY_20261006.md), the
+[fresh supplement](PRODUCT_REPLAY_20261006_SUPPLEMENT.md), its
+[three-issue autonomous Sol run](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#autonomous-sol-swe-results), and the historical
+six-case benchmark. The rest of this page documents the historical benchmark:
 two pinned local models, three synthetic task families and three selected public
 SWE-bench cases. Do not pool counts across these different protocols.
 
@@ -29,11 +31,13 @@ system supplying equivalent verified results. Public review/admission uses
 **TEST APPROVAL STUBS**, not human approval.
 
 The historical results below retain the fixed settings, model digests, source
-commits, per-case assertion findings and reviewer limitations. The README shows
-the headline counts; the AND breakdown describes the same original answers.
-Original records remain in the private lab and prior Git revisions. The new
-Product replay has its own task denominators and does not regenerate this
-110-call benchmark or its SWE patches.
+commits, per-case assertion findings and reviewer limitations. The README now shows
+the supplementary run's fresh scores; the AND breakdown here describes the
+original answers. Original records remain in the private lab and prior Git
+revisions. The earlier Product replay did not regenerate this benchmark; the
+supplement completed 110 fresh Gemma attempts and evaluated the submitted SWE
+patches. Its results and failures are reported separately, without rewriting
+these historical scores.
 
 ## Historical six-case results
 

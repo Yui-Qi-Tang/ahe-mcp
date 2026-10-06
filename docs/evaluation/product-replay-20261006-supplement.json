@@ -1,0 +1,4540 @@
+{
+  "product_commit": "844a3a6530120ea5514a2e59bc1be51fa2f82cba",
+  "complete_lab_history_replay": false,
+  "scope": "Completed Gemma six-case, original lifecycle 78 and native Product batches; Sol/history scope outstanding",
+  "model_tables": [
+    {
+      "model": "e4b",
+      "family": "synthetic",
+      "arm": "A",
+      "attempts": 14,
+      "status": {
+        "completed": 14
+      },
+      "unsupported": 3,
+      "unresolved_grounding": 0,
+      "wrong_decision_answers": 4,
+      "unscored_decision_answers": 0
+    },
+    {
+      "model": "e4b",
+      "family": "synthetic",
+      "arm": "B",
+      "attempts": 4,
+      "status": {
+        "completed": 4
+      },
+      "unsupported": 2,
+      "unresolved_grounding": 0,
+      "wrong_decision_answers": 2,
+      "unscored_decision_answers": 0
+    },
+    {
+      "model": "e4b",
+      "family": "synthetic",
+      "arm": "C",
+      "attempts": 14,
+      "status": {
+        "completed": 14
+      },
+      "unsupported": 5,
+      "unresolved_grounding": 0,
+      "wrong_decision_answers": 6,
+      "unscored_decision_answers": 0
+    },
+    {
+      "model": "e4b",
+      "family": "synthetic",
+      "arm": "D",
+      "attempts": 14,
+      "status": {
+        "completed": 14
+      },
+      "unsupported": 4,
+      "unresolved_grounding": 0,
+      "wrong_decision_answers": 4,
+      "unscored_decision_answers": 0
+    },
+    {
+      "model": "e4b",
+      "family": "swe",
+      "arm": "A",
+      "attempts": 3,
+      "status": {
+        "truncated": 2,
+        "completed": 1
+      },
+      "unsupported": 0,
+      "unresolved_grounding": 2,
+      "submitted": 1,
+      "resolved": 1,
+      "abstained": 0,
+      "citation_error_answers": 1
+    },
+    {
+      "model": "e4b",
+      "family": "swe",
+      "arm": "C",
+      "attempts": 3,
+      "status": {
+        "completed": 1,
+        "truncated": 2
+      },
+      "unsupported": 2,
+      "unresolved_grounding": 1,
+      "submitted": 1,
+      "resolved": 0,
+      "abstained": 0,
+      "citation_error_answers": 0
+    },
+    {
+      "model": "e4b",
+      "family": "swe",
+      "arm": "D",
+      "attempts": 3,
+      "status": {
+        "completed": 1,
+        "truncated": 2
+      },
+      "unsupported": 0,
+      "unresolved_grounding": 3,
+      "submitted": 0,
+      "resolved": 0,
+      "abstained": 1,
+      "citation_error_answers": 0
+    },
+    {
+      "model": "31b",
+      "family": "synthetic",
+      "arm": "A",
+      "attempts": 14,
+      "status": {
+        "completed": 14
+      },
+      "unsupported": 0,
+      "unresolved_grounding": 0,
+      "wrong_decision_answers": 0,
+      "unscored_decision_answers": 0
+    },
+    {
+      "model": "31b",
+      "family": "synthetic",
+      "arm": "B",
+      "attempts": 4,
+      "status": {
+        "completed": 4
+      },
+      "unsupported": 0,
+      "unresolved_grounding": 0,
+      "wrong_decision_answers": 0,
+      "unscored_decision_answers": 0
+    },
+    {
+      "model": "31b",
+      "family": "synthetic",
+      "arm": "C",
+      "attempts": 14,
+      "status": {
+        "completed": 14
+      },
+      "unsupported": 0,
+      "unresolved_grounding": 0,
+      "wrong_decision_answers": 0,
+      "unscored_decision_answers": 0
+    },
+    {
+      "model": "31b",
+      "family": "synthetic",
+      "arm": "D",
+      "attempts": 14,
+      "status": {
+        "completed": 14
+      },
+      "unsupported": 0,
+      "unresolved_grounding": 0,
+      "wrong_decision_answers": 0,
+      "unscored_decision_answers": 0
+    },
+    {
+      "model": "31b",
+      "family": "swe",
+      "arm": "A",
+      "attempts": 3,
+      "status": {
+        "truncated": 2,
+        "completed": 1
+      },
+      "unsupported": 1,
+      "unresolved_grounding": 2,
+      "submitted": 1,
+      "resolved": 1,
+      "abstained": 0,
+      "citation_error_answers": 0
+    },
+    {
+      "model": "31b",
+      "family": "swe",
+      "arm": "C",
+      "attempts": 3,
+      "status": {
+        "completed": 1,
+        "truncated": 2
+      },
+      "unsupported": 1,
+      "unresolved_grounding": 2,
+      "submitted": 1,
+      "resolved": 1,
+      "abstained": 0,
+      "citation_error_answers": 0
+    },
+    {
+      "model": "31b",
+      "family": "swe",
+      "arm": "D",
+      "attempts": 3,
+      "status": {
+        "completed": 2,
+        "truncated": 1
+      },
+      "unsupported": 1,
+      "unresolved_grounding": 1,
+      "submitted": 2,
+      "resolved": 2,
+      "abstained": 0,
+      "citation_error_answers": 0
+    }
+  ],
+  "swe_attempts": [
+    {
+      "id": "e4b-swe-astropy__astropy-12907-A",
+      "model_key": "e4b",
+      "condition": "astropy__astropy-12907",
+      "arm": "A",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "e4b-swe-django__django-10914-D",
+      "model_key": "e4b",
+      "condition": "django__django-10914",
+      "arm": "D",
+      "status": "completed",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "e4b-swe-scikit-learn__scikit-learn-25570-A",
+      "model_key": "e4b",
+      "condition": "scikit-learn__scikit-learn-25570",
+      "arm": "A",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "e4b-swe-django__django-10914-C",
+      "model_key": "e4b",
+      "condition": "django__django-10914",
+      "arm": "C",
+      "status": "completed",
+      "official_submitted": true,
+      "official_resolved": false,
+      "official_status": "not_resolved",
+      "official_report_sha256": "021b0866c1ee90c736209527024151843bfe21fdab7f2bce2f545d1f0743df37",
+      "official_tests": {
+        "FAIL_TO_PASS": {
+          "success": 0,
+          "failure": 1
+        },
+        "PASS_TO_PASS": {
+          "success": 98,
+          "failure": 0
+        },
+        "FAIL_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        },
+        "PASS_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        }
+      }
+    },
+    {
+      "id": "e4b-swe-astropy__astropy-12907-D",
+      "model_key": "e4b",
+      "condition": "astropy__astropy-12907",
+      "arm": "D",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "e4b-swe-scikit-learn__scikit-learn-25570-D",
+      "model_key": "e4b",
+      "condition": "scikit-learn__scikit-learn-25570",
+      "arm": "D",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "e4b-swe-django__django-10914-A",
+      "model_key": "e4b",
+      "condition": "django__django-10914",
+      "arm": "A",
+      "status": "completed",
+      "official_submitted": true,
+      "official_resolved": true,
+      "official_status": "resolved",
+      "official_report_sha256": "b105979fe78dbf4323f40226cf6abc32a4c059331e95c1ae61031e8e8ef651b8",
+      "official_tests": {
+        "FAIL_TO_PASS": {
+          "success": 1,
+          "failure": 0
+        },
+        "PASS_TO_PASS": {
+          "success": 98,
+          "failure": 0
+        },
+        "FAIL_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        },
+        "PASS_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        }
+      }
+    },
+    {
+      "id": "e4b-swe-scikit-learn__scikit-learn-25570-C",
+      "model_key": "e4b",
+      "condition": "scikit-learn__scikit-learn-25570",
+      "arm": "C",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "e4b-swe-astropy__astropy-12907-C",
+      "model_key": "e4b",
+      "condition": "astropy__astropy-12907",
+      "arm": "C",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "31b-swe-astropy__astropy-12907-A",
+      "model_key": "31b",
+      "condition": "astropy__astropy-12907",
+      "arm": "A",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "31b-swe-django__django-10914-D",
+      "model_key": "31b",
+      "condition": "django__django-10914",
+      "arm": "D",
+      "status": "completed",
+      "official_submitted": true,
+      "official_resolved": true,
+      "official_status": "resolved",
+      "official_report_sha256": "b105979fe78dbf4323f40226cf6abc32a4c059331e95c1ae61031e8e8ef651b8",
+      "official_tests": {
+        "FAIL_TO_PASS": {
+          "success": 1,
+          "failure": 0
+        },
+        "PASS_TO_PASS": {
+          "success": 98,
+          "failure": 0
+        },
+        "FAIL_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        },
+        "PASS_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        }
+      }
+    },
+    {
+      "id": "31b-swe-scikit-learn__scikit-learn-25570-A",
+      "model_key": "31b",
+      "condition": "scikit-learn__scikit-learn-25570",
+      "arm": "A",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "31b-swe-django__django-10914-C",
+      "model_key": "31b",
+      "condition": "django__django-10914",
+      "arm": "C",
+      "status": "completed",
+      "official_submitted": true,
+      "official_resolved": true,
+      "official_status": "resolved",
+      "official_report_sha256": "b105979fe78dbf4323f40226cf6abc32a4c059331e95c1ae61031e8e8ef651b8",
+      "official_tests": {
+        "FAIL_TO_PASS": {
+          "success": 1,
+          "failure": 0
+        },
+        "PASS_TO_PASS": {
+          "success": 98,
+          "failure": 0
+        },
+        "FAIL_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        },
+        "PASS_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        }
+      }
+    },
+    {
+      "id": "31b-swe-astropy__astropy-12907-D",
+      "model_key": "31b",
+      "condition": "astropy__astropy-12907",
+      "arm": "D",
+      "status": "completed",
+      "official_submitted": true,
+      "official_resolved": true,
+      "official_status": "resolved",
+      "official_report_sha256": "fe3f3bddc9631279d3babf7270913070d91e9207c3468bd947823aee3e7b1b86",
+      "official_tests": {
+        "FAIL_TO_PASS": {
+          "success": 2,
+          "failure": 0
+        },
+        "PASS_TO_PASS": {
+          "success": 13,
+          "failure": 0
+        },
+        "FAIL_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        },
+        "PASS_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        }
+      }
+    },
+    {
+      "id": "31b-swe-scikit-learn__scikit-learn-25570-D",
+      "model_key": "31b",
+      "condition": "scikit-learn__scikit-learn-25570",
+      "arm": "D",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "31b-swe-django__django-10914-A",
+      "model_key": "31b",
+      "condition": "django__django-10914",
+      "arm": "A",
+      "status": "completed",
+      "official_submitted": true,
+      "official_resolved": true,
+      "official_status": "resolved",
+      "official_report_sha256": "b105979fe78dbf4323f40226cf6abc32a4c059331e95c1ae61031e8e8ef651b8",
+      "official_tests": {
+        "FAIL_TO_PASS": {
+          "success": 1,
+          "failure": 0
+        },
+        "PASS_TO_PASS": {
+          "success": 98,
+          "failure": 0
+        },
+        "FAIL_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        },
+        "PASS_TO_FAIL": {
+          "success": 0,
+          "failure": 0
+        }
+      }
+    },
+    {
+      "id": "31b-swe-scikit-learn__scikit-learn-25570-C",
+      "model_key": "31b",
+      "condition": "scikit-learn__scikit-learn-25570",
+      "arm": "C",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    },
+    {
+      "id": "31b-swe-astropy__astropy-12907-C",
+      "model_key": "31b",
+      "condition": "astropy__astropy-12907",
+      "arm": "C",
+      "status": "truncated",
+      "official_submitted": false,
+      "official_resolved": false,
+      "official_status": "not_submitted"
+    }
+  ],
+  "native_batches": [
+    {
+      "log": "supplement-research-final/replay.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "d68cd34c7a1d6474d4b47bec5cb8031913ee7918deb5a613e875e390a1aa700c",
+      "leaf_counts": {
+        "pass": 214
+      },
+      "test_events": {
+        "pass": 228
+      }
+    },
+    {
+      "log": "supplement-research-race-final/replay.jsonl",
+      "race": true,
+      "test_overlay": null,
+      "sha256": "e7454ab1fae2a04679a64d62ee41f05e661756e72e9eedba5473dd6a3917a79a",
+      "leaf_counts": {
+        "pass": 213,
+        "fail": 1
+      },
+      "test_events": {
+        "pass": 226,
+        "fail": 2
+      }
+    },
+    {
+      "log": "support-and-search/product-topology.jsonl",
+      "race": true,
+      "test_overlay": null,
+      "sha256": "2e309da0c880ad7103ea92437c8c5aa2b114fccb253b2799a27fd8d61976eca2",
+      "leaf_counts": {
+        "pass": 40
+      },
+      "test_events": {
+        "pass": 42
+      }
+    },
+    {
+      "log": "historical-query/replay-01/anchor-sql.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "94a52e14294150efcf91486b4eb0894baa2fb03a19674ede30522dc04262acc7",
+      "leaf_counts": {
+        "pass": 1
+      },
+      "test_events": {
+        "pass": 1
+      }
+    },
+    {
+      "log": "historical-query/replay-01/anchor.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "d19d93430308546a9fcdc311ed58190dbf28f4c3ff9db212a1164eb5d2ecacd5",
+      "leaf_counts": {
+        "pass": 96
+      },
+      "test_events": {
+        "pass": 97
+      }
+    },
+    {
+      "log": "historical-query/replay-01/contracts.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "a66b015d80e6023901ca8dc219ffacc06f75adc9a5cd9e72cc2477fcbeb913f3",
+      "leaf_counts": {
+        "pass": 10
+      },
+      "test_events": {
+        "pass": 11
+      }
+    },
+    {
+      "log": "historical-query/replay-01/multi-sql.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "c91b236f737576ba8c40a1bb85ba06dce60894507dcba7f06a6300a5e5f2a203",
+      "leaf_counts": {
+        "pass": 1
+      },
+      "test_events": {
+        "pass": 1
+      }
+    },
+    {
+      "log": "historical-query/replay-01/multi.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "6b9d40980bf87d58918158961ed90d7155f056c8460e66a6037958085273413c",
+      "leaf_counts": {
+        "pass": 72
+      },
+      "test_events": {
+        "pass": 73
+      }
+    },
+    {
+      "log": "historical-query/replay-01/outcome.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "6bca61ec56b4d598304a4aab3b674f50907c8b0c567399afa07295266edba783",
+      "leaf_counts": {
+        "pass": 144
+      },
+      "test_events": {
+        "pass": 145
+      }
+    },
+    {
+      "log": "historical-query/replay-01/practical-sql.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "9fbd984943dc6b030cedb0680f9d4964bbfe18c747c1e96a6bdc46af53bdd0cf",
+      "leaf_counts": {
+        "pass": 1
+      },
+      "test_events": {
+        "pass": 1
+      }
+    },
+    {
+      "log": "supplement-han-final/query.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "76407b36f769c56df15af2174bcce050feda6e482faabb3f51d5776736acac5b",
+      "leaf_counts": {
+        "pass": 63
+      },
+      "test_events": {
+        "pass": 64
+      }
+    },
+    {
+      "log": "supplement-han-final/scale.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "382c0f1a45667cf0fef462e73d28588b16aed5fd787b53fb394918da5cd92e52",
+      "leaf_counts": {
+        "pass": 1
+      },
+      "test_events": {
+        "pass": 1
+      }
+    },
+    {
+      "log": "supplement-han-final/plan.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "ca68b51648050a2b5e61f6b9d3f043d45cb54e0c1a125d1154c195c5d295fa12",
+      "leaf_counts": {
+        "fail": 1
+      },
+      "test_events": {
+        "fail": 1
+      }
+    },
+    {
+      "log": "supplement-failure-repeat-02-final/plan.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "6d99d971479df07cd50a395f9acf100cee93e396c3bbf622959804be25c5c36e",
+      "leaf_counts": {
+        "fail": 1
+      },
+      "test_events": {
+        "fail": 1
+      }
+    },
+    {
+      "log": "supplement-failure-repeat-02-final/swe-race.jsonl",
+      "race": true,
+      "test_overlay": null,
+      "sha256": "9bd1426d47f29d2aac5373d87540a9171a5c514aa21af064dd7c072ede08c010",
+      "leaf_counts": {
+        "fail": 2,
+        "pass": 1
+      },
+      "test_events": {
+        "fail": 3,
+        "pass": 1
+      }
+    },
+    {
+      "log": "supplement-process-diagnostic-02-final/diagnostic-race.jsonl",
+      "race": true,
+      "test_overlay": "diagnostic_messages_only",
+      "sha256": "fa4a0c5ceac394a40af2ac68719bb4318bc394d7b42f00b1bb97150b2fef9020",
+      "leaf_counts": {
+        "pass": 42,
+        "fail": 6
+      },
+      "test_events": {
+        "pass": 42,
+        "fail": 8
+      }
+    },
+    {
+      "log": "supplement-fixture-budgets-v2-final/mcp-race.jsonl",
+      "race": true,
+      "test_overlay": "fixture_budgets_v2",
+      "sha256": "23f51d68a40d277a9a8b83f257b8324d33413b50014f1d2198562a360bd3a452",
+      "leaf_counts": {
+        "pass": 48
+      },
+      "test_events": {
+        "pass": 50
+      }
+    },
+    {
+      "log": "supplement-fixture-budgets-v2-final/plan.jsonl",
+      "race": false,
+      "test_overlay": "fixture_budgets_v2",
+      "sha256": "279211d43345ca0d1470359cbe59c2f95dd177a6f9c813a626454fdea64b0c13",
+      "leaf_counts": {
+        "pass": 1
+      },
+      "test_events": {
+        "pass": 1
+      }
+    },
+    {
+      "log": "supplement-consistency-lab-sql-final/replay.jsonl",
+      "race": true,
+      "test_overlay": "lab_to_product_schema_or_role_adapter",
+      "sha256": "44b66473289c9effd40b6e7d894143a4b8d8179add1e70857688501f8928c0c6",
+      "leaf_counts": {
+        "pass": 16
+      },
+      "test_events": {
+        "pass": 18
+      }
+    },
+    {
+      "log": "supplement-consistency-lab-upgrade-final/replay.jsonl",
+      "race": true,
+      "test_overlay": "lab_to_product_schema_or_role_adapter",
+      "sha256": "370c019830774a4e55189908914ffbf4044daa2128119914f781bced40198471",
+      "leaf_counts": {
+        "pass": 1
+      },
+      "test_events": {
+        "pass": 1
+      }
+    },
+    {
+      "log": "full/ordinary/go-test.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "42412d4565f0f40b13a41f072e08160f921f7e19973ec327f73bbdd790cf01cc",
+      "leaf_counts": {
+        "pass": 1834
+      },
+      "test_events": {
+        "pass": 2001
+      }
+    },
+    {
+      "log": "full/ordinary-race/go-test.jsonl",
+      "race": true,
+      "test_overlay": null,
+      "sha256": "9ccc01191c1ca892db251bb3bc58526d52d3328315f135230b33ebef900ed2fb",
+      "leaf_counts": {
+        "pass": 1834
+      },
+      "test_events": {
+        "pass": 2001
+      }
+    },
+    {
+      "log": "full/integration/go-test.jsonl",
+      "race": false,
+      "test_overlay": null,
+      "sha256": "a31073477b685bebf3017e89604b647aa33cdaca33d0cd53772452d96ef0def6",
+      "leaf_counts": {
+        "pass": 3582,
+        "skip": 13
+      },
+      "test_events": {
+        "pass": 3828,
+        "skip": 13
+      }
+    },
+    {
+      "log": "full/integration-race/go-test.jsonl",
+      "race": true,
+      "test_overlay": null,
+      "sha256": "fe5981f38082b3819223376437b335105e4d57344ad22a909b9a43a49fdd69e3",
+      "leaf_counts": {
+        "pass": 3576,
+        "fail": 6,
+        "skip": 13
+      },
+      "test_events": {
+        "pass": 3821,
+        "fail": 7,
+        "skip": 13
+      }
+    }
+  ],
+  "limits": [
+    "One attempt per familiar development-case cell; no statistical or general capability claim.",
+    "A/C/D hold source pool fixed; whole presentation changes, not isolated graph causality.",
+    "Official repair results do not certify explanation fidelity.",
+    "Six-case main-agent review is nonblind; lifecycle review is single-rater partial masking; neither is independent validation.",
+    "Ollama changed from historical 0.34.1 to current 0.34.4.",
+    "Sol and other historical families are outside this local 110-cell summary."
+  ],
+  "lifecycle": {
+    "attempts": 78,
+    "completed": 78,
+    "technical_failures": 0,
+    "retries": 0,
+    "offline_model_calls": 0,
+    "all_requests_identical_to_original": true,
+    "runtime": {
+      "old": "0.34.1",
+      "new": "0.34.4",
+      "same_runtime_replication": false
+    },
+    "models": {
+      "31b": {
+        "digest": "e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e",
+        "name": "gemma4:31b-it-qat"
+      },
+      "e4b": {
+        "digest": "ee665637121887cf3befff38abbb1be4ee117c7db867d97a67e29049ecd7e15f",
+        "name": "gemma4:e4b-it-qat"
+      }
+    },
+    "summary": [
+      {
+        "model": "e4b",
+        "arm": "C0",
+        "attempts": 3,
+        "valid": 3,
+        "status_counts": {
+          "completed": 3
+        },
+        "field_correct": {
+          "path_exists": 3,
+          "declared_parent_integrity": 3,
+          "parent_a_currentness": 3,
+          "parent_b_currentness": 3,
+          "all_referenced_parents_current": 3
+        },
+        "structure_both_correct": 3,
+        "parents_both_correct": 3,
+        "lifecycle_all_correct": 3,
+        "all_decisions_correct": 3,
+        "supported_determinate_lifecycle": 0,
+        "answerable_lifecycle_fields": 0,
+        "warranted_abstention_fields": 9,
+        "warranted_abstention_opportunities": 9,
+        "unnecessary_abstention_fields": 0,
+        "answerable_decision_fields": 6,
+        "unnecessary_abstention_answers": 0,
+        "false_current_fields": 0,
+        "noncurrent_parent_fields": 6,
+        "false_all_current": 0,
+        "nonyes_joint_cases": 3,
+        "false_no_joint": 0,
+        "citation_contract_error_answers": 0,
+        "duplicate_reference_answers": 0,
+        "reason_omitted": 0,
+        "wrong_explanation": 0,
+        "wrong_explanation_unresolved": 0,
+        "structure_currentness_confusion": 0,
+        "structure_currentness_confusion_unresolved": 0,
+        "citation_misuse": 0,
+        "citation_misuse_unresolved": 1,
+        "explicit_abstention": 3,
+        "explicit_abstention_unresolved": 0,
+        "direct_receipt_cue": 0,
+        "direct_receipt_cue_unresolved": 0
+      },
+      {
+        "model": "e4b",
+        "arm": "C1",
+        "attempts": 18,
+        "valid": 18,
+        "status_counts": {
+          "completed": 18
+        },
+        "field_correct": {
+          "path_exists": 18,
+          "declared_parent_integrity": 18,
+          "parent_a_currentness": 11,
+          "parent_b_currentness": 15,
+          "all_referenced_parents_current": 9
+        },
+        "structure_both_correct": 18,
+        "parents_both_correct": 9,
+        "lifecycle_all_correct": 9,
+        "all_decisions_correct": 9,
+        "supported_determinate_lifecycle": 35,
+        "answerable_lifecycle_fields": 48,
+        "warranted_abstention_fields": 0,
+        "warranted_abstention_opportunities": 6,
+        "unnecessary_abstention_fields": 2,
+        "answerable_decision_fields": 84,
+        "unnecessary_abstention_answers": 1,
+        "false_current_fields": 8,
+        "noncurrent_parent_fields": 9,
+        "false_all_current": 8,
+        "nonyes_joint_cases": 9,
+        "false_no_joint": 1,
+        "citation_contract_error_answers": 2,
+        "duplicate_reference_answers": 0,
+        "reason_omitted": 0,
+        "wrong_explanation": 9,
+        "wrong_explanation_unresolved": 2,
+        "structure_currentness_confusion": 0,
+        "structure_currentness_confusion_unresolved": 0,
+        "citation_misuse": 4,
+        "citation_misuse_unresolved": 13,
+        "explicit_abstention": 0,
+        "explicit_abstention_unresolved": 0,
+        "direct_receipt_cue": 0,
+        "direct_receipt_cue_unresolved": 0
+      },
+      {
+        "model": "e4b",
+        "arm": "D",
+        "attempts": 18,
+        "valid": 18,
+        "status_counts": {
+          "completed": 18
+        },
+        "field_correct": {
+          "path_exists": 18,
+          "declared_parent_integrity": 18,
+          "parent_a_currentness": 18,
+          "parent_b_currentness": 18,
+          "all_referenced_parents_current": 15
+        },
+        "structure_both_correct": 18,
+        "parents_both_correct": 18,
+        "lifecycle_all_correct": 15,
+        "all_decisions_correct": 15,
+        "supported_determinate_lifecycle": 48,
+        "answerable_lifecycle_fields": 48,
+        "warranted_abstention_fields": 3,
+        "warranted_abstention_opportunities": 6,
+        "unnecessary_abstention_fields": 0,
+        "answerable_decision_fields": 84,
+        "unnecessary_abstention_answers": 0,
+        "false_current_fields": 0,
+        "noncurrent_parent_fields": 9,
+        "false_all_current": 0,
+        "nonyes_joint_cases": 9,
+        "false_no_joint": 3,
+        "citation_contract_error_answers": 3,
+        "duplicate_reference_answers": 0,
+        "reason_omitted": 0,
+        "wrong_explanation": 2,
+        "wrong_explanation_unresolved": 5,
+        "structure_currentness_confusion": 0,
+        "structure_currentness_confusion_unresolved": 0,
+        "citation_misuse": 0,
+        "citation_misuse_unresolved": 11,
+        "explicit_abstention": 0,
+        "explicit_abstention_unresolved": 0,
+        "direct_receipt_cue": 18,
+        "direct_receipt_cue_unresolved": 0
+      },
+      {
+        "model": "31b",
+        "arm": "C0",
+        "attempts": 3,
+        "valid": 3,
+        "status_counts": {
+          "completed": 3
+        },
+        "field_correct": {
+          "path_exists": 3,
+          "declared_parent_integrity": 3,
+          "parent_a_currentness": 3,
+          "parent_b_currentness": 3,
+          "all_referenced_parents_current": 3
+        },
+        "structure_both_correct": 3,
+        "parents_both_correct": 3,
+        "lifecycle_all_correct": 3,
+        "all_decisions_correct": 3,
+        "supported_determinate_lifecycle": 0,
+        "answerable_lifecycle_fields": 0,
+        "warranted_abstention_fields": 9,
+        "warranted_abstention_opportunities": 9,
+        "unnecessary_abstention_fields": 0,
+        "answerable_decision_fields": 6,
+        "unnecessary_abstention_answers": 0,
+        "false_current_fields": 0,
+        "noncurrent_parent_fields": 6,
+        "false_all_current": 0,
+        "nonyes_joint_cases": 3,
+        "false_no_joint": 0,
+        "citation_contract_error_answers": 0,
+        "duplicate_reference_answers": 0,
+        "reason_omitted": 0,
+        "wrong_explanation": 0,
+        "wrong_explanation_unresolved": 0,
+        "structure_currentness_confusion": 0,
+        "structure_currentness_confusion_unresolved": 0,
+        "citation_misuse": 0,
+        "citation_misuse_unresolved": 0,
+        "explicit_abstention": 3,
+        "explicit_abstention_unresolved": 0,
+        "direct_receipt_cue": 0,
+        "direct_receipt_cue_unresolved": 0
+      },
+      {
+        "model": "31b",
+        "arm": "C1",
+        "attempts": 18,
+        "valid": 18,
+        "status_counts": {
+          "completed": 18
+        },
+        "field_correct": {
+          "path_exists": 18,
+          "declared_parent_integrity": 18,
+          "parent_a_currentness": 13,
+          "parent_b_currentness": 14,
+          "all_referenced_parents_current": 13
+        },
+        "structure_both_correct": 18,
+        "parents_both_correct": 13,
+        "lifecycle_all_correct": 13,
+        "all_decisions_correct": 13,
+        "supported_determinate_lifecycle": 38,
+        "answerable_lifecycle_fields": 48,
+        "warranted_abstention_fields": 2,
+        "warranted_abstention_opportunities": 6,
+        "unnecessary_abstention_fields": 0,
+        "answerable_decision_fields": 84,
+        "unnecessary_abstention_answers": 0,
+        "false_current_fields": 1,
+        "noncurrent_parent_fields": 9,
+        "false_all_current": 1,
+        "nonyes_joint_cases": 9,
+        "false_no_joint": 4,
+        "citation_contract_error_answers": 2,
+        "duplicate_reference_answers": 0,
+        "reason_omitted": 0,
+        "wrong_explanation": 5,
+        "wrong_explanation_unresolved": 0,
+        "structure_currentness_confusion": 0,
+        "structure_currentness_confusion_unresolved": 0,
+        "citation_misuse": 4,
+        "citation_misuse_unresolved": 1,
+        "explicit_abstention": 1,
+        "explicit_abstention_unresolved": 0,
+        "direct_receipt_cue": 0,
+        "direct_receipt_cue_unresolved": 0
+      },
+      {
+        "model": "31b",
+        "arm": "D",
+        "attempts": 18,
+        "valid": 18,
+        "status_counts": {
+          "completed": 18
+        },
+        "field_correct": {
+          "path_exists": 18,
+          "declared_parent_integrity": 18,
+          "parent_a_currentness": 18,
+          "parent_b_currentness": 18,
+          "all_referenced_parents_current": 18
+        },
+        "structure_both_correct": 18,
+        "parents_both_correct": 18,
+        "lifecycle_all_correct": 18,
+        "all_decisions_correct": 18,
+        "supported_determinate_lifecycle": 48,
+        "answerable_lifecycle_fields": 48,
+        "warranted_abstention_fields": 6,
+        "warranted_abstention_opportunities": 6,
+        "unnecessary_abstention_fields": 0,
+        "answerable_decision_fields": 84,
+        "unnecessary_abstention_answers": 0,
+        "false_current_fields": 0,
+        "noncurrent_parent_fields": 9,
+        "false_all_current": 0,
+        "nonyes_joint_cases": 9,
+        "false_no_joint": 0,
+        "citation_contract_error_answers": 18,
+        "duplicate_reference_answers": 0,
+        "reason_omitted": 0,
+        "wrong_explanation": 0,
+        "wrong_explanation_unresolved": 0,
+        "structure_currentness_confusion": 0,
+        "structure_currentness_confusion_unresolved": 0,
+        "citation_misuse": 0,
+        "citation_misuse_unresolved": 0,
+        "explicit_abstention": 3,
+        "explicit_abstention_unresolved": 0,
+        "direct_receipt_cue": 18,
+        "direct_receipt_cue_unresolved": 0
+      }
+    ],
+    "pairs": [
+      {
+        "model": "e4b",
+        "case": "policy-both_current",
+        "improved_fields": [
+          "parent_a_currentness",
+          "parent_b_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "e4b",
+        "case": "policy-a_superseded",
+        "improved_fields": [
+          "parent_a_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "e4b",
+        "case": "policy-b_superseded",
+        "improved_fields": [
+          "parent_b_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "e4b",
+        "case": "policy-unrelated_changed",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "e4b",
+        "case": "policy-a_pending",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "e4b",
+        "case": "policy-a_unclassified",
+        "improved_fields": [
+          "parent_a_currentness"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "e4b",
+        "case": "api-both_current",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "e4b",
+        "case": "api-a_superseded",
+        "improved_fields": [
+          "parent_a_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "e4b",
+        "case": "api-b_superseded",
+        "improved_fields": [
+          "parent_b_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "e4b",
+        "case": "api-unrelated_changed",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "e4b",
+        "case": "api-a_pending",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "e4b",
+        "case": "api-a_unclassified",
+        "improved_fields": [
+          "parent_a_currentness"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "e4b",
+        "case": "deployment-both_current",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "e4b",
+        "case": "deployment-a_superseded",
+        "improved_fields": [
+          "parent_a_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "e4b",
+        "case": "deployment-b_superseded",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "e4b",
+        "case": "deployment-unrelated_changed",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "e4b",
+        "case": "deployment-a_pending",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "e4b",
+        "case": "deployment-a_unclassified",
+        "improved_fields": [
+          "parent_a_currentness"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "31b",
+        "case": "policy-both_current",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "policy-a_superseded",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "policy-b_superseded",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "policy-unrelated_changed",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "policy-a_pending",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "policy-a_unclassified",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "api-both_current",
+        "improved_fields": [
+          "parent_a_currentness",
+          "parent_b_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "31b",
+        "case": "api-a_superseded",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "api-b_superseded",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "api-unrelated_changed",
+        "improved_fields": [
+          "parent_a_currentness",
+          "parent_b_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "31b",
+        "case": "api-a_pending",
+        "improved_fields": [
+          "parent_a_currentness",
+          "parent_b_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "31b",
+        "case": "api-a_unclassified",
+        "improved_fields": [
+          "parent_a_currentness",
+          "parent_b_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      },
+      {
+        "model": "31b",
+        "case": "deployment-both_current",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "deployment-a_superseded",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "deployment-b_superseded",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "deployment-unrelated_changed",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "deployment-a_pending",
+        "improved_fields": [],
+        "regressed_fields": [],
+        "same_decisions": true
+      },
+      {
+        "model": "31b",
+        "case": "deployment-a_unclassified",
+        "improved_fields": [
+          "parent_a_currentness",
+          "all_referenced_parents_current"
+        ],
+        "regressed_fields": [],
+        "same_decisions": false
+      }
+    ],
+    "pair_counts": {
+      "e4b": {
+        "gain": 9,
+        "tie": 9
+      },
+      "31b": {
+        "tie": 13,
+        "gain": 5
+      }
+    },
+    "review": {
+      "method": "single-main-rater partial masking; labels sealed before model/arm identity map read; not independent",
+      "label_sha256": "a76ae4b1c0dfbb49536fdd8d6f4605ed8f4b561a1ead32dfd1463f135b7dd530",
+      "unmask_receipt_sha256": "3860343d56652855b606e70e957e350c8c72262a4beb4eee2c5f1deb53a9018e"
+    },
+    "artifacts": {
+      "MANIFEST.json": "a18086d90cb5237c47d6fbf8c85827df86d8546128e31c70b516b6071bba16c7",
+      "results.json": "31d23a21fff260b7ddf7a4224dbbb77ccc89b4cdade3b61287c261e49cb56f2c",
+      "recount.json": "105e49b47c6280f82b905e853ed50494cce17913902f0245ae87be802289ae7d",
+      "evaluation/manual-review.json": "a76ae4b1c0dfbb49536fdd8d6f4605ed8f4b561a1ead32dfd1463f135b7dd530",
+      "evaluation/masked-answers.json": "29410423519b423469b37cd4bca93ac6a36dbf327374cd28268d0b6aa075e873",
+      "evaluation/identity-map.json": "360d23e3d32a95487d9ff18bd486b9e062225bf82839b8dc6546b40076df97ea",
+      "evaluation/unmask-receipt.json": "3860343d56652855b606e70e957e350c8c72262a4beb4eee2c5f1deb53a9018e",
+      "RUNTIME_CORRECTION.json": "34764ded17e9a04d097d4b4995d077facc286a5c0d4ce58bc1858a9c40dd40c1",
+      "OLLAMA_CLEANUP.json": "9f611a985fe6423941611a1d30dfa1b959c2c1b079a3bc8592a97c756d119283"
+    },
+    "answers": [
+      {
+        "id": "31b-api-C0",
+        "model": "31b",
+        "arm": "C0",
+        "packet": "api-C0",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "parent_b_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R68",
+          "category": "warranted_unknown",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "30a503c0f41f3f4c227a0f4d3a190918d579c872f3960071de842479415e5bb8",
+        "raw_response_sha256": "4b95471ccecae86c52b9c900c0c6a0c012e1cf9fd645bc3d276727f9c28ef2d7"
+      },
+      {
+        "id": "31b-api-a_pending-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "api-a_pending-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": false,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R30",
+          "category": "supersedes_direction_reversed",
+          "wrong_explanation": true,
+          "citation_misuse": true,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "b2170c435542ca25a81d14b223e58181d5186a896a72b20beb31d662e63ac5bd",
+        "raw_response_sha256": "1c0343b51366bb30d1615ec095afbe1780e9e12de3e01b0838dc99403a2d4180"
+      },
+      {
+        "id": "31b-api-a_pending-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "api-a_pending-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R12",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "32c3fbceccce2092ec8e1221cb5e753949c57b11359efe70debbfedc78ffb1f8",
+        "raw_response_sha256": "5e551a18fc26e16d0e8325db22492d104cfc64cbb057b875958af507418afe4d"
+      },
+      {
+        "id": "31b-api-a_superseded-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "api-a_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R31",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "2d06a6f8f8201ac85bbf8c12e7bb3977ccef625faf37ec5d4878df51de82ec61",
+        "raw_response_sha256": "e4b1b26aa07d27d2ac5663f8866e5746332430123c4f755e04056593166de2ee"
+      },
+      {
+        "id": "31b-api-a_superseded-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "api-a_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R53",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "d8105f7c93fe8147aa3db482f0d866f1bf613153364f39c6d171318c73a10acf",
+        "raw_response_sha256": "0b3a73dd15f26776fa59f51340b35375cefb1a1acf27a8bfb26d5783abf7ac62"
+      },
+      {
+        "id": "31b-api-a_unclassified-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "api-a_unclassified-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": false,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R45",
+          "category": "supersedes_direction_reversed",
+          "wrong_explanation": true,
+          "citation_misuse": true,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "8513071d39c67b9dfcea11d2f56a4ece8af85247199bc6fc83c1604e0f3269af",
+        "raw_response_sha256": "bf7c49cbd3a721218fa0ce3a313ffabdcbeee39f13fff11995988684100d134b"
+      },
+      {
+        "id": "31b-api-a_unclassified-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "api-a_unclassified-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results",
+            "derivations",
+            "edges"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R55",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "6801c7bc08e116e5782f64705154daaa56f21e3d230b71c74f68479ad3750c83",
+        "raw_response_sha256": "504f6ebdbdf600575452be17ed09ca505ea0bd214f4e35ffd2612f5b31d250a4"
+      },
+      {
+        "id": "31b-api-b_superseded-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "api-b_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R11",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "8f2e5d7d2ff0ebcaa271cce981295a0eeb8bae475b8d13e44eb165909a3bd9a7",
+        "raw_response_sha256": "d309994829cedc7f5b827fb8b04eb6f87172b560e28f62316c07f17084e9a12c"
+      },
+      {
+        "id": "31b-api-b_superseded-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "api-b_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R04",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "c7366619f4f1bc598401ae4233c8f052e4f5cbe845244426f9f132d4bcde0079",
+        "raw_response_sha256": "f420ccc6230075616cc47fa569069718de4e81a8b9203b59bd2b840ad32b7c68"
+      },
+      {
+        "id": "31b-api-both_current-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "api-both_current-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": false,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R29",
+          "category": "supersedes_direction_reversed",
+          "wrong_explanation": true,
+          "citation_misuse": true,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "fcbf802d38469477628fc07a5159b6ec7f0138c08aeefc499e5a23c55f4750c3",
+        "raw_response_sha256": "275fafe9634d73ddadd3ea02792b4361be702b7a87bb25e35ec98e827e0d92e4"
+      },
+      {
+        "id": "31b-api-both_current-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "api-both_current-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R43",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "74378ff41ac033d32b6b4ccdb4440446eddb3e95f7143eafe0207b21dd518945",
+        "raw_response_sha256": "1408353994e13879247e347222c0b118770050eff02ed899622828b5bb67c9a3"
+      },
+      {
+        "id": "31b-api-unrelated_changed-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "api-unrelated_changed-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": false,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R61",
+          "category": "supersedes_direction_reversed",
+          "wrong_explanation": true,
+          "citation_misuse": true,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "55b75079fc151960a8f5698aa2570adaeca418070121d89f589c7dd08f5af03b",
+        "raw_response_sha256": "fa308495d488d78c1978055559a7fc6024e195d2e40b0f30d2d1ed71c656796b"
+      },
+      {
+        "id": "31b-api-unrelated_changed-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "api-unrelated_changed-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R40",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "1c58a93f7227fd3be24a36030a8551d39e8f98cd873d6c3dbe2666e963bdfac3",
+        "raw_response_sha256": "462f3bb09e71c50a91778038c92e64171e48f5b6c16a653db074878e67201114"
+      },
+      {
+        "id": "31b-deployment-C0",
+        "model": "31b",
+        "arm": "C0",
+        "packet": "deployment-C0",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "parent_b_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R15",
+          "category": "warranted_unknown",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "57257ee59e49e1bf9d556f2ec8baac661471f6f9211e0d2a6c8291ce2d04ef48",
+        "raw_response_sha256": "eb90a14412dbb185635c2d49c489af14bab76d104076b547e42f243146b5e1fa"
+      },
+      {
+        "id": "31b-deployment-a_pending-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "deployment-a_pending-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R63",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "584168350c29712ea18b736ec41704bfa799cb800f1af3a191725a81691773f7",
+        "raw_response_sha256": "a09601bc5a756977037ca33202540f76034680621a313b62d187d61a55ad0316"
+      },
+      {
+        "id": "31b-deployment-a_pending-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "deployment-a_pending-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R44",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "6225b0a5206e0d3620e597481aed498bace7f9ddea4eda74bf95602ad98f46df",
+        "raw_response_sha256": "3a4aa465b788fdda049ca50be986b6d0926659c4e5fc9ebbacb02a1c2c99a748"
+      },
+      {
+        "id": "31b-deployment-a_superseded-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "deployment-a_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R48",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "a132c6b1d9fd7c491ac8d734930fc5283bc3b5cd1921ee78fd2495d9f8e9b230",
+        "raw_response_sha256": "27c5f71517fc573c1ca82f2fcc00654c20ee873ed356a7d3417a4694d9d08a46"
+      },
+      {
+        "id": "31b-deployment-a_superseded-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "deployment-a_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results",
+            "derivations",
+            "edges"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R75",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "0def065edef8df6e20f197e1b4d08279955f6aceb73b9571d8035f3241c7fc6d",
+        "raw_response_sha256": "5b31a1c10d2591d88e250e33ec48460d95ed1760e35875040267c0eae3ae261b"
+      },
+      {
+        "id": "31b-deployment-a_unclassified-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "deployment-a_unclassified-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [
+            "parent_a_currentness"
+          ],
+          "false_all_current": true,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R28",
+          "category": "closure_omission",
+          "wrong_explanation": true,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "4bde558b837f628ad49bac3f4cf761bb15473f71c05a5d00314c381e7f24c9c3",
+        "raw_response_sha256": "77d2cce3d20bbcb10c482b1d368fe8000766f2d6870f07a0d00df6b2b85ec3f9"
+      },
+      {
+        "id": "31b-deployment-a_unclassified-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "deployment-a_unclassified-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results",
+            "derivations",
+            "edges"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R66",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "85ff5ef1b974be063cea6848b5c208fba83539047b169358643ebfa51ffbc8c1",
+        "raw_response_sha256": "1bc35a190c068924b17eb0c4ce34e014d2ea9fda426a35573e041307a04c097b"
+      },
+      {
+        "id": "31b-deployment-b_superseded-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "deployment-b_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R18",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "e2259d1cd448a3e399096364eeec222e93de51be4b2422dd670ba8356727ceeb",
+        "raw_response_sha256": "b80e646a5eee979532f40d1ca74ed81740a9d1a123beb606001caa7ab0b1061b"
+      },
+      {
+        "id": "31b-deployment-b_superseded-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "deployment-b_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results",
+            "derivations",
+            "edges"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R47",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "34d098c82b4c025e980a04e7ac4fcffa6166654202f98d86a9e6fd115f55220c",
+        "raw_response_sha256": "18979bc26c6dcf7e2e9ceb7ec4ea8efa8093d15acef7df4a7987eb78cba9c646"
+      },
+      {
+        "id": "31b-deployment-both_current-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "deployment-both_current-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R70",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "5c9e0f06ef3246db0cb8a5061a9791235138766e20502cd85bcfd1b2112c4f30",
+        "raw_response_sha256": "3f6fa9ca811b06080c413372000a6c592cef16ed3d346c8e2780e31a4851e07e"
+      },
+      {
+        "id": "31b-deployment-both_current-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "deployment-both_current-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R50",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "b55d1d6cdd98df2b81c011c6d2788c703085cc9a384337c079b55e422324005d",
+        "raw_response_sha256": "c32621ee8395f1432bae38a3edb63ced57ecca8ec9478069f784a8bcb4b0f129"
+      },
+      {
+        "id": "31b-deployment-unrelated_changed-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "deployment-unrelated_changed-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R22",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "68f0d066e7f81a1b230f52771d422998f8507541f6f5d1b2544986b919c83036",
+        "raw_response_sha256": "107adc5eaf062dfd793612c58614a7e90b28f07a515b838715a95f67753f2bda"
+      },
+      {
+        "id": "31b-deployment-unrelated_changed-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "deployment-unrelated_changed-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results",
+            "derivations",
+            "edges"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R62",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "f175b200ef1a8f7cb54b74dfd5f4fa6c04bdd47ce66487887d3a3d3e9aac46f0",
+        "raw_response_sha256": "135fbe653616ec1bb37789f224da35aea54272c5dbc31bbc6a01bbd36633da70"
+      },
+      {
+        "id": "31b-policy-C0",
+        "model": "31b",
+        "arm": "C0",
+        "packet": "policy-C0",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "parent_b_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R59",
+          "category": "warranted_unknown",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "1f30b5d4e8a9c8f155de5fb1ccdcb0af17c6dc66f8a36aa0387fe2370f80301f",
+        "raw_response_sha256": "0e7a03f081ffd1085bd0a8a3367b0b6d7114311c6cf74d4b12a62743e89d01bd"
+      },
+      {
+        "id": "31b-policy-a_pending-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "policy-a_pending-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "selected_lineages"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R25",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "852c4483cd4ccf579256676a31aef3e91c93885f98991bfd29fe466eb03d9730",
+        "raw_response_sha256": "e7877598831391429b36747f6730b7296e567ef3335d61182398208b444012fa"
+      },
+      {
+        "id": "31b-policy-a_pending-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "policy-a_pending-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R42",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "5ba2e8ff9aa0c970de7c33a06bea4a649c6a471e0b585d62d8218b833f772a25",
+        "raw_response_sha256": "37710b4e7d417b934c22411af045dc360eadbf57394cd8d0784dcb753c59a211"
+      },
+      {
+        "id": "31b-policy-a_superseded-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "policy-a_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R51",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "e77d56d77d39783614d32f5b0c2cde41d101279f6af4ed6b7ebf0078eec6c819",
+        "raw_response_sha256": "3a7f0fadc8ce0ff421a9ac67b24a9af5fdbda5c5deeb4165aee8c3d8c3b4a05f"
+      },
+      {
+        "id": "31b-policy-a_superseded-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "policy-a_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R08",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "38b8c2fe35194dbda5c7d24cd8cc0aa969f427971ca4edc95b06b4da8262305a",
+        "raw_response_sha256": "9580b8e01ee82cb6e08500cc405ddf4ccae0f8b3a1fa45f54b979612764abb7e"
+      },
+      {
+        "id": "31b-policy-a_unclassified-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "policy-a_unclassified-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "selected_lineages.A.object_claims",
+            "selected_lineages.B.object_claims"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R74",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "411e79e961c1b2540eda60202221a543483470ae16874d98e0520107826c18fb",
+        "raw_response_sha256": "1aaf144e47b307eb43263d70ad67c691b7419741eca5b235467ae8b131f3fe15"
+      },
+      {
+        "id": "31b-policy-a_unclassified-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "policy-a_unclassified-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results",
+            "derivations",
+            "edges"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R60",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "53ab12f08b451a962d6431a81271322489a2be4cdff38c033880568852bb50ea",
+        "raw_response_sha256": "c3e503267edeef07b036084bcadbc8594f9d1eda53337ccef2458abef5220dae"
+      },
+      {
+        "id": "31b-policy-b_superseded-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "policy-b_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R03",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "0dc69478eb1895c64af34b71dcf87ce5192c9040cc37dd1cee31d89e777e896e",
+        "raw_response_sha256": "2b4157c1982c863eaa8234366143b83d8d1f5e481d13f1436890c23bb56021ba"
+      },
+      {
+        "id": "31b-policy-b_superseded-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "policy-b_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R24",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "ff54e1f7ad5d985bac3b6516ec74cafae99d68e8297278f81ccc92a6c9052e5b",
+        "raw_response_sha256": "2a4ec1d4351f87ee5783dd95eb3f53b6ce755f18d9b1a121838ce36b0e0dc34a"
+      },
+      {
+        "id": "31b-policy-both_current-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "policy-both_current-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R38",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "cb9b3e8891a22e794f6eb4c70a08e0ee149b9b5de76fd7978c7dd3f0ef82069d",
+        "raw_response_sha256": "46870c0d5edc7d6e289f72f5534b627c66b91c5d5839591bb475cd90635db4df"
+      },
+      {
+        "id": "31b-policy-both_current-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "policy-both_current-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R65",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "c3497cf8b4a87f2fc8a73a2a99986e867842d056a8f01da703bfa49b9a63fff1",
+        "raw_response_sha256": "ddadb44c3789f46c865bb1c63fa2babc27e6735cd3535ac73c7e0db19143ae8b"
+      },
+      {
+        "id": "31b-policy-unrelated_changed-C1",
+        "model": "31b",
+        "arm": "C1",
+        "packet": "policy-unrelated_changed-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R06",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "d1374d04726c2a95fa231d3f4a1c80063b48118ff609b8a69e4a7c613e21ab6a",
+        "raw_response_sha256": "4bc14b8fd5ec36942527110ef4961d8dfd902dc86597751b7266d4f95546759d"
+      },
+      {
+        "id": "31b-policy-unrelated_changed-D",
+        "model": "31b",
+        "arm": "D",
+        "packet": "policy-unrelated_changed-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R76",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "6aecc01a3b01246622707a9e6d1443494bd337fe44fa7fe6e9c736266788358d",
+        "raw_response_sha256": "c4265d5dde95cddf3caca8d5d84f4912f272a78f7f5a141a2297beb5ace811c2"
+      },
+      {
+        "id": "e4b-api-C0",
+        "model": "e4b",
+        "arm": "C0",
+        "packet": "api-C0",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "parent_b_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R10",
+          "category": "warranted_unknown",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "5bc9aa8965051068631a8fe23b3d8ac0a63f0082c1ad7a760d9d25b9355d667f",
+        "raw_response_sha256": "76867e053834d1de1ec8e9070623c7351972f274cfeff4ad6129d94050f84e70"
+      },
+      {
+        "id": "e4b-api-a_pending-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "api-a_pending-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "admission-event:v2:sha256:7cba9be27791877d65f6edd7dd579a4cf0bda514ecb28dea184c432a6989d17"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R67",
+          "category": "accurate_abbreviated",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "d16ae1f1d293cfc75ec270569befcf0c5bcd24ce58305151514a93626a884369",
+        "raw_response_sha256": "3138be2dbe218e1e6c4a9c32d7f7ebe9a83803003b5835e23b630f4452d400c9"
+      },
+      {
+        "id": "e4b-api-a_pending-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "api-a_pending-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R36",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "5b478d5d44073fa0fedee13da159077c27e315774c00ca53b3fa9ff54eba57ca",
+        "raw_response_sha256": "097dd3a8592d6876502783cb01f131da141bb6f81c9dbcbec93f65ad90ebfb1e"
+      },
+      {
+        "id": "e4b-api-a_superseded-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "api-a_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [
+            "parent_a_currentness"
+          ],
+          "false_all_current": true,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R21",
+          "category": "ignored_supersession",
+          "wrong_explanation": true,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "600d7fcd08147270327088038fdb9b3351b98e52b1b9c8d71c077360bc6a5104",
+        "raw_response_sha256": "74bb9b96b73657c0850eff145a7abd30902728bea657f386d2473a887dfe0adc"
+      },
+      {
+        "id": "e4b-api-a_superseded-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "api-a_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R16",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "8bbb72e77fb53d67d8e9d489c4251c32b4644db913147bb913d168de2d6e0cbf",
+        "raw_response_sha256": "852b71dc2de41caee17fad90b5a883cdf160b19aaa0cf864dbc37dd483e1addd"
+      },
+      {
+        "id": "e4b-api-a_unclassified-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "api-a_unclassified-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [
+            "parent_a_currentness"
+          ],
+          "false_all_current": true,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R39",
+          "category": "admission_as_current",
+          "wrong_explanation": true,
+          "citation_misuse": true,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "f89150eab96a326eeb3b230ef40ed8870100f5aaaf7ac916de048797fed35955",
+        "raw_response_sha256": "99249105e0023ca87fd895b2b516b35e634261f7272f40eb985dc2519c86f525"
+      },
+      {
+        "id": "e4b-api-a_unclassified-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "api-a_unclassified-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R05",
+          "category": "accurate_reason_wrong_joint_field",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "0fdc3503e54b6928f7282079338526a421557a6301d0dced73595a13495c4b66",
+        "raw_response_sha256": "51a7205e1c9e12f85bb234d8f24a74f3f6dd8e521483850bb7225049c97ab8b0"
+      },
+      {
+        "id": "e4b-api-b_superseded-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "api-b_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": false,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [
+            "parent_b_currentness"
+          ],
+          "false_all_current": true,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R56",
+          "category": "ignored_supersession",
+          "wrong_explanation": true,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "b23bd22bc825818d2d67764605e81447d2032fe5343057e1af6d17ee69f00acb",
+        "raw_response_sha256": "5c1d76e9efe5968d6b0afb3cfca855599ac048eb7298cb5e0374d803de61964f"
+      },
+      {
+        "id": "e4b-api-b_superseded-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "api-b_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R46",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "a3e1c3c388956ba48376e9ff49c90bca2d071a537cd6fe95d4caf67041dfdc6b",
+        "raw_response_sha256": "8a758383dbf5696a6f99fd5d3a9565409cdeb68b717983cb0dd52ed66d042c98"
+      },
+      {
+        "id": "e4b-api-both_current-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "api-both_current-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "admission-event:v2:sha256:7cba9be27791877d65f6edd7dd579a4cf0bda514ecb28dea184c432a6989d17"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R09",
+          "category": "accurate_abbreviated",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "4dc5f53546b1fc60ec2a7311d6a53faa78ca44c6b66cd611adff03573c866cb9",
+        "raw_response_sha256": "966986f326e1730907880463aae3fff7c73a4825b1b33710b76fe27a878ec3c9"
+      },
+      {
+        "id": "e4b-api-both_current-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "api-both_current-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R34",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "d966631e269d16fbf43ef57d2f0073bb39aa33d49824bfe58ea10030883eef98",
+        "raw_response_sha256": "19fd72c82991930c02a5bd02bc9f6d5c374d0e0ad02aa514a04c643309d9bbb5"
+      },
+      {
+        "id": "e4b-api-unrelated_changed-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "api-unrelated_changed-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R27",
+          "category": "event_scope_ambiguous",
+          "wrong_explanation": null,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "c0a91f8e982ab9edb469312e8f4ea7233f723c62e6eaafcdba7f13f2c979c387",
+        "raw_response_sha256": "51c6b4d68281fa7651cb41c85a7e360b46c8117cbba57d11e33d515a97b1303e"
+      },
+      {
+        "id": "e4b-api-unrelated_changed-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "api-unrelated_changed-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R52",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "7d9f1e7a7909486afa0c5d895de6318ec89f7bf47d7a1550acc5a054addc8637",
+        "raw_response_sha256": "ee667fdca053868e22a688478ce16c4cad7da4c4705c303e3303a8e631718038"
+      },
+      {
+        "id": "e4b-deployment-C0",
+        "model": "e4b",
+        "arm": "C0",
+        "packet": "deployment-C0",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "parent_b_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R19",
+          "category": "warranted_unknown",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "eaf88e5c71c4f82ae541a76691c6ddd79ee110edbf1d334069b475fe693b1d27",
+        "raw_response_sha256": "7c31268d842190ff1144c7905f0169d9b59a580ec1f734597281327b47bdf298"
+      },
+      {
+        "id": "e4b-deployment-a_pending-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "deployment-a_pending-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R58",
+          "category": "event_scope_ambiguous",
+          "wrong_explanation": null,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "e8b21ffe88f9881c8c0ab199b1bf3709770b82bc55258c54785d54351a81a032",
+        "raw_response_sha256": "a96a4881ae315f7cf9e4d37af5220bb4d16af20aee22179d63df57df909b4fe4"
+      },
+      {
+        "id": "e4b-deployment-a_pending-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "deployment-a_pending-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results.A.projection.semantics",
+            "ahe_currentness_results.B.projection.semantics"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R32",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "3e0577e288b3a24cbe013aeb534af3ebd58a80379455aff67e1e715cede526db",
+        "raw_response_sha256": "f76993cfdf4bb0cffe709b709b7190e0e7a01e1b72d309c380bd089850ee66e3"
+      },
+      {
+        "id": "e4b-deployment-a_superseded-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "deployment-a_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [
+            "parent_a_currentness"
+          ],
+          "false_all_current": true,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R69",
+          "category": "ignored_supersession",
+          "wrong_explanation": true,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "b8aa959b4fa6d93dea22019eb5ecd790276983d30ab1d447660182f76a5334ea",
+        "raw_response_sha256": "dce0bd1d39b0492b1afc29f22f52d4eddbc752368aa7602efea50c552b98b2c9"
+      },
+      {
+        "id": "e4b-deployment-a_superseded-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "deployment-a_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R37",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "74b61caf23ca6dea2c9727786b819c8147d949c3046817517a682b2a0527b924",
+        "raw_response_sha256": "5ad6a4834a61531ad8d8ca10aeb4580ecba4800cdb8d60e40a899060f987f68f"
+      },
+      {
+        "id": "e4b-deployment-a_unclassified-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "deployment-a_unclassified-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [
+            "parent_a_currentness"
+          ],
+          "false_all_current": true,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R41",
+          "category": "closure_omission",
+          "wrong_explanation": true,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "e4d046ee6cb721253c40c9589e7e4fd49f83e5c281de643eba5ebb5e6e30e023",
+        "raw_response_sha256": "59fa5a3eeed4cdb89ce7d7f807074fce83aa410727500844bd49f14246b46679"
+      },
+      {
+        "id": "e4b-deployment-a_unclassified-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "deployment-a_unclassified-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "canon-node:401c9e95f2c3737"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R02",
+          "category": "unknown_as_false",
+          "wrong_explanation": true,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "cb08f0055dcb26e24668696b9edc3f3bc953d8d331815b136938482d0aeacec4",
+        "raw_response_sha256": "6387d3b925b3bd62f61cae1f22b699014b700a543d47abb12d1a74166b3f11e7"
+      },
+      {
+        "id": "e4b-deployment-b_superseded-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "deployment-b_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R78",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "0210bff272e0fbccbb4abde82bb7140fa757699325cc0c93779ef9d6cc42bef5",
+        "raw_response_sha256": "479470dc15a892fcfdb3a0e16d07ba1cc3e3ad68ab40182aaf50991420741477"
+      },
+      {
+        "id": "e4b-deployment-b_superseded-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "deployment-b_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R71",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "803ddb726fdb18ceda32e82b8c20ba368906a18aa9905d0d7147124f253552ef",
+        "raw_response_sha256": "a7f2252d308f9fbc4339c0a9dd82de2327d7aa32b077e5022671ad13950efc24"
+      },
+      {
+        "id": "e4b-deployment-both_current-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "deployment-both_current-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R77",
+          "category": "accurate_abbreviated",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "308fdc9172e4b32a624fe612d372332b8f2e4cfa7028693d455f5e0e6a1ef6c0",
+        "raw_response_sha256": "46bba4424b07466445a036486817f2d321d234c31fc5f69364c287c010f24b72"
+      },
+      {
+        "id": "e4b-deployment-both_current-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "deployment-both_current-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [
+            "ahe_currentness_results.A.projection.semantics",
+            "ahe_currentness_results.B.projection.semantics"
+          ],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R72",
+          "category": "semantics_label_ambiguous",
+          "wrong_explanation": null,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "ae29504931982244132a6d022c7b58450fb319a8cb67cbe4f627b601a92dd1e0",
+        "raw_response_sha256": "ac9f3ac95ba1db31be443c9cb0b70b25455609671de6bc3fc7f4ceaa75b2c0b0"
+      },
+      {
+        "id": "e4b-deployment-unrelated_changed-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "deployment-unrelated_changed-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R57",
+          "category": "accurate_abbreviated",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "3ce312163b5839f2c09c255524ac948ef6f722abb68f4505bd4892d90fb72996",
+        "raw_response_sha256": "31dadbdbf1fa4bf1345cad506fc602cb33dae6e3d0815022f3986e2343f5ee5e"
+      },
+      {
+        "id": "e4b-deployment-unrelated_changed-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "deployment-unrelated_changed-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R20",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "3c437d914f97af3f33e94dab939031cea755d9a5dc4a9073e043cf43cbc02168",
+        "raw_response_sha256": "843568c1866c0d32e7c7cde1ff59f5aedba75cc6dd3f230432578df2c85352f0"
+      },
+      {
+        "id": "e4b-policy-C0",
+        "model": "e4b",
+        "arm": "C0",
+        "packet": "policy-C0",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness",
+            "parent_b_currentness",
+            "all_referenced_parents_current"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R54",
+          "category": "warranted_unknown",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "b1f3219c0cd58c382f6b9d6c546d6239aab2e031cab39d6a0ff365b53197eebc",
+        "raw_response_sha256": "bfd9b28c8f16e91f2687935a8015403e3ef2f407a15951f38be349475c4745ec"
+      },
+      {
+        "id": "e4b-policy-a_pending-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "policy-a_pending-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R73",
+          "category": "accurate_abbreviated",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "65140630ac70ed7acc978a9acb1555a78026b600b080bd91aaf3ca8afc6b4f4f",
+        "raw_response_sha256": "8c12ee2d58b25fd3873309c4446fcee232436c3d9fbafbbabfa35b542a47b9a5"
+      },
+      {
+        "id": "e4b-policy-a_pending-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "policy-a_pending-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R07",
+          "category": "path_wording_ambiguous",
+          "wrong_explanation": null,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "2cc333569cf4d262f462da517260e11737767eef3e7f43911cf9940a0cc3cd6a",
+        "raw_response_sha256": "cad65753c9f0cad4302ddd0310350b354e7b55ce7942e7e6c02fc45e5cfe416f"
+      },
+      {
+        "id": "e4b-policy-a_superseded-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "policy-a_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [
+            "parent_a_currentness"
+          ],
+          "false_all_current": true,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R13",
+          "category": "admission_as_current",
+          "wrong_explanation": true,
+          "citation_misuse": true,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "c88688d03647e602cd0c38baaf0ec7ba4baf2db05c2155968281db013559c6bc",
+        "raw_response_sha256": "7e4e9bae1bdb05db25c9aa4e64df44d90fca081a471852d23dafdc94cc71b103"
+      },
+      {
+        "id": "e4b-policy-a_superseded-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "policy-a_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R49",
+          "category": "accurate",
+          "wrong_explanation": false,
+          "citation_misuse": false,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "f6a90747a74fe067cfe0ff47a7bb8cc1d2f41929a69614e59a69ba1da713a884",
+        "raw_response_sha256": "15956452b627872ad498f63469888bf591b09ee5d6152c8f251be332aab3d8a4"
+      },
+      {
+        "id": "e4b-policy-a_unclassified-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "policy-a_unclassified-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [
+            "parent_a_currentness"
+          ],
+          "false_all_current": true,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R01",
+          "category": "closure_omission",
+          "wrong_explanation": true,
+          "citation_misuse": true,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "7b1035c19e31cb54a457ec523da2760cc8f2f632ee2859d09b7f262757cab6b2",
+        "raw_response_sha256": "3bce3c4505ff8388baeeab7b63fc6dad4fd20b2b628ebd4f309cefc61f3a85f9"
+      },
+      {
+        "id": "e4b-policy-a_unclassified-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "policy-a_unclassified-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [
+            "parent_a_currentness"
+          ],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R23",
+          "category": "unknown_as_false",
+          "wrong_explanation": true,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "7444f95d449e0988cf79c5145786d1af36d89742faace8000a28964583b85587",
+        "raw_response_sha256": "2120a8129de0ebf191a1e19605d8b113fe01c2e39ef134169d247adea020c268"
+      },
+      {
+        "id": "e4b-policy-b_superseded-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "policy-b_superseded-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": false,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [
+            "parent_b_currentness"
+          ],
+          "false_all_current": true,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R64",
+          "category": "admission_as_current",
+          "wrong_explanation": true,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "6b6c122017f11db2f74038681ca5fa9b053a2355ef27a75eed34f8e3f45a38f3",
+        "raw_response_sha256": "98cf29bb5e874a536f1602007e139c948a094fff80a37c61c7fd8d9c5f514640"
+      },
+      {
+        "id": "e4b-policy-b_superseded-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "policy-b_superseded-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R26",
+          "category": "negation_ambiguous",
+          "wrong_explanation": null,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "7732fe9cd36728300a94b58f400e0391c3fd85139d24ac7fbc8834ce2255725f",
+        "raw_response_sha256": "b54c1c7389268065864fe353bde49143fa5f0adacb9e2c983eccc798f3c3fd0b"
+      },
+      {
+        "id": "e4b-policy-both_current-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "policy-both_current-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": false,
+            "parent_b_currentness": false,
+            "all_referenced_parents_current": false
+          },
+          "unnecessary_abstention": [
+            "parent_a_currentness",
+            "parent_b_currentness"
+          ],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R17",
+          "category": "global_head_as_lineage_currentness",
+          "wrong_explanation": true,
+          "citation_misuse": true,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "4b4e15829d6309905db2a074ed31a3c665a7016770981f55f67bb7edf33f7e01",
+        "raw_response_sha256": "12cd38307a4c4b0c5bc3fe1688047f7457cf0872c2f44035a94bdab9bcb6736e"
+      },
+      {
+        "id": "e4b-policy-both_current-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "policy-both_current-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R35",
+          "category": "path_wording_ambiguous",
+          "wrong_explanation": null,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "1b1e1684cb2742f1ccae424d35e291fb2f40b64ee47fbce2c5868d8e9a271c25",
+        "raw_response_sha256": "f12f61cda8e816b9ccd1d739eb27f14e2512157c8835ca9dd88df239f6bba870"
+      },
+      {
+        "id": "e4b-policy-unrelated_changed-C1",
+        "model": "e4b",
+        "arm": "C1",
+        "packet": "policy-unrelated_changed-C1",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R33",
+          "category": "accurate_abbreviated",
+          "wrong_explanation": false,
+          "citation_misuse": null,
+          "direct_receipt_cue": false
+        },
+        "request_sha256": "4d9b540c81c3f5f9dd0f651a1727a825b80387891362d35dc8b9ec385942c7ac",
+        "raw_response_sha256": "a2c65aedb915089343020a77edfb88fff13fd757339f82e72102d15f437dc070"
+      },
+      {
+        "id": "e4b-policy-unrelated_changed-D",
+        "model": "e4b",
+        "arm": "D",
+        "packet": "policy-unrelated_changed-D",
+        "status": "completed",
+        "scores": {
+          "correct": {
+            "path_exists": true,
+            "declared_parent_integrity": true,
+            "parent_a_currentness": true,
+            "parent_b_currentness": true,
+            "all_referenced_parents_current": true
+          },
+          "unnecessary_abstention": [],
+          "warranted_abstention": [],
+          "false_current": [],
+          "false_all_current": false,
+          "invalid_refs": [],
+          "duplicate_refs": false,
+          "reason_omitted": false
+        },
+        "review": {
+          "review_id": "R14",
+          "category": "edge_scope_ambiguous",
+          "wrong_explanation": null,
+          "citation_misuse": null,
+          "direct_receipt_cue": true
+        },
+        "request_sha256": "b3721da45aa9458bd21fe61921ef5be0e8bd956fbc2a56291e3528e7c81bd5bb",
+        "raw_response_sha256": "ba1e9224dbd3a48806ba9588f997c03200cc005ba433f35111194db56f41acf6"
+      }
+    ],
+    "historical_comparison": {
+      "source_sha256": "18f093db764c2b9a9666f2491a3c3e78a4eb9b7b56c168fc67b65ab149f2aa4c",
+      "causal_attribution": "unestablished; runtime and run context differ; explanation labels are single-rater and not independent",
+      "summary": [
+        {
+          "model": "e4b",
+          "arm": "C0",
+          "attempts": 3,
+          "lifecycle_all_correct": 3,
+          "wrong_explanation": 0,
+          "wrong_explanation_unresolved": 2,
+          "citation_contract_error_answers": 0
+        },
+        {
+          "model": "e4b",
+          "arm": "C1",
+          "attempts": 18,
+          "lifecycle_all_correct": 0,
+          "wrong_explanation": 18,
+          "wrong_explanation_unresolved": 0,
+          "citation_contract_error_answers": 4
+        },
+        {
+          "model": "e4b",
+          "arm": "D",
+          "attempts": 18,
+          "lifecycle_all_correct": 0,
+          "wrong_explanation": 18,
+          "wrong_explanation_unresolved": 0,
+          "citation_contract_error_answers": 0
+        },
+        {
+          "model": "31b",
+          "arm": "C0",
+          "attempts": 3,
+          "lifecycle_all_correct": 3,
+          "wrong_explanation": 0,
+          "wrong_explanation_unresolved": 0,
+          "citation_contract_error_answers": 0
+        },
+        {
+          "model": "31b",
+          "arm": "C1",
+          "attempts": 18,
+          "lifecycle_all_correct": 15,
+          "wrong_explanation": 4,
+          "wrong_explanation_unresolved": 0,
+          "citation_contract_error_answers": 0
+        },
+        {
+          "model": "31b",
+          "arm": "D",
+          "attempts": 18,
+          "lifecycle_all_correct": 15,
+          "wrong_explanation": 3,
+          "wrong_explanation_unresolved": 0,
+          "citation_contract_error_answers": 18
+        }
+      ]
+    }
+  },
+  "current_continuation": {
+    "protocol": "autonomous-swe-v1",
+    "local_execution_date": "2026-10-07",
+    "product_base": "844a3a6530120ea5514a2e59bc1be51fa2f82cba",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "unique_issues": 3,
+    "agent_workflows": 3,
+    "model_retries": 0,
+    "official_patch_evaluations": 3,
+    "official_resolved": 2,
+    "ahe_only_resolved": 2,
+    "source_records": 40,
+    "source_manifest_sha256": "53fa35362646a87e665a34fd022813edeb4ba7a4b2f43cca129904ee003cf812",
+    "cases": [
+      {
+        "case": "astropy__astropy-12907",
+        "queries": 7,
+        "tool_calls": 13,
+        "edit_attempts": 1,
+        "elapsed_seconds": 150.985,
+        "decision": "patch_submitted",
+        "patch_sha256": "67d13e046d394909447f43e1c0e2f6ed8b94cff58262bbe7af280e4f4b40ff4f",
+        "patch_applied": true,
+        "official_resolved": true,
+        "behavioral_protocol_pass": true,
+        "counted_ahe_only_resolved": true,
+        "exact_quotes_checked": 16,
+        "all_quotes_grounded": true,
+        "query_strategy": [
+          "get_evidence_record",
+          "search_evidence_records",
+          "get_grounded_evidence_brief",
+          "get_grounded_evidence_brief",
+          "get_grounded_evidence_brief",
+          "get_grounded_evidence_brief",
+          "get_grounded_evidence_brief"
+        ],
+        "official_test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 2,
+            "failure": 0
+          },
+          "PASS_TO_PASS": {
+            "success": 13,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "official_report_sha256": "fe3f3bddc9631279d3babf7270913070d91e9207c3468bd947823aee3e7b1b86",
+        "final_answer_sha256": "4e30477f3dc05c0041734d957809725f0ef3a9f3e7afd7e48d485e66822cfcec",
+        "transcript_audit_sha256": "c7fdab4b9820b9df6fdbd9c095f2a7d1f9edba9586dc0d4a5846ffb9460c310a",
+        "citation_check_sha256": "7bbf226894499733fc979327b847658b288baf0a7e71c416370b9a6464d25e47",
+        "manual_review_sha256": "6de844a028703ba3b0bd23c1da0b7f07fc5b038b1eb3e9d5fe6fd80e3372c4a3",
+        "prompt_sha256": "b9d0ae5a64872311c6e44ce8ace47854d0e59258ef683571334cf8a23f6b7419",
+        "cleanup_confirmed": true,
+        "pre_evaluation_unsupported_assertion_identified": false
+      },
+      {
+        "case": "django__django-10914",
+        "queries": 6,
+        "tool_calls": 12,
+        "edit_attempts": 1,
+        "elapsed_seconds": 146.38,
+        "decision": "patch_submitted",
+        "patch_sha256": "db3ada27425856991495685ee05a387de6608f30b5471a88a59f73a91c66ee6a",
+        "patch_applied": true,
+        "official_resolved": true,
+        "behavioral_protocol_pass": true,
+        "counted_ahe_only_resolved": true,
+        "exact_quotes_checked": 5,
+        "all_quotes_grounded": true,
+        "query_strategy": [
+          "get_evidence_record",
+          "search_evidence_records",
+          "search_evidence_records",
+          "get_grounded_evidence_brief",
+          "search_evidence_records",
+          "get_grounded_evidence_brief"
+        ],
+        "official_test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 1,
+            "failure": 0
+          },
+          "PASS_TO_PASS": {
+            "success": 98,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "official_report_sha256": "b105979fe78dbf4323f40226cf6abc32a4c059331e95c1ae61031e8e8ef651b8",
+        "final_answer_sha256": "5e75f1a023a5359d5bdc00c21166c1622c9cc099f689b098e34cf96174d6e376",
+        "transcript_audit_sha256": "8c413bd33e41f1738bebbb9c38204cb77baa6c433bd32eac3a91ba57b51f598e",
+        "citation_check_sha256": "d5da9397d758b8e5339cf78cbbb7eeee6e140b1785abed80b895f2c8ce39f03a",
+        "manual_review_sha256": "84c42f9445a1d3829383fbba4a8e9a3f52f71ef3b3830dcef5eaef42f92c1dc7",
+        "prompt_sha256": "39704ed1406f8352ed608d0984edf4bbb5429cea02cf85128b0dea0b2132a2d9",
+        "cleanup_confirmed": true,
+        "pre_evaluation_unsupported_assertion_identified": false
+      },
+      {
+        "case": "scikit-learn__scikit-learn-25570",
+        "queries": 10,
+        "tool_calls": 16,
+        "edit_attempts": 1,
+        "elapsed_seconds": 199.039,
+        "decision": "patch_submitted",
+        "patch_sha256": "e95ce0da6054d30e99392b3f922a5ff3b5c7ba4eb34f93acdf051b6a8f95a038",
+        "patch_applied": true,
+        "official_resolved": false,
+        "behavioral_protocol_pass": true,
+        "counted_ahe_only_resolved": false,
+        "exact_quotes_checked": 6,
+        "all_quotes_grounded": true,
+        "query_strategy": [
+          "get_evidence_record",
+          "search_evidence_records",
+          "get_grounded_evidence_brief",
+          "get_evidence_record",
+          "get_grounded_evidence_brief",
+          "get_grounded_evidence_brief",
+          "get_grounded_evidence_brief",
+          "get_grounded_evidence_brief",
+          "get_grounded_evidence_brief",
+          "get_grounded_evidence_brief"
+        ],
+        "official_test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 0,
+            "failure": 3
+          },
+          "PASS_TO_PASS": {
+            "success": 184,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "official_report_sha256": "1a8de1b8ab3110e2cfa2aeb7b3e84e2fc6a6dd2eca9805d5ae28b652a7d3d72a",
+        "final_answer_sha256": "8644c1ca9e0ae7798518818acf3bb8e59ac48e5bea6e5635cd2d80949ed74163",
+        "transcript_audit_sha256": "bf5cd5f5525a552f2cbc5f21f1f58276a563e14d14668551a6f92bacdd98b9ca",
+        "citation_check_sha256": "e96490e80013da06faf9a0b31fefa564658616a0a3d2d51f0f35dffb5ba5cbec",
+        "manual_review_sha256": "fc90a9b697cca97725b2d01c9e76f4238ddf4bf07fdfb13579b03ba2c9e4c128",
+        "prompt_sha256": "bee11a578e92752a810344acc7b6334e682c1a1cac91a61b561b14f30aacc7f2",
+        "cleanup_confirmed": true,
+        "pre_evaluation_unsupported_assertion_identified": false,
+        "post_evaluation_review": {
+          "case": "scikit-learn__scikit-learn-25570",
+          "reviewed_at": "2026-10-06T16:27:54.226064+00:00",
+          "classification": "incomplete repair; new iterator-consumption failure in target tests",
+          "official_resolved": false,
+          "target_tests_passed": 0,
+          "target_tests_failed": 3,
+          "existing_tests_passed": 184,
+          "patch_applied": true,
+          "failure": "RuntimeError: generator raised StopIteration",
+          "observed_path": "fit_transform -> _update_fitted_transformers -> next(fitted_transformers), sklearn/compose/_column_transformer.py:602",
+          "mechanism": "Patched _iter no longer yields the empty passthrough as a fitted transformer. _update_fitted_transformers still consumes the next fitted transformer for that passthrough, takes the StandardScaler entry, then exhausts the iterator for the numerical entry.",
+          "source_gap": "No one of the 15 frozen AHE source records contains the definition or a mention of _update_fitted_transformers. Its body is visible in the official failure traceback only after the attempt was sealed. The agent acknowledged missing lifecycle implementation.",
+          "interpretation": "Exact citations and a plausible local branch change did not establish a complete repair across producer and consumer. This is not an AHE retrieval error demonstrated on complete stored evidence. We did not test whether adding the missing source would make the agent succeed.",
+          "pre_evaluation_review_retained": true,
+          "pre_evaluation_claim_boundary": "Prior review found no unsupported observed-source fact; the broader repair-sufficiency hypothesis is contradicted by execution. Do not summarize all three explanations as verified correct.",
+          "agent_given_test_feedback": false,
+          "patch_revised_after_test": false,
+          "test_output_sha256": "b73174b254d1de51197cad2167ba5e95f258ebdead4ee928a224de13f6e492a5"
+        }
+      }
+    ],
+    "test_results": {
+      "executed_local_dates": [
+        "2026-10-06",
+        "2026-10-07"
+      ],
+      "only_tracked_code_changes": [
+        "internal/mcpintegration/runtime_provisioning_launcher_integration_test.go",
+        "internal/mcpintegration/han_plan_integration_test.go"
+      ],
+      "runtime_implementation_changed": false,
+      "batches": [
+        {
+          "log": "native-suite/ordinary/go-test.jsonl",
+          "log_sha256": "3bd56cbf32f48311766486f7ff6e80afffae2ed1d53e3c1e5b379ced82c61d49",
+          "leaf_counts": {
+            "pass": 1834,
+            "fail": 0,
+            "skip": 0
+          },
+          "failed_tests": [],
+          "failed_packages": [],
+          "skipped_tests": []
+        },
+        {
+          "log": "native-suite/ordinary-race/go-test.jsonl",
+          "log_sha256": "5a67cb2203c9528584e817d2a266ee87239a596dbb9b45e952836161902fe298",
+          "leaf_counts": {
+            "pass": 1834,
+            "fail": 0,
+            "skip": 0
+          },
+          "failed_tests": [],
+          "failed_packages": [],
+          "skipped_tests": []
+        },
+        {
+          "log": "native-suite/integration/go-test.jsonl",
+          "log_sha256": "77b2896fb1ff055fbd7fe7f47cd839bad9b02ef8c27127546adb1d3568db8645",
+          "leaf_counts": {
+            "pass": 3582,
+            "fail": 0,
+            "skip": 13
+          },
+          "failed_tests": [],
+          "failed_packages": [],
+          "skipped_tests": [
+            "TestIntegrationHanOutcomeReadOnlyLab",
+            "TestHanOutcomeFrozenPlan",
+            "TestIntegrationHanPlanIsolatedLab",
+            "TestIntegrationHanQueryMCPIsolatedLab",
+            "TestIntegrationHanScaleIsolatedLab",
+            "TestIntegrationMultisurfaceReadOnlyLab",
+            "TestMultisurfaceFrozenPlan",
+            "TestIntegrationMultisurfaceSQLControls",
+            "TestIntegrationPracticalAnchorReadOnlyLab",
+            "TestPracticalAnchorFrozenPlan",
+            "TestIntegrationPracticalAnchorSQLControls",
+            "TestIntegrationPracticalSQLControls",
+            "TestIntegrationSWERelationPackets"
+          ]
+        },
+        {
+          "log": "native-suite/integration-race/go-test.jsonl",
+          "log_sha256": "fe7df6e9b85e7670f5ba924782502373ce03bae4585aca7ba77dc1d9d8b2ed53",
+          "leaf_counts": {
+            "pass": 3582,
+            "fail": 0,
+            "skip": 13
+          },
+          "failed_tests": [],
+          "failed_packages": [],
+          "skipped_tests": [
+            "TestIntegrationHanOutcomeReadOnlyLab",
+            "TestHanOutcomeFrozenPlan",
+            "TestIntegrationHanPlanIsolatedLab",
+            "TestIntegrationHanQueryMCPIsolatedLab",
+            "TestIntegrationHanScaleIsolatedLab",
+            "TestIntegrationMultisurfaceReadOnlyLab",
+            "TestMultisurfaceFrozenPlan",
+            "TestIntegrationMultisurfaceSQLControls",
+            "TestIntegrationPracticalAnchorReadOnlyLab",
+            "TestPracticalAnchorFrozenPlan",
+            "TestIntegrationPracticalAnchorSQLControls",
+            "TestIntegrationPracticalSQLControls",
+            "TestIntegrationSWERelationPackets"
+          ]
+        },
+        {
+          "log": "supplement-research-final/replay.jsonl",
+          "log_sha256": "0cf532c151646343dcc879d640f0bbdbfd240c5586db6a63fcbbf67a416dd140",
+          "leaf_counts": {
+            "pass": 214,
+            "fail": 0,
+            "skip": 0
+          },
+          "failed_tests": [],
+          "failed_packages": [],
+          "skipped_tests": []
+        },
+        {
+          "log": "supplement-research-race-final/replay.jsonl",
+          "log_sha256": "301e4ca736bcba67b426b4c2c338fb5de88a27402b99b88a5c90fc80799ea0d4",
+          "leaf_counts": {
+            "pass": 214,
+            "fail": 0,
+            "skip": 0
+          },
+          "failed_tests": [],
+          "failed_packages": [],
+          "skipped_tests": []
+        },
+        {
+          "log": "supplement-han-final/plan.jsonl",
+          "log_sha256": "be421a5d9efbcd0a2c475b3363208ece7a3b65f969db58996957e073786d28d7",
+          "leaf_counts": {
+            "pass": 1,
+            "fail": 0,
+            "skip": 0
+          },
+          "failed_tests": [],
+          "failed_packages": [],
+          "skipped_tests": []
+        },
+        {
+          "log": "supplement-han-final/query.jsonl",
+          "log_sha256": "026ea64238c5b31dc469b042c4b0f312de5ceb31d0577e429b09a7c6f0ecaa47",
+          "leaf_counts": {
+            "pass": 63,
+            "fail": 0,
+            "skip": 0
+          },
+          "failed_tests": [],
+          "failed_packages": [],
+          "skipped_tests": []
+        },
+        {
+          "log": "supplement-han-final/scale.jsonl",
+          "log_sha256": "ab4d8667d5f6a9c6c11f0d247cd76b5f7799679af4002b5cb2a9de731e955d8c",
+          "leaf_counts": {
+            "pass": 1,
+            "fail": 0,
+            "skip": 0
+          },
+          "failed_tests": [],
+          "failed_packages": [],
+          "skipped_tests": []
+        }
+      ],
+      "checks": [
+        {
+          "batch": "native-suite",
+          "source_unchanged": true,
+          "summary_sha256": "5a0ab25c074112f5ef63e191ea52285e06415d45315ec2d79c3f2bfe3ccd7de2",
+          "commands": 21
+        },
+        {
+          "batch": "supplement-research-final",
+          "source_unchanged": true,
+          "summary_sha256": "cf0e1164030808c9bd52dbb70d0340a5d92f401800f28e84dc77f5914d191452",
+          "commands": 8
+        },
+        {
+          "batch": "supplement-research-race-final",
+          "source_unchanged": true,
+          "summary_sha256": "2e2b71b8779a79dbab962f3e07eb0acd47fd82141911a07086daed0c1ee1027d",
+          "commands": 8
+        },
+        {
+          "batch": "supplement-han-final",
+          "source_unchanged": true,
+          "summary_sha256": "34d0d2246e264a83cf812fc2a6acb58ce22482aab652925c4aef712321e0bf77",
+          "commands": 15
+        }
+      ],
+      "broad_skips": 13,
+      "selected_again_this_round": [
+        "TestIntegrationSWERelationPackets",
+        "TestIntegrationHanPlanIsolatedLab",
+        "TestIntegrationHanQueryMCPIsolatedLab",
+        "TestIntegrationHanScaleIsolatedLab"
+      ],
+      "remaining_nine_opt_in_entries": "Retain separately executed earlier supplementary runs; not fresh repetitions after these test-only fixes."
+    },
+    "pg_setups": [
+      {
+        "setup": "supplement-agent-astropy__astropy-12907-final",
+        "command_failures": 0,
+        "cleanup_confirmed": true,
+        "source_unchanged": true,
+        "summary_sha256": "75c2b21a148f1ab2feca4db43c227f8d4c0fb10f3d0c0f4f9db1b8ee28ffd33d"
+      },
+      {
+        "setup": "supplement-agent-django__django-10914-final",
+        "command_failures": 0,
+        "cleanup_confirmed": true,
+        "source_unchanged": true,
+        "summary_sha256": "c8af8e55a10ce0f241c12c8097d88996e3c063dcf8c523fe217df9183d30e5ba"
+      },
+      {
+        "setup": "supplement-agent-scikit-learn__scikit-learn-25570-final",
+        "command_failures": 1,
+        "cleanup_confirmed": true,
+        "source_unchanged": true,
+        "summary_sha256": "9112c82a26be71bcc04200f3d0788a8cffcbea15c31c5a19758d9c8c3912c92b"
+      },
+      {
+        "setup": "supplement-agent-scikit-learn__scikit-learn-25570-serial-setup-final",
+        "command_failures": 0,
+        "cleanup_confirmed": true,
+        "source_unchanged": true,
+        "summary_sha256": "65c739207c246e0643c7879012be74e7c921f2359d23d4b752bb5d22ff4b935f"
+      }
+    ],
+    "gateway_control_tests": {
+      "passed": 4,
+      "log_sha256": "6b973e2baea9a6a8fd59bf20e8a3f7244911fd685187ad9a3d69b87d42a93da9"
+    },
+    "controls": {
+      "reused_from_previous_supplement": true,
+      "base": 3,
+      "gold": 3,
+      "fresh_control_runs": 0,
+      "receipt_sha256": "a2f1bf74d0ac234de51e1fd7cc3d11db2f6ba5cc2d5a79f1a1ba89a5c885ea2b"
+    },
+    "limits": [
+      "Three familiar issues and one workflow each; no general reliability or causal AHE gain estimate.",
+      "Same frozen source pool as Gemma, different interactive protocol and model budget; not a controlled model comparison.",
+      "Gateway permissions enforced; whole-agent tools not technically sandboxed. Behavioral adherence audited from all tool calls.",
+      "Parent and child encrypted assignment hashes match; plaintext dispatch is operator-attested, not a provider plaintext receipt.",
+      "Main-agent explanation review is a single unblinded reviewer, completed before this patch official evaluation.",
+      "Synthetic admission/review approvals are test fixtures, not human sign-off.",
+      "SWE-300 and older presentation grids deferred; old fixed-packet Sol pilot remains partial."
+    ]
+  }
+}

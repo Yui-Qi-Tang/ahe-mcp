@@ -504,7 +504,8 @@ func assertProvisioningLauncherStartupRejected(t *testing.T, ctx context.Context
 
 func startProvisionedLauncher(t *testing.T, ctx context.Context, command, configPath, serverName string) *authorityProcess {
 	t.Helper()
-	processCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	// The caller bounds the complete workflow, including this child process.
+	processCtx, cancel := context.WithCancel(ctx)
 	cmd := exec.CommandContext(processCtx, command, "--config", configPath)
 	cmd.Env = provisioningPollutedEnvironment()
 	raceOutput := &authorityRaceOutput{}
