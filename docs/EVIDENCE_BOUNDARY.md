@@ -1,6 +1,6 @@
 # Evidence-boundary experiment
 
-> For the current six-case model results, use the [README evaluation](../README.md#evaluation).
+> For the historical six-case model results, see the [full evaluation](EVALUATION.md#historical-six-case-results).
 > This page explains runnable domain fixtures. Their contract checks are not
 > model accuracy scores. Earlier model pilots and delivery diagnostics are
 > historical runs, not additional observations in the current comparison;
