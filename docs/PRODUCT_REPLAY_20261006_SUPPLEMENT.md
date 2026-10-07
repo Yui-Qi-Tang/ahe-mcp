@@ -57,6 +57,31 @@ time. E4B's Django C patch only changed a comment, leaving the default `None`;
 the bug-fix test expected `0o644`. All four scikit-learn attempts were truncated,
 so this run produced no official repair verdict for that issue.
 
+### Issue complexity
+
+These are **rough manual ratings added after the run**, based on the reasoning
+needed to diagnose and repair each issue. The frozen SWE dataset used here has
+no `difficulty` field. These ratings are not official SWE-bench labels, measured
+completion times, or ratings inferred from model success and truncation.
+
+| Issue | Rating | Basis |
+| --- | --- | --- |
+| Django 10914 | Low | The issue explicitly requests `0o644`; the repair changes the single visible upload-permission default from `None`. |
+| Astropy 12907 | Medium | Diagnosis requires understanding nested model composition and preserving the right-hand dependency matrix in `_cstack`. |
+| scikit-learn 25570 | Medium | Diagnosis requires matching nonempty transformer outputs with their column names in pandas output; the reference fix filters empty outputs in `_hstack`. |
+
+All three reference patches affect one source file and replace one executable
+line; the scikit-learn patch also adds two comment lines. Small patches can still
+require nontrivial diagnosis. This is a small set of localized repairs, not
+coverage of large changes across multiple files or a calibrated difficulty scale.
+
+Evidence availability is a separate limit. The scikit-learn packet omitted
+`_update_fitted_transformers`, relevant to the earlier Sol patch's `StopIteration`.
+That omission does not make the original issue intrinsically harder or establish
+that the reference repair requires changing that consumer. Gemma's four attempts
+on this issue ended at the generation limit and supplied no tested patch; they
+are not four demonstrated incorrect repairs.
+
 ### Fixed conditions and retained evidence
 
 - Exactly **40 original source records**, base revisions and the external syntax

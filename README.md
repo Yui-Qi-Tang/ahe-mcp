@@ -15,13 +15,28 @@ consistency watch **v1**. Go **1.27.0** module.
 
 ### Bug fixes — 2026-10-07
 
-Three SWE-bench issues: **Django, Astropy and scikit-learn**. Scores show
-**bugs fixed / 3 issues**, confirmed by official tests.
+**Gemma 4 E4B IT-QAT (E4B)** and **Gemma 4 31B IT-QAT (31B)** each tried
+these three issues, without and with AHE results.
 
-| Model | Without AHE results | With AHE results |
-| --- | ---: | ---: |
-| Gemma 4 E4B IT-QAT | **0/3** | **0/3** |
-| Gemma 4 31B IT-QAT | **1/3** | **2/3** |
+| Issue | E4B without AHE | E4B with AHE | 31B without AHE | 31B with AHE |
+| --- | --- | --- | --- | --- |
+| Django 10914 | Not fixed | Declined | **Fixed** | **Fixed** |
+| Astropy 12907 | Unfinished | Unfinished | Unfinished | **Fixed** |
+| scikit-learn 25570 | Unfinished | Unfinished | Unfinished | Unfinished |
+
+**Bugs fixed, without → with AHE: E4B 0/3 → 0/3; 31B 1/3 → 2/3.**
+“Fixed” means the patch passed official tests; “Not fixed” means it was tested
+and failed to fix the bug.
+
+| Issue | Repair complexity* | What needs fixing |
+| --- | --- | --- |
+| Django 10914 | **Low** | Set the upload-permission default to the value explicitly requested by the issue. |
+| Astropy 12907 | **Medium** | Preserve input/output dependencies when combining nested model matrices. |
+| scikit-learn 25570 | **Medium** | Keep output column names aligned when a transformer selects no columns. |
+
+*Complexity is our rough, post-run judgment of the reasoning needed, not a
+SWE-bench label or a rating based on model success. All three reference fixes
+replace one line of logic in one source file. [Basis and source limits](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#issue-complexity).
 
 Across 12 answers, **7 ran out of tokens before finishing and 1 declined to propose a
 fix**. Four patches reached testing: **3 passed, 1 failed**. Unfinished answers
@@ -37,8 +52,8 @@ also received existing AHE check/query results. Models did not query AHE live.
 These are three familiar issues, one attempt each, under a 4,096-token limit.
 [Per-issue results and method](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#gemma-swe-comparison-2026-10-07).
 
-A separate **Sol 6.1 high** test fixed **2/3 without AHE and 2/3 with AHE**.
-It used a different workflow. [Sol results](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#sol-without-ahe-comparison).
+A separate **Sol 6.1 high** test fixed **Django and Astropy in both groups
+(2/3 each)**; scikit-learn was not fixed in either. It used a different workflow. [Sol results](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#sol-without-ahe-comparison).
 
 ### Evidence answers — 2026-10-06
 
