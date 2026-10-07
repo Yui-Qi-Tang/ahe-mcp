@@ -1,16 +1,116 @@
 # Product replay supplement — 2026-10-06
 
-**Native Product tests pass after two test-timeout fixes. Autonomous Sol SWE
-repairs passed 2/3; scikit-learn still fails its three target tests.** The 2026-10-06–07
-continuation is bounded to those fixes and three autonomous Sol SWE workflows;
-SWE-300 and older presentation grids are deferred. Earlier failures and model
-results remain below with their original scope.
+**Latest Gemma SWE comparison: E4B C/D 0/3 → 0/3;
+31B C/D 1/3 → 2/3.** Twelve new model attempts were made on
+2026-10-07 using retained AHE receipts; 7 were truncated. The denominator includes
+unsubmitted attempts. Native Product tests and the separate Sol 2/3 versus 2/3
+comparison retain their earlier execution scope. SWE-300 remains deferred.
 
 Product base: `844a3a6530120ea5514a2e59bc1be51fa2f82cba`, schema 55, role policy v7,
 Go 1.27.1 and PostgreSQL 18.6. Only two tracked Go test files changed in this
 continuation; Product runtime logic, schemas and query limits are unchanged.
 
 This repository's `lab/` directories contain private verification artifacts.
+
+## Gemma SWE comparison: 2026-10-07
+
+The user selected **Gemma 4 E4B IT-QAT** and **Gemma 4 31B IT-QAT** from the README.
+This run generated **12 new fixed-packet answers**: two models × the original
+three SWE issues × C/D. It does not reuse old answers as new executions.
+
+| Model | Without AHE results | With retained AHE results |
+| --- | ---: | ---: |
+| Gemma 4 E4B IT-QAT | **0/3** (1 tested) | **0/3** (0 tested) |
+| Gemma 4 31B IT-QAT | **1/3** (1 tested) | **2/3** (2 tested) |
+
+C supplies the same original sources and external syntax-navigation candidates;
+D appends the retained, actually executed Product AHE derivation/query readback.
+The numerator is the number officially confirmed resolved; each denominator is
+**three planned attempts**. An unsubmitted answer has no official test verdict.
+
+| Model | Arm | Resolved / attempts | Patches submitted | Truncated | Abstained | Tested, not resolved | Evaluation incomplete |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| e4b | C | 0/3 | 1 | 2 | 0 | 1 | 0 |
+| e4b | D | 0/3 | 0 | 2 | 1 | 0 | 0 |
+| 31b | C | 1/3 | 1 | 2 | 0 | 0 | 0 |
+| 31b | D | 2/3 | 2 | 1 | 0 | 0 | 0 |
+
+| Model | Arm | Issue | Outcome | Bug-fix tests passed | Regression tests passed |
+| --- | --- | --- | --- | ---: | ---: |
+| e4b | C | astropy__astropy-12907 | Truncated; not submitted | — | — |
+| e4b | D | astropy__astropy-12907 | Truncated; not submitted | — | — |
+| e4b | C | django__django-10914 | Tested: not resolved | 0/1 | 98/98 |
+| e4b | D | django__django-10914 | Abstained; not submitted | — | — |
+| e4b | C | scikit-learn__scikit-learn-25570 | Truncated; not submitted | — | — |
+| e4b | D | scikit-learn__scikit-learn-25570 | Truncated; not submitted | — | — |
+| 31b | C | astropy__astropy-12907 | Truncated; not submitted | — | — |
+| 31b | D | astropy__astropy-12907 | Tested: resolved | 2/2 | 13/13 |
+| 31b | C | django__django-10914 | Tested: resolved | 1/1 | 98/98 |
+| 31b | D | django__django-10914 | Tested: resolved | 1/1 | 98/98 |
+| 31b | C | scikit-learn__scikit-learn-25570 | Truncated; not submitted | — | — |
+| 31b | D | scikit-learn__scikit-learn-25570 | Truncated; not submitted | — | — |
+
+31B's additional success is Astropy: C reached the generation limit, while D
+finished a patch that passed both bug-fix tests. This is an improvement under
+the fixed generation budget; it does not establish that C would fail with more
+time. E4B's Django C patch only changed a comment, leaving the default `None`;
+the bug-fix test expected `0o644`. All four scikit-learn attempts were truncated,
+so this run produced no official repair verdict for that issue.
+
+### Fixed conditions and retained evidence
+
+- Exactly **40 original source records**, base revisions and the external syntax
+  candidates were retained. The twelve serialized requests match their previous
+  C/D requests byte for byte, including system prompt and answer schema. D only
+  appends the original AHE readback section; no new consumer code, tests, gold
+  patches or earlier answers entered model inputs.
+- Model digests and **Ollama 0.34.4** match the earlier run. Settings remained
+  temperature 0, seed 42, context 32,768, generation limit 4,096, `think=true`,
+  streaming. Original filtered request order was retained: E4B then 31B.
+  One call per cell; no answer repair, longer-budget retry or best-of selection.
+- The generation limit is not a guarantee of 4,096 visible-answer tokens.
+  **7/12** returned terminal `done_reason=length`; visible output was
+  separately retained and reviewed. A truncated explanation can contain a
+  detectable unsupported assertion even though no patch is submitted.
+- AHE receipts originate from **2026-10-06**. Stored source, provenance and earlier
+  check records were verified unchanged by hashes; **zero new AHE/PG operations**
+  were run in this extension. This measures interpretation of fixed evidence,
+  not model-chosen live retrieval or an isolated graph-mechanism effect.
+- The same six base-fail/gold-pass reports and evaluator dataset were hash-checked
+  and reused, not rerun. The existing official harness evaluated only valid
+  nonempty patches once, with 900 seconds per instance and two workers per group.
+  Final test identifiers and denominators were checked against the base controls.
+  Empty/invalid/truncated answers were not converted into official test failures.
+
+### Explanations and comparison limits
+
+Every visible answer, including partial visible output, was reviewed by the main
+agent using the original source-grounding rubric before official patch testing.
+This is one unblinded reviewer, aware of prior results; no model scored the cases.
+A text-only counterparty challenged the denominator/reporting claims only.
+
+E4B's Astropy C partial answer calls the original `_compute_n_outputs` incomplete,
+although the supplied excerpt simply ends mid-function. The Django C explanation
+also promotes the issue author's tentative security rationale to an established
+fact. Such unsupported explanations remain separate from exact quotations and
+repair tests. E4B's Django D abstention is unnecessary for the bounded default
+change, while its permission wording remains an unresolved judgment rather than
+a clean answer. In 31B's Django answers, C adds an unsupplied process-umask
+mechanism and D promotes the security hypothesis to fact. Both default-change
+patches passed, while those explanations remain unsupported. Per-answer judgments are retained
+in the compact results.
+
+**12/12 visible outputs exactly matched the preceding run**, including empty
+outputs where applicable. These are fresh calls under the same deterministic
+settings, not additional independent issues. The observations apply to this
+bounded workflow on three familiar development cases; they do not establish
+population-wide reliability. Sol's autonomous results use different model,
+budget and interaction rules and remain separate.
+
+The owned Ollama process and all owned evaluator containers were cleaned.
+Only evaluation documents/private artifacts changed; Product runtime/schema and
+Pouch/Detective were unchanged. Native Product tests were not rerun for this
+model-only extension. SWE-300 remains deferred.
 
 ## Test timeout fixes and revalidation
 
@@ -98,7 +198,8 @@ in this run, and no evaluator feedback or replacement attempt was given.
 
 The source pool was the same 40 pinned records used for the preceding three-issue
 Gemma experiment. The protocol is different: autonomous queries and edits,
-different model/runtime/budget, and no new matched static-control Sol arm.
+different model/runtime/budget. The later [static-source Sol comparison](#sol-without-ahe-comparison)
+adds a control for this autonomous protocol, not for the Gemma fixed-packet protocol.
 Therefore **Sol 2/3 and Gemma 31B D 2/3 are not a controlled model comparison**,
 nor evidence that AHE caused a gain. These are three familiar development issues,
 not SWE-300 or population-wide performance.
@@ -131,6 +232,80 @@ All owned PostgreSQL and MCP processes were stopped and their temporary data and
 sockets removed. Official evaluator containers were removed; cached images and
 raw reports remain available for reproduction. Product implementation did not
 change during these workflows.
+
+## Sol without AHE comparison
+
+On **2026-10-07**, three fresh **gpt-6.1-sol / high** agents used a static-source
+gateway. The with-AHE arm reuses the three sealed workflows above; it was not
+regenerated. Each arm has one workflow per issue. All three new patches received
+one official SWE-bench evaluation after sealing, with no feedback or repair retry.
+
+| Issue | Without AHE | With AHE | Bug-fix tests passed: without / with | Regression tests passed: without / with |
+| --- | --- | --- | --- | --- |
+| Astropy 12907 | Resolved | Resolved | 2/2 / 2/2 | 13/13 / 13/13 |
+| Django 10914 | Resolved | Resolved | 1/1 / 1/1 | 98/98 / 98/98 |
+| scikit-learn 25570 | Not resolved | Not resolved | 0/3 / 0/3 | 184/184 / 184/184 |
+| Issues resolved | **2/3** | **2/3** | — | — |
+
+**The paired patches are byte-identical in all three issues.** In particular,
+without AHE also changes the scikit-learn empty-selection `elif` to `if` and
+fails with `generator raised StopIteration`. Both agents disclosed missing
+fitted-transformer lifecycle code; neither produced a complete repair. The
+consumer source was not added to this control, preserving the original evidence
+boundary. Exact quotations and passing old tests do not establish bug repair.
+This run observed no repair-success gain from the AHE workflow. It does not show
+that AHE is ineffective generally or establish why either agent chose its patch.
+
+### Matched inputs and remaining differences
+
+- Both arms had the same **40 original source records**, pinned revisions,
+  source bytes and editable base files. No old answers, gold patch, official test
+  source or additional consumer code entered the new agents' channel.
+- Without AHE offers an index, individual source records and the complete static
+  packet. It retains the original external syntax-navigation candidates and
+  declared omissions, as the fixed-packet C arm did. These candidates existed
+  before AHE import; they are not resolved calls or causal proof. No AHE process,
+  database, query, admission or lifecycle result was used by this control.
+- Both used the same mechanical editor and limits: **30 minutes, 40 read
+  operations, 20 edit attempts**. A full static packet costs one read, so equal
+  operation caps are **not equal token or information budgets**. Interfaces,
+  presentation, actual reads and run order differ; this is a descriptive workflow
+  comparison, not an isolated causal estimate of a single AHE mechanism.
+
+| Issue | Without-AHE reads | With-AHE queries | Edits per arm |
+| --- | ---: | ---: | ---: |
+| Astropy 12907 | 7 | 7 | 1 |
+| Django 10914 | 2 | 6 | 1 |
+| scikit-learn 25570 | 8 | 10 | 1 |
+
+All **33 new agent tool calls** matched the static gateway trace. All **22 exact
+quotes** matched their bound source records and actual responses. The main agent
+reviewed the explanations before the new evaluations, but already knew the
+with-AHE results; this was a single unblinded review. For scikit-learn, the prior
+failure was explicitly recorded as contrary evidence to repair sufficiency,
+without being sent to the new solver. No unsupported observed-source assertion
+was identified; this is not a claim that all three diagnoses or repairs are correct.
+
+The gateway enforces its own operation restrictions; whole-agent tool adherence
+is established by the recorded-call audit, not a hard whole-tool sandbox. Opaque
+parent/child assignment hashes match, while plaintext dispatch remains operator
+attested. A post-seal message only acknowledged successful submission; it gave
+no test result or repair advice.
+
+All six previous base-fail/gold-pass control reports and the official dataset
+were hash-verified and reused, **not rerun**. The same evaluator and cached instance
+images evaluated the new patches. Static-gateway boundary checks passed **6/6**;
+these are harness checks, not additional Product or model successes. An initial
+third-agent capacity rejection occurred before that workflow existed; it was
+successfully dispatched after another agent finished, with no replacement answer.
+Private records retain preparation/path and citation-parser mistakes and their
+corrections. All owned static sockets/processes and evaluator containers were
+cleaned; cached images and raw reports remain.
+
+Only evaluation documents and private verification artifacts changed in this
+control extension. Product runtime/schema did not change, and the native Product
+matrix above was not rerun. This adds three new workflows on the **same three
+issues**, not three additional issues, the SWE-300 set, or the old unfinished Sol grid.
 
 ## Fresh six-case model results
 

@@ -4536,5 +4536,952 @@
       "Synthetic admission/review approvals are test fixtures, not human sign-off.",
       "SWE-300 and older presentation grids deferred; old fixed-packet Sol pilot remains partial."
     ]
+  },
+  "sol_without_ahe_comparison": {
+    "protocol": "without-ahe-swe-v1",
+    "local_execution_date": "2026-10-07",
+    "product_commit": "9aaf4b5a43bc176485665e18df66044bb98ff6d9",
+    "model": "gpt-6.1-sol",
+    "effort": "high",
+    "unique_issues": 3,
+    "new_agent_workflows": 3,
+    "retained_with_ahe_workflows": 3,
+    "model_retries": 0,
+    "new_official_patch_evaluations": 3,
+    "official_resolved": 2,
+    "protocol_compliant_resolved": 2,
+    "with_ahe_official_resolved": 2,
+    "source_records": 40,
+    "source_records_added": 0,
+    "source_parity_sha256": "3d33684b9472e1207477000bf6377a193d3d2dc7b3d96f765dc96d2459f1167a",
+    "retained_with_summary_sha256": "ab0dfb2fee7a7d6765b236c67310002981793cd44879601c590bd5b0bae14bd3",
+    "cases": [
+      {
+        "case": "astropy__astropy-12907",
+        "reads": 7,
+        "tool_calls": 12,
+        "edit_attempts": 1,
+        "elapsed_seconds": 205.954,
+        "decision": "patch_submitted",
+        "patch_sha256": "67d13e046d394909447f43e1c0e2f6ed8b94cff58262bbe7af280e4f4b40ff4f",
+        "same_patch_as_with_ahe": true,
+        "patch_applied": true,
+        "official_resolved": true,
+        "behavioral_protocol_pass": true,
+        "counted_without_ahe_resolved": true,
+        "exact_quotes_checked": 15,
+        "all_quotes_grounded": true,
+        "pre_evaluation_unsupported_observed_source_assertion_identified": false,
+        "query_strategy": [
+          "get_source_record",
+          "list_source_records",
+          "get_source_record",
+          "get_source_record",
+          "get_source_record",
+          "get_source_record",
+          "get_source_record"
+        ],
+        "official_test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 2,
+            "failure": 0
+          },
+          "PASS_TO_PASS": {
+            "success": 13,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "official_report_sha256": "fe3f3bddc9631279d3babf7270913070d91e9207c3468bd947823aee3e7b1b86",
+        "final_answer_sha256": "e1a624ca99b43e27ac11ba6c9cb93ddfa45c0fa5b60d45ddf0d5873271ffaa5a",
+        "transcript_audit_sha256": "867c57325d7a52778c8c9c1f5f1b351e62de57e795c686c486dddde7f9693687",
+        "citation_check_sha256": "762464f7104ac512979718d6cb01552ccb59b93670dbe8920e399b853ba9dedb",
+        "manual_review_sha256": "d1a255932b01457220444e3c512c858815b8e8e31ca169bbb06f58302de07d6d",
+        "prompt_sha256": "36938a5461f812c0a4f161bf8b675dc737ffd935df00c01c525a8d0c2a8a8927",
+        "cleanup_confirmed": true
+      },
+      {
+        "case": "django__django-10914",
+        "reads": 2,
+        "tool_calls": 7,
+        "edit_attempts": 1,
+        "elapsed_seconds": 63.327,
+        "decision": "patch_submitted",
+        "patch_sha256": "db3ada27425856991495685ee05a387de6608f30b5471a88a59f73a91c66ee6a",
+        "same_patch_as_with_ahe": true,
+        "patch_applied": true,
+        "official_resolved": true,
+        "behavioral_protocol_pass": true,
+        "counted_without_ahe_resolved": true,
+        "exact_quotes_checked": 3,
+        "all_quotes_grounded": true,
+        "pre_evaluation_unsupported_observed_source_assertion_identified": false,
+        "query_strategy": [
+          "get_source_record",
+          "get_static_evidence"
+        ],
+        "official_test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 1,
+            "failure": 0
+          },
+          "PASS_TO_PASS": {
+            "success": 98,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "official_report_sha256": "b105979fe78dbf4323f40226cf6abc32a4c059331e95c1ae61031e8e8ef651b8",
+        "final_answer_sha256": "06b0d292240390af8492877b4fedea9a7615d70ff3c1b13b610827fd0b8f61a0",
+        "transcript_audit_sha256": "ab6fc3d039801d9014fd216dc4d7a4331a841e082f67acbb5b1116e3490d71f2",
+        "citation_check_sha256": "04950c703f6a62429bb9c1529f68e18b6f3391b24253889c102cf28f1324522e",
+        "manual_review_sha256": "73862c70f3ae97833fbc0d6e7d05d8358f4ec221f28832b08491eb03fef64908",
+        "prompt_sha256": "fc4d95b4ee362dd6e72fefa59c9ce9d538a8865338e6bfd2d17305ad4af71f81",
+        "cleanup_confirmed": true
+      },
+      {
+        "case": "scikit-learn__scikit-learn-25570",
+        "reads": 8,
+        "tool_calls": 14,
+        "edit_attempts": 1,
+        "elapsed_seconds": 564.329,
+        "decision": "patch_submitted",
+        "patch_sha256": "e95ce0da6054d30e99392b3f922a5ff3b5c7ba4eb34f93acdf051b6a8f95a038",
+        "same_patch_as_with_ahe": true,
+        "patch_applied": true,
+        "official_resolved": false,
+        "behavioral_protocol_pass": true,
+        "counted_without_ahe_resolved": false,
+        "exact_quotes_checked": 4,
+        "all_quotes_grounded": true,
+        "pre_evaluation_unsupported_observed_source_assertion_identified": false,
+        "query_strategy": [
+          "get_source_record",
+          "list_source_records",
+          "get_source_record",
+          "get_source_record",
+          "get_source_record",
+          "get_source_record",
+          "get_source_record",
+          "get_static_evidence"
+        ],
+        "official_test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 0,
+            "failure": 3
+          },
+          "PASS_TO_PASS": {
+            "success": 184,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "official_report_sha256": "1a8de1b8ab3110e2cfa2aeb7b3e84e2fc6a6dd2eca9805d5ae28b652a7d3d72a",
+        "final_answer_sha256": "c66f664757d37cfb561c202376d30da94bdcc56f9c2f295415cda2204601478d",
+        "transcript_audit_sha256": "0e90e17a4e4be27ab166ce2e4e2e18b7350e2d4b2c778b2653bf0f31a6261a03",
+        "citation_check_sha256": "0e2a26916ef2ae18083881529f608ba5956101de2b1635e181b305b93fd66037",
+        "manual_review_sha256": "723ab3bdf077ec86f136c1b5416f5135903124bff7893a518f6d1dd070a1ed0f",
+        "prompt_sha256": "0daa631fd423fba7c0d48023743476e58afcc49c3308e636a2a8006885ffde80",
+        "cleanup_confirmed": true,
+        "post_evaluation_review": {
+          "case": "scikit-learn__scikit-learn-25570",
+          "reviewed_at": "2026-10-06T19:50:04.588015+00:00",
+          "classification": "incomplete repair; identical iterator-consumption failure to retained with-AHE arm",
+          "official_resolved": false,
+          "bug_fix_tests_passed": 0,
+          "bug_fix_tests_failed": 3,
+          "regression_tests_passed": 184,
+          "environment_timeout": false,
+          "failure": "RuntimeError: generator raised StopIteration",
+          "observed_path": "fit_transform -> _update_fitted_transformers -> next(fitted_transformers), sklearn/compose/_column_transformer.py:602",
+          "source_gap": "The consumer body and name were absent from all 15 frozen records in both arms. No new consumer source was supplied.",
+          "interpretation": "Both models produced the same local iterator change despite acknowledging missing lifecycle code; the repair is incomplete. Exact quotes and passing regression tests do not establish sufficiency.",
+          "agent_given_test_feedback": false,
+          "patch_revised_after_test": false,
+          "test_output_sha256": "725d633a49f5217d11e2757d050797dbf4973ad8a0d3eee2f0fee5b64b12c77a"
+        }
+      }
+    ],
+    "paired_cases": [
+      {
+        "case": "astropy__astropy-12907",
+        "without_ahe": {
+          "official_resolved": true,
+          "reads": 7,
+          "tool_calls": 12,
+          "elapsed_seconds": 205.954,
+          "official_test_counts": {
+            "FAIL_TO_PASS": {
+              "success": 2,
+              "failure": 0
+            },
+            "PASS_TO_PASS": {
+              "success": 13,
+              "failure": 0
+            },
+            "FAIL_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            },
+            "PASS_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            }
+          }
+        },
+        "with_ahe": {
+          "official_resolved": true,
+          "queries": 7,
+          "tool_calls": 13,
+          "elapsed_seconds": 150.985,
+          "official_test_counts": {
+            "FAIL_TO_PASS": {
+              "success": 2,
+              "failure": 0
+            },
+            "PASS_TO_PASS": {
+              "success": 13,
+              "failure": 0
+            },
+            "FAIL_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            },
+            "PASS_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            }
+          }
+        },
+        "same_patch": true
+      },
+      {
+        "case": "django__django-10914",
+        "without_ahe": {
+          "official_resolved": true,
+          "reads": 2,
+          "tool_calls": 7,
+          "elapsed_seconds": 63.327,
+          "official_test_counts": {
+            "FAIL_TO_PASS": {
+              "success": 1,
+              "failure": 0
+            },
+            "PASS_TO_PASS": {
+              "success": 98,
+              "failure": 0
+            },
+            "FAIL_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            },
+            "PASS_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            }
+          }
+        },
+        "with_ahe": {
+          "official_resolved": true,
+          "queries": 6,
+          "tool_calls": 12,
+          "elapsed_seconds": 146.38,
+          "official_test_counts": {
+            "FAIL_TO_PASS": {
+              "success": 1,
+              "failure": 0
+            },
+            "PASS_TO_PASS": {
+              "success": 98,
+              "failure": 0
+            },
+            "FAIL_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            },
+            "PASS_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            }
+          }
+        },
+        "same_patch": true
+      },
+      {
+        "case": "scikit-learn__scikit-learn-25570",
+        "without_ahe": {
+          "official_resolved": false,
+          "reads": 8,
+          "tool_calls": 14,
+          "elapsed_seconds": 564.329,
+          "official_test_counts": {
+            "FAIL_TO_PASS": {
+              "success": 0,
+              "failure": 3
+            },
+            "PASS_TO_PASS": {
+              "success": 184,
+              "failure": 0
+            },
+            "FAIL_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            },
+            "PASS_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            }
+          }
+        },
+        "with_ahe": {
+          "official_resolved": false,
+          "queries": 10,
+          "tool_calls": 16,
+          "elapsed_seconds": 199.039,
+          "official_test_counts": {
+            "FAIL_TO_PASS": {
+              "success": 0,
+              "failure": 3
+            },
+            "PASS_TO_PASS": {
+              "success": 184,
+              "failure": 0
+            },
+            "FAIL_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            },
+            "PASS_TO_FAIL": {
+              "success": 0,
+              "failure": 0
+            }
+          }
+        },
+        "same_patch": true
+      }
+    ],
+    "gateway_boundary_tests": {
+      "passed": 6,
+      "log_sha256": "4474bc84cb8a655e7cc651dd1398cb8b20df7956358e682cc8d6955a48548d20"
+    },
+    "controls": {
+      "reused_base_fail": 3,
+      "reused_gold_pass": 3,
+      "fresh_control_runs": 0,
+      "verification_sha256": "e03f8f54311b82aff3b137ae54c8d69ca37f222d1adc1e661767eb167558c5ee"
+    },
+    "runtime_changed": false,
+    "native_product_tests_rerun": false,
+    "limits": [
+      "Three familiar issues, one workflow per arm and issue; no population-wide reliability or isolated causal AHE effect.",
+      "Same source pool, revisions, model/effort, operation caps and editor; interfaces/presentation/timing differ. Equal operation caps are not equal information or token budgets.",
+      "With arm retains the sealed prior run; without arm is new. No with-arm rerun or best-of selection.",
+      "Gateway restrictions enforced; whole-agent access supported by tool-call audit, not a hard whole-tool sandbox.",
+      "Encrypted assignment delivery checked; plaintext dispatch operator-attested, without a provider plaintext receipt.",
+      "Explanation review is by the main agent, unblinded, before new patch evaluation but aware of prior with-arm outcomes. Exact citations do not establish repair sufficiency.",
+      "No source expansion, local agent tests, evaluation feedback or replacement attempts.",
+      "SWE-300 and older presentation grids remain deferred; no Pouch or Detective changes."
+    ]
+  },
+  "gemma_swe_cd_20261007": {
+    "protocol": "gemma-swe-cd-20261007",
+    "execution_date_local": "2026-10-07",
+    "timezone": "Asia/Taipei",
+    "product_head": "9aaf4b5a43bc176485665e18df66044bb98ff6d9",
+    "models": {
+      "e4b": {
+        "tag": "gemma4:e4b-it-qat",
+        "digest": "ee665637121887cf3befff38abbb1be4ee117c7db867d97a67e29049ecd7e15f"
+      },
+      "31b": {
+        "tag": "gemma4:31b-it-qat",
+        "digest": "e0812a55773bfeac846b2d605b4d93638b8dfa7119d9587f3d91475afc78185e"
+      }
+    },
+    "ollama": {
+      "version": "0.34.4"
+    },
+    "options": {
+      "temperature": 0,
+      "seed": 42,
+      "num_ctx": 32768,
+      "num_predict": 4096
+    },
+    "think": true,
+    "fresh_model_attempts": 12,
+    "unique_issues": 3,
+    "model_retries": 0,
+    "source_records": 40,
+    "fresh_ahe_operations": 0,
+    "retained_ahe_receipt_date": "2026-10-06",
+    "retained_base_gold_controls": 6,
+    "fresh_base_gold_controls": 0,
+    "arm_definitions": {
+      "C": "original sources plus external syntax-navigation candidates; no AHE readback",
+      "D": "C plus retained real Product AHE derivation/query readback"
+    },
+    "scores": {
+      "e4b": {
+        "C": {
+          "attempted": 3,
+          "submitted_patches": 1,
+          "official_resolved": 0,
+          "outcomes": {
+            "tested_not_resolved": 1,
+            "truncated": 2
+          },
+          "confirmed_unsupported_answers": 2,
+          "unresolved_or_no_answer": 1,
+          "no_unsupported_assertion_identified": 0
+        },
+        "D": {
+          "attempted": 3,
+          "submitted_patches": 0,
+          "official_resolved": 0,
+          "outcomes": {
+            "abstained": 1,
+            "truncated": 2
+          },
+          "confirmed_unsupported_answers": 0,
+          "unresolved_or_no_answer": 3,
+          "no_unsupported_assertion_identified": 0
+        }
+      },
+      "31b": {
+        "C": {
+          "attempted": 3,
+          "submitted_patches": 1,
+          "official_resolved": 1,
+          "outcomes": {
+            "resolved": 1,
+            "truncated": 2
+          },
+          "confirmed_unsupported_answers": 1,
+          "unresolved_or_no_answer": 2,
+          "no_unsupported_assertion_identified": 0
+        },
+        "D": {
+          "attempted": 3,
+          "submitted_patches": 2,
+          "official_resolved": 2,
+          "outcomes": {
+            "resolved": 2,
+            "truncated": 1
+          },
+          "confirmed_unsupported_answers": 1,
+          "unresolved_or_no_answer": 1,
+          "no_unsupported_assertion_identified": 1
+        }
+      }
+    },
+    "attempts": [
+      {
+        "id": "e4b-swe-django__django-10914-D",
+        "model_key": "e4b",
+        "arm": "D",
+        "case": "django__django-10914",
+        "generation_status": "completed",
+        "outcome": "abstained",
+        "submitted": false,
+        "official_resolved": false,
+        "test_denominators_complete": null,
+        "patch_applied": null,
+        "test_counts": null,
+        "decision": "insufficient_evidence",
+        "citation_errors": 0,
+        "anchor_errors": 0,
+        "contract_errors": 0,
+        "unsupported_assertion": null,
+        "review_category": "unresolved_wording",
+        "review_rationale": "The storage/application implementation is absent, but the issue title and visible None default support a bounded default-change proposal. Abstaining from that bounded proposal is unnecessary. Desired file permissions set by FILE_UPLOAD_PERMISSIONS could assert already-configured permissions or just describe the setting purpose; retain this wording judgment as unresolved rather than clean.",
+        "visible_answer_chars": 1014,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 5849,
+        "eval_count": 1456,
+        "done_reason": "stop",
+        "wall_seconds": 19.627,
+        "request_sha256": "0a73c5439fb9dd134cecd4c967f628327f3b4f5e524074b430fa70261ecb8bb6",
+        "transport_request_sha256": "1e63567e9ad2e26733150b878976e3e2bebcf9a2b5364f15faf8ef2f228c2133",
+        "result_sha256": "a66d7da8bac49aff3f71c88e7f24bd2ab4a9281aef209080d89563d9a3b1b635",
+        "visible_answer_sha256": "4382d50cb8642e51b9048695ba0405be845b0e6ea75060b0fc128b5851f6ead9",
+        "patch_sha256": null,
+        "official_report_sha256": null,
+        "review_sha256": "e7060674c916f34f57d936083159faf6f077cec60df19b3be9e1e0369e466496"
+      },
+      {
+        "id": "e4b-swe-django__django-10914-C",
+        "model_key": "e4b",
+        "arm": "C",
+        "case": "django__django-10914",
+        "generation_status": "completed",
+        "outcome": "tested_not_resolved",
+        "submitted": true,
+        "official_resolved": false,
+        "test_denominators_complete": true,
+        "patch_applied": true,
+        "test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 0,
+            "failure": 1
+          },
+          "PASS_TO_PASS": {
+            "success": 98,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "decision": "propose_fix",
+        "citation_errors": 0,
+        "anchor_errors": 0,
+        "contract_errors": 0,
+        "unsupported_assertion": true,
+        "review_category": "source_hypothesis_promoted_to_fact",
+        "review_rationale": "The issue qualifies the security explanation with In all probability; no Python tempfile implementation is supplied. Calling this known standard-library behavior for security reasons promotes that hypothesis to a supported fact. The comment-only patch leaves FILE_UPLOAD_PERMISSIONS=None; official repair outcome remains separate and untested.",
+        "visible_answer_chars": 1682,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 4939,
+        "eval_count": 1948,
+        "done_reason": "stop",
+        "wall_seconds": 20.576,
+        "request_sha256": "ef6c5734c894bc370c959128283236a609384fe6c68ce9897a63b0409a48bb0e",
+        "transport_request_sha256": "fb78a0eb21c39122046101904653730292b3be8ef63703cd57767333df137e4f",
+        "result_sha256": "f96c31a6e17e700efc2e97860183407e3c30494c6e65629e12a20858e949fb9d",
+        "visible_answer_sha256": "624256661ea9a16e6084a876d4e80ff95dc19d0fae584f28abb607bf99f9473b",
+        "patch_sha256": "10fc6616fff5e43dce53d6ca38136d9188a6230adf43b3024e916855915d5f72",
+        "official_report_sha256": "021b0866c1ee90c736209527024151843bfe21fdab7f2bce2f545d1f0743df37",
+        "review_sha256": "c76c9f10dda20d6b27b6170cb7d6bd3f32ab61e51378ca0900eebcd4272f0b50"
+      },
+      {
+        "id": "e4b-swe-astropy__astropy-12907-D",
+        "model_key": "e4b",
+        "arm": "D",
+        "case": "astropy__astropy-12907",
+        "generation_status": "truncated",
+        "outcome": "truncated",
+        "submitted": false,
+        "official_resolved": false,
+        "test_denominators_complete": null,
+        "patch_applied": null,
+        "test_counts": null,
+        "decision": null,
+        "citation_errors": null,
+        "anchor_errors": null,
+        "contract_errors": null,
+        "unsupported_assertion": null,
+        "review_category": "no_visible_final_answer",
+        "review_rationale": "Reached the generation limit with no visible final answer. Neither correct nor a clean source-grounded answer; retained in the original attempt denominator. Thinking is not used to reconstruct an answer.",
+        "visible_answer_chars": 0,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 16899,
+        "eval_count": 4096,
+        "done_reason": "length",
+        "wall_seconds": 53.637,
+        "request_sha256": "6709474101fc296d4fdebd90c9aef5c7d53da1e255f1aca3436aa7c2ff25f5b2",
+        "transport_request_sha256": "3e5fe93b3aac13866a251cef5e1fa11f6ce21e9d3c263262098ad7f2b4af4c94",
+        "result_sha256": "41f9677e8fde8c0c7f16a3884cf6023d2ec19cfde2ab17c032a56048c17ffdc8",
+        "visible_answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "patch_sha256": null,
+        "official_report_sha256": null,
+        "review_sha256": "24a01a91254433984e6f5317e4732aa7e7418e2a17552990bb6972d4066fc8e4"
+      },
+      {
+        "id": "e4b-swe-scikit-learn__scikit-learn-25570-D",
+        "model_key": "e4b",
+        "arm": "D",
+        "case": "scikit-learn__scikit-learn-25570",
+        "generation_status": "truncated",
+        "outcome": "truncated",
+        "submitted": false,
+        "official_resolved": false,
+        "test_denominators_complete": null,
+        "patch_applied": null,
+        "test_counts": null,
+        "decision": null,
+        "citation_errors": null,
+        "anchor_errors": null,
+        "contract_errors": null,
+        "unsupported_assertion": null,
+        "review_category": "no_visible_final_answer",
+        "review_rationale": "Reached the generation limit with no visible final answer. Neither correct nor a clean source-grounded answer; retained in the original attempt denominator. Thinking is not used to reconstruct an answer.",
+        "visible_answer_chars": 0,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 16809,
+        "eval_count": 4096,
+        "done_reason": "length",
+        "wall_seconds": 65.081,
+        "request_sha256": "c3ac65801ebb16976f8aa764af61c94ccd707156e145c0298723be02a7583b76",
+        "transport_request_sha256": "2edfc7d05c08d6468d7d717320e483cebfe6a17a9656dce91cb30389be701493",
+        "result_sha256": "f503960ad90aefc22d6c4f482c7eabbcd4b06ebb27850a604bb63f332102fed0",
+        "visible_answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "patch_sha256": null,
+        "official_report_sha256": null,
+        "review_sha256": "6d08c303a8c0a9d306f0466b17973d828c155b7e98aa09bfb83833339837312c"
+      },
+      {
+        "id": "e4b-swe-scikit-learn__scikit-learn-25570-C",
+        "model_key": "e4b",
+        "arm": "C",
+        "case": "scikit-learn__scikit-learn-25570",
+        "generation_status": "truncated",
+        "outcome": "truncated",
+        "submitted": false,
+        "official_resolved": false,
+        "test_denominators_complete": null,
+        "patch_applied": null,
+        "test_counts": null,
+        "decision": null,
+        "citation_errors": null,
+        "anchor_errors": null,
+        "contract_errors": null,
+        "unsupported_assertion": null,
+        "review_category": "no_visible_final_answer",
+        "review_rationale": "Reached the generation limit with no visible final answer. Neither correct nor a clean source-grounded answer; retained in the original attempt denominator. Thinking is not used to reconstruct an answer.",
+        "visible_answer_chars": 0,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 9712,
+        "eval_count": 4096,
+        "done_reason": "length",
+        "wall_seconds": 66.437,
+        "request_sha256": "4c361f824010b333b17087025ddfbaf63e040aaf8cf5c488d8630144bd472758",
+        "transport_request_sha256": "52c3650b44a7ef8b999bb6478b5d41544f42a724635f37549e4ab77fdb5ff0fe",
+        "result_sha256": "a26593760f99e2a404b77b21ccab4288c9b4aa349257141811cebc6fe0ecb0e1",
+        "visible_answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "patch_sha256": null,
+        "official_report_sha256": null,
+        "review_sha256": "91a031f093cdf646d570130f89a936c4c0e255b11bab9d5074d423c45e7bd7e9"
+      },
+      {
+        "id": "e4b-swe-astropy__astropy-12907-C",
+        "model_key": "e4b",
+        "arm": "C",
+        "case": "astropy__astropy-12907",
+        "generation_status": "truncated",
+        "outcome": "truncated",
+        "submitted": false,
+        "official_resolved": false,
+        "test_denominators_complete": null,
+        "patch_applied": null,
+        "test_counts": null,
+        "decision": null,
+        "citation_errors": null,
+        "anchor_errors": null,
+        "contract_errors": null,
+        "unsupported_assertion": true,
+        "review_category": "partial_answer_unsupported_source_claim",
+        "review_rationale": "The visible partial answer says _compute_n_outputs is incomplete and only computes the left operand. The supplied source excerpt ends at else; an excerpt boundary does not establish incomplete original implementation. The answer promotes that unsupported claim to supported. This judgment uses only the visible response, not thinking. No truncated edit is repaired or submitted.",
+        "visible_answer_chars": 995,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 8104,
+        "eval_count": 4096,
+        "done_reason": "length",
+        "wall_seconds": 62.491,
+        "request_sha256": "110f2aafc6d9f984ec93eb90c4e383f41b9c3d876895f315ca679a244cc0c017",
+        "transport_request_sha256": "6b2c1aa8c0a98108d608e8f4f78957af11a24b351ddc88d1a66f90e100864b13",
+        "result_sha256": "3b1632ecf4c4f27b4964cf4698b74153688b2da13952f2b422c9b9432649fde5",
+        "visible_answer_sha256": "c86c2b596ee2ae113d7223f4414cb4d952950a986c16f3a258238531239607e0",
+        "patch_sha256": null,
+        "official_report_sha256": null,
+        "review_sha256": "174d78048bbd0b49a49a9bdf9ba8c4cdfc70fd8dd394b746a9e9bf5f03a6499d"
+      },
+      {
+        "id": "31b-swe-django__django-10914-D",
+        "model_key": "31b",
+        "arm": "D",
+        "case": "django__django-10914",
+        "generation_status": "completed",
+        "outcome": "resolved",
+        "submitted": true,
+        "official_resolved": true,
+        "test_denominators_complete": true,
+        "patch_applied": true,
+        "test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 1,
+            "failure": 0
+          },
+          "PASS_TO_PASS": {
+            "success": 98,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "decision": "propose_fix",
+        "citation_errors": 0,
+        "anchor_errors": 0,
+        "contract_errors": 0,
+        "unsupported_assertion": true,
+        "review_category": "source_hypothesis_promoted_to_fact",
+        "review_rationale": "The source issue reports 0o0600 on some systems but explicitly qualifies security considerations as In all probability. The answer calls security defaults the supported cause without that qualification and without supplied tempfile implementation. The None-to-0o644 edit is a separately grounded proposal; exact quotes and later repair tests do not establish the security explanation.",
+        "visible_answer_chars": 972,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 5849,
+        "eval_count": 1219,
+        "done_reason": "stop",
+        "wall_seconds": 92.354,
+        "request_sha256": "ca369c20c7470bd4586a2a2191320c7d6989a84af6ceeeaeba9ca26b61804979",
+        "transport_request_sha256": "1b0dc59f18399ebf82fbe6f329747d6c1e9e7ee451fd6735182796bd81aa5a0c",
+        "result_sha256": "52c071c7137aa85dde6b18f20ef9044e0e44792533b60363c6d2acce5ce2c171",
+        "visible_answer_sha256": "7f4fa0b9a1bfe3e9149a734251569f78da4df4ca198ac3cfeabfd9a5f9aa37ce",
+        "patch_sha256": "db3ada27425856991495685ee05a387de6608f30b5471a88a59f73a91c66ee6a",
+        "official_report_sha256": "b105979fe78dbf4323f40226cf6abc32a4c059331e95c1ae61031e8e8ef651b8",
+        "review_sha256": "939d00c3cfb019b7d114011973a111fe3193ff4d6e427885bc0aac449f8511d3"
+      },
+      {
+        "id": "31b-swe-django__django-10914-C",
+        "model_key": "31b",
+        "arm": "C",
+        "case": "django__django-10914",
+        "generation_status": "completed",
+        "outcome": "resolved",
+        "submitted": true,
+        "official_resolved": true,
+        "test_denominators_complete": true,
+        "patch_applied": true,
+        "test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 1,
+            "failure": 0
+          },
+          "PASS_TO_PASS": {
+            "success": 98,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "decision": "propose_fix",
+        "citation_errors": 0,
+        "anchor_errors": 0,
+        "contract_errors": 0,
+        "unsupported_assertion": true,
+        "review_category": "unsupported_in_memory_upload_permission_mechanism",
+        "review_rationale": "The answer asserts MemoryUploadedFile permissions depend on process umask. Neither an umask rule nor the storage/save implementation is present in the eight supplied records. Issue-reported variability and visible uploaded-file classes do not establish that implementation mechanism. The default-change edit and exact citations are separately grounded proposals, not proof of this explanatory claim.",
+        "visible_answer_chars": 1045,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 4939,
+        "eval_count": 2571,
+        "done_reason": "stop",
+        "wall_seconds": 144.574,
+        "request_sha256": "3ad1b3dd682b96fd87d2bfd07c4aac0270ca4fed7811fae6fa61eee6a46069d1",
+        "transport_request_sha256": "11ade72070f7715bb530f077de85646323a0f5a649303ce224e92833b0298a35",
+        "result_sha256": "a3b78cca8158d79ec61fc63063dcf401429f29dbcb60981c81fdd478fd0184e6",
+        "visible_answer_sha256": "7763fef289ffed21f18c8c31155fe6eec05139b51b910d8c9d6f9e06c557c28b",
+        "patch_sha256": "db3ada27425856991495685ee05a387de6608f30b5471a88a59f73a91c66ee6a",
+        "official_report_sha256": "b105979fe78dbf4323f40226cf6abc32a4c059331e95c1ae61031e8e8ef651b8",
+        "review_sha256": "c6b52b10dd6ac1f22be7f7d4e5a826b300bc073b82dde1e54eb215848f12531c"
+      },
+      {
+        "id": "31b-swe-astropy__astropy-12907-D",
+        "model_key": "31b",
+        "arm": "D",
+        "case": "astropy__astropy-12907",
+        "generation_status": "completed",
+        "outcome": "resolved",
+        "submitted": true,
+        "official_resolved": true,
+        "test_denominators_complete": true,
+        "patch_applied": true,
+        "test_counts": {
+          "FAIL_TO_PASS": {
+            "success": 2,
+            "failure": 0
+          },
+          "PASS_TO_PASS": {
+            "success": 13,
+            "failure": 0
+          },
+          "FAIL_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          },
+          "PASS_TO_FAIL": {
+            "success": 0,
+            "failure": 0
+          }
+        },
+        "decision": "propose_fix",
+        "citation_errors": 0,
+        "anchor_errors": 0,
+        "contract_errors": 0,
+        "unsupported_assertion": false,
+        "review_category": "bounded_supported_proposal",
+        "review_rationale": "The visible _cstack body fills the ndarray right block with ones while preserving left, and _separable recursively passes the child matrices through the & operator mapping. The answer identifies that local loss of right-matrix structure and proposes the corresponding exact one-line preservation. It does not claim tests were executed or full-repository coverage. Official repair remains separately pending.",
+        "visible_answer_chars": 899,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 16899,
+        "eval_count": 4005,
+        "done_reason": "stop",
+        "wall_seconds": 311.627,
+        "request_sha256": "53c33c3ea273469495e0031d8a1059046e500bebf58935ab6fdf7288dfaa6773",
+        "transport_request_sha256": "9638cfd1500c3d5d4ead779eb032fc23cc35f0fb3ac64eddb95c5b72ad168d80",
+        "result_sha256": "488a0459cfaf2281ea7718a90c27ec69f39ab81fef65089632b2ffeeec90426d",
+        "visible_answer_sha256": "e243807fef341800342cd01b7a1caab4fd60b18d74084d38a2a0f36aff70d6b5",
+        "patch_sha256": "67d13e046d394909447f43e1c0e2f6ed8b94cff58262bbe7af280e4f4b40ff4f",
+        "official_report_sha256": "fe3f3bddc9631279d3babf7270913070d91e9207c3468bd947823aee3e7b1b86",
+        "review_sha256": "8b5adc296ee76efa4f334eb3369ce482a66e4724badeecc9b1c1eeb0141571a1"
+      },
+      {
+        "id": "31b-swe-scikit-learn__scikit-learn-25570-D",
+        "model_key": "31b",
+        "arm": "D",
+        "case": "scikit-learn__scikit-learn-25570",
+        "generation_status": "truncated",
+        "outcome": "truncated",
+        "submitted": false,
+        "official_resolved": false,
+        "test_denominators_complete": null,
+        "patch_applied": null,
+        "test_counts": null,
+        "decision": null,
+        "citation_errors": null,
+        "anchor_errors": null,
+        "contract_errors": null,
+        "unsupported_assertion": null,
+        "review_category": "no_visible_final_answer",
+        "review_rationale": "Reached the generation limit with no visible final answer. Neither correct nor a clean source-grounded answer; retained in the original attempt denominator. Thinking is not used to reconstruct an answer.",
+        "visible_answer_chars": 0,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 16809,
+        "eval_count": 4096,
+        "done_reason": "length",
+        "wall_seconds": 300.842,
+        "request_sha256": "084e8a25c93e1a8e5a7022eb22e2fa39caf3769043624677aa01408f9d7d33f1",
+        "transport_request_sha256": "7fbc96dfeca8825edd085d85b6ceedeaee9846e9f72edb40157850d514c83522",
+        "result_sha256": "e7118ecb137b13f89ee9f46213748f1752cced4b10085216e06f667fcca36fab",
+        "visible_answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "patch_sha256": null,
+        "official_report_sha256": null,
+        "review_sha256": "7fad307e5c788a0bd0e6d20df28a469359084b3ab7cd4c54455f16880f0142e9"
+      },
+      {
+        "id": "31b-swe-scikit-learn__scikit-learn-25570-C",
+        "model_key": "31b",
+        "arm": "C",
+        "case": "scikit-learn__scikit-learn-25570",
+        "generation_status": "truncated",
+        "outcome": "truncated",
+        "submitted": false,
+        "official_resolved": false,
+        "test_denominators_complete": null,
+        "patch_applied": null,
+        "test_counts": null,
+        "decision": null,
+        "citation_errors": null,
+        "anchor_errors": null,
+        "contract_errors": null,
+        "unsupported_assertion": null,
+        "review_category": "no_visible_final_answer",
+        "review_rationale": "Reached the generation limit with no visible final answer. Neither correct nor a clean source-grounded answer; retained in the original attempt denominator. Thinking is not used to reconstruct an answer.",
+        "visible_answer_chars": 0,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 9712,
+        "eval_count": 4096,
+        "done_reason": "length",
+        "wall_seconds": 264.646,
+        "request_sha256": "a040edc60950b99874e4d7b3762e10e5f6625250cd805f7e69b62cf4fbbe90e3",
+        "transport_request_sha256": "9d7920132803f9d2cfe56d43fa6a71efa095400a31d00de323dadf43cb948b2d",
+        "result_sha256": "f233cc7f87c8c3f0571aee8efd5375e3cbdbbb713b3e418514513e14d5f6f3e0",
+        "visible_answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "patch_sha256": null,
+        "official_report_sha256": null,
+        "review_sha256": "27b158d229ff585401232a327f274a96fd01425c507174122bd0c4bb333a3216"
+      },
+      {
+        "id": "31b-swe-astropy__astropy-12907-C",
+        "model_key": "31b",
+        "arm": "C",
+        "case": "astropy__astropy-12907",
+        "generation_status": "truncated",
+        "outcome": "truncated",
+        "submitted": false,
+        "official_resolved": false,
+        "test_denominators_complete": null,
+        "patch_applied": null,
+        "test_counts": null,
+        "decision": null,
+        "citation_errors": null,
+        "anchor_errors": null,
+        "contract_errors": null,
+        "unsupported_assertion": null,
+        "review_category": "no_visible_final_answer",
+        "review_rationale": "Reached the generation limit with no visible final answer. Neither correct nor a clean source-grounded answer; retained in the original attempt denominator. Thinking is not used to reconstruct an answer.",
+        "visible_answer_chars": 0,
+        "visible_answer_matches_prior_run": true,
+        "prompt_eval_count": 8104,
+        "eval_count": 4096,
+        "done_reason": "length",
+        "wall_seconds": 249.099,
+        "request_sha256": "00694e2c4d88926460b836e5d5ca506872344f3507fafb2c0b62f64c4db657aa",
+        "transport_request_sha256": "9e6f5e4eb49115605f95c9ed63b7a8e34e98c8312c39cd5d48a53503ab2e0206",
+        "result_sha256": "ed8d177e732f40a46f0391f4c410b4870a36272f7e9ad77ae72b28cfaa0c13db",
+        "visible_answer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "patch_sha256": null,
+        "official_report_sha256": null,
+        "review_sha256": "22f48f7ee4072e3283eeaa7f59bbef0b7505404cfe631b1e9fc6eadd047c4f92"
+      }
+    ],
+    "total_submitted_patches": 4,
+    "total_official_resolved": 3,
+    "truncated": 7,
+    "evaluation_incomplete": 0,
+    "visible_answers_identical_to_prior": 12,
+    "frozen_manifest_sha256": "406e964652f22d95b7628220141c4893bd74e73bdb30a20d9f00c15f2dede36c",
+    "pair_validation_sha256": "631d86745dd325b7c59f8ec121eb451ea911327692be2bed959c9e8da63d9e1b",
+    "review_sha256": "085de0d42d09d4d29401263f5703a8e29da32a02eb6108f993ffaa83975caa39",
+    "official_receipts_sha256": "41b42ca6bb8207a23daee7ea13b8b9eef3cffffb3e1e0d9fb5036b7ba7dd41c9",
+    "harness_verification_sha256": "779dbf30ad7b1e9fe3c3a2b155b61629341a95ef60f93df9bb2b9aa87b826d5e",
+    "harness_source_files_verified": 607,
+    "native_product_tests_rerun": false,
+    "runtime_schema_changed": false,
+    "cleanup_confirmed": true,
+    "limitations": [
+      "Resolved/3 means officially resolved cases divided by three planned attempts. Unsubmitted answers have no official test verdict.",
+      "Same original requests, model digests, runtime and settings; one fresh inference per cell on familiar development issues. Not independent held-out tasks or a population-wide reliability estimate.",
+      "4096 is a generation limit with think=true, not a guaranteed visible-answer allowance. Truncation and absence of a final answer remain separate from tested patch failure.",
+      "D uses real retained AHE receipts, not new AHE operations or model-chosen live queries. C already includes external syntax candidates.",
+      "One unblinded main-agent explanation reviewer; exact citations and formal provenance do not prove repair sufficiency. A text-only counterparty challenged denominator/reporting claims, not case scoring.",
+      "Prior Sol results and the old unfinished fixed-packet grid remain separate; SWE-300 is deferred."
+    ]
   }
 }

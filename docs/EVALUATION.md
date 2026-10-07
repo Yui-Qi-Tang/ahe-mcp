@@ -2,8 +2,11 @@
 
 The [README evaluation](../README.md#evaluation) separates the
 [earlier Product replay](PRODUCT_REPLAY_20261006.md), the
-[fresh supplement](PRODUCT_REPLAY_20261006_SUPPLEMENT.md), its
-[three-issue autonomous Sol run](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#autonomous-sol-swe-results), and the historical
+[fresh supplement](PRODUCT_REPLAY_20261006_SUPPLEMENT.md), the
+[2026-10-07 Gemma SWE comparison](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#gemma-swe-comparison-2026-10-07), the
+[three-issue autonomous Sol run](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#autonomous-sol-swe-results),
+[Sol with/without-AHE comparison](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#sol-without-ahe-comparison),
+and the historical
 six-case benchmark. The rest of this page documents the historical benchmark:
 two pinned local models, three synthetic task families and three selected public
 SWE-bench cases. Do not pool counts across these different protocols.
@@ -448,4 +451,4 @@ production reliability rate or independent annotation is established.
 For a new experiment, use the [experiment protocol](../.claude/skills/ahe-evidence-query/references/experiments.md):
 freeze inputs and scoring before generation, retain all attempts, distinguish
 abstention from invented explanations, and score repairs separately from
-source fidelity. A future live-agent comparison is a different experiment.
+source fidelity. The live-agent comparison linked above is a separate experiment.

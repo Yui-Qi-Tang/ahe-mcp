@@ -13,79 +13,60 @@ consistency watch **v1**. Go **1.27.0** module.
 
 ## Evaluation
 
-### Latest autonomous SWE run: 2026-10-07
+### Bug fixes — 2026-10-07
 
-**Sol 6.1 high: 2/3 issues resolved.** Each issue used one fresh agent, live AHE
-queries and an isolated code copy, with no answer hints or evaluation retries.
+Three SWE-bench issues: **Django, Astropy and scikit-learn**. Scores show
+**bugs fixed / 3 issues**, confirmed by official tests.
 
-| SWE-bench issue | Official repair result | Target tests passed | Existing tests passed |
-| --- | --- | ---: | ---: |
-| Astropy 12907 | **PASS** | **2/2** | **13/13** |
-| Django 10914 | **PASS** | **1/1** | **98/98** |
-| scikit-learn 25570 | **FAIL** | **0/3** | **184/184** |
-
-The scikit-learn patch applied but introduced `StopIteration`; it remains a failed
-repair. These three familiar issues use a different protocol from the Gemma
-fixed-packet results below. [Method, failure analysis and limits](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#autonomous-sol-swe-results).
-
-### Product verification: 2026-10-06–07
-
-Product `844a3a6` with two test-timeout fixes, PostgreSQL 18.6, Go 1.27.1.
-
-| Product checks | Normal: pass / fail / skip | Race: pass / fail / skip |
-| --- | ---: | ---: |
-| Selected cases, including three SWE source packets | **214 / 0 / 0** | **214 / 0 / 0** |
-| Repository ordinary tests | **1,834 / 0 / 0** | **1,834 / 0 / 0** |
-| PostgreSQL integration, consistency and solvers | **3,582 / 0 / 13** | **3,582 / 0 / 13** |
-
-Counts overlap. Han query **63/63**, scale and plan also passed separately.
-The 13 broad-matrix skips require explicit selection: four were rerun in this
-continuation; the other nine retain their preceding passing runs. Product runtime
-logic is unchanged. [Current checks and retained earlier failures](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#test-timeout-fixes-and-revalidation).
-
-### Fresh six-case model results: 2026-10-06
-
-110 new Gemma attempts, including **18 SWE repair attempts on three SWE-bench
-cases**. Submitted patches received official evaluation; truncations and
-abstentions remain in denominators.
-
-| Official SWE repairs — higher is better | Structured/static evidence | With AHE results |
+| Model | Without AHE results | With AHE results |
 | --- | ---: | ---: |
 | Gemma 4 E4B IT-QAT | **0/3** | **0/3** |
 | Gemma 4 31B IT-QAT | **1/3** | **2/3** |
 
-| Synthetic answers with unsupported assertions — lower is better | Structured/static evidence | With AHE results |
-| --- | ---: | ---: |
-| Gemma 4 E4B IT-QAT | **5/14** | **4/14** |
-| Gemma 4 31B IT-QAT | **0/14** | **0/14** |
+Across 12 answers, **7 ran out of tokens before finishing and 1 declined to propose a
+fix**. Four patches reached testing: **3 passed, 1 failed**. Unfinished answers
+and declined fixes still count among the three issues; they were not tested.
 
-Eleven of the 18 SWE attempts were truncated. A passing repair does not certify
-its explanation. These are familiar cases, one attempt per condition, with one
-reviewer; Ollama changed from the historical run. The older fixed-packet Sol pilot
-remains partial; the autonomous results above are a separate protocol. [Method, per-case results and limits](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#fresh-six-case-model-results).
+On Django, **E4B with AHE results declined to propose a fix**, saying the supplied
+code did not show how file permissions were applied. Without AHE, it only changed
+a comment and failed the bug test. The reviewer judged the refusal too cautious:
+the supplied evidence supported changing the default. Neither answer fixed it.
 
-### Fresh lifecycle answers: 2026-10-06
+Both sides read the same source material and code-navigation hints; the AHE side
+also received existing AHE check/query results. Models did not query AHE live.
+These are three familiar issues, one attempt each, under a 4,096-token limit.
+[Per-issue results and method](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#gemma-swe-comparison-2026-10-07).
 
-| All lifecycle decisions correct | Full static records | With AHE results |
-| --- | ---: | ---: |
-| Gemma 4 E4B IT-QAT | **9/18** | **15/18** |
-| Gemma 4 31B IT-QAT | **13/18** | **18/18** |
+A separate **Sol 6.1 high** test fixed **2/3 without AHE and 2/3 with AHE**.
+It used a different workflow. [Sol results](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#sol-without-ahe-comparison).
 
-78 fresh answers, including six shared controls. With AHE, citation-contract
-errors remained **3/18** for E4B and **18/18** for 31B; correct decisions do not
-mean complete answers passed. [Separate explanation and citation scores](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#fresh-lifecycle-results).
+### Evidence answers — 2026-10-06
 
-### Earlier fixed-packet answers: 2026-10-06
+| What was checked | Model | Without AHE results | With AHE results |
+| --- | --- | ---: | ---: |
+| Answers making claims the evidence does not support — fewer is better | Gemma 4 E4B IT-QAT | **5/14** | **4/14** |
+| Same check | Gemma 4 31B IT-QAT | **0/14** | **0/14** |
+| Correctly judged whether evidence was still valid — more is better | Gemma 4 E4B IT-QAT | **9/18** | **15/18** |
+| Same check | Gemma 4 31B IT-QAT | **13/18** | **18/18** |
 
-| Fixed-rule score | Gemma 4 31B QAT | Sol 6.1 high |
-| --- | ---: | ---: |
-| Common evidence questions | **21/42** | **42/42** |
-| Additional conflict/support controls | Not run | **16/16** |
+Correct judgments can still have citation mistakes: with AHE, **3/18 E4B** and
+**18/18 31B** answers failed the citation rules. These two checks use different
+question sets. [Claim checks](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#fresh-six-case-model-results) · [Evidence-status checks](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#fresh-lifecycle-results).
 
-These 100 answers belong to the earlier Product run. Sol still had five explanation
-ambiguities and two potential overclaims. [Earlier report](docs/PRODUCT_REPLAY_20261006.md#model-results).
-Historical six-case scores remain in [evaluation details](docs/EVALUATION.md).
-The remaining replay scope is tracked in the [supplement](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#outstanding-work).
+### Product tests — 2026-10-06–07
+
+| Test group | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Selected Lab cases, including SWE source handling | **214** | **0** | **0** |
+| General tests | **1,834** | **0** | **0** |
+| PostgreSQL integration and logic checks | **3,582** | **0** | **13** |
+
+Normal runs and runs with Go's race detector gave the same counts. Groups overlap.
+The 13 skipped tests require separate commands: **4 were rerun and passed**;
+**9 retain earlier passing runs**. [Full test record](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#test-timeout-fixes-and-revalidation).
+
+Earlier results and unfinished work remain in the [reports](docs/EVALUATION.md)
+and [work remaining](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#outstanding-work).
 
 ## Quick start
 
