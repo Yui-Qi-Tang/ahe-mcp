@@ -13,75 +13,68 @@ consistency watch **v1**. Go **1.27.0** module.
 
 ## Evaluation
 
-### Bug fixes — 2026-10-07
+### Repairing with test feedback — 2026-10-08
 
-**Gemma 4 E4B IT-QAT (E4B)** and **Gemma 4 31B IT-QAT (31B)** each tried
-these three issues, without and with AHE results.
+On **scikit-learn 25570**, **Gemma 4 E4B IT-QAT** reached a fully passing
+repair **four corrections earlier with AHE results** in this run.
+
+| E4B condition | First fully passing repair | Same successful input, rerun 3 times |
+| --- | --- | --- |
+| With AHE results | **Correction 24** | **3/3 passed** |
+| Without AHE results | **Correction 28** | **3/3 passed** |
+
+Each success passed **all 3 bug tests and all 184 existing tests**. Correction 0
+is the initial answer. Both groups shared failed patches and test feedback;
+the same tests guided and graded repairs. This shared search does not isolate
+AHE's effect or establish a general reduction in rounds. The confirmations used the same
+frozen input and fixed seed, not three new searches.
+[Method and every round](docs/REPAIR_FEEDBACK_20261008.md).
+
+### First answers to three bugs — 2026-10-08
+
+One answer per issue and condition, with an **8,192-token output limit**.
+“Fixed” requires both bug tests and existing tests to pass.
 
 | Issue | E4B without AHE | E4B with AHE | 31B without AHE | 31B with AHE |
 | --- | --- | --- | --- | --- |
 | Django 10914 | Not fixed | Declined | **Fixed** | **Fixed** |
-| Astropy 12907 | Unfinished | Unfinished | Unfinished | **Fixed** |
-| scikit-learn 25570 | Unfinished | Unfinished | Unfinished | Unfinished |
+| Astropy 12907 | Invalid patch | Not fixed | **Fixed** | **Fixed** |
+| scikit-learn 25570 | Broke existing tests | Unfinished | **Fixed** | Unfinished |
+| **Issues fixed** | **0/3** | **0/3** | **3/3** | **2/3** |
 
-**Bugs fixed, without → with AHE: E4B 0/3 → 0/3; 31B 1/3 → 2/3.**
-“Fixed” means the patch passed official tests; “Not fixed” means it was tested
-and failed to fix the bug.
-
-| Issue | Repair complexity* | What needs fixing |
-| --- | --- | --- |
-| Django 10914 | **Low** | Set the upload-permission default to the value explicitly requested by the issue. |
-| Astropy 12907 | **Medium** | Preserve input/output dependencies when combining nested model matrices. |
-| scikit-learn 25570 | **Medium** | Keep output column names aligned when a transformer selects no columns. |
-
-*Complexity is our rough, post-run judgment of the reasoning needed, not a
-SWE-bench label or a rating based on model success. All three reference fixes
-replace one line of logic in one source file. [Basis and source limits](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#issue-complexity).
-
-Across 12 answers, **7 ran out of tokens before finishing and 1 declined to propose a
-fix**. Four patches reached testing: **3 passed, 1 failed**. Unfinished answers
-and declined fixes still count among the three issues; they were not tested.
-
-On Django, **E4B with AHE results declined to propose a fix**, saying the supplied
-code did not show how file permissions were applied. Without AHE, it only changed
-a comment and failed the bug test. The reviewer judged the refusal too cautious:
-the supplied evidence supported changing the default. Neither answer fixed it.
-
-Both sides read the same source material and code-navigation hints; the AHE side
-also received existing AHE check/query results. Models did not query AHE live.
-These are three familiar issues, one attempt each, under a 4,096-token limit.
-[Per-issue results and method](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#gemma-swe-comparison-2026-10-07).
-
-A separate **Sol 6.1 high** test fixed **Django and Astropy in both groups
-(2/3 each)**; scikit-learn was not fixed in either. It used a different workflow. [Sol results](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#sol-without-ahe-comparison).
+E4B and 31B are **Gemma 4 E4B IT-QAT** and **Gemma 4 31B IT-QAT**.
+Both unfinished answers reached the output limit. A separate **12,288-token**
+scikit-learn rerun let **31B pass in both groups**; E4B with AHE still ran out of
+tokens. These first-answer results remain separate from the feedback experiment.
+[Per-issue scores, complexity and method](docs/EVALUATION_20261008.md#first-answers).
 
 ### Evidence answers — 2026-10-06
 
 | What was checked | Model | Without AHE results | With AHE results |
 | --- | --- | ---: | ---: |
-| Answers making claims the evidence does not support — fewer is better | Gemma 4 E4B IT-QAT | **5/14** | **4/14** |
-| Same check | Gemma 4 31B IT-QAT | **0/14** | **0/14** |
-| Correctly judged whether evidence was still valid — more is better | Gemma 4 E4B IT-QAT | **9/18** | **15/18** |
-| Same check | Gemma 4 31B IT-QAT | **13/18** | **18/18** |
+| Answers with unsupported claims — fewer is better | E4B | **5/14** | **4/14** |
+| Same check | 31B | **0/14** | **0/14** |
+| Correctly judged whether evidence was still valid — more is better | E4B | **9/18** | **15/18** |
+| Same check | 31B | **13/18** | **18/18** |
 
 Correct judgments can still have citation mistakes: with AHE, **3/18 E4B** and
-**18/18 31B** answers failed the citation rules. These two checks use different
-question sets. [Claim checks](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#fresh-six-case-model-results) · [Evidence-status checks](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#fresh-lifecycle-results).
+**18/18 31B** answers failed the citation rules. The two checks use different
+question sets. [Detailed results](docs/EVALUATION_20261008.md#evidence-answers).
 
-### Product tests — 2026-10-06–07
+### Product tests — 2026-10-07
 
-| Test group | Passed | Failed | Skipped |
-| --- | ---: | ---: | ---: |
-| Selected Lab cases, including SWE source handling | **214** | **0** | **0** |
-| General tests | **1,834** | **0** | **0** |
-| PostgreSQL integration and logic checks | **3,582** | **0** | **13** |
+| Test group | Passed in normal run | Passed with Go race detector |
+| --- | ---: | ---: |
+| General tests | **1,834** | **1,834** |
+| PostgreSQL integration | **3,594** | **3,594** |
+| Selected Lab cases, including SWE source handling | **214** | **214** |
 
-Normal runs and runs with Go's race detector gave the same counts. Groups overlap.
-The 13 skipped tests require separate commands: **4 were rerun and passed**;
-**9 retain earlier passing runs**. [Full test record](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#test-timeout-fixes-and-revalidation).
+**No unexpected failures.** All 13 opt-in entries skipped by the integration
+command were separately rerun and passed in both modes; **none remain unrun**.
+Groups overlap. These are software checks, not model repair scores.
+[Scope, upgrades and concurrent-client checks](docs/EVALUATION_20261008.md#product-tests).
 
-Earlier results and unfinished work remain in the [reports](docs/EVALUATION.md)
-and [work remaining](docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md#outstanding-work).
+[Current methods and data](docs/EVALUATION_20261008.md) · [Earlier results](docs/EVALUATION.md)
 
 ## Quick start
 

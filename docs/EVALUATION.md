@@ -1,15 +1,20 @@
 # Evaluation and reproduction
 
-The [README evaluation](../README.md#evaluation) separates the
-[earlier Product replay](PRODUCT_REPLAY_20261006.md), the
-[fresh supplement](PRODUCT_REPLAY_20261006_SUPPLEMENT.md), the
-[2026-10-07 Gemma SWE comparison](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#gemma-swe-comparison-2026-10-07), the
-[three-issue autonomous Sol run](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#autonomous-sol-swe-results),
-[Sol with/without-AHE comparison](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#sol-without-ahe-comparison),
-and the historical
-six-case benchmark. The rest of this page documents the historical benchmark:
-two pinned local models, three synthetic task families and three selected public
-SWE-bench cases. Do not pool counts across these different protocols.
+The [README evaluation](../README.md#evaluation) now summarizes the
+[2026-10-08 results](EVALUATION_20261008.md), including first answers, the
+[E4B feedback experiment](REPAIR_FEEDBACK_20261008.md), and the complete
+2026-10-07 Product test run. The latest report links the public quantitative data
+and distinguishes fresh database workflows from retained-receipt diagnostics.
+
+Earlier records remain separate:
+
+- [Initial Product replay](PRODUCT_REPLAY_20261006.md).
+- [2026-10-06 supplement and 2026-10-07 Gemma comparison](PRODUCT_REPLAY_20261006_SUPPLEMENT.md).
+- [Sol 6.1 high with/without AHE: 2/3 each](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#sol-without-ahe-comparison).
+- The historical six-case benchmark below: two pinned local models, three
+  synthetic task families and three selected public SWE-bench cases.
+
+Do not pool counts or replace historical scores across these different protocols.
 
 ## Read the numbers
 
@@ -34,9 +39,9 @@ system supplying equivalent verified results. Public review/admission uses
 **TEST APPROVAL STUBS**, not human approval.
 
 The historical results below retain the fixed settings, model digests, source
-commits, per-case assertion findings and reviewer limitations. The README now shows
-the supplementary run's fresh scores; the AND breakdown here describes the
-original answers. Original records remain in the private lab and prior Git
+commits, per-case assertion findings and reviewer limitations. The README shows
+the dated results linked above; the AND breakdown here describes the original
+answers. Original records remain in the private lab and prior Git
 revisions. The earlier Product replay did not regenerate this benchmark; the
 supplement completed 110 fresh Gemma attempts and evaluated the submitted SWE
 patches. Its results and failures are reported separately, without rewriting

@@ -1,6 +1,9 @@
 # Product replay supplement — 2026-10-06
 
-**Latest Gemma SWE comparison: E4B C/D 0/3 → 0/3;
+Later executions are recorded in [the 2026-10-08 report](EVALUATION_20261008.md).
+The scores and outstanding-work list below retain this report's original scope.
+
+**Gemma SWE comparison in this report: E4B C/D 0/3 → 0/3;
 31B C/D 1/3 → 2/3.** Twelve new model attempts were made on
 2026-10-07 using retained AHE receipts; 7 were truncated. The denominator includes
 unsubmitted attempts. Native Product tests and the separate Sol 2/3 versus 2/3
