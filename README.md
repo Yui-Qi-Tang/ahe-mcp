@@ -13,6 +13,21 @@ consistency watch **v1**. Go **1.27.0** module.
 
 ## Evaluation
 
+### Sharing failed repairs — 2026-10-10
+
+**Gemma 4 E4B IT-QAT**, scikit-learn 25570; each group had 30 answers.
+“Passed” means all **3 bug tests + 184 existing tests** passed.
+
+| Failure feedback | With AHE results | Without AHE results |
+| --- | --- | --- |
+| Own failures only | Not fixed in 30 answers | Not fixed in 30 answers |
+| Own and peer failures | **First passed at answer 8; next 22 passed** | Not fixed in 30 answers |
+
+After success, the next 22 answers reused the same input and fixed seed; all
+produced the same patch. This is one issue and one pair per sharing policy,
+not a guarantee of future success or an isolated measure of AHE's effect.
+[Method, counts and limitations](docs/REPAIR_SHARING_20261010.md).
+
 ### Repairing with test feedback — 2026-10-08
 
 On **scikit-learn 25570**, **Gemma 4 E4B IT-QAT** reached a fully passing
