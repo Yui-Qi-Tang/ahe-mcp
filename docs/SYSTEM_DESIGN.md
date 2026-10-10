@@ -594,12 +594,14 @@ implement BM25, PathSim or a paper's scoring model.
 
 | Program/profile | Current public scope |
 | --- | --- |
-| Query | 13 read-only tools; no model calls or evidence writes |
+| Query | 26 read-only tools, including Core records and consistency readback; no model calls or evidence writes |
 | Intake | 5 source/extractor tools; source/extraction/pending only |
 | `source-claim-reviewer` | 3 exact source-review tools; admit/reject/audit_only |
 | `relation-reviewer` | 4 exact implementation/reference review/admission tools; no node writes |
 | `repository-intake` | 2 fixed-repository capture/parser tools; pending and inactive generations |
 | `endpoint-reviewer` | 2 exact endpoint review/admission tools; no collection or independent relations |
+| `core-records` | 6 identity/check/representation/watch record tools; no admission or solver execution during MCP calls |
+| `ahe-consistency-worker` | Separately started process using the core-records DB role; checks configured watches and persists diagnostic history |
 | `legacy-reviewer` / `legacy-operator` | CLI rejects startup; the internal 43-tool registry is not a public capability list |
 
 Runtime `tools/list` is the interface authority. Tool arguments cannot switch schema,
@@ -609,8 +611,9 @@ schema, not row-level tenant isolation. Reviewer table ACLs still permit trusted
 ACLs alone do not prove that all direct SQL passes exact review. DB owners/superusers
 remain within the trusted operations boundary.
 
-MCP has its own migration ledger, currently through 48. Same-numbered migrations from
-another Core repository cannot be applied directly. Migration/runtime checks cover names,
+MCP has its own migration ledger, currently through 55, and requires role policy v7.
+Same-numbered migrations from another Core repository cannot be applied directly.
+Migration/runtime checks cover names,
 checksums and protected schema objects. Failures do not automatically delete data or
 relax ACLs. Legacy data conversion, persistent DB deployment and service-role provisioning
 require separate operational authorization.

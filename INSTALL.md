@@ -305,8 +305,9 @@ transferred to a different process/visibility cut.
 ## Repository and derived endpoint writers
 
 These are separately provisioned profiles, not extra source-reviewer tools.
-Apply migration 49 and provision/verify matching roles with the operator
-workflow above. A schema upgrade also changes the required runtime policy.
+These profiles were introduced in migration 49; the current build requires the
+full migration chain through 55 and role policy v7. Provision or upgrade and
+verify matching roles with the operator workflow above.
 For fresh installations, provision distinct fresh
 pairs for the new installation and verify each one, rather than rerunning
 `provision` on old names or manually adding a missing grant.
