@@ -14,46 +14,54 @@ consistency watch **v1**. Go **1.27.0** module.
 ## Evaluation
 
 AHE supplies traceable context to help agents **do the right thing** and
-**expose evidence gaps instead of forcing an answer**. These six experiment
-families examine evidence judgments and working repairs separately.
-Models are **Gemma 4 E4B IT-QAT** and **Gemma 4 31B IT-QAT**.
-Both conditions receive the same source material; the AHE condition also
-receives recorded Product operation and query results.
+**expose evidence gaps instead of forcing an answer**. Historical and later
+results remain separate; they are not a version trend or one combined score.
 
-**Using evidence correctly.** Scores are answers with every required decision
-field correct / questions. Higher is better; explanations are checked separately.
+**Synthetic evidence questions.** Models are **Gemma 4 E4B IT-QAT**
+and **Gemma 4 31B IT-QAT**. Arrows below mean **without → with AHE results**:
+the same source material, with recorded AHE checks and queries added.
 
-| Experiment | E4B without AHE | E4B with AHE | 31B without AHE | 31B with AHE |
-| --- | ---: | ---: | ---: | ---: |
-| 1. Are all necessary premises supported? | 1/4 | **2/4** | 4/4 | 4/4 |
-| 2. Can an outdated review still authorize admission? | 4/5 | 3/5 | 5/5 | 5/5 |
-| 3. Was the code–requirement link separately approved? | 3/5 | **5/5** | 5/5 | 5/5 |
+| Measure / run | E4B | 31B |
+| --- | ---: | ---: |
+| Unsupported-claim answers, historical — fewer is better | 6/14 → **3/14** | 1/14 → **0/14** |
+| Unsupported-claim answers, later replay — fewer is better | 5/14 → **4/14** | 0/14 → 0/14 |
+| Correct evidence-currentness decisions, separate later check | 9/18 → **15/18** | 13/18 → **18/18** |
 
-E4B improved in two families but regressed on outdated reviews. Answers with
-unsupported claims fell **5/14 → 4/14** overall: **1/5 → 0/5** for independent
-links, but **1/5 → 2/5** for outdated reviews. 31B had **0/14 in both conditions**.
-These findings show where evidence helped and where the model still misread it;
-they are not a general guarantee. [Per-family scores and method](docs/EVALUATION.md#six-family-readme-comparison).
+The later replay's three synthetic families scored as follows. A correct answer
+has every required decision field correct; explanations are checked separately.
 
-**Repairing code.** These are first answers from a separate run. “Fixed” means
-every selected bug test and existing test passed.
+| Synthetic family | E4B without → with AHE | 31B without → with AHE |
+| --- | ---: | ---: |
+| Necessary premises | 1/4 → **2/4** | 4/4 → 4/4 |
+| Outdated reviews | 4/5 → 3/5 | 5/5 → 5/5 |
+| Separately approved code–requirement links | 3/5 → **5/5** | 5/5 → 5/5 |
 
-| SWE experiment | E4B without AHE | E4B with AHE | 31B without AHE | 31B with AHE |
+E4B improved in two families but regressed on outdated reviews. Better decisions
+also did not ensure correct citations: the separate currentness check retained
+**3/18 E4B and 18/18 31B** citation failures with AHE.
+[Run boundaries, historical scores and failures](docs/EVALUATION.md#readme-result-map).
+
+**Three SWE repair issues.** “Fixed” requires every selected bug test
+and existing test to pass. Historical successes and later failures are both retained.
+
+| Fully repaired issues: without → with AHE | E4B | 31B |
+| --- | ---: | ---: |
+| Historical run | 0/3 → **1/3** | 1/3 → **3/3** |
+| Later first-answer run, 8,192-token limit | 0/3 → 0/3 | 3/3 → 2/3 |
+
+The later run's individual results:
+
+| SWE issue | E4B without AHE | E4B with AHE | 31B without AHE | 31B with AHE |
 | --- | --- | --- | --- | --- |
-| 4. Django 10914 | Ineffective comment-only edit | Identified missing code; no patch | **Fixed** | **Fixed** |
-| 5. Astropy 12907 | Patch could not run | Tested; bug not fixed | **Fixed** | **Fixed** |
-| 6. scikit-learn 25570 | Passed bug tests; broke 17 existing tests | Output limit; no patch | **Fixed** | Output limit; no patch |
+| Django 10914 | Ineffective comment-only edit | Identified missing code; no patch | **Fixed** | **Fixed** |
+| Astropy 12907 | Patch could not run | Tested; bug not fixed | **Fixed** | **Fixed** |
+| scikit-learn 25570 | Passed bug tests; broke 17 existing tests | Output limit; no patch | **Fixed** | Output limit; no patch |
 
-**Not forcing an answer:** on Django, E4B with AHE identified a real missing
-code path and stopped, making the evidence gap visible. The supplied code still
-supported a limited default-setting change, so refusing the entire repair was
-too broad. Gap detection is useful; it is not a completed repair.
-
-At the **8,192-token** limit, fully repaired issues were **0/3 → 0/3** for E4B
-and **3/3 → 2/3** for 31B (without → with AHE). A separate **12,288-token**
-scikit-learn rerun let **31B pass both conditions**; E4B with AHE still reached
-the limit. Output truncation is not a decision to abstain.
-[Test counts, complexity and method](docs/EVALUATION_20261008.md).
+On Django, **E4B with AHE exposed a real evidence gap instead of submitting a
+patch**. Refusing the whole repair was too broad: a limited default-setting
+change was supported. A separate **12,288-token** scikit-learn rerun let
+**31B pass both conditions**; E4B with AHE remained capped. Truncation is not
+evidence-based abstention. [Test counts, complexity and method](docs/EVALUATION_20261008.md).
 
 **Using failure history:** in two E4B shared-feedback runs on scikit-learn,
 full passes appeared at **correction 24 versus 28**, and **answer 8 versus
@@ -62,16 +70,26 @@ own-failures-only group passed within 30. The external controller supplied
 feedback; these observations do not isolate AHE's effect or prove a general speedup.
 [Correction loop](docs/REPAIR_FEEDBACK_20261008.md) · [Sharing comparison](docs/REPAIR_SHARING_20261010.md).
 
-These are small, familiar case sets. Explanation reviews used one unblinded
-reviewer. Separate [currentness and citation checks](docs/EVALUATION_20261008.md#evidence-answers)
-also retain both improved decisions and citation failures.
+**Evidence storage and lifecycle checks.** These checks test evidence storage and
+state changes, separately from model answer quality. Each count passed in both
+normal and Go race runs:
 
-**Product checks:** normal and Go race runs each passed **1,834 general tests**,
-**3,594 PostgreSQL integration tests** and **214 selected Lab/SWE source cases**.
-No unexpected failures; all 13 opt-in entries separately passed in both modes.
-Groups overlap. These software checks are separate from model outcomes.
+| Selected checks | Passed |
+| --- | ---: |
+| Proposition identity and correction/withdrawal history | **55/55** |
+| Admission boundaries, stress and review/report binding | **94/94** |
+| Lifecycle, relations and disposition | **21/21** |
+| Source queries and stored diagnosis readback | **41/41** |
+| Three SWE source packets: intake, relations and Query | **3/3** |
+| **Total selected checks** | **214/214** |
 
-[Evaluation goals, all reports and limitations](docs/EVALUATION.md).
+The broader AHE MCP runs passed **1,834 general** and **3,594 PostgreSQL integration**
+tests in each mode; all 13 opt-in entries also passed separately. Counts overlap.
+[Exact coverage](docs/EVALUATION.md#software-contract-checks).
+
+Small, familiar cases and single-reviewer explanation judgments limit these
+observations. All scores above are retained executions; this documentation update
+ran no new experiments. [Methods, run dates and limitations](docs/EVALUATION.md).
 
 ## Quick start
 

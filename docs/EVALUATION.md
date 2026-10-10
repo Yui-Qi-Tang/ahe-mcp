@@ -1,6 +1,7 @@
 # Evaluation and reproduction
 
-The [README evaluation](../README.md#evaluation) presents six experiment families.
+The [README evaluation](../README.md#evaluation) presents model comparisons
+and evidence storage/lifecycle checks.
 The reports below retain each experiment's own method, counts and limitations:
 
 - [2026-10-10 peer failure details versus repeated own failure details](REPAIR_PEER_FAILURES_20261010.md).
@@ -22,14 +23,67 @@ Earlier records remain separate:
 
 Do not pool counts or replace historical scores across these different protocols.
 
+## README result map
+
+The README retains the earlier positive observations alongside later successes
+and failures. This is a documentation update using
+existing reports and scores, with no new inference, PostgreSQL operation, test
+execution or explanation judgment.
+
+| README result | Execution scope / record | What is being compared |
+| --- | --- | --- |
+| Historical synthetic claims and three SWE repairs | Original Product-facing study, displayed in README commit `00e9636` and retained in `844a3a6` | Structured/static C versus C plus actual AHE results D; [original scores and method](#historical-six-case-results). |
+| Later synthetic-claim replay | Product, 2026-10-06 | The same three synthetic families; [fresh six-case results](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#fresh-six-case-model-results). |
+| Later evidence-currentness decisions | Product, 2026-10-06; separate lifecycle packets | Full static records C1 versus added Product currentness results D; [decisions, explanations and citations](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#fresh-lifecycle-results). |
+| Later three SWE first answers | Product, 2026-10-08 | Same source material, without/with real Product results, 8,192-token cap; [first answers](EVALUATION_20261008.md#first-answers). |
+| Selected 214 contract/SWE checks | Product replay; normal/race results retained in the 2026-10-07 full run | Native contracts and source-packet handling; [coverage below](#software-contract-checks). |
+
+The two Product models are `gemma4:e4b-it-qat` and `gemma4:31b-it-qat` with
+the pinned digests retained in their reports. Each arrow in a Product result
+is a comparison within that run. Historical versus later rows are not an
+isolated software-version comparison: runtime, receipts, and in the SWE
+follow-ups the generation budget or feedback protocol differ. Earlier gains
+remain observed results; later failures remain failures. Do not select the best
+run as the current success rate or infer a version trend from these rows.
+
+In particular, the separate 18-answer currentness check is not the five-case
+stale-review family. Its improved decisions coexist with AHE citation failures
+of 3/18 E4B and 18/18 31B. Historical 31B repairs passing 3/3 official test sets
+likewise did not establish that all three explanations were supported.
+
+## Software contract checks
+
+The README groups the existing [214-check inventory](PRODUCT_REPLAY_20261006.md#what-the-214-checks-contain)
+by behavior. The [full Product run](EVALUATION_20261008.md#product-tests) records
+214/214 passes in each normal/race mode. These are executions in **Product** of
+the selected cases and controls. They do not establish that every historical
+research workflow has been rerun.
+
+| README group | Original inventory entries | Leaf cases per mode |
+| --- | --- | ---: |
+| Identity and correction history | Proposition/justification identity 27; binding correction, withdrawal and history 28 | 55 |
+| Admission and review/report binding | Core boundary 34; Core stress 48; report-to-subject binding 12 | 94 |
+| Lifecycle, relations and disposition | Lineage/currentness 18; original relation contracts 2; recorded disposition 1 | 21 |
+| Source queries and diagnosis readback | Body-query control 1; body-query cases 22; stored diagnosis readback 18 | 41 |
+| SWE source packets | Intake, relations and Query for the three Product repair issues | 3 |
+| **Total** | **Same selected checks, grouped without duplication** | **214** |
+
+Passing expected rejection, withdrawal, identity and state-transition checks
+supports those native contracts; it does not mean models always interpret their
+receipts correctly. Diagnosis readback does not validate semantic extraction.
+The three SWE packet checks are not patch evaluations. Broader ordinary and
+integration counts overlap this selection and must not be summed as distinct
+coverage. Original skip records remain in the logs; the full run supplemented
+all thirteen opt-in entry points in both modes, leaving none of those unrun.
+
 ## Six-family README comparison
 
-The README restores the six families, not six distinct SWE issues. It retains
-the previously selected result versions: experiments 1–3 use the 2026-10-06
-Product replay; experiments 4–6 use the 2026-10-08 first-answer repair run.
-Dates are recorded here rather than used as README headings. This documentation
-update only groups existing scores; it does not rerun models, software tests or
-PostgreSQL, change judgments, or substitute historical successes for later failures.
+Within the Product model comparison, the original six families mean three
+synthetic families plus three SWE repair issues. The later per-family rows retain
+experiments 1–3 from the 2026-10-06 replay and experiments 4–6 from the
+2026-10-08 first-answer run, alongside the separately identified historical
+aggregate results. Dates and detailed methods stay here rather than in README
+headings. This update does not change the underlying scores or judgments.
 
 ### Evidence judgments: experiments 1–3
 
