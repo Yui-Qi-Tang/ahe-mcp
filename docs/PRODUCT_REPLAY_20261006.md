@@ -152,11 +152,11 @@ citation and explanation labels overlap and must not be added together.
 
 ### Comparison with earlier answers
 
-| Frozen scorer, recounted consistently | Original Gemma pilot | Previous Product replay | This Product replay |
-| --- | ---: | ---: | ---: |
-| Gemma common 42 | 19 / 42 | 21 / 42 | 21 / 42 |
-| Sol common 42 | — | 42 / 42 | 42 / 42 |
-| Sol additional conflict 16 | — | 16 / 16 | 16 / 16 |
+| Frozen scorer, recounted consistently | Previous Product replay | This Product replay |
+| --- | ---: | ---: |
+| Gemma common 42 | 21 / 42 | 21 / 42 |
+| Sol common 42 | 42 / 42 | 42 / 42 |
+| Sol additional conflict 16 | 16 / 16 | 16 / 16 |
 
 All 42 new Gemma parsed final answers, including explanation and references,
 matched the previous Product replay exactly. All 42 HTTP response bodies had
@@ -164,8 +164,7 @@ new hashes and new server timestamps, with a newly recorded request for each;
 these were fresh inference calls, not copied answers. Sol's common decision
 fields also matched the previous replay, while explanation wording varied.
 This is observed repeatability on fixed inputs, not evidence of general
-reliability or improvement from the Core port. The older Gemma pilot's lower
-score cannot be causally attributed to Product changes by this comparison.
+reliability or improvement from the Core port.
 
 ## Model protocol
 

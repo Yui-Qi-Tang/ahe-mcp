@@ -4053,67 +4053,7 @@
         "request_sha256": "b3721da45aa9458bd21fe61921ef5be0e8bd956fbc2a56291e3528e7c81bd5bb",
         "raw_response_sha256": "ba1e9224dbd3a48806ba9588f997c03200cc005ba433f35111194db56f41acf6"
       }
-    ],
-    "historical_comparison": {
-      "source_sha256": "18f093db764c2b9a9666f2491a3c3e78a4eb9b7b56c168fc67b65ab149f2aa4c",
-      "causal_attribution": "unestablished; runtime and run context differ; explanation labels are single-rater and not independent",
-      "summary": [
-        {
-          "model": "e4b",
-          "arm": "C0",
-          "attempts": 3,
-          "lifecycle_all_correct": 3,
-          "wrong_explanation": 0,
-          "wrong_explanation_unresolved": 2,
-          "citation_contract_error_answers": 0
-        },
-        {
-          "model": "e4b",
-          "arm": "C1",
-          "attempts": 18,
-          "lifecycle_all_correct": 0,
-          "wrong_explanation": 18,
-          "wrong_explanation_unresolved": 0,
-          "citation_contract_error_answers": 4
-        },
-        {
-          "model": "e4b",
-          "arm": "D",
-          "attempts": 18,
-          "lifecycle_all_correct": 0,
-          "wrong_explanation": 18,
-          "wrong_explanation_unresolved": 0,
-          "citation_contract_error_answers": 0
-        },
-        {
-          "model": "31b",
-          "arm": "C0",
-          "attempts": 3,
-          "lifecycle_all_correct": 3,
-          "wrong_explanation": 0,
-          "wrong_explanation_unresolved": 0,
-          "citation_contract_error_answers": 0
-        },
-        {
-          "model": "31b",
-          "arm": "C1",
-          "attempts": 18,
-          "lifecycle_all_correct": 15,
-          "wrong_explanation": 4,
-          "wrong_explanation_unresolved": 0,
-          "citation_contract_error_answers": 0
-        },
-        {
-          "model": "31b",
-          "arm": "D",
-          "attempts": 18,
-          "lifecycle_all_correct": 15,
-          "wrong_explanation": 3,
-          "wrong_explanation_unresolved": 0,
-          "citation_contract_error_answers": 18
-        }
-      ]
-    }
+    ]
   },
   "current_continuation": {
     "protocol": "autonomous-swe-v1",

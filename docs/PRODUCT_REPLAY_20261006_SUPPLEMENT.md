@@ -459,10 +459,8 @@ The owned server was stopped. An initial obsolete runtime assertion stopped
 before any model call; its failure and the corrected runtime declaration are
 retained separately.
 
-Historically, lifecycle-all-correct scores were E4B C1/D **0/18 and 0/18**, and
-31B **15/18 and 15/18**. Both runs remain recorded; their differences cannot be
-attributed solely to Product. The compact result file includes all 36 paired
-field changes, six shared controls, per-answer labels and response hashes.
+The compact result file includes all 36 paired C1/D field changes from this
+Product replay, six shared controls, per-answer labels and response hashes.
 
 ## Earlier supplementary tests and original case coverage
 
