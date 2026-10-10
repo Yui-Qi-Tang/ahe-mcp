@@ -13,8 +13,8 @@ review context makes an existing exact review invalid?
 
 This executable example measures `reviewable-ingestion/v1` contract behavior.
 It does not measure code parsing, semantic entailment, reviewer competence,
-agent behavior, or production persistence. The public summary is in the
-[README](../README.md#a-citation-is-not-an-approval).
+agent behavior, or production persistence. For the operational review and
+admission workflow, see the [first evidence workflow](FIRST_WORKFLOW.md).
 
 ## Reproduce
 

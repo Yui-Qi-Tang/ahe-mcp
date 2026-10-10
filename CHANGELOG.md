@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased — current baseline
+
+The current development build requires schema **55** and role policy **v7**.
+This summary covers implemented changes since the dated entries below; it is
+not a release announcement.
+
+- Added migrations 50–52 for external proposition identity, traceable binding
+  corrections/withdrawals/restorations, and immutable external checks and
+  representations. These records do not admit evidence or prove semantic
+  equivalence.
+- Added migrations 53–54 for consistency watches, diagnostic history, proof
+  artifacts and record-integrity guards. Query now exposes 26 read-only tools;
+  the separate `core-records` profile exposes six record/configuration tools.
+- Added the explicitly started `ahe-consistency-worker`: external Boolean
+  declarations, currentness policy, checked SAT/UNSAT, conflict localization
+  and recomputation with durable polling events. It does not extract meaning
+  or repair canonical evidence. See [consistency operation](docs/CONSISTENCY.md).
+- Added the [experimental v0 logic resolver](logicresolver/README.md), with
+  CaDiCaL/DRAT and a bounded linear Z3 adapter. The Product consistency path
+  uses SAT; Z3 UNSAT results have no independently checked proof.
+- Added migration 55 for explicitly typed candidate hypotheses and optional
+  contradiction-source bindings while preserving prior admission history.
+- Added runtime-role upgrades that retain the existing group/LOGIN pair.
+  Existing installations require the documented migration and role checks;
+  see [upgrade instructions](INSTALL.md#upgrade).
+- Updated practical multisurface retrieval to plan v2. Its public query-mode
+  name remains `practical_multisurface_lexical_v1`, paired with response schema
+  `grounded-evidence-brief-v7`; default queries remain unchanged.
+
 ## Unreleased — 2026-09-16
 
 - Added separate MCP profiles for local Git/Go intake and exact-reviewed

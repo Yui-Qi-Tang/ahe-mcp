@@ -2,9 +2,10 @@
 
 Native Go APIs in `internal/evidenceingestion` check one exact proposition
 namespace and scope. The [product workflow](../../docs/CONSISTENCY.md) exposes
-readback through Query and configuration through core-records. The current contract is schema 54 and role policy
-v7; diagnostic history remains separate from canonical admission. Pouch and
-external consumers are unchanged.
+readback through Query and configuration through core-records. The current
+runtime requires schema **55** and role policy **v7**. Consistency record guards
+were introduced in schema 54 and remain active. Diagnostic history remains
+separate from canonical admission. Pouch and external consumers are unchanged.
 
 ## Participation policy
 

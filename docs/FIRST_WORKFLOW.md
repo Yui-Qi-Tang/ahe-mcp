@@ -16,7 +16,7 @@ An ordinary answering agent receives only Query; the operator performs the
 intake and review steps through their separately authorized clients.
 
 In each client, discover `tools/list`. Expect 5 intake tools, 3 source-review
-tools and 13 Query tools. Use the installed schemas if they differ from these
+tools and 26 Query tools. Use the installed schemas if they differ from these
 examples; stop on a missing required capability. An empty database is normal.
 The examples below are `tools/call` **arguments**, not shell commands or full
 JSON-RPC requests. Replace angle-bracket placeholders with returned values.

@@ -1,10 +1,16 @@
 # Evaluation and reproduction
 
-The [README evaluation](../README.md#evaluation) now summarizes the
-[2026-10-08 results](EVALUATION_20261008.md), including first answers, the
-[E4B feedback experiment](REPAIR_FEEDBACK_20261008.md), and the complete
-2026-10-07 Product test run. The latest report links the public quantitative data
-and distinguishes fresh database workflows from retained-receipt diagnostics.
+The [README evaluation](../README.md#evaluation) presents six experiment families.
+The reports below retain each experiment's own method, counts and limitations:
+
+- [2026-10-10 peer failure details versus repeated own failure details](REPAIR_PEER_FAILURES_20261010.md).
+- [2026-10-10 shared versus own failure feedback](REPAIR_SHARING_20261010.md).
+- [2026-10-08 E4B repair-feedback experiment](REPAIR_FEEDBACK_20261008.md).
+- [2026-10-08 first answers and diagnostics, with the 2026-10-07 Product tests](EVALUATION_20261008.md).
+
+These reports link their public quantitative data and distinguish fresh
+database workflows from retained-receipt diagnostics. This index does not
+replace the recorded results or combine their denominators.
 
 Earlier records remain separate:
 
@@ -15,6 +21,116 @@ Earlier records remain separate:
   synthetic task families and three selected public SWE-bench cases.
 
 Do not pool counts or replace historical scores across these different protocols.
+
+## Six-family README comparison
+
+The README restores the six families, not six distinct SWE issues. It retains
+the previously selected result versions: experiments 1–3 use the 2026-10-06
+Product replay; experiments 4–6 use the 2026-10-08 first-answer repair run.
+Dates are recorded here rather than used as README headings. This documentation
+update only groups existing scores; it does not rerun models, software tests or
+PostgreSQL, change judgments, or substitute historical successes for later failures.
+
+### Evidence judgments: experiments 1–3
+
+“Without AHE” is the structured/static control C, not a model with no context.
+“With AHE” is D: the same source evidence plus recorded Product operation/query
+results. Models read fixed packets supplied by the controller; they did not
+choose live queries. The original [Product replay method and limits](PRODUCT_REPLAY_20261006_SUPPLEMENT.md#fresh-six-case-model-results)
+still apply, including simulated review approval and one attempt per cell.
+
+Correct answers below have every required decision field correct. Unsupported
+claims count answers containing at least one unsupported or source-contradicted
+assertion, including false denials of visible evidence. These two measures can
+overlap and must not be added. They measure interpretation of evidence, not
+successful execution of a downstream action or a rate of appropriate refusal.
+
+| Experiment | Model | Correct decisions: without → with AHE | Unsupported claims: without → with AHE |
+| --- | --- | ---: | ---: |
+| 1. Necessary premises / declared AND support | E4B | 1/4 → 2/4 | 3/4 → 2/4 |
+| 1. Necessary premises / declared AND support | 31B | 4/4 → 4/4 | 0/4 → 0/4 |
+| 2. Outdated review / stale review | E4B | 4/5 → 3/5 | 1/5 → 2/5 |
+| 2. Outdated review / stale review | 31B | 5/5 → 5/5 | 0/5 → 0/5 |
+| 3. Separately approved code–requirement link / independent `implements` | E4B | 3/5 → 5/5 | 1/5 → 0/5 |
+| 3. Separately approved code–requirement link / independent `implements` | 31B | 5/5 → 5/5 | 0/5 → 0/5 |
+| **All three families** | **E4B** | **8/14 → 10/14** | **5/14 → 4/14** |
+| **All three families** | **31B** | **14/14 → 14/14** | **0/14 → 0/14** |
+
+The recorded E4B failures explain why both columns matter:
+
+- In the premise cases, two AHE answers still denied an existing path when a
+  necessary parent or edge was missing. Incomplete support does not erase a
+  path that is present.
+- In the outdated-review cases, E4B with AHE incorrectly said canonical evidence
+  existed after `audit_only` and after rejection. The static control made the
+  first error only. AHE results did not prevent this regression.
+- For independent links, the static control made two decision errors. One also
+  treated approval-stub reason text as an explicit approval and claimed a
+  relation had been admitted. All five AHE answers had correct decision fields,
+  and no unsupported assertion was identified in them.
+
+This breakdown regroups the sealed per-answer scores and existing single-rater,
+non-blind explanation labels. No answers were newly judged. Each answer had a
+completed response and scored decision fields. The totals agree with the
+`model_tables` C/D synthetic rows in the [public replay data](evaluation/product-replay-20261006-supplement.json).
+The historical table further below is a different run and remains unchanged.
+
+| Retained score artifact | SHA-256 |
+| --- | --- |
+| Six-case final summary | `481f53f5d6575b08ee84630b6ce4a1a723beb9887f30a1e5b31155ced7395b23` |
+| E4B explanation review | `38aec7a14970dcae0d30953518efbbeb301b233e353405420e1767bd8d05af60` |
+| 31B explanation review | `e643bbbf554bf583bed16ecb52f3015d9e3a454b5ad5e2c01e2bda99aed545ff` |
+
+These private artifacts are identified for traceability; their hashes are not
+a public reproduction package or independent validation.
+
+### Repairs: experiments 4–6
+
+The README table uses all twelve original 8,192-token first answers on Django
+10914, Astropy 12907 and scikit-learn 25570. It does not replace truncated answers
+with the separate 12,288-token diagnostic or later feedback-loop successes.
+“Fixed” requires all selected bug and existing tests to pass. An ineffective
+edit, broken test collection, a regression, no patch and output truncation remain
+distinct outcomes. The [per-issue test counts, source limits and method](EVALUATION_20261008.md#first-answers)
+provide the full record; the Django gap-detection observation is explained below.
+
+The feedback-loop paragraphs are additional experiments on the same scikit-learn
+issue, not new issues or additions to a six-family total. Likewise, the separate
+currentness check (E4B 9/18 → 15/18; 31B 13/18 → 18/18) is not the five-case
+outdated-review family. Its AHE citation failures (E4B 3/18; 31B 18/18) remain in
+the [evidence-answer report](EVALUATION_20261008.md#evidence-answers).
+
+## Evaluation goals
+
+AHE supplies traceable evidence context. The intended downstream behavior is
+to act on supported information and expose missing evidence before guessing.
+Repair counts alone do not measure both goals. Keep the following observations
+separate; this interpretation does not change any historical score or rubric.
+
+| Observation | What it establishes |
+| --- | --- |
+| Patch passes the selected bug and existing tests | Functional success within that test scope; explanations still require evidence checks. |
+| Model names a real missing source or condition and stops | Visible gap detection and restraint; whether the whole task should stop needs separate review. |
+| Model refuses despite sufficient evidence for a bounded action | Lost task progress, even if another part of the evidence is incomplete. |
+| Output is truncated or a patch cannot run | A delivery failure, not an evidence-based decision to abstain. |
+
+In the recorded Django comparison, E4B without AHE proposed a comment-only edit
+that did not fix the requested behavior. With AHE, it named the missing code
+that applies `FILE_UPLOAD_PERMISSIONS` and supplied no patch. The original
+non-blind source review found that gap real, while the issue and supplied setting
+definition still supported a limited default-value change. The report therefore
+preserves both findings: the model exposed a gap instead of submitting a repair,
+but its refusal extended beyond what that gap justified. This one comparison
+does not establish a general rate of appropriate abstention or an AHE-enforced
+action policy. The [original results](EVALUATION_20261008.md#first-answers) remain
+unchanged.
+
+Evidence-status accuracy, unsupported claims, citation errors, appropriate
+stopping and tested repairs are distinct outcomes. A correct decision field
+does not certify its explanation; a refusal does not automatically count as
+success. Feedback experiments additionally depend on the external controller's
+selection and presentation of prior failures. AHE preserves and returns the
+evidence; the model and controller remain responsible for queries and actions.
 
 ## Read the numbers
 
@@ -40,8 +156,8 @@ system supplying equivalent verified results. Public review/admission uses
 
 The historical results below retain the fixed settings, model digests, source
 commits, per-case assertion findings and reviewer limitations. The README shows
-the dated results linked above; the AND breakdown here describes the original
-answers. Original records remain in the private lab and prior Git
+a selection of the dated results linked above; the AND breakdown here describes
+the original answers. Original records remain in the private lab and prior Git
 revisions. The earlier Product replay did not regenerate this benchmark; the
 supplement completed 110 fresh Gemma attempts and evaluated the submitted SWE
 patches. Its results and failures are reported separately, without rewriting
