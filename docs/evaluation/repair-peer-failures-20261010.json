@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "experiment": "peer failure details versus repeated own failure details",
+  "date": "2026-10-10",
+  "case": "scikit-learn__scikit-learn-25570",
+  "scope": "Three paired one-step comparisons, not independent multi-round trajectories. Both arms use E4B with AHE; the common history index retains peer summaries.",
+  "product_revision": "068390090d4951f671346d68069786034f9bfcc0",
+  "case_base_revision": "cd25abee0ad0ac95225d4a9be8948eff69f49690",
+  "model": {
+    "name": "gemma4:e4b-it-qat",
+    "digest": "ee665637121887cf3befff38abbb1be4ee117c7db867d97a67e29049ecd7e15f",
+    "ollama_version": "0.40.0",
+    "temperature": 0,
+    "seed": 42,
+    "context_limit": 65536,
+    "output_limit": 12288,
+    "thinking": true
+  },
+  "totals": {
+    "answers": 6,
+    "submitted": 5,
+    "full_successes": 0,
+    "model_test_assertions_executed": 935,
+    "model_test_slots_unexecuted": 187,
+    "control_assertions_executed": 374,
+    "all_test_assertions_executed": 1309
+  },
+  "controls": [
+    {
+      "condition": "original code",
+      "target_passed": 0,
+      "target_total": 3,
+      "existing_passed": 184,
+      "existing_total": 184,
+      "tests_executed": 187
+    },
+    {
+      "condition": "reference patch",
+      "target_passed": 3,
+      "target_total": 3,
+      "existing_passed": 184,
+      "existing_total": 184,
+      "tests_executed": 187
+    }
+  ],
+  "formal_infrastructure": {
+    "fresh_pg_clusters": 6,
+    "distinct_login_roles": 24,
+    "mcp_calls": 1164,
+    "fresh_test_containers": 7,
+    "preflight_excluded": true
+  },
+  "rows_in_generation_order": [
+    {
+      "id": "r02-peer",
+      "arm": "peer",
+      "generation_status": "completed",
+      "submitted": true,
+      "full_success": false,
+      "target_passed": 0,
+      "target_total": 3,
+      "existing_passed": 184,
+      "existing_total": 184,
+      "tests_executed": 187,
+      "unexecuted_slots": 0,
+      "patch_sha256": "4eab78a3be24ea93c9f65aa9b1e9f9a732e8ef039fc54aa7da48d34a07d8a5bc",
+      "prompt_tokens": 20305,
+      "output_tokens": 1925,
+      "historical_checkpoint": 2,
+      "fixed_own_failures_count": 0,
+      "new_failures_vs_own_count": 0,
+      "matches_own_prior_patch": true,
+      "citation_error_count": 1,
+      "contract_errors": [],
+      "groups": {
+        "own_only_failed": {
+          "passed": 0,
+          "total": 3
+        },
+        "peer_only_failed": {
+          "passed": 16,
+          "total": 16
+        },
+        "both_failed": {
+          "passed": 0,
+          "total": 0
+        },
+        "both_previously_passed": {
+          "passed": 168,
+          "total": 168
+        }
+      }
+    },
+    {
+      "id": "r02-repeat",
+      "arm": "repeat",
+      "generation_status": "completed",
+      "submitted": true,
+      "full_success": false,
+      "target_passed": 0,
+      "target_total": 3,
+      "existing_passed": 171,
+      "existing_total": 184,
+      "tests_executed": 187,
+      "unexecuted_slots": 0,
+      "patch_sha256": "5bb6ba3a37a4d3842eb775b2a2555d272891bb8f94dba06a09dc9add88d288a8",
+      "prompt_tokens": 18117,
+      "output_tokens": 7068,
+      "historical_checkpoint": 2,
+      "fixed_own_failures_count": 0,
+      "new_failures_vs_own_count": 13,
+      "matches_own_prior_patch": false,
+      "citation_error_count": 0,
+      "contract_errors": [],
+      "groups": {
+        "own_only_failed": {
+          "passed": 0,
+          "total": 3
+        },
+        "peer_only_failed": {
+          "passed": 16,
+          "total": 16
+        },
+        "both_failed": {
+          "passed": 0,
+          "total": 0
+        },
+        "both_previously_passed": {
+          "passed": 155,
+          "total": 168
+        }
+      }
+    },
+    {
+      "id": "r05-repeat",
+      "arm": "repeat",
+      "generation_status": "completed",
+      "submitted": true,
+      "full_success": false,
+      "target_passed": 3,
+      "target_total": 3,
+      "existing_passed": 182,
+      "existing_total": 184,
+      "tests_executed": 187,
+      "unexecuted_slots": 0,
+      "patch_sha256": "f63869dcbdfde350ded3784a1cf03f991ef5a275f1ed17770fb90d16488dfe8f",
+      "prompt_tokens": 22372,
+      "output_tokens": 3398,
+      "historical_checkpoint": 5,
+      "fixed_own_failures_count": 0,
+      "new_failures_vs_own_count": 0,
+      "matches_own_prior_patch": true,
+      "citation_error_count": 0,
+      "contract_errors": [],
+      "groups": {
+        "own_only_failed": {
+          "passed": 0,
+          "total": 2
+        },
+        "peer_only_failed": {
+          "passed": 16,
+          "total": 16
+        },
+        "both_failed": {
+          "passed": 0,
+          "total": 0
+        },
+        "both_previously_passed": {
+          "passed": 169,
+          "total": 169
+        }
+      }
+    },
+    {
+      "id": "r05-peer",
+      "arm": "peer",
+      "generation_status": "completed",
+      "submitted": true,
+      "full_success": false,
+      "target_passed": 3,
+      "target_total": 3,
+      "existing_passed": 182,
+      "existing_total": 184,
+      "tests_executed": 187,
+      "unexecuted_slots": 0,
+      "patch_sha256": "f63869dcbdfde350ded3784a1cf03f991ef5a275f1ed17770fb90d16488dfe8f",
+      "prompt_tokens": 23090,
+      "output_tokens": 3023,
+      "historical_checkpoint": 5,
+      "fixed_own_failures_count": 0,
+      "new_failures_vs_own_count": 0,
+      "matches_own_prior_patch": true,
+      "citation_error_count": 0,
+      "contract_errors": [],
+      "groups": {
+        "own_only_failed": {
+          "passed": 0,
+          "total": 2
+        },
+        "peer_only_failed": {
+          "passed": 16,
+          "total": 16
+        },
+        "both_failed": {
+          "passed": 0,
+          "total": 0
+        },
+        "both_previously_passed": {
+          "passed": 169,
+          "total": 169
+        }
+      }
+    },
+    {
+      "id": "r07-peer",
+      "arm": "peer",
+      "generation_status": "completed",
+      "submitted": false,
+      "full_success": false,
+      "target_passed": null,
+      "target_total": 3,
+      "existing_passed": null,
+      "existing_total": 184,
+      "tests_executed": 0,
+      "unexecuted_slots": 187,
+      "patch_sha256": null,
+      "prompt_tokens": 23675,
+      "output_tokens": 5177,
+      "historical_checkpoint": 7,
+      "fixed_own_failures_count": null,
+      "new_failures_vs_own_count": null,
+      "matches_own_prior_patch": null,
+      "citation_error_count": 0,
+      "contract_errors": [
+        "patch lacks edits/citations"
+      ],
+      "groups": null
+    },
+    {
+      "id": "r07-repeat",
+      "arm": "repeat",
+      "generation_status": "completed",
+      "submitted": true,
+      "full_success": false,
+      "target_passed": 0,
+      "target_total": 3,
+      "existing_passed": 179,
+      "existing_total": 184,
+      "tests_executed": 187,
+      "unexecuted_slots": 0,
+      "patch_sha256": "4f55f1206599c602d8db23ec233f0c14eef003ed94db346aa2680ae829b605d5",
+      "prompt_tokens": 23198,
+      "output_tokens": 5916,
+      "historical_checkpoint": 7,
+      "fixed_own_failures_count": 0,
+      "new_failures_vs_own_count": 6,
+      "matches_own_prior_patch": false,
+      "citation_error_count": 0,
+      "contract_errors": [],
+      "groups": {
+        "own_only_failed": {
+          "passed": 0,
+          "total": 2
+        },
+        "peer_only_failed": {
+          "passed": 16,
+          "total": 16
+        },
+        "both_failed": {
+          "passed": 0,
+          "total": 0
+        },
+        "both_previously_passed": {
+          "passed": 163,
+          "total": 169
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "One issue, three related historical checkpoints, one answer per cell; operator unblinded.",
+    "Peer details change text length, identity and token positions. No equal-token semantic-only control.",
+    "History index still includes peer summaries; this is not a fully unshared comparison.",
+    "Controller performed intake and query; models did not call MCP themselves. Test approval stubs are not human semantic review.",
+    "Missing citations prevented one patch submission; its functional correctness is unknown. A wrong nonempty source citation did not block testing under the unchanged scorer.",
+    "No submitted patch repaired a remaining own failure. This comparison does not establish the cause of the historical answer-8 success."
+  ],
+  "provenance": {
+    "raw_materials_public": false,
+    "complete_reproduction_bundle_public": false,
+    "archive_file_count": 400,
+    "source_summary_sha256": "5e216f8259bf052a232a6ecd67100bf8809995bb78a21f911a682c938d40efc8",
+    "final_audit_sha256": "d456f0d161c9fde2f89b2b814715c54aebce1bf49bd82d288f619053229ba2a6",
+    "archive_seal_sha256": "8e4d8fc471b11000f1b939c4b7238975ebf6e1863a8047b77e47e7e01f3c9731"
+  }
+}

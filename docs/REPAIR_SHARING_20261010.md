@@ -106,6 +106,12 @@ from confirmation costs and includes all 120 answer statuses.
 
 ## What this establishes
 
+The completed [peer-detail comparison](REPAIR_PEER_FAILURES_20261010.md)
+compares adding a peer's different failure details with repeating the model's
+own failure details at three earlier checkpoints. None of its five tested
+patches repaired a remaining own failure. It does not establish the mechanism
+behind the answer-8 success recorded here.
+
 The observed result is consistent with shared failure information helping this
 AHE-assisted search. It does not isolate which card, repeated detail, history
 index, extra context or AHE receipt caused the change. Each policy has only one
