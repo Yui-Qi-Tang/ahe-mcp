@@ -68,6 +68,16 @@ category within the original denominator; do not treat them as clean answers.
 Disclose manual or model-based reviewers, blinding and judgment uncertainty.
 Preserve rubric corrections and earlier labels without rewriting model output.
 
+For future experiments measuring abstention or withdrawal, adopt the
+[decision restraint rubric](../../../../docs/DECISION_RESTRAINT_EVALUATION.md)
+in the new PLAN and freeze its version/hash before generation. Define the exact
+action scope, evidence-delivery states, required-verification and stopping
+conditions, withdrawal events, denominators and reviewer procedure. Separate
+model-chosen restraint from tool-enforced stops, invalid patches, truncation and
+infrastructure failures. Score reasons and task progress separately; record
+unknown judgments without treating them as successful abstentions. Adding this
+rubric does not authorize a run or change any earlier frozen protocol or score.
+
 Report model/version, cases, source scope, controls, actual operations and the
 observed gains or failures. Repeated conditions are not independent tasks.
 Passing tests does not validate every explanation; no observed error does not

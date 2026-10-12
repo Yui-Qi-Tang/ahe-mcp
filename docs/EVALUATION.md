@@ -4,6 +4,11 @@ The [README evaluation](../README.md#evaluation) presents model comparisons
 and evidence storage/lifecycle checks.
 The reports below retain each experiment's own method, counts and limitations:
 
+- [E4B autonomous repair, continuation and exact-input replay](E4B_AUTONOMOUS_REPAIR_20261012.md):
+  only first passed at round 18, AHE at round 34. Neither passed the next
+  history-extended round; both reproduced their original success once with
+  identical inputs. The fixed AHE workflow was stopped without a full pass.
+  These are different workflows, not an isolated AHE treatment.
 - [2026-10-10 peer failure details versus repeated own failure details](REPAIR_PEER_FAILURES_20261010.md).
 - [2026-10-10 shared versus own failure feedback](REPAIR_SHARING_20261010.md).
 - [2026-10-08 E4B repair-feedback experiment](REPAIR_FEEDBACK_20261008.md).
@@ -155,6 +160,13 @@ outdated-review family. Its AHE citation failures (E4B 3/18; 31B 18/18) remain i
 the [evidence-answer report](EVALUATION_20261008.md#evidence-answers).
 
 ## Evaluation goals
+
+Future experiments on abstention, evidence requests and withdrawal use the
+[decision restraint evaluation method](DECISION_RESTRAINT_EVALUATION.md).
+It separates warranted restraint, unnecessary stopping, unsupported action and
+revision after contrary evidence, with explicit denominators and delivery-failure
+categories. It is a prospective rubric, not a new result or a rescore of the
+historical runs below.
 
 AHE supplies traceable evidence context. The intended downstream behavior is
 to act on supported information and expose missing evidence before guessing.
