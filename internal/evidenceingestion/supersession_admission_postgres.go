@@ -132,12 +132,34 @@ type supersessionTargetRecord struct {
 	WasBootstrapped     bool
 }
 
-func loadSupersessionTargetsForUpdate(
-	ctx context.Context,
-	tx sqlTx,
-	targetNodeIDs []string,
-) ([]supersessionTargetRecord, error) {
-	rows, err := tx.query(ctx, `
+func loadSupersessionTargets(ctx context.Context, tx sqlTx, targetNodeIDs []string, lockOnly bool) ([]supersessionTargetRecord, error) {
+	mode := "native"
+	if lockOnly {
+		mode = "helper"
+	}
+	return loadSupersessionTargetRecords(ctx, tx, targetNodeIDs, mode)
+}
+
+func loadSupersessionTargetRecords(ctx context.Context, tx sqlTx, targetNodeIDs []string, mode string) ([]supersessionTargetRecord, error) {
+	if mode == "helper" {
+		rows, err := tx.query(ctx, `SELECT canonical_supersession_lock_targets_v1($1::text[])`, targetNodeIDs)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var id string
+			if err = rows.Scan(&id); err != nil {
+				rows.Close()
+				return nil, err
+			}
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+	query := `
 		SELECT
 			n.canonical_node_id,
 			n.node_kind,
@@ -159,8 +181,11 @@ func loadSupersessionTargetsForUpdate(
 			ON m.canonical_node_id = n.canonical_node_id
 		WHERE n.canonical_node_id = ANY($1::text[])
 		ORDER BY n.canonical_node_id
-		FOR UPDATE OF n
-	`, targetNodeIDs)
+	`
+	if mode == "native" {
+		query += ` FOR UPDATE OF n`
+	}
+	rows, err := tx.query(ctx, query, targetNodeIDs)
 	if err != nil {
 		return nil, fmt.Errorf("loading supersession targets: %w", err)
 	}

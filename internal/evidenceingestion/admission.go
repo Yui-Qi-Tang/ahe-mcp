@@ -174,6 +174,10 @@ func getCanonicalEvidenceByID(ctx context.Context, db sqlQueryer, canonicalID st
 	}
 	result.OriginProposal = origin
 	if result.CanonicalID == origin.CanonicalRef {
+		result.SupersessionAdmission, err = loadSupersessionReviewReceipt(ctx, db, origin.ProposalOccurrenceID)
+		if err != nil {
+			return CanonicalQueryResult{}, err
+		}
 		result.EndpointAdmission, err = loadEndpointAdmissionReceipt(ctx, db, origin.ProposalOccurrenceID)
 		if err != nil {
 			return CanonicalQueryResult{}, err
@@ -234,12 +238,13 @@ type admissionDecision struct {
 }
 
 type admissionDecisionMetadata struct {
-	DecisionBy                           string
-	DecisionReason                       string
-	ReviewBindingContractVersion         string
-	Derivation                           *evidencegraph.DerivationRecord
-	DerivationParentEdges                map[string]string
-	DerivationOriginProposalOccurrenceID string
+	SupersessionReviewBindingContractVersion string
+	DecisionBy                               string
+	DecisionReason                           string
+	ReviewBindingContractVersion             string
+	Derivation                               *evidencegraph.DerivationRecord
+	DerivationParentEdges                    map[string]string
+	DerivationOriginProposalOccurrenceID     string
 }
 
 func buildCanonicalAdmissionMutation(proposal ProposalQueryResult, input AdmissionInput) (canonicalAdmissionMutation, error) {
@@ -1279,7 +1284,7 @@ func insertAdmissionDecision(
 	if metadata.ReviewBindingContractVersion != "" {
 		reviewBindingContractVersion = metadata.ReviewBindingContractVersion
 	}
-	_, err = tx.exec(ctx, `
+	query := `
 		INSERT INTO admission_decisions (
 			admission_decision_id,
 			proposal_occurrence_id,
@@ -1292,7 +1297,8 @@ func insertAdmissionDecision(
 			review_binding_contract_version
 		)
 		VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $9)
-	`,
+	`
+	args := []any{
 		decision.ID,
 		decision.ProposalOccurrence,
 		decision.Outcome,
@@ -1302,7 +1308,13 @@ func insertAdmissionDecision(
 		metadata.DecisionBy,
 		metadata.DecisionReason,
 		reviewBindingContractVersion,
-	)
+	}
+	if metadata.SupersessionReviewBindingContractVersion != "" {
+		query = strings.Replace(query, "review_binding_contract_version\n", "review_binding_contract_version,supersession_review_binding_contract_version\n", 1)
+		query = strings.Replace(query, "$8, $9)", "$8, $9, $10)", 1)
+		args = append(args, metadata.SupersessionReviewBindingContractVersion)
+	}
+	_, err = tx.exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("inserting admission decision %s: %w", decision.ID, err)
 	}

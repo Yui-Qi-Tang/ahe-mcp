@@ -25,7 +25,7 @@ func TestIntegrationEndpointUpgradeRetainsNativeHistory(t *testing.T) {
 	}
 	after := ordinaryFenceRows(t, ctx, pool)
 	for name, rows := range before {
-		if name != "schema_migrations" && !reflect.DeepEqual(rows, after[name]) {
+		if name != "schema_migrations" && !reflect.DeepEqual(upgradeHistoricalRows(t, name, rows), upgradeHistoricalRows(t, name, after[name])) {
 			t.Fatalf("upgrade changed %s", name)
 		}
 	}
@@ -38,7 +38,7 @@ func TestIntegrationEndpointUpgradeRetainsNativeHistory(t *testing.T) {
 		t.Fatal("historical native admission was relabeled as exact endpoint review")
 	}
 	status, err := VerifyCurrentInSchema(ctx, pool, schema)
-	if err != nil || status.AppliedMigrations != 55 {
+	if err != nil || status.AppliedMigrations != 56 {
 		t.Fatal("endpoint schema not current")
 	}
 	again, err := ApplyUpInSchema(ctx, pool, schema)

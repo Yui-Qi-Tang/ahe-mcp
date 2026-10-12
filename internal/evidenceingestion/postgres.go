@@ -1254,6 +1254,19 @@ func getProposalByOccurrenceID(ctx context.Context, db sqlQueryer, occurrenceID 
 		}
 		return ProposalQueryResult{}, fmt.Errorf("querying proposal occurrence: %w", err)
 	}
+	if result.AdmissionOutcome == admissionOutcomeRejected || result.AdmissionOutcome == admissionOutcomeAuditOnly {
+		var bound bool
+		if err := db.queryRow(ctx, `SELECT EXISTS (SELECT 1 FROM endpoint_disposition_review_bindings WHERE proposal_occurrence_id=$1)`, occurrenceID).Scan(&bound); err != nil {
+			return ProposalQueryResult{}, err
+		}
+		if bound {
+			review, err := loadEndpointDispositionReview(ctx, db, result, nil)
+			if err != nil {
+				return ProposalQueryResult{}, err
+			}
+			result.EndpointDisposition = review.Lifecycle.DispositionReceipt
+		}
+	}
 	return result, nil
 }
 

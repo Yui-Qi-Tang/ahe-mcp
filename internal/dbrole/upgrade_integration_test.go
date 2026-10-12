@@ -92,7 +92,7 @@ func TestIntegrationRoleUpgradePreservesIdentityAndEvidence(t *testing.T) {
 					t.Fatalf("upgrade through ApplyUp: changed=%t err=%v", changed, err)
 				}
 				status, err := migrations.VerifyCurrent(ctx, pool)
-				if err != nil || status.AppliedMigrations != 55 {
+				if err != nil || status.AppliedMigrations != 56 {
 					t.Fatalf("upgraded schema: %+v %v", status, err)
 				}
 			}
@@ -244,7 +244,7 @@ func roleUpgradeFixture(t *testing.T, baseline roleUpgradeBaseline) (context.Con
 	nonce := policyRandomHex(t, 8)
 	database := "ahe_role_upgrade_" + nonce
 	databaseID := pgx.Identifier{database}.Sanitize()
-	if _, err := admin.Exec(ctx, "CREATE DATABASE "+databaseID+" TEMPLATE template0"); err != nil {
+	if _, err := admin.Exec(ctx, "CREATE DATABASE "+databaseID+" TEMPLATE template0 ENCODING 'UTF8'"); err != nil {
 		t.Fatal(err)
 	}
 	var created []string

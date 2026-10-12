@@ -179,6 +179,7 @@ var requiredTablesByMigration = map[string][]string{
 		"canonical_supersession_members",
 		"canonical_supersession_replacement_targets",
 	},
+	"000056_reviewed_lifecycle_writers.up.sql":                     {"endpoint_disposition_review_bindings", "endpoint_review_requests", "supersession_review_bindings"},
 	"000049_evidence_ingestion_endpoint_review.up.sql":             {"canonical_endpoint_review_bindings"},
 	"000043_evidence_ingestion_source_run_request_identity.up.sql": {},
 	"000044_evidence_ingestion_ordinary_admission_integrity.up.sql": {
@@ -195,6 +196,7 @@ var requiredTablesByMigration = map[string][]string{
 }
 
 var requiredTables = []string{
+	"endpoint_disposition_review_bindings", "endpoint_review_requests", "supersession_review_bindings",
 	"consistency_watches", "consistency_watch_versions", "consistency_runs", "consistency_run_artifacts", "consistency_events",
 	"canonical_propositions",
 	"canonical_proposition_bindings",
@@ -296,6 +298,15 @@ type requiredAdmissionFunction struct {
 }
 
 var requiredAdmissionFunctions = []requiredAdmissionFunction{
+	{Name: "canonical_supersession_event_authority_trigger", Result: "trigger", SourceSHA256: "sha256:168d50f4b150ec886680ad5bdb50bdf2b2eeb2f0d684ccf50dbbaad230b8ae12", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "canonical_supersession_admission_events"},
+	{Name: "canonical_supersession_member_authority_trigger", Result: "trigger", SourceSHA256: "sha256:827898d1c32868b0189dd52c6a2419d2fe03a4a74de7ff7edad8f0bf5ce18572", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "canonical_supersession_members"},
+	{Name: "canonical_supersession_target_authority_trigger", Result: "trigger", SourceSHA256: "sha256:db6bf2e4da9fe32bc0f282a49cab34193af2ae22096935379346630efd4a5c07", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "canonical_supersession_replacement_targets"},
+	{Name: "canonical_supersession_proposal_authority_trigger", Result: "trigger", SourceSHA256: "sha256:6a003b71a26405ad5e1623b0f1d4bfa86ee3ac54cb427b7778ae38308fa9d047", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "proposal_occurrences"},
+	{Name: "source_claim_disposition_review_assert_v1", Arguments: "text", Result: "void", SourceSHA256: "sha256:6f707e370f3de9847b3f0baee2486acc06dfdb657ce711070b8dd72170b42187", OwnerTable: "source_claim_disposition_review_bindings"},
+	{Name: "reviewed_lifecycle_authority_trigger_v1", Arguments: "", Result: "trigger", SourceSHA256: "sha256:22ffe4b790aa4a7ccc239afcdf1abb59528f4dfd451ee1cd4836ea262961af9d", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "supersession_review_bindings"},
+	{Name: "canonical_supersession_lock_targets_v1", Arguments: "text[]", Result: "SETOF text", SourceSHA256: "sha256:444d7797e11f0befa95293d460c7961c0c5ad6ffc637a1ae74c4ad8353836a56", SecurityDefiner: true, SearchPath: "schema-pinned", OwnerTable: "canonical_graph_nodes"},
+	{Name: "endpoint_disposition_review_assert_v1", Arguments: "text", Result: "void", SourceSHA256: "sha256:0d75a791b37232719df90e39bca0daf1a3045926d20b529adc3cb61720719bb0", SecurityDefiner: false, SearchPath: "", OwnerTable: "endpoint_disposition_review_bindings"},
+	{Name: "supersession_review_assert_v1", Arguments: "text", Result: "void", SourceSHA256: "sha256:73dbcf800cb5dd044e8e165dd8610b8198afe0d0000b369923422b28ad37ecd5", SecurityDefiner: false, SearchPath: "", OwnerTable: "supersession_review_bindings"},
 	{Name: "canonical_endpoint_lock_nodes_v1", Arguments: "text[]", Result: "SETOF text", SourceSHA256: "sha256:259fcf09f1de0da6fc46c6abe80f74c8ec5a241d9ea0771fda9633dd438f6c94", SecurityDefiner: true, SearchPath: "schema-pinned", OwnerTable: "canonical_graph_nodes"},
 	{Name: "canonical_endpoint_review_assert_v1", Arguments: "text", Result: "void", SourceSHA256: "sha256:997e258171e9218effe54a5b8e27f8d0b1a8e680a2804ba47ffea2f5dfe83cbe", OwnerTable: "canonical_endpoint_review_bindings"},
 	{Name: "canonical_endpoint_review_trigger_v1", Result: "trigger", SourceSHA256: "sha256:042ca78cd16baf09303c69c5a1b3e2201f04d63d546d58e2a4e60172f152c013", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "canonical_endpoint_review_bindings"},
@@ -441,6 +452,18 @@ const (
 )
 
 var requiredAdmissionTriggers = []requiredAdmissionTrigger{
+	{Name: "endpoint_review_requests_append_only", Table: "endpoint_review_requests", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "endpoint_review_requests_forbid_truncate", Table: "endpoint_review_requests", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "endpoint_disposition_review_bindings_append_only", Table: "endpoint_disposition_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "endpoint_disposition_review_bindings_forbid_truncate", Table: "endpoint_disposition_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "supersession_review_bindings_append_only", Table: "supersession_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
+	{Name: "supersession_review_bindings_forbid_truncate", Table: "supersession_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
+	{Name: "admission_decisions_reviewed_lifecycle", Table: "admission_decisions", Function: "reviewed_lifecycle_authority_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "proposal_occurrences_reviewed_lifecycle", Table: "proposal_occurrences", Function: "reviewed_lifecycle_authority_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "endpoint_review_requests_reviewed_lifecycle", Table: "endpoint_review_requests", Function: "reviewed_lifecycle_authority_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "canonical_endpoint_review_bindings_reviewed_lifecycle", Table: "canonical_endpoint_review_bindings", Function: "reviewed_lifecycle_authority_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "endpoint_disposition_review_bindings_reviewed_lifecycle", Table: "endpoint_disposition_review_bindings", Function: "reviewed_lifecycle_authority_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
+	{Name: "supersession_review_bindings_reviewed_lifecycle", Table: "supersession_review_bindings", Function: "reviewed_lifecycle_authority_trigger_v1", TriggerType: afterRowInsertUpdateDelete, Constraint: true, Deferrable: true, InitiallyDeferred: true},
 	{Name: "canonical_endpoint_review_append_only", Table: "canonical_endpoint_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeRowUpdateDelete},
 	{Name: "canonical_endpoint_review_forbid_truncate", Table: "canonical_endpoint_review_bindings", Function: "canonical_admission_forbid_mutation_v1", TriggerType: beforeStatementTruncate},
 	{Name: "canonical_endpoint_review_authority", Table: "canonical_endpoint_review_bindings", Function: "canonical_endpoint_review_trigger_v1", TriggerType: 1 | 4, Constraint: true, Deferrable: true, InitiallyDeferred: true},
@@ -560,12 +583,13 @@ var requiredCanonicalSupersessionTriggers = []requiredCanonicalSupersessionTrigg
 }
 
 type requiredCanonicalSupersessionFunction struct {
-	Name         string
-	Arguments    string
-	Result       string
-	SourceSHA256 string
-	Volatility   string
-	Strict       bool
+	SecurityDefiner bool
+	Name            string
+	Arguments       string
+	Result          string
+	SourceSHA256    string
+	Volatility      string
+	Strict          bool
 }
 
 var requiredCanonicalSupersessionFunctions = []requiredCanonicalSupersessionFunction{
@@ -603,12 +627,12 @@ var requiredCanonicalSupersessionFunctions = []requiredCanonicalSupersessionFunc
 	{
 		Name:         "canonical_supersession_event_authority_trigger",
 		Result:       "trigger",
-		SourceSHA256: "sha256:41cd6f4752bc891c45b08fd2a08d0ff533904c8d79462b5927e6c9ef14fb5d0e",
+		SourceSHA256: "sha256:168d50f4b150ec886680ad5bdb50bdf2b2eeb2f0d684ccf50dbbaad230b8ae12", SecurityDefiner: true,
 	},
 	{
 		Name:         "canonical_supersession_member_authority_trigger",
 		Result:       "trigger",
-		SourceSHA256: "sha256:f36bec9612b5216112c34f95a90b74054456d2f1737d843cfc74c326f13604c6",
+		SourceSHA256: "sha256:827898d1c32868b0189dd52c6a2419d2fe03a4a74de7ff7edad8f0bf5ce18572", SecurityDefiner: true,
 	},
 	{
 		Name:         "canonical_supersession_head_authority_trigger",
@@ -628,7 +652,7 @@ var requiredCanonicalSupersessionFunctions = []requiredCanonicalSupersessionFunc
 	{
 		Name:         "canonical_supersession_proposal_authority_trigger",
 		Result:       "trigger",
-		SourceSHA256: "sha256:0e4bb17c57aa03549744e39815f97c6fab4359a9682d1d2afaa4730c38a51679",
+		SourceSHA256: "sha256:6a003b71a26405ad5e1623b0f1d4bfa86ee3ac54cb427b7778ae38308fa9d047", SecurityDefiner: true,
 	},
 	{
 		Name:         "canonical_supersession_edge_authority_trigger",
@@ -638,7 +662,7 @@ var requiredCanonicalSupersessionFunctions = []requiredCanonicalSupersessionFunc
 	{
 		Name:         "canonical_supersession_target_authority_trigger",
 		Result:       "trigger",
-		SourceSHA256: "sha256:23e8601a652a80f465415ba78e903f45ff6cc36cb5ab6772c2c86a9f278eaebc",
+		SourceSHA256: "sha256:db6bf2e4da9fe32bc0f282a49cab34193af2ae22096935379346630efd4a5c07", SecurityDefiner: true,
 	},
 }
 
@@ -858,6 +882,55 @@ var requiredCanonicalSupersessionConstraints = []requiredCanonicalSupersessionCo
 }
 
 var requiredAdmissionConstraints = []requiredCanonicalSupersessionConstraint{
+	{Table: "admission_decisions", Name: "admission_decisions_supersession_review_contract_ck", Type: "c", Definition: "CHECK (((supersession_review_binding_contract_version IS NULL) OR ((supersession_review_binding_contract_version = 'reviewed-supersession-admission/v1'::text) AND (outcome = 'admitted'::text) AND (review_binding_contract_version IS NULL) AND (disposition_review_binding_contract_version IS NULL))))"},
+	{Table: "admission_decisions", Name: "admission_decisions_disposition_review_contract_ck", Type: "c", Definition: "CHECK (((disposition_review_binding_contract_version IS NULL) OR ((disposition_review_binding_contract_version = ANY (ARRAY['reviewed-source-claim-disposition/v1'::text, 'reviewed-endpoint-disposition/v1'::text])) AND (review_binding_contract_version IS NULL) AND (outcome = ANY (ARRAY['rejected'::text, 'audit_only'::text])) AND (canonical_ref IS NULL) AND (raw_evidence_node_ids = '[]'::jsonb) AND (canonical_edge_ids = '[]'::jsonb))))"},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_reviewed_lifecycle", Type: "t", Definition: "TRIGGER DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_review_subject_not_null", Type: "n", Definition: "NOT NULL review_subject", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_display_payload_not_null", Type: "n", Definition: "NOT NULL display_payload", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_receipt_payload_not_null", Type: "n", Definition: "NOT NULL receipt_payload", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_pkey", Type: "p", Definition: "PRIMARY KEY (admission_decision_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_proposal_occurrence_id_key", Type: "u", Definition: "UNIQUE (proposal_occurrence_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_request_id_key", Type: "u", Definition: "UNIQUE (request_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_admission_decision_id_fkey", Type: "f", Definition: "FOREIGN KEY (admission_decision_id) REFERENCES admission_decisions(admission_decision_id) DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_binding_proposal_occurrence_id_fkey", Type: "f", Definition: "FOREIGN KEY (proposal_occurrence_id) REFERENCES proposal_occurrences(proposal_occurrence_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_b_request_id_proposal_occurren_fkey", Type: "f", Definition: "FOREIGN KEY (request_id, proposal_occurrence_id, admission_decision_id) REFERENCES endpoint_review_requests(request_id, proposal_occurrence_id, admission_decision_id) DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_event_id_fkey", Type: "f", Definition: "FOREIGN KEY (event_id) REFERENCES canonical_supersession_admission_events(event_id) DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_reviewed_lifecycle", Type: "t", Definition: "TRIGGER DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_request_id_check", Type: "c", Definition: "CHECK ((((octet_length(request_id) >= 1) AND (octet_length(request_id) <= 200)) AND (btrim(request_id) = request_id)))", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_request_id_not_null", Type: "n", Definition: "NOT NULL request_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_proposal_occurrence_id_not_null", Type: "n", Definition: "NOT NULL proposal_occurrence_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_admission_decision_id_not_null", Type: "n", Definition: "NOT NULL admission_decision_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_pkey", Type: "p", Definition: "PRIMARY KEY (request_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_proposal_occurrence_id_key", Type: "u", Definition: "UNIQUE (proposal_occurrence_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_admission_decision_id_key", Type: "u", Definition: "UNIQUE (admission_decision_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_request_id_proposal_occurrence_id__key", Type: "u", Definition: "UNIQUE (request_id, proposal_occurrence_id, admission_decision_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_proposal_occurrence_id_fkey", Type: "f", Definition: "FOREIGN KEY (proposal_occurrence_id) REFERENCES proposal_occurrences(proposal_occurrence_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_review_requests", Name: "endpoint_review_requests_admission_decision_id_fkey", Type: "f", Definition: "FOREIGN KEY (admission_decision_id) REFERENCES admission_decisions(admission_decision_id) DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
+	{Table: "canonical_endpoint_review_bindings", Name: "endpoint_admission_request_fk", Type: "f", Definition: "FOREIGN KEY (request_id, proposal_occurrence_id, admission_decision_id) REFERENCES endpoint_review_requests(request_id, proposal_occurrence_id, admission_decision_id) DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_review_subject_check", Type: "c", Definition: "CHECK ((review_subject ~ '^endpoint-review:sha256:[0-9a-f]{64}$'::text))", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_display_payload_check", Type: "c", Definition: "CHECK (((octet_length(display_payload) >= 1) AND (octet_length(display_payload) <= 1048576)))", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_receipt_payload_check", Type: "c", Definition: "CHECK (((jsonb_typeof(receipt_payload) = 'object'::text) AND (octet_length((receipt_payload)::text) <= 32768)))", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bind_admission_decision_id_not_null", Type: "n", Definition: "NOT NULL admission_decision_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bin_proposal_occurrence_id_not_null", Type: "n", Definition: "NOT NULL proposal_occurrence_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_request_id_not_null", Type: "n", Definition: "NOT NULL request_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_request_id_check", Type: "c", Definition: "CHECK ((((octet_length(request_id) >= 1) AND (octet_length(request_id) <= 200)) AND (btrim(request_id) = request_id)))", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_review_subject_check", Type: "c", Definition: "CHECK ((review_subject ~ '^supersession-review:sha256:[0-9a-f]{64}$'::text))", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_display_payload_check", Type: "c", Definition: "CHECK (((octet_length(display_payload) >= 1) AND (octet_length(display_payload) <= 1048576)))", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_receipt_payload_check", Type: "c", Definition: "CHECK (((jsonb_typeof(receipt_payload) = 'object'::text) AND (octet_length((receipt_payload)::text) <= 32768)))", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_admission_decision_id_not_null", Type: "n", Definition: "NOT NULL admission_decision_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_proposal_occurrence_id_not_null", Type: "n", Definition: "NOT NULL proposal_occurrence_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_request_id_not_null", Type: "n", Definition: "NOT NULL request_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_event_id_not_null", Type: "n", Definition: "NOT NULL event_id", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_review_subject_not_null", Type: "n", Definition: "NOT NULL review_subject", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_display_payload_not_null", Type: "n", Definition: "NOT NULL display_payload", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_receipt_payload_not_null", Type: "n", Definition: "NOT NULL receipt_payload", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_pkey", Type: "p", Definition: "PRIMARY KEY (admission_decision_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_proposal_occurrence_id_key", Type: "u", Definition: "UNIQUE (proposal_occurrence_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_request_id_key", Type: "u", Definition: "UNIQUE (request_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_event_id_key", Type: "u", Definition: "UNIQUE (event_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_admission_decision_id_fkey", Type: "f", Definition: "FOREIGN KEY (admission_decision_id) REFERENCES admission_decisions(admission_decision_id) DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
+	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_proposal_occurrence_id_fkey", Type: "f", Definition: "FOREIGN KEY (proposal_occurrence_id) REFERENCES proposal_occurrences(proposal_occurrence_id)", Deferrable: false, InitiallyDeferred: false},
+	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_reviewed_lifecycle", Type: "t", Definition: "TRIGGER DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
 	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_pkey", Type: "p", Definition: "PRIMARY KEY (admission_decision_id)"},
 	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_proposal_occurrence_id_key", Type: "u", Definition: "UNIQUE (proposal_occurrence_id)"},
 	{Table: "canonical_endpoint_review_bindings", Name: "canonical_endpoint_review_bindings_request_id_key", Type: "u", Definition: "UNIQUE (request_id)"},
@@ -1817,7 +1890,7 @@ func verifyCanonicalSupersessionSchemaObjects(ctx context.Context, db tableQuery
 			return fmt.Errorf("checking canonical supersession function %s: %w", required.Name, err)
 		}
 		if language != "plpgsql" || arguments != required.Arguments ||
-			result != required.Result || kind != "f" || security {
+			result != required.Result || kind != "f" || security != required.SecurityDefiner {
 			return fmt.Errorf("required canonical supersession function %s does not match its signature contract", required.Name)
 		}
 		if required.Volatility != "" &&

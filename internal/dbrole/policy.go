@@ -455,6 +455,9 @@ func policyStatements(
 	if manifest.Profile == ProfileEndpointReviewer {
 		statements = append(statements, "GRANT EXECUTE ON FUNCTION "+pgx.Identifier{schema, "canonical_endpoint_lock_nodes_v1"}.Sanitize()+"(text[]) TO "+roleID)
 	}
+	if manifest.Profile == ProfileSupersessionReviewer {
+		statements = append(statements, "GRANT EXECUTE ON FUNCTION "+pgx.Identifier{schema, "canonical_supersession_lock_targets_v1"}.Sanitize()+"(text[]) TO "+roleID)
+	}
 	return statements, nil
 }
 

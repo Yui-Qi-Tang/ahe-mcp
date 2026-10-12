@@ -803,6 +803,7 @@ type IngestResult struct {
 
 // ProposalQueryResult is the internal query result for a proposal occurrence.
 type ProposalQueryResult struct {
+	EndpointDisposition        *EndpointDispositionReceipt `json:"endpoint_disposition,omitempty"`
 	ProposalOccurrenceID       string
 	ProposalLocalID            string
 	ProposalFingerprint        string
@@ -1116,7 +1117,8 @@ type CanonicalGraphNode struct {
 
 // CanonicalQueryResult is the external-query shape for one admitted canonical node.
 type CanonicalQueryResult struct {
-	EndpointAdmission          *EndpointAdmissionReceipt `json:"endpoint_admission,omitempty"`
+	SupersessionAdmission      *SupersessionReviewReceipt `json:"supersession_admission,omitempty"`
+	EndpointAdmission          *EndpointAdmissionReceipt  `json:"endpoint_admission,omitempty"`
 	CanonicalID                string
 	NodeKind                   evidencegraph.CanonicalNodeKind
 	Payload                    evidencegraph.EvidencePayload

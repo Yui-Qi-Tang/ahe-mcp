@@ -24,8 +24,12 @@ func TestEndpointProfilesClosed(t *testing.T) {
 			t.Fatal(err)
 		}
 		tools := b.Tools()
-		if len(tools) != 2 {
-			t.Fatal("profile must have exactly two tools")
+		expected := 2
+		if profile == ProfileEndpointReviewer {
+			expected = 3
+		}
+		if len(tools) != expected {
+			t.Fatal("unexpected closed tool inventory")
 		}
 		for _, tool := range tools {
 			if tool.InputSchema["additionalProperties"] != false {
@@ -77,7 +81,7 @@ func TestEndpointProfileTableAndFunctionAuthority(t *testing.T) {
 		"canonical_derivations": {dbrole.PrivilegeInsert}, "canonical_derivation_parents": {dbrole.PrivilegeInsert},
 		"admission_decisions": {dbrole.PrivilegeInsert}, "canonical_ordinary_admission_manifests": {dbrole.PrivilegeInsert},
 		"canonical_ordinary_admission_node_bindings": {dbrole.PrivilegeInsert}, "canonical_ordinary_admission_edge_bindings": {dbrole.PrivilegeInsert},
-		"canonical_endpoint_review_bindings": {dbrole.PrivilegeInsert}, "proposal_occurrences": {dbrole.PrivilegeUpdate},
+		"endpoint_disposition_review_bindings": {dbrole.PrivilegeInsert}, "endpoint_review_requests": {dbrole.PrivilegeInsert}, "canonical_endpoint_review_bindings": {dbrole.PrivilegeInsert}, "proposal_occurrences": {dbrole.PrivilegeUpdate},
 	}
 	repositoryWrites := map[string][]dbrole.Privilege{}
 	for _, name := range []string{"source_blobs", "repository_snapshots", "source_file_snapshots", "repository_snapshot_intake_requests",

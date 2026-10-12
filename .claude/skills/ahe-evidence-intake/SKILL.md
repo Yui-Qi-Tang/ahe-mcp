@@ -42,7 +42,8 @@ extraction remain separate workflows.
 - If the source connector or required AHE tool is unavailable, stop and report
   the missing capability. Do not substitute a model-generated source.
 - The standard executable requires an explicitly selected `intake`,
-  `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer` or
+  `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer`,
+  `supersession-reviewer` or
   `repository-intake` profile; it has no default
   profile. Intake exposes
   `submit_external_source`, `get_extractor_input`, and `submit_extractor_output`.
@@ -50,7 +51,8 @@ extraction remain separate workflows.
   `admit_reviewed_source_claim`, and `record_reviewed_source_claim_disposition`.
   Independent implementation/reference review uses a separately authorized
   `relation-reviewer`, described below. Legacy admission/disposition,
-  generic derived-node, contradiction and Supersession writers are not enabled.
+  generic derived-node and contradiction writers are not enabled. Supersession
+  requires its separately provisioned exact-review profile.
   Exact-reviewed endpoints use the separately authorized profile below. Do not
   enable a legacy profile, change a launcher, or use direct SQL to work around
   a missing capability. See [installation scope](../../../INSTALL.md#bounded-external-intake-mcp-installation).
@@ -267,13 +269,39 @@ fixed root/identity and exact commit. It stores tracked Go bytes and parses
 pending proposals without running code, fetching data, calling models or
 activating a generation. Query returned IDs or `lifecycle_scope=all`.
 Neither repository access nor launcher reconfiguration is implied by relation
-review permission. Endpoint tools currently support approval only; source
-`reject`/`audit_only` tools are not a workaround for code endpoints.
+review permission. For a human `reject` or `audit_only`, call `record_reviewed_endpoint_disposition`
+with the unchanged `review`, `expected_subject`, human reason and stable
+`request_id`. This terminally records that occurrence and creates no canonical
+node or edge. Preserve the complete request for uncertain-outcome retry. Show
+`lifecycle` alongside the historical display; `exact_replay_only` requires the
+original decision, never a new review. Query its occurrence to read
+`endpoint_disposition`. Source disposition is not a workaround for endpoints.
+
+## Reviewed Fresh-v2 Supersession
+
+Use only a separately provisioned `supersession-reviewer`. Keep the new external
+source claim pending and select its exact occurrence, complete 1–64 older
+external source-claim targets and six-field source-object/slot basis. Call
+`get_supersession_review`; show its complete native display, exact new/old
+quotes and source revisions, coverage/comparison limits, full target set and
+CAS head. The stable semantic slot and replacement meaning require human review;
+revision order does not establish them. After explicit approval and human reason,
+copy the returned `display.request` as `review`, `subject` as `expected_subject`,
+and send `admit_reviewed_supersession` with `decision=approved` and stable
+`request_id`. Launcher-owned reviewer identity is not a tool argument.
+
+Read the returned receipt and Query currentness with its lineage key. The entire
+replacement and receipt commit together. Preserve the original request for
+uncertain outcomes; exact replay remains available after later head advancement.
+A head/subject conflict requires a fresh review and new decision. An
+`exact_replay_only` display is historical material. Already ordinarily admitted
+new claims, repository code and derived endpoints are outside fresh-v2. Never
+substitute legacy tools, generic edges, fake source revisions or SQL.
 
 ## Relations and Repository Extraction Are Separate
 
 Source intake/review does not itself expose endpoint admission. Generic derived
-admission, contradiction, Supersession and repository activation remain disabled. If the task
+admission, contradiction and repository activation remain disabled. If the task
 needs these capabilities, report the unavailable workflow and stop. Do not
 substitute an ordinary statement, generic edge, fake replacement node, legacy
 profile, or direct SQL. Provider revision order alone does not prove semantic

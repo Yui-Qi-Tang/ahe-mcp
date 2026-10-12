@@ -168,14 +168,15 @@ type authorityProcessLogin struct {
 }
 
 type authorityProcessFixture struct {
-	endpoints  authorityProcessLogin
-	repository authorityProcessLogin
-	relations  authorityProcessLogin
-	schema     string
-	pool       *pgxpool.Pool
-	query      authorityProcessLogin
-	intake     authorityProcessLogin
-	reviewer   authorityProcessLogin
+	supersession authorityProcessLogin
+	endpoints    authorityProcessLogin
+	repository   authorityProcessLogin
+	relations    authorityProcessLogin
+	schema       string
+	pool         *pgxpool.Pool
+	query        authorityProcessLogin
+	intake       authorityProcessLogin
+	reviewer     authorityProcessLogin
 }
 
 func newAuthorityProcessFixture(t *testing.T, ctx context.Context, databaseURL string, extraProfiles ...dbrole.Profile) authorityProcessFixture {
@@ -267,6 +268,8 @@ func newAuthorityProcessFixture(t *testing.T, ctx context.Context, databaseURL s
 			fixture.intake = binding
 		} else if profile == dbrole.ProfileRelationReviewer {
 			fixture.relations = binding
+		} else if profile == dbrole.ProfileSupersessionReviewer {
+			fixture.supersession = binding
 		} else if profile == dbrole.ProfileEndpointReviewer {
 			fixture.endpoints = binding
 		} else if profile == dbrole.ProfileRepositoryIntake {

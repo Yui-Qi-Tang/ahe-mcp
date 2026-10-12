@@ -69,7 +69,7 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 	endpoints := start(f.endpoints, "endpoint-reviewer", "")
 	relations := start(f.relations, "relation-reviewer", "")
 	query := start(f.query, "query", "")
-	endpoints.assertTools(t, []string{mcpendpoints.ToolReview, mcpendpoints.ToolAdmit})
+	endpoints.assertTools(t, []string{mcpendpoints.ToolReview, mcpendpoints.ToolAdmit, mcpendpoints.ToolDisposition})
 	for _, name := range []string{"admit_pending_proposal", "submit_external_source", "admit_reviewed_implements", "admit_reviewed_source_claim", "capture_repository_snapshot"} {
 		endpoints.assertDenied(t, name, map[string]any{})
 	}

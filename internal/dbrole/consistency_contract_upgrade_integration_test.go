@@ -28,7 +28,7 @@ func TestIntegrationConsistencyContractUpgradeRetainsRoles(t *testing.T) {
 	if baseline.SourceCommit != "2cf9476528aaba4edab92f0a857e5c1a605a4f79" || len(baseline.MigrationChecksums) != 53 {
 		t.Fatal("unexpected baseline")
 	}
-	ctx, _, pool, actors := roleUpgradeFixture(t, baseline)
+	ctx, owner, pool, actors := roleUpgradeFixture(t, baseline)
 	before := roleUpgradeIdentities(t, ctx, pool, actors)
 	in := evidenceingestion.ConsistencyWatchInput{WatchID: "preserved-watch", RequestID: "preserved-config", EngineID: "fixed-external-engine", Request: evidenceingestion.ConsistencyRequest{Scope: evidenceingestion.ConsistencyScope{Namespace: "fixed", ScopeRef: "scope"}, RuleVersion: "1"}}
 	if _, err := evidenceingestion.RegisterConsistencyWatch(ctx, pool, in); err != nil {
@@ -43,6 +43,21 @@ func TestIntegrationConsistencyContractUpgradeRetainsRoles(t *testing.T) {
 	}
 	if _, err := migrations.VerifyCurrent(ctx, pool); err != nil {
 		t.Fatal(err)
+	}
+	// Schema upgrade alone must not refresh old runtime credentials. Check every
+	// LOGIN before upgrading any group, including the two shared query logins.
+	for _, actor := range actors {
+		if actor.Group != "" {
+			roleUpgradeRejectOldPolicy(t, ctx, actor, baseline.Manifests[actor.Profile])
+		}
+	}
+	for _, actor := range actors {
+		if actor.Group == "" {
+			continue
+		}
+		if _, err := UpgradeRuntime(ctx, owner, ProvisionInput{Database: actor.Config.ConnConfig.Database, Role: actor.Group, SessionUser: actor.Login, Schema: "evidence", Profile: actor.Profile}); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if !reflect.DeepEqual(before, roleUpgradeIdentities(t, ctx, pool, actors)) {
 		t.Fatal("upgrade changed existing identities")

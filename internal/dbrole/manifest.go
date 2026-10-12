@@ -10,7 +10,7 @@ import (
 )
 
 // PolicyVersion identifies the native ordinary/review authority policy, not Core's policy.
-const PolicyVersion = "ahe-mcp-database-role-policy/v7"
+const PolicyVersion = "ahe-mcp-database-role-policy/v8"
 
 // Profile identifies an implemented database capability set.
 type Profile string
@@ -32,6 +32,7 @@ const ProfileSourceClaimReviewer Profile = "source-claim-reviewer"
 // ProfileRelationReviewer only appends independently reviewed relation receipts and edges.
 const ProfileRelationReviewer Profile = "relation-reviewer"
 const ProfileEndpointReviewer Profile = "endpoint-reviewer"
+const ProfileSupersessionReviewer Profile = "supersession-reviewer"
 const ProfileRepositoryIntake Profile = "repository-intake"
 
 // ProfileCoreRecords appends external identity, checks and consistency history; it cannot admit evidence.
@@ -121,6 +122,8 @@ var queryTables = []string{
 	"detective_workspace_registration_requests",
 	"detective_workspace_sources",
 	"detective_workspaces",
+	"endpoint_disposition_review_bindings",
+	"endpoint_review_requests",
 	"evidence_ingestion_request_serializations",
 	"external_check_records",
 	"external_check_representation_links",
@@ -169,11 +172,12 @@ var queryTables = []string{
 	"source_intake_requests",
 	"source_snapshots",
 	"span_catalog_entries",
+	"supersession_review_bindings",
 }
 
 // ProfileNames returns implemented profile names only.
 func ProfileNames() []string {
-	return []string{string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer), string(ProfileRelationReviewer), string(ProfileEndpointReviewer), string(ProfileRepositoryIntake), string(ProfileCoreRecords)}
+	return []string{string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer), string(ProfileRelationReviewer), string(ProfileEndpointReviewer), string(ProfileRepositoryIntake), string(ProfileCoreRecords), string(ProfileSupersessionReviewer)}
 }
 
 // ParseProfile accepts an exact implemented profile without normalization.
@@ -204,9 +208,16 @@ func BuildManifest(profile Profile) (Manifest, error) {
 			switch table {
 			case "canonical_graph_nodes", "canonical_graph_edges", "admission_decisions", "canonical_ordinary_admission_manifests",
 				"canonical_ordinary_admission_node_bindings", "canonical_ordinary_admission_edge_bindings",
-				"canonical_derivations", "canonical_derivation_parents", "canonical_endpoint_review_bindings":
+				"canonical_derivations", "canonical_derivation_parents", "canonical_endpoint_review_bindings", "endpoint_disposition_review_bindings", "endpoint_review_requests":
 				privileges = append(privileges, PrivilegeInsert)
 			case "proposal_occurrences":
+				privileges = append(privileges, PrivilegeUpdate)
+			}
+		} else if profile == ProfileSupersessionReviewer {
+			switch table {
+			case "canonical_graph_nodes", "canonical_graph_edges", "admission_decisions", "canonical_supersession_lineages", "canonical_supersession_admission_events", "canonical_supersession_members", "canonical_supersession_replacement_targets", "supersession_review_bindings":
+				privileges = append(privileges, PrivilegeInsert)
+			case "proposal_occurrences", "canonical_supersession_admission_head":
 				privileges = append(privileges, PrivilegeUpdate)
 			}
 		} else if profile == ProfileRepositoryIntake {
@@ -233,6 +244,9 @@ func BuildManifest(profile Profile) (Manifest, error) {
 	manifest := Manifest{SchemaVersion: PolicyVersion, Profile: profile, Tables: rules, TrustedRawDML: profile != ProfileQuery}
 	if profile == ProfileEndpointReviewer {
 		manifest.FunctionExecute = []string{"canonical_endpoint_lock_nodes_v1(text[])"}
+	}
+	if profile == ProfileSupersessionReviewer {
+		manifest.FunctionExecute = []string{"canonical_supersession_lock_targets_v1(text[])"}
 	}
 	return manifest, nil
 }

@@ -60,200 +60,205 @@ func admitPendingSupersession(
 			if _, err := tx.exec(ctx, `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`); err != nil {
 				return fmt.Errorf("configuring supersession admission transaction: %w", err)
 			}
-			proposal, err := loadProposalForAdmission(ctx, tx, input.ProposalOccurrenceID)
-			if err != nil {
-				return err
-			}
-			switch proposal.AdmissionOutcome {
-			case admissionOutcomePending:
-			case admissionOutcomeAdmitted:
-				replay, err := replaySupersessionAdmission(ctx, tx, proposal, input, basis)
-				if err != nil {
-					return err
-				}
-				result = replay
-				return nil
-			case admissionOutcomeRejected, admissionOutcomeAuditOnly:
-				return newDomainError(
-					ErrorAdmissionStateConflict,
-					"proposal %s outcome is %s",
-					proposal.ProposalOccurrenceID,
-					proposal.AdmissionOutcome,
-				)
-			default:
-				return newDomainError(
-					ErrorAdmissionStateConflict,
-					"proposal %s has unknown admission outcome %q",
-					proposal.ProposalOccurrenceID,
-					proposal.AdmissionOutcome,
-				)
-			}
-
-			if proposal.ExtractionAttemptStatus != attemptStatusSucceeded {
-				return newDomainError(
-					ErrorAdmissionStateConflict,
-					"proposal %s attempt status is %s",
-					proposal.ProposalOccurrenceID,
-					proposal.ExtractionAttemptStatus,
-				)
-			}
-			if proposal.ProposalKind != ProposalKindStatement {
-				return newDomainError(
-					ErrorUnsupportedAdmission,
-					"proposal kind %q is not supported by supersession admission",
-					proposal.ProposalKind,
-				)
-			}
-			if err := validateProposalSupersessionBasis(proposal, basis); err != nil {
-				return err
-			}
-
-			mutation, err := buildCanonicalAdmissionMutation(proposal, AdmissionInput{
-				ProposalOccurrenceID: proposal.ProposalOccurrenceID,
-				DecisionBy:           input.DecisionBy,
-				DecisionReason:       input.DecisionReason,
-			})
-			if err != nil {
-				return err
-			}
-			if len(mutation.nodes) == 0 || mutation.nodes[0].Kind != evidencegraph.CanonicalSourceClaim {
-				return newDomainError(ErrorSupersessionInvariant, "replacement admission did not build a source_claim")
-			}
-			replacementNode := mutation.nodes[0]
-			request, err := evidencesupersession.NewRequestPayloadV2(
-				proposal.ProposalOccurrenceID,
-				replacementNode.ID,
-				basis,
-				input.TargetNodeIDs,
-				input.ExpectedRevision,
-				input.ExpectedHeadEventID,
-			)
-			if err != nil {
-				return supersessionInputError(err)
-			}
-			decisionPayload, err := evidencesupersession.NewDecisionPayloadV2(
-				proposal.ProposalOccurrenceID,
-				replacementNode.ID,
-				input.DecisionBy,
-				input.DecisionReason,
-			)
-			if err != nil {
-				return supersessionInputError(err)
-			}
-
-			head, err := loadCanonicalSupersessionHead(ctx, tx, true)
-			if err != nil {
-				return err
-			}
-			if head.Revision != input.ExpectedRevision || head.HeadEventID != input.ExpectedHeadEventID {
-				return newDomainError(
-					ErrorSupersessionHeadConflict,
-					"supersession head is revision=%d event=%q, expected revision=%d event=%q",
-					head.Revision,
-					head.HeadEventID,
-					input.ExpectedRevision,
-					input.ExpectedHeadEventID,
-				)
-			}
-			if err := requireFreshSupersessionReplacement(ctx, tx, replacementNode.ID); err != nil {
-				return err
-			}
-			if err := ensureSupersessionLineage(ctx, tx, request.LineageKey, basis); err != nil {
-				return err
-			}
-			targets, err := loadSupersessionTargetsForUpdate(ctx, tx, input.TargetNodeIDs)
-			if err != nil {
-				return err
-			}
-			bootstrappedTargetIDs, err := validateSupersessionTargets(targets, input.TargetNodeIDs, request.LineageKey, basis)
-			if err != nil {
-				return err
-			}
-
-			event, err := evidencesupersession.NewAtomicReplacementEventV2(
-				request,
-				decisionPayload,
-				mutation.decision.ID,
-				bootstrappedTargetIDs,
-			)
-			if err != nil {
-				return fmt.Errorf("building supersession admission event: %w", err)
-			}
-			eventID, err := event.ID()
-			if err != nil {
-				return fmt.Errorf("identifying supersession admission event: %w", err)
-			}
-
-			mutation.nodes[0].Provenance.ReviewRef = mutation.decision.ID
-			for index := range mutation.edges {
-				mutation.edges[index].Provenance.ReviewRef = mutation.decision.ID
-			}
-			supersedesEdges := buildSupersedesEdges(proposal, replacementNode.ID, input.TargetNodeIDs, mutation.decision.ID, eventID)
-			supersedesEdgeIDs := make([]string, 0, len(supersedesEdges))
-			for _, edge := range supersedesEdges {
-				supersedesEdgeIDs = append(supersedesEdgeIDs, edge.ID)
-			}
-			mutation.edges = append(mutation.edges, supersedesEdges...)
-			mutation.result.CanonicalEdgeIDs = append(mutation.result.CanonicalEdgeIDs, supersedesEdgeIDs...)
-			mutation.decision.CanonicalEdgeIDs = append(mutation.decision.CanonicalEdgeIDs, supersedesEdgeIDs...)
-
-			if err := insertSupersessionCanonicalMutation(ctx, tx, mutation, len(supersedesEdges)); err != nil {
-				return err
-			}
-			if err := insertAdmissionDecision(ctx, tx, mutation.decision, admissionDecisionMetadata{
-				DecisionBy:     input.DecisionBy,
-				DecisionReason: input.DecisionReason,
-			}); err != nil {
-				return err
-			}
-			if err := insertSupersessionAdmissionEvent(ctx, tx, eventID, event); err != nil {
-				return err
-			}
-			if err := insertSupersessionMember(ctx, tx, replacementNode.ID, request.LineageKey, eventID, false); err != nil {
-				return err
-			}
-			for _, targetID := range bootstrappedTargetIDs {
-				if err := insertSupersessionMember(ctx, tx, targetID, request.LineageKey, eventID, true); err != nil {
-					return err
-				}
-			}
-			if err := insertSupersessionReplacementTargets(
-				ctx,
-				tx,
-				eventID,
-				request.LineageKey,
-				replacementNode.ID,
-				input.TargetNodeIDs,
-				supersedesEdgeIDs,
-			); err != nil {
-				return err
-			}
-			if err := advanceCanonicalSupersessionHead(ctx, tx, head, eventID, event.Revision); err != nil {
-				return err
-			}
-			if err := markProposalAdmitted(ctx, tx, proposal.ProposalOccurrenceID, replacementNode.ID); err != nil {
-				return err
-			}
-
-			result = supersessionAdmissionResult(
-				mutation.result,
-				request.LineageKey,
-				input.TargetNodeIDs,
-				bootstrappedTargetIDs,
-				supersedesEdgeIDs,
-				eventID,
-				event,
-				input.DecisionBy,
-				input.DecisionReason,
-				false,
-			)
-			return nil
+			return admitPendingSupersessionInTx(ctx, tx, input, basis, false, &result)
 		})
 	})
 	if err != nil {
 		return SupersessionAdmissionResult{}, err
 	}
 	return result, nil
+}
+
+func admitPendingSupersessionInTx(ctx context.Context, tx sqlTx, input SupersessionAdmissionInput, basis evidencesupersession.Basis, lockOnly bool, result *SupersessionAdmissionResult) error {
+	proposal, err := loadProposalForAdmission(ctx, tx, input.ProposalOccurrenceID)
+	if err != nil {
+		return err
+	}
+	switch proposal.AdmissionOutcome {
+	case admissionOutcomePending:
+	case admissionOutcomeAdmitted:
+		replay, err := replaySupersessionAdmission(ctx, tx, proposal, input, basis)
+		if err != nil {
+			return err
+		}
+		*result = replay
+		return nil
+	case admissionOutcomeRejected, admissionOutcomeAuditOnly:
+		return newDomainError(
+			ErrorAdmissionStateConflict,
+			"proposal %s outcome is %s",
+			proposal.ProposalOccurrenceID,
+			proposal.AdmissionOutcome,
+		)
+	default:
+		return newDomainError(
+			ErrorAdmissionStateConflict,
+			"proposal %s has unknown admission outcome %q",
+			proposal.ProposalOccurrenceID,
+			proposal.AdmissionOutcome,
+		)
+	}
+
+	if proposal.ExtractionAttemptStatus != attemptStatusSucceeded {
+		return newDomainError(
+			ErrorAdmissionStateConflict,
+			"proposal %s attempt status is %s",
+			proposal.ProposalOccurrenceID,
+			proposal.ExtractionAttemptStatus,
+		)
+	}
+	if proposal.ProposalKind != ProposalKindStatement {
+		return newDomainError(
+			ErrorUnsupportedAdmission,
+			"proposal kind %q is not supported by supersession admission",
+			proposal.ProposalKind,
+		)
+	}
+	if err := validateProposalSupersessionBasis(proposal, basis); err != nil {
+		return err
+	}
+
+	mutation, err := buildCanonicalAdmissionMutation(proposal, AdmissionInput{
+		ProposalOccurrenceID: proposal.ProposalOccurrenceID,
+		DecisionBy:           input.DecisionBy,
+		DecisionReason:       input.DecisionReason,
+	})
+	if err != nil {
+		return err
+	}
+	if len(mutation.nodes) == 0 || mutation.nodes[0].Kind != evidencegraph.CanonicalSourceClaim {
+		return newDomainError(ErrorSupersessionInvariant, "replacement admission did not build a source_claim")
+	}
+	replacementNode := mutation.nodes[0]
+	request, err := evidencesupersession.NewRequestPayloadV2(
+		proposal.ProposalOccurrenceID,
+		replacementNode.ID,
+		basis,
+		input.TargetNodeIDs,
+		input.ExpectedRevision,
+		input.ExpectedHeadEventID,
+	)
+	if err != nil {
+		return supersessionInputError(err)
+	}
+	decisionPayload, err := evidencesupersession.NewDecisionPayloadV2(
+		proposal.ProposalOccurrenceID,
+		replacementNode.ID,
+		input.DecisionBy,
+		input.DecisionReason,
+	)
+	if err != nil {
+		return supersessionInputError(err)
+	}
+
+	head, err := loadCanonicalSupersessionHead(ctx, tx, true)
+	if err != nil {
+		return err
+	}
+	if head.Revision != input.ExpectedRevision || head.HeadEventID != input.ExpectedHeadEventID {
+		return newDomainError(
+			ErrorSupersessionHeadConflict,
+			"supersession head is revision=%d event=%q, expected revision=%d event=%q",
+			head.Revision,
+			head.HeadEventID,
+			input.ExpectedRevision,
+			input.ExpectedHeadEventID,
+		)
+	}
+	if err := requireFreshSupersessionReplacement(ctx, tx, replacementNode.ID); err != nil {
+		return err
+	}
+	if err := ensureSupersessionLineage(ctx, tx, request.LineageKey, basis); err != nil {
+		return err
+	}
+	targets, err := loadSupersessionTargets(ctx, tx, input.TargetNodeIDs, lockOnly)
+	if err != nil {
+		return err
+	}
+	bootstrappedTargetIDs, err := validateSupersessionTargets(targets, input.TargetNodeIDs, request.LineageKey, basis)
+	if err != nil {
+		return err
+	}
+
+	event, err := evidencesupersession.NewAtomicReplacementEventV2(
+		request,
+		decisionPayload,
+		mutation.decision.ID,
+		bootstrappedTargetIDs,
+	)
+	if err != nil {
+		return fmt.Errorf("building supersession admission event: %w", err)
+	}
+	eventID, err := event.ID()
+	if err != nil {
+		return fmt.Errorf("identifying supersession admission event: %w", err)
+	}
+
+	mutation.nodes[0].Provenance.ReviewRef = mutation.decision.ID
+	for index := range mutation.edges {
+		mutation.edges[index].Provenance.ReviewRef = mutation.decision.ID
+	}
+	supersedesEdges := buildSupersedesEdges(proposal, replacementNode.ID, input.TargetNodeIDs, mutation.decision.ID, eventID)
+	supersedesEdgeIDs := make([]string, 0, len(supersedesEdges))
+	for _, edge := range supersedesEdges {
+		supersedesEdgeIDs = append(supersedesEdgeIDs, edge.ID)
+	}
+	mutation.edges = append(mutation.edges, supersedesEdges...)
+	mutation.result.CanonicalEdgeIDs = append(mutation.result.CanonicalEdgeIDs, supersedesEdgeIDs...)
+	mutation.decision.CanonicalEdgeIDs = append(mutation.decision.CanonicalEdgeIDs, supersedesEdgeIDs...)
+
+	if err := insertSupersessionCanonicalMutation(ctx, tx, mutation, len(supersedesEdges)); err != nil {
+		return err
+	}
+	metadata := admissionDecisionMetadata{DecisionBy: input.DecisionBy, DecisionReason: input.DecisionReason}
+	if lockOnly {
+		metadata.SupersessionReviewBindingContractVersion = ReviewedSupersessionAdmissionV1
+	}
+	if err := insertAdmissionDecision(ctx, tx, mutation.decision, metadata); err != nil {
+		return err
+	}
+	if err := insertSupersessionAdmissionEvent(ctx, tx, eventID, event); err != nil {
+		return err
+	}
+	if err := insertSupersessionMember(ctx, tx, replacementNode.ID, request.LineageKey, eventID, false); err != nil {
+		return err
+	}
+	for _, targetID := range bootstrappedTargetIDs {
+		if err := insertSupersessionMember(ctx, tx, targetID, request.LineageKey, eventID, true); err != nil {
+			return err
+		}
+	}
+	if err := insertSupersessionReplacementTargets(
+		ctx,
+		tx,
+		eventID,
+		request.LineageKey,
+		replacementNode.ID,
+		input.TargetNodeIDs,
+		supersedesEdgeIDs,
+	); err != nil {
+		return err
+	}
+	if err := advanceCanonicalSupersessionHead(ctx, tx, head, eventID, event.Revision); err != nil {
+		return err
+	}
+	if err := markProposalAdmitted(ctx, tx, proposal.ProposalOccurrenceID, replacementNode.ID); err != nil {
+		return err
+	}
+
+	*result = supersessionAdmissionResult(
+		mutation.result,
+		request.LineageKey,
+		input.TargetNodeIDs,
+		bootstrappedTargetIDs,
+		supersedesEdgeIDs,
+		eventID,
+		event,
+		input.DecisionBy,
+		input.DecisionReason,
+		false,
+	)
+	return nil
 }
 
 func runSupersessionAdmissionAttempts(run func() error) error {

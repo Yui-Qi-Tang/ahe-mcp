@@ -449,6 +449,8 @@ type ListEvidenceNeighborsResponse struct {
 
 // GetEvidenceRecordResponse preserves proposal lifecycle and provenance metadata.
 type GetEvidenceRecordResponse struct {
+	SupersessionAdmission      *evidenceingestion.SupersessionReviewReceipt   `json:"supersession_admission,omitempty"`
+	EndpointDisposition        *evidenceingestion.EndpointDispositionReceipt  `json:"endpoint_disposition,omitempty"`
 	EndpointAdmission          *evidenceingestion.EndpointAdmissionReceipt    `json:"endpoint_admission,omitempty"`
 	RecordRef                  RecordRef                                      `json:"record_ref"`
 	ProposalLocalID            string                                         `json:"proposal_local_id,omitempty"`
@@ -1487,6 +1489,7 @@ func mapProposalResult(result evidenceingestion.ProposalQueryResult) GetEvidence
 		canonicalRef = &value
 	}
 	return GetEvidenceRecordResponse{
+		EndpointDisposition: result.EndpointDisposition,
 		RecordRef: RecordRef{
 			Kind: "proposal",
 			ID:   result.ProposalOccurrenceID,
@@ -1525,7 +1528,8 @@ func mapCanonicalResult(result evidenceingestion.CanonicalQueryResult) GetEviden
 	origin := result.OriginProposal
 	canonicalRef := result.CanonicalID
 	return GetEvidenceRecordResponse{
-		EndpointAdmission: result.EndpointAdmission,
+		SupersessionAdmission: result.SupersessionAdmission,
+		EndpointAdmission:     result.EndpointAdmission,
 		RecordRef: RecordRef{
 			Kind: "canonical_evidence",
 			ID:   result.CanonicalID,

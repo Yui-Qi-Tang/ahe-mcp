@@ -116,3 +116,13 @@ source grounding, completeness and repair success are distinct checks.
 For a request to design, run or score an experiment, also read
 [the experiment protocol](references/experiments.md). Ordinary evidence lookup
 does not start an experiment or require loading that protocol.
+
+## Reviewed lifecycle readback
+
+For a declined endpoint, read `get_evidence_record` by exact proposal occurrence.
+Its `endpoint_disposition` preserves the native review subject, request ID,
+reviewer, reason and `rejected`/`audit_only` outcome without canonical evidence.
+A terminal historical display is not a pending review. For reviewed fresh-v2
+Supersession, read `supersession_admission` by its canonical ID and use Query currentness
+with its observed lineage key. Superseded source claims remain admitted;
+currentness is snapshot-bound and does not prove provider freshness or truth.

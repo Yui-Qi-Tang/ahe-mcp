@@ -56,10 +56,12 @@
   proposal lifecycle. Supersession uses a fresh external pending proposal plus
   its dedicated atomic admission and read-only currentness tools.
 - Standard ingestion profiles are separately authorized `core-records`, `intake`,
-  `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer` and
+  `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer`,
+  `supersession-reviewer` and
   `relation-reviewer`. Bounded exact-reviewed derived/code endpoints use the
-  endpoint profile; generic derived admission, contradiction, Supersession
-  and repository activation writers remain internal contracts, not enabled
+  endpoint profile. Exact fresh-v2 replacement uses the separate supersession
+  reviewer; generic derived admission, contradiction and repository activation
+  writers remain internal contracts, not enabled
   standard MCP tools. Their read-only tools do not authorize these writes.
   If the required tool is absent, stop and report the unavailable capability;
   never enable a legacy profile or substitute direct SQL to follow this guide.
@@ -119,6 +121,31 @@ markers already present in exact source bytes, not arbitrary URLs or inferred
 links. Do not manufacture markers. Relation reject/audit_only is a non-write
 human outcome, not a tool in this profile. See [setup and scope](INSTALL.md#independent-relation-reviewer).
 
+## Reviewed Supersession and Endpoint Disposition
+
+A separately provisioned `supersession-reviewer` exposes `get_supersession_review`
+and `admit_reviewed_supersession`. Keep the replacement external source claim
+pending. Select its exact occurrence, complete 1–64 older source-claim targets
+and six-field basis. Display the complete native review with retained old/new
+quotes, revisions, version comparison limitations and CAS coordinate. After
+explicit human approval and reason, copy `display.request` as `review` and
+`subject` as `expected_subject`, with `decision=approved` and a stable request ID.
+The launcher supplies reviewer identity. Claim, edges, event, head and receipt
+commit together. Head or subject conflicts need a new review and decision;
+uncertain outcomes require the unchanged original request. `exact_replay_only`
+is historical material and permits only the original retry. Read currentness
+with the returned lineage key; it does not prove provider freshness or truth.
+Repository code, derived endpoints and already ordinarily admitted replacements
+are outside fresh-v2. Never relabel an endpoint or manufacture a revision.
+
+Endpoint review supports approved admission or explicit `reject`/`audit_only`
+through `record_reviewed_endpoint_disposition`, with the same unchanged review,
+subject, request ID and human reason. A disposition is terminal for that
+occurrence and creates no canonical evidence. Show lifecycle alongside the
+historical display; Query reads `endpoint_disposition` using the occurrence ID.
+Admission and disposition share request-ID authority. Changed decisions are not
+retries, and source disposition tools cannot substitute for endpoint review.
+
 ## Internal Relation Contracts (Not Standard MCP Operations)
 
 The following describes retained domain behavior, not an executable intake
@@ -137,17 +164,6 @@ report the missing capability rather than changing profiles or using SQL.
   Changed rationale, producer metadata, or session reference conflicts rather
   than creating a new proposal version. Do not manufacture replacement nodes
   to bypass this limitation.
-- For an explicit version replacement, keep the new external-source proposal
-  pending. Read it, every older target, and `get_canonical_supersession_head`.
-  Show exact quotes, source titles/locations, provider revision, version
-  differences, coverage/limitations, the complete target set, six-field
-  source-object/slot basis, and full head revision/event ID coordinate.
-- Call `admit_pending_supersession` only after explicit approval. Rejected or
-  `audit_only` uses `record_pending_proposal_disposition`. AHE atomically creates
-  the fresh claim, exact `new -> old` edges, lineage event, and next head.
-- Read back `get_canonical_supersession_currentness` with the returned lineage
-  key. Never supply or infer completeness, members, winner, status, head, or
-  hashes. Snapshot currentness is not provider freshness or global truth.
 - Do not infer replacement or stable slot identity from revision order or
   repository source-generation lifecycle. See `docs/SYSTEM_DESIGN.md#graph-relations-and-versions`.
 - Never place credentials, tokens, DSNs, private conversation text, or other

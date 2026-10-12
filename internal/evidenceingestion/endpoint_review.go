@@ -45,10 +45,11 @@ type EndpointReview struct {
 
 // EndpointReviewLifecycle distinguishes a new admission from receipt-bound replay.
 type EndpointReviewLifecycle struct {
-	Mode             string                    `json:"mode"`
-	AdmissionOutcome string                    `json:"admission_outcome"`
-	CanonicalRef     string                    `json:"canonical_ref,omitempty"`
-	Receipt          *EndpointAdmissionReceipt `json:"receipt,omitempty"`
+	Mode               string                      `json:"mode"`
+	AdmissionOutcome   string                      `json:"admission_outcome"`
+	CanonicalRef       string                      `json:"canonical_ref,omitempty"`
+	Receipt            *EndpointAdmissionReceipt   `json:"receipt,omitempty"`
+	DispositionReceipt *EndpointDispositionReceipt `json:"disposition_receipt,omitempty"`
 }
 type EndpointReviewDisplay struct {
 	ContractVersion string                               `json:"contract_version"`
@@ -141,6 +142,9 @@ func loadEndpointReview(ctx context.Context, tx sqlTx, req EndpointReviewRequest
 	p, err := getProposalByOccurrenceID(ctx, tx, req.ProposalOccurrenceID)
 	if err != nil {
 		return EndpointReview{}, err
+	}
+	if p.AdmissionOutcome == admissionOutcomeRejected || p.AdmissionOutcome == admissionOutcomeAuditOnly {
+		return loadEndpointDispositionReview(ctx, tx, p, &req)
 	}
 	if p.ExtractionAttemptStatus != attemptStatusSucceeded || p.ProposalKind != ProposalKindStatement ||
 		(p.AdmissionOutcome != admissionOutcomePending && p.AdmissionOutcome != admissionOutcomeAdmitted) {
@@ -338,8 +342,14 @@ func AdmitReviewedEndpoint(ctx context.Context, pool *pgxpool.Pool, input Review
 				result.Admission.Replayed = true
 				return nil
 			}
+			if p.AdmissionOutcome != admissionOutcomePending {
+				return newDomainError(ErrorAdmissionStateConflict, "endpoint is terminal")
+			}
 			mutation, err := buildCanonicalAdmissionMutation(p, native)
 			if err != nil {
+				return err
+			}
+			if err := reserveEndpointReviewRequest(ctx, tx, input.RequestID, p.ProposalOccurrenceID, mutation.result.AdmissionDecisionID); err != nil {
 				return err
 			}
 			if mutation.derivation != nil {

@@ -1723,6 +1723,12 @@ func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) s
 		}
 		return mockRow{err: pgx.ErrNoRows}
 	default:
+		if strings.Contains(query, "SELECT EXISTS (SELECT 1 FROM endpoint_disposition_review_bindings") {
+			return mockRow{values: []any{false}}
+		}
+		if strings.Contains(query, "SELECT (SELECT b.receipt_payload FROM supersession_review_bindings") {
+			return mockRow{values: []any{[]byte(nil)}}
+		}
 		return mockRow{err: fmt.Errorf("unsupported mock query row: %s", compactSQL(query))}
 	}
 }

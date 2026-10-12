@@ -40,10 +40,10 @@ func TestIntegrationVerifyCurrentAcceptsAppliedSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 55 {
-		t.Fatalf("AppliedMigrations = %d, want 55", status.AppliedMigrations)
+	if status.AppliedMigrations != 56 {
+		t.Fatalf("AppliedMigrations = %d, want 56", status.AppliedMigrations)
 	}
-	if status.LatestMigration != "000055_evidence_ingestion_candidate_relation_source.up.sql" {
+	if status.LatestMigration != "000056_reviewed_lifecycle_writers.up.sql" {
 		t.Fatalf("LatestMigration = %q", status.LatestMigration)
 	}
 }
@@ -142,7 +142,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	}
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM schema_migrations
-		WHERE migration_name = '000055_evidence_ingestion_candidate_relation_source.up.sql'
+		WHERE migration_name = '000056_reviewed_lifecycle_writers.up.sql'
 	`); err != nil {
 		t.Fatalf("delete latest migration row: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	if !errors.Is(err, ErrSchemaNotCurrent) {
 		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
 	}
-	if !strings.Contains(err.Error(), "54/55 embedded migrations are applied") {
+	if !strings.Contains(err.Error(), "55/56 embedded migrations are applied") {
 		t.Fatalf("VerifyCurrent() error = %v, want migration count detail", err)
 	}
 }
@@ -320,7 +320,7 @@ func TestIntegrationApplyUpAllowsRepositoryRunRequestReuseAndOneSourceRun(t *tes
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want migration 000043 applied")
 	}
-	assertMigrationCount(t, ctx, pool, 55)
+	assertMigrationCount(t, ctx, pool, 56)
 	assertMigrationIndexExists(t, ctx, pool, "extraction_runs_source_request_id_uq")
 	if _, err := VerifyCurrent(ctx, pool); err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
@@ -1204,7 +1204,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want true")
 	}
-	assertMigrationCount(t, ctx, pool, 55)
+	assertMigrationCount(t, ctx, pool, 56)
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "source_file_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshot_intake_requests")
@@ -2351,7 +2351,7 @@ func TestIntegrationSchemaBoundAPIsRejectTemporaryRelationShadowing(t *testing.T
 	qualifiedLedger := pgx.Identifier{schema, "schema_migrations"}.Sanitize()
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM `+qualifiedLedger+`
-		WHERE migration_name = '000055_evidence_ingestion_candidate_relation_source.up.sql'
+		WHERE migration_name = '000056_reviewed_lifecycle_writers.up.sql'
 	`); err != nil {
 		t.Fatalf("make target migration ledger incomplete: %v", err)
 	}
@@ -2366,7 +2366,7 @@ func TestIntegrationSchemaBoundAPIsRejectTemporaryRelationShadowing(t *testing.T
 	}
 
 	pool.Reset()
-	if _, err := VerifyCurrentInSchema(ctx, pool, schema); !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), "54/55") {
+	if _, err := VerifyCurrentInSchema(ctx, pool, schema); !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), "55/56") {
 		t.Fatalf("VerifyCurrentInSchema() after reset error = %v, want incomplete target ledger", err)
 	}
 }

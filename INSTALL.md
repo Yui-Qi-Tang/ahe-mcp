@@ -9,10 +9,10 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 ## Installation scope
 
 Build the reviewed source commit using the steps below. The current MCP schema
-is 55. Query/intake/source-reviewer inventories are 26/5/3. Separate
+is 56. Query/intake/source-reviewer inventories are 26/5/3. Separate
 `relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
-4/2/2 tools; `core-records` exposes six record/configuration tools. The full
-migration chain through 55 and role policy v7 are required. Do not perform a
+4/3/2 tools. The separate `supersession-reviewer` exposes 2 tools; `core-records` exposes six record/configuration tools. The full
+migration chain through 56 and role policy v8 are required. Do not perform a
 binary-only replacement against an older schema or reuse source-review
 credentials for endpoint/relation writes.
 
@@ -27,8 +27,8 @@ separate. See [search contracts and limits](docs/SYSTEM_DESIGN.md#search).
 The current MCP implementation uses explicit
 launcher and database authority. Query is read-only; the ingestion executable
 separates five source/extractor intake tools from a three-tool
-`source-claim-reviewer`, a four-tool `relation-reviewer`, and two-tool
-`endpoint-reviewer` and `repository-intake` profiles.
+`source-claim-reviewer`, a four-tool `relation-reviewer`, and three-tool `endpoint-reviewer`, two-tool `supersession-reviewer` and
+`repository-intake` profiles.
 Its legacy reviewer/operator profiles remain
 disabled. Existing internal typed writers remain retained
 implementation assets, not newly enabled MCP entrypoints. See
@@ -176,7 +176,7 @@ DATABASE_DSN="$(cat /absolute/private/ahe/migration-database-dns)" \
 Success returns credential-free JSON containing `schema_version`, `schema`,
 `changed`, `applied_migrations`, and `latest_migration`. Repeating the command is
 safe when the selected schema, migration ledger and checksums match. The current
-native schema is 55; migrations 1–54 retain their original checksums.
+native schema is 56; migrations 1–55 retain their original checksums.
 Migration 43 retains the partial unique source-extraction request index.
 Migration 44 requires no proposal/canonical/admission authority and exactly the
 native empty Supersession head before adding ordinary admission manifests;
@@ -306,7 +306,7 @@ transferred to a different process/visibility cut.
 
 These are separately provisioned profiles, not extra source-reviewer tools.
 These profiles were introduced in migration 49; the current build requires the
-full migration chain through 55 and role policy v7. Provision or upgrade and
+full migration chain through 56 and role policy v8. Provision or upgrade and
 verify matching roles with the operator workflow above.
 For fresh installations, provision distinct fresh
 pairs for the new installation and verify each one, rather than rerunning
@@ -324,8 +324,8 @@ pairs for the new installation and verify each one, rather than rerunning
   regular Go files, 16 MiB/file, 256 MiB total. Parser extraction is limited to
   256 files and 8 MiB. The generation stays inactive; use returned proposal IDs
   or Query `lifecycle_scope=all`.
-- `endpoint-reviewer`: `get_endpoint_review` and
-  `admit_reviewed_endpoint`. `kind=repository_code` requires a verified
+- `endpoint-reviewer`: `get_endpoint_review`, `admit_reviewed_endpoint` and
+  `record_reviewed_endpoint_disposition`. `kind=repository_code` requires a verified
   repository-backed Go proposal and forbids `derivation`.
   `kind=derived_spec` requires an original-source-backed statement proposal
   plus `derivation`: 1–8 unique sorted admitted `parent_node_ids`, `method`,
@@ -358,9 +358,39 @@ schema-pinned, bounded `FOR KEY SHARE` reader. Exact review is not proof of
 human attention or semantic entailment.
 
 Only after both endpoints are admitted should the separate relation reviewer
-prepare `implements`. Generic, contradiction and Supersession writers remain
-disabled. There is no new endpoint `reject`/`audit_only` writer; never relabel
-code as a source claim to use source-disposition tools.
+prepare `implements`. Generic and contradiction writers remain disabled. Endpoint `reject`/`audit_only`
+uses `record_reviewed_endpoint_disposition` after the same complete exact review,
+with the unchanged request/subject, human decision/reason and stable request ID.
+The independent disposition receipt is terminal for the occurrence, creates no
+canonical materialization, and is readable as `endpoint_disposition` through
+Query. Historical terminal review permits only the original exact retry.
+Never relabel code as a source claim to use source-disposition tools.
+
+## Supersession reviewer
+
+The separately provisioned `supersession-reviewer` requires schema 56 / policy v8.
+Use the same protected launcher configuration as other reviewer profiles with
+its own fixed principal, bounded LOGIN and NOLOGIN group. Run
+`AHE_RUNTIME_PROFILE=supersession-reviewer ./bin/ahe-runtime-admin provision`
+under the separately selected operator identity, configure authentication, then
+`verify` using its LOGIN before starting `ahe-mcp-launch`. Do not reuse intake,
+source-review or operator credentials.
+
+Its two tools are `get_supersession_review` and `admit_reviewed_supersession`.
+The getter takes the pending external-source occurrence, six-field basis and
+complete 1–64 target set. Display all native material and retained version
+comparison limitations. After explicit approval and reason, copy
+`display.request` into `review`, use `subject` as `expected_subject`, and send
+`decision=approved` plus a stable request ID. The launcher supplies reviewer.
+Claim, exact new-to-old edges, lineage/event/head and review receipt commit
+atomically. Preserve the unchanged request for uncertain-outcome retries;
+head/subject conflicts require new review and approval. Use the returned
+lineage key for Query currentness. Already ordinarily admitted replacements,
+repository code and derived endpoints are not supported by fresh-v2.
+
+The role has only bounded native replacement writes. Canonical UPDATE is denied;
+a schema-pinned helper locks at most 64 old nodes without changing them. Query,
+intake and other reviewers do not acquire this helper or replacement authority.
 
 ## Core records profile
 
@@ -582,7 +612,7 @@ An empty new database is expected; no search result alone is not a connection te
 
 ## Upgrade
 
-This build requires schema **55** and database role policy **v7**. Updating a
+This build requires schema **56** and database role policy **v8**. Updating a
 schema-49 installation is **not** a binary-only replacement: migrations 50–53 add
 Core record and consistency-history tables. From schema 49, all profiles need
 SELECT on eleven new tables; from schema 52, five new diagnostic tables. Refresh
@@ -619,9 +649,12 @@ existing role identities remain unchanged; migrate, then verify the original
 LOGINs. Rollback refuses to discard candidate or source-bound relation history.
 
 Provision `core-records` separately only if its writes are authorized. Existing
-profiles gain reads, not the new write capability. For an already qualified
-schema-55/policy-v7 installation, a binary-only replacement retains existing
-protected launcher paths, identities and credentials; verify them before reconnecting.
+profiles gain reads, not the new write capability. A schema-55/policy-v7 installation needs migration 56 and policy v8, followed by
+`ahe-runtime-admin upgrade` of existing roles and `verify` with each runtime
+LOGIN. All profiles gain SELECT on three new receipt/request tables; endpoint
+reviewer gains INSERT on its two new tables. Provision supersession-reviewer
+separately. Migration 56 retains original displays/receipts and registers
+historical endpoint admission request IDs without rewriting their decisions.
 Never copy credentials into repository artifacts.
 
 ### Separate database-adoption procedure
@@ -662,7 +695,7 @@ embedded migration names and checksums.
 - missing/invalid runtime principal, profile, role or schema: configure the
   protected launcher; do not inject replacement identity through tool arguments.
 - `legacy writer runtime profiles are not enabled`: this executable currently
-  accepts `core-records`, `intake`, `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer` or `repository-intake`; do not weaken the gate to recover old writer exposure.
+  accepts `core-records`, `intake`, `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer`, `supersession-reviewer` or `repository-intake`; do not weaken the gate to recover old writer exposure.
 - schema/search-path rejection: pre-provision the exact private schema and
   remove fallback from the migration connection configuration, not from an
   existing database's ACLs.

@@ -8,7 +8,7 @@
 
 [Results](#evaluation) · [Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [MCP setup](INSTALL.md)
 
-Development version: **unreleased** · schema **55** · role policy **v7** ·
+Development version: **unreleased** · schema **56** · role policy **v8** ·
 consistency watch **v1**. Go **1.27.0** module.
 
 ## Evaluation

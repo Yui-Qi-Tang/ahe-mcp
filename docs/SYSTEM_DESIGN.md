@@ -176,7 +176,7 @@ URLs, provider links and manual-review-profile admission are not supported.
 Product migrations 47–48 preserve the product's existing ordinary and
 Supersession authority contracts while adding these independent receipts.
 Startup verifies receipt columns, constraints, guarded functions and triggers;
-role policy v7 permits relation-reviewer INSERT only on the edge and two receipt
+role policy v8 permits relation-reviewer INSERT only on the edge and two receipt
 tables. Trusted role credentials still do not authenticate a human conversation.
 
 The graph adapter obtains AHE-selected relations and a bounded scope from one read
@@ -303,7 +303,7 @@ and relation approvals remain independent.
 
 The domain registry is broader than the standard runtime. Only the bounded
 exact-reviewed endpoint subset above is exposed; generic derived, contradiction
-and Supersession writers remain disabled. Do not bypass the entry point with
+writers remain disabled; fresh-v2 Supersession uses its separate exact-review profile. Do not bypass the entry point with
 `source-claim-reviewer` credentials or treat these internal paths as enabled client operations.
 
 - **Derived admission**: each new immutable derived claim requires 1–64 admitted
@@ -329,28 +329,44 @@ See [admission](../internal/evidenceingestion/admission.go),
 [contradiction](../internal/evidenceingestion/canonical_contradiction.go),
 [supersession admission](../internal/evidenceingestion/supersession_admission.go).
 
+Endpoint non-admission has `reviewed-endpoint-disposition/v1` authority in a
+separate append-only binding, without an ordinary admission manifest. Approved
+and declined endpoints share a request-ID registry and proposal terminal lock.
+The review digest binds endpoint kind, original bytes and derivation parents;
+a disposition terminally consumes that occurrence, not its parents. Query
+returns outcome, reviewer and reason by occurrence. Historical display bytes
+remain unchanged and lifecycle is reported separately.
+
 ### Supersession review flow
 
-This diagram describes the internal Supersession domain workflow. The standard
-ingestion runtime does not expose its writer.
+The separate `supersession-reviewer` exposes complete native review and
+exact-reviewed fresh-v2 admission. Its immutable subject includes the complete
+target set, six-field basis, retained new/old grounding and CAS coordinate.
+Admission and review receipt share one transaction. Exact retries use the saved
+historical display and remain valid after later events; head conflicts during a
+new admission require a fresh review. Repository and derived endpoints are outside
+this contract.
 
 ```mermaid
 sequenceDiagram
     participant A as External agent
     participant H as Human reviewer
     participant I as Intake service
-    participant W as Internal Supersession writer
+    participant W as Supersession reviewer
     participant P as PostgreSQL
     A->>I: Submit source and pending proposal
     I->>P: Validate and store candidate material
+    A->>W: get_supersession_review with occurrence, basis and targets
+    W->>P: Read native records and head in one snapshot
+    W-->>A: Complete display, request and subject
     A->>H: Show claim, exact quotes, source revision and limitations
     A->>H: Show complete targets, six-field basis and observed head
-    H-->>A: Explicit approval, reviewer and reason
-    A->>W: Proposal, basis, exact targets and expected head
+    H-->>A: Explicit approval and reason
+    A->>W: admit_reviewed_supersession with unchanged request and subject
     W->>P: Begin transaction, read proposal and lock head
     P-->>W: Stored source, proposal and current head
     W->>W: Check fresh replacement, targets, lineage, hashes and head
-    W->>P: Atomically save replacement, relations, decision, event and new head
+    W->>P: Atomically save replacement, relations, decision, event, head and receipt
     W-->>A: Committed result or error
 ```
 
@@ -599,7 +615,8 @@ implement BM25, PathSim or a paper's scoring model.
 | `source-claim-reviewer` | 3 exact source-review tools; admit/reject/audit_only |
 | `relation-reviewer` | 4 exact implementation/reference review/admission tools; no node writes |
 | `repository-intake` | 2 fixed-repository capture/parser tools; pending and inactive generations |
-| `endpoint-reviewer` | 2 exact endpoint review/admission tools; no collection or independent relations |
+| `supersession-reviewer` | 2 exact fresh-v2 external replacement review/admission tools |
+| `endpoint-reviewer` | 3 exact endpoint review/admission/disposition tools; no collection or independent relations |
 | `core-records` | 6 identity/check/representation/watch record tools; no admission or solver execution during MCP calls |
 | `ahe-consistency-worker` | Separately started process using the core-records DB role; checks configured watches and persists diagnostic history |
 | `legacy-reviewer` / `legacy-operator` | CLI rejects startup; the internal 43-tool registry is not a public capability list |
@@ -611,7 +628,7 @@ schema, not row-level tenant isolation. Reviewer table ACLs still permit trusted
 ACLs alone do not prove that all direct SQL passes exact review. DB owners/superusers
 remain within the trusted operations boundary.
 
-MCP has its own migration ledger, currently through 55, and requires role policy v7.
+MCP has its own migration ledger, currently through 56, and requires role policy v8.
 Same-numbered migrations from another Core repository cannot be applied directly.
 Migration/runtime checks cover names,
 checksums and protected schema objects. Failures do not automatically delete data or

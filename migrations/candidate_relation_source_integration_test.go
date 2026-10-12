@@ -16,20 +16,24 @@ import (
 
 func rollbackCandidateRelationSourceForTest(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	t.Helper()
-	down, err := os.ReadFile("000055_evidence_ingestion_candidate_relation_source.down.sql")
-	if err != nil {
-		t.Fatal(err)
-	}
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(ctx)
-	if _, err := tx.Exec(ctx, string(down)); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := tx.Exec(ctx, `DELETE FROM schema_migrations WHERE migration_name=$1`, candidateRelationSourceMigration); err != nil {
-		t.Fatal(err)
+	// Revert dependent lifecycle objects and their ledger entry before schema55.
+	// Native down guards still refuse populated review or relation history.
+	for _, migration := range []string{"000056_reviewed_lifecycle_writers", "000055_evidence_ingestion_candidate_relation_source"} {
+		down, err := os.ReadFile(migration + ".down.sql")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tx.Exec(ctx, string(down)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM schema_migrations WHERE migration_name=$1`, migration+".up.sql"); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatal(err)
@@ -73,12 +77,12 @@ func TestIntegrationCandidateRelationUpgrade54PreservesHistory(t *testing.T) {
 	}
 	after["canonical_contradiction_proposals"] = relationRows
 	for table, rows := range before {
-		if table != "schema_migrations" && !reflect.DeepEqual(rows, after[table]) {
+		if table != "schema_migrations" && !reflect.DeepEqual(upgradeHistoricalRows(t, table, rows), upgradeHistoricalRows(t, table, after[table])) {
 			t.Fatalf("upgrade changed old rows in %s", table)
 		}
 	}
 	status, err := VerifyCurrentInSchema(ctx, pool, schema)
-	if err != nil || status.AppliedMigrations != 55 {
+	if err != nil || status.AppliedMigrations != 56 {
 		t.Fatalf("upgraded readiness: %+v %v", status, err)
 	}
 	replay, err := evidenceingestion.SubmitCanonicalContradictionProposal(ctx, pool, evidenceingestion.CanonicalContradictionProposalInput{RequestID: "research-REPEATABLE READ", NodeAID: a, NodeBID: b, Rationale: "The supplied statements disagree.", ProducerName: "frozen-lab-fixture", ProducerVersion: "v1"})

@@ -21,6 +21,7 @@ const (
 	ToolExtract             = "extract_repository_go"
 	ToolReview              = "get_endpoint_review"
 	ToolAdmit               = "admit_reviewed_endpoint"
+	ToolDisposition         = "record_reviewed_endpoint_disposition"
 )
 
 type Backend struct {
@@ -124,6 +125,13 @@ func (b *Backend) CallTool(ctx context.Context, name string, args json.RawMessag
 		}
 		req.ReviewerID = b.principal.ID
 		value, err = evidenceingestion.AdmitReviewedEndpoint(ctx, b.pool, req)
+	case b.profile == ProfileEndpointReviewer && name == ToolDisposition:
+		var req evidenceingestion.ReviewedEndpointAdmissionInput
+		if err = decodeRequest(args, &req); err != nil {
+			break
+		}
+		req.ReviewerID = b.principal.ID
+		value, err = evidenceingestion.RecordReviewedEndpointDisposition(ctx, b.pool, req)
 	default:
 		return nil, runtimeauth.NewUnauthorizedError("operation unavailable in this endpoint profile")
 	}
