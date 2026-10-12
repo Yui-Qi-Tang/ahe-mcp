@@ -119,3 +119,18 @@ func TestEndpointProfileTableAndFunctionAuthority(t *testing.T) {
 		}
 	}
 }
+
+func TestEndpointDerivationParentSchema(t *testing.T) {
+	b := &Backend{profile: ProfileEndpointReviewer}
+	for _, tool := range b.Tools() {
+		schema := tool.InputSchema
+		if tool.Name != ToolReview {
+			schema = schema["properties"].(map[string]any)["review"].(map[string]any)
+		}
+		derivation := schema["properties"].(map[string]any)["derivation"].(map[string]any)
+		parents := derivation["properties"].(map[string]any)["parent_node_ids"].(map[string]any)
+		if parents["minItems"] != 1 || parents["maxItems"] != 32 || parents["uniqueItems"] != true {
+			t.Fatalf("%s parent schema lost exact 1-32 bound: %v", tool.Name, parents)
+		}
+	}
+}

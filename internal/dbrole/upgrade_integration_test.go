@@ -92,7 +92,7 @@ func TestIntegrationRoleUpgradePreservesIdentityAndEvidence(t *testing.T) {
 					t.Fatalf("upgrade through ApplyUp: changed=%t err=%v", changed, err)
 				}
 				status, err := migrations.VerifyCurrent(ctx, pool)
-				if err != nil || status.AppliedMigrations != 56 {
+				if err != nil || status.AppliedMigrations != 57 {
 					t.Fatalf("upgraded schema: %+v %v", status, err)
 				}
 			}

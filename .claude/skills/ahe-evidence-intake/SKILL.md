@@ -253,9 +253,12 @@ another profile to obtain write access.
 
 With the separately provisioned `endpoint-reviewer`, admit a source-backed
 statement as `kind=derived_spec` through `get_endpoint_review` → explicit
-human approval → `admit_reviewed_endpoint`. Supply the complete 1–8 sorted
+human approval → `admit_reviewed_endpoint`. Supply the complete 1–32 sorted
 admitted AND parents and explicit method/producer/trace reference. Retain source
 bytes and qualifications; do not invent a manual source for the derivation.
+The same per-node limit applies to independent implements review. Complete AND
+ancestry remains bounded to 64 nodes and depth 8, with unchanged byte/display
+limits; do not omit parents or invent intermediate claims merely to fit a cap.
 
 Show the complete native display and ancestor source context. Nested
 source-basis effects are provenance context, not source approval. Copy the
@@ -297,6 +300,21 @@ A head/subject conflict requires a fresh review and new decision. An
 `exact_replay_only` display is historical material. Already ordinarily admitted
 new claims, repository code and derived endpoints are outside fresh-v2. Never
 substitute legacy tools, generic edges, fake source revisions or SQL.
+
+Choose a documented, stable slot for one independently replaceable fact/aspect
+inside the external source object, not for its revision or claim record ID.
+Several facts in one function/test may need separate slots. The complete target
+set covers the approved replacement scope; it need not include unrelated claims
+from that source object. All six basis fields determine the lineage key, while
+their semantic suitability still requires human review.
+
+Fresh-v2 requires matching old/new source-object identity in all four provider
+fields. Only a genuine same-object new revision can supply a fresh pending
+replacement. Do not rewrite connector identity to bridge per-commit IDs, file
+moves or a changed ID scheme. An already ordinarily admitted newer claim is not
+retrofitted or retired by this flow; disclose any duplicate admitted history.
+There is no redundancy marker or cross-object identity-migration operation in
+this profile. See [stable slots and existing stores](../../../INSTALL.md#stable-slots-and-existing-stores).
 
 ## Relations and Repository Extraction Are Separate
 

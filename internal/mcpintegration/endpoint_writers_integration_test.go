@@ -5,6 +5,7 @@ package mcpintegration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +29,15 @@ import (
 // below is created over a real standard stdio MCP under separately granted roles.
 // All content, extraction and approvals are explicitly synthetic test stubs.
 func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
+	testEndpointWritersStandardMCP(t, 2)
+}
+
+func TestIntegrationEndpointWriters32ParentsStandardMCP(t *testing.T) {
+	testEndpointWritersStandardMCP(t, 32)
+}
+
+func testEndpointWritersStandardMCP(t *testing.T, parentCount int) {
+	t.Helper()
 	dsn := os.Getenv("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN")
 	if dsn == "" {
 		t.Skip("AHE_DBROLE_ACCEPTANCE_DATABASE_DSN is not set")
@@ -77,6 +87,9 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 	var parents []string
 	statements := []string{"refund.ValidateRefundWindow identifies the integer refund-window predicate.",
 		"The refund-window predicate contract is only days <= 30; no time origin or nonnegative bound is specified."}
+	for i := len(statements); i < parentCount; i++ {
+		statements = append(statements, fmt.Sprintf("Synthetic refund contract premise %02d is explicitly declared for this AND-basis test.", i))
+	}
 	submit := func(i int, request, statement string) evidenceingestionmcp.SubmitExtractorOutputResponse {
 		return relationTool[evidenceingestionmcp.SubmitExtractorOutputResponse](t, intake, "submit_extractor_output", evidenceingestionmcp.SubmitExtractorOutputRequest{
 			RequestID: request, SourceSnapshotID: sources[i].SourceSnapshotID, ExtractionViewID: sources[i].ExtractionViewID,
@@ -87,7 +100,10 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 		})
 	}
 	for i, statement := range statements {
-		label := []string{"a", "b"}[i]
+		label := fmt.Sprintf("premise-%02d", i)
+		if i < 2 {
+			label = []string{"a", "b"}[i]
+		}
 		source := relationTool[evidenceingestionmcp.SubmitExternalSourceResponse](t, intake, "submit_external_source", evidenceingestion.ExternalSourceEnvelopeV1{
 			SchemaVersion: evidenceingestion.ExternalSourceEnvelopeSchemaV1, RequestID: "source-" + label,
 			SourceSystem: "lab", SourceNamespace: "endpoint-synthetic", ObjectType: "document", ObjectID: label, Revision: "v1",
@@ -138,8 +154,23 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 	before := relationCounts(t, ctx, f.pool)
 	review := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, req)
 	assertPendingEndpointReview(t, review)
-	if relationCounts(t, ctx, f.pool) != before || len(review.Display.SourceLeaves) != 2 || len(review.Display.Ancestors) != 2 || review.Display.CodeFile != nil {
+	if relationCounts(t, ctx, f.pool) != before || len(review.Display.SourceLeaves) != parentCount || len(review.Display.Ancestors) != parentCount || review.Display.CodeFile != nil {
 		t.Fatal("derived review context/effect differs")
+	}
+	if parentCount == 32 {
+		oversized := req
+		oversizedDerivation := *req.Derivation
+		oversizedDerivation.ParentNodeIDs = append(slices.Clone(parents), "canon-node:synthetic-extra")
+		slices.Sort(oversizedDerivation.ParentNodeIDs)
+		oversized.Derivation = &oversizedDerivation
+		relationRejected(t, endpoints, mcpendpoints.ToolReview, oversized)
+		relationRejected(t, endpoints, mcpendpoints.ToolAdmit, evidenceingestion.ReviewedEndpointAdmissionInput{
+			RequestID: "oversized-endpoint", Review: oversized, ExpectedSubject: review.Subject,
+			Decision: "approved", DecisionReason: "APPROVE STUB: over-limit input must be refused.",
+		})
+		if relationCounts(t, ctx, f.pool) != before {
+			t.Fatal("33-parent refusal mutated canonical state")
+		}
 	}
 	approve := evidenceingestion.ReviewedEndpointAdmissionInput{RequestID: "derived-endpoint", Review: req, ExpectedSubject: review.Subject, Decision: "approved", DecisionReason: "APPROVE STUB: complete synthetic AND derivation."}
 	changed := approve
@@ -153,6 +184,16 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 	relations.assertDenied(t, mcpendpoints.ToolAdmit, approve)
 	verifyEndpointLockAndRollback(t, ctx, f, endpoints, approve)
 	admitted := relationTool[evidenceingestion.EndpointAdmissionReceipt](t, endpoints, mcpendpoints.ToolAdmit, approve)
+	var persistedParents []string
+	if err := f.pool.QueryRow(ctx, "SELECT array_agg(parent_node_id ORDER BY parent_node_id) FROM canonical_derivation_parents WHERE derivation_id=$1", admitted.Admission.DerivationID).Scan(&persistedParents); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(persistedParents, parents) {
+		t.Fatal("endpoint admission lost or changed the complete AND parent set")
+	}
+	if parentCount == 32 {
+		assertParentLimitRollbackRefused(t, ctx, f)
+	}
 	reviewAgain := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, req)
 	assertAdmittedEndpointReview(t, review, reviewAgain, admitted)
 	changedReview := req
@@ -237,9 +278,30 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
 	relationReq := evidenceimplements.RecursiveReviewRequest{SpecificationNodeID: admitted.Admission.CanonicalRef, ImplementationNodeID: code.Admission.CanonicalRef, Mapping: mapping,
 		Rules: []evidenceimplements.RecursiveDerivationRule{{NodeID: admitted.Admission.CanonicalRef, DerivationID: admitted.Admission.DerivationID, RuleStatement: req.Derivation.Method}}}
 	relationReview := relationTool[mcprelations.ImplementsReviewResponse](t, relations, mcprelations.ToolGetImplementsReview, relationReq)
-	relationTool[map[string]any](t, relations, mcprelations.ToolAdmitReviewedImplements, mcprelations.ImplementsAdmissionRequest{
+	relationApprove := mcprelations.ImplementsAdmissionRequest{
 		RequestID: "endpoint-implements", Review: relationReview.Request, ExpectedSubject: relationReview.Subject, Decision: "approved", DecisionReason: "APPROVE STUB: independent synthetic mapping only.",
-	})
+	}
+	relationResult := relationTool[evidenceimplements.DerivedAdmissionResult](t, relations, mcprelations.ToolAdmitReviewedImplements, relationApprove)
+	relationRead := relationTool[evidencequerymcp.RelationProvenanceResponse](t, query, "get_relation_provenance", map[string]any{"canonical_edge_id": relationResult.Edge.ID})
+	if relationRead.ImplementsAdmission == nil || relationRead.ImplementsAdmission.ContractVersion != evidenceimplements.RecursiveAdmissionContract {
+		t.Fatal("Query lost the recursive implements receipt")
+	}
+	if parentCount == 32 {
+		t.Logf("32-source-parent native display=%d bytes, enclosing receipt=%d bytes", len(relationRead.ImplementsAdmission.DisplayPayloadUTF8), len(relationRead.ImplementsAdmission.ReceiptPayloadUTF8))
+	}
+	if parentCount == 32 && len(relationRead.ImplementsAdmission.DisplayPayloadUTF8) <= 128<<10 {
+		t.Fatal("32-source-parent fixture did not exercise the expanded display bound")
+	}
+	afterRelation := relationCounts(t, ctx, f.pool)
+	relationTool[map[string]any](t, relations, mcprelations.ToolAdmitReviewedImplements, relationApprove)
+	if relationCounts(t, ctx, f.pool) != afterRelation {
+		t.Fatal("implements exact replay changed canonical state")
+	}
+	if parentCount == 32 {
+		assertParentLimitRollbackRefused(t, ctx, f)
+	} else {
+		verifyParentLimitUpgradeRetainsRelation(t, ctx, f, relations, relationApprove)
+	}
 	var nodes, edges, decisions, endpointBindings, sourceBindings, unreviewed, active int
 	if err := f.pool.QueryRow(ctx, `SELECT (SELECT count(*) FROM canonical_graph_nodes),(SELECT count(*) FROM canonical_graph_edges),
  (SELECT count(*) FROM admission_decisions),(SELECT count(*) FROM canonical_endpoint_review_bindings),
@@ -247,10 +309,10 @@ func TestIntegrationEndpointWritersStandardMCP(t *testing.T) {
  (SELECT count(*) FROM repository_source_heads)`).Scan(&nodes, &edges, &decisions, &endpointBindings, &sourceBindings, &unreviewed, &active); err != nil {
 		t.Fatal(err)
 	}
-	if nodes != 7 || edges != 6 || decisions != 4 || endpointBindings != 2 || sourceBindings != 2 || unreviewed != 0 || active != 0 {
+	if nodes != 2*parentCount+3 || edges != 2*parentCount+2 || decisions != parentCount+2 || endpointBindings != 2 || sourceBindings != parentCount || unreviewed != 0 || active != 0 {
 		t.Fatalf("unexpected fully reviewed MCP graph: nodes=%d edges=%d decisions=%d endpoints=%d sources=%d unreviewed=%d active=%d", nodes, edges, decisions, endpointBindings, sourceBindings, unreviewed, active)
 	}
-	t.Log("standard MCP only: two reviewed source claims, one AND-derived endpoint, one repository code endpoint, one independently reviewed implements; no native canonical bootstrap")
+	t.Logf("standard MCP only: %d reviewed source claims, complete %d-parent AND endpoint, repository code endpoint, independent implements, exact replay and commit rollback; no native canonical bootstrap", parentCount, parentCount)
 }
 
 func endpointConflict(t *testing.T, p *authorityProcess, tool string, args any, kind evidenceingestion.ErrorKind) {

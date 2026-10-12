@@ -62,9 +62,16 @@ func TestIntegrationReviewedLifecycleUpgradeAndGuards(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	parentDown, err := os.ReadFile("000057_reviewed_derivation_parent_limit.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
 	// No new lifecycle receipt exists: restoring the old schema must preserve history.
 	tx, err := pool.Begin(ctx)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tx.Exec(ctx, string(parentDown)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = tx.Exec(ctx, string(down)); err != nil {

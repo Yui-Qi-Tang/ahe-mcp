@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	derivedImplementsMaxParents    = 8
+	derivedImplementsMaxParents    = ReviewedDerivationMaxParents
 	derivedImplementsMaxSourceRefs = 128
 	derivedImplementsSourceBytes   = 1 << 20
 	derivedImplementsRecordBytes   = 128 << 10
@@ -66,7 +66,7 @@ func loadDerivedImplementsNativeBasis(ctx context.Context, tx sqlTx, specificati
 		return DerivedImplementsNativeBasis{}, err
 	}
 	if metadata.Derivation == nil || len(metadata.Derivation.Parents) < 1 || len(metadata.Derivation.Parents) > derivedImplementsMaxParents {
-		return DerivedImplementsNativeBasis{}, newDomainError(ErrorDerivationInvariant, "implements specification requires one to eight direct source parents")
+		return DerivedImplementsNativeBasis{}, newDomainError(ErrorDerivationInvariant, "implements specification requires one to %d direct source parents", derivedImplementsMaxParents)
 	}
 	result := DerivedImplementsNativeBasis{Specification: root, SourceLeaves: make([]DerivedImplementsSourceLeaf, 0, len(metadata.Derivation.Parents))}
 	edges := make(map[string]canonicalReadEdge, len(metadata.Derivation.Parents))

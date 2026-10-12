@@ -1,6 +1,7 @@
 package evidenceingestion
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -34,5 +35,24 @@ func TestEndpointReviewRequestContract(t *testing.T) {
 	code := EndpointReviewRequest{Kind: "repository_code", ProposalOccurrenceID: "occ:synthetic"}
 	if err := validateEndpointRequest(code); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestEndpointReviewParentCountBoundaries(t *testing.T) {
+	for _, count := range []int{0, 1, 8, 9, 12, 32, 33} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			parents := make([]string, count)
+			for i := range parents {
+				parents[i] = fmt.Sprintf("canon-node:parent-%02d", i)
+			}
+			req := EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: "occ:synthetic",
+				Derivation: &EndpointDerivation{ParentNodeIDs: parents, Method: "AND", Producer: "synthetic", TraceRef: "synthetic:trace"}}
+			err := validateEndpointRequest(req)
+			if count == 0 || count == 33 {
+				assertKind(t, err, ErrorInvalidInput)
+			} else if err != nil {
+				t.Fatalf("%d sorted admitted-coordinate parents rejected: %v", count, err)
+			}
+		})
 	}
 }

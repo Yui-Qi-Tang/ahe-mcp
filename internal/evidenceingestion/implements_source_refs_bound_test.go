@@ -42,7 +42,7 @@ func TestImplementsOtherReviewBoundsRemain(t *testing.T) {
 		size, parents, incoming int
 	}{
 		{name: "record_bytes", size: (128 << 10) + 1},
-		{name: "parent_count", size: 1024, parents: 9, incoming: 9},
+		{name: "parent_count", size: 1024, parents: 33, incoming: 33},
 		{name: "unregistered_edge", size: 1024, incoming: 1},
 	} {
 		for _, recursive := range []bool{false, true} {

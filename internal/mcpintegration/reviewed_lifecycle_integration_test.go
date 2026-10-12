@@ -217,8 +217,15 @@ func TestIntegrationReviewedLifecycleStandardMCP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	parentDown, err := os.ReadFile("../../migrations/000057_reviewed_derivation_parent_limit.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
 	rollbackTx, err := f.pool.Begin(ctx)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = rollbackTx.Exec(ctx, string(parentDown)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = rollbackTx.Exec(ctx, string(down)); err == nil {

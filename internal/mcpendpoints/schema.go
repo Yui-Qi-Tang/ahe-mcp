@@ -1,8 +1,10 @@
 package mcpendpoints
 
 import (
-	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpstdio"
 	"slices"
+
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpstdio"
 )
 
 func object(fields map[string]any, optional ...string) map[string]any {
@@ -36,12 +38,12 @@ func (b *Backend) Tools() []mcpstdio.Tool {
 		"kind":                   map[string]any{"type": "string", "enum": []string{"repository_code", "derived_spec"}},
 		"proposal_occurrence_id": text(200),
 		"derivation": object(map[string]any{
-			"parent_node_ids": map[string]any{"type": "array", "items": text(200), "minItems": 1, "maxItems": 8, "uniqueItems": true},
+			"parent_node_ids": map[string]any{"type": "array", "items": text(200), "minItems": 1, "maxItems": evidenceingestion.ReviewedDerivationMaxParents, "uniqueItems": true},
 			"method":          text(4000), "producer": text(200), "trace_ref": text(500),
 		}),
 	}, "derivation")
 	return []mcpstdio.Tool{
-		{Name: ToolReview, Title: "Review Evidence Endpoint", Description: "Reconstruct one endpoint from native DB authority. repository_code requires a parser-grounded repository proposal and forbids derivation; derived_spec requires a source-backed statement proposal plus one to eight sorted admitted AND parent IDs and explicit derivation method, producer, trace_ref. Show lifecycle together with the complete display, source context, immutable code and all ancestor leaves. lifecycle reports current admission state: pending_admission permits a new review; exact_replay_only identifies an admitted or declined endpoint with its original receipt. display is the immutable pre-admission snapshot, not current status. An admitted proposal without a matching endpoint receipt is refused. The nested source-basis effect is context, not approval. No writes; does not prove entailment, behavior or currentness.", InputSchema: review, Annotations: mcpstdio.Annotations{ReadOnlyHint: &ro, DestructiveHint: &no, IdempotentHint: &yes}},
+		{Name: ToolReview, Title: "Review Evidence Endpoint", Description: "Reconstruct one endpoint from native DB authority. repository_code requires a parser-grounded repository proposal and forbids derivation; derived_spec requires a source-backed statement proposal plus one to 32 sorted admitted AND parent IDs and explicit derivation method, producer, trace_ref. Show lifecycle together with the complete display, source context, immutable code and all ancestor leaves. lifecycle reports current admission state: pending_admission permits a new review; exact_replay_only identifies an admitted or declined endpoint with its original receipt. display is the immutable pre-admission snapshot, not current status. An admitted proposal without a matching endpoint receipt is refused. The nested source-basis effect is context, not approval. No writes; does not prove entailment, behavior or currentness.", InputSchema: review, Annotations: mcpstdio.Annotations{ReadOnlyHint: &ro, DestructiveHint: &no, IdempotentHint: &yes}},
 		{Name: ToolDisposition, Title: "Record Reviewed Endpoint Disposition", Description: "After explicit human reject or audit_only of the complete unchanged get_endpoint_review display, preserve its exact request and subject, decision and reason. Terminally record the occurrence outcome and immutable receipt without canonical nodes or edges. Reviewer is launcher-bound; request IDs are shared with endpoint admission. Replay only the original unchanged decision. Never use source disposition for code or derived endpoints.", InputSchema: object(map[string]any{
 			"request_id": text(200), "review": review, "expected_subject": text(200),
 			"decision": map[string]any{"type": "string", "enum": []string{"reject", "audit_only"}}, "decision_reason": text(2000),

@@ -9,10 +9,10 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 ## Installation scope
 
 Build the reviewed source commit using the steps below. The current MCP schema
-is 56. Query/intake/source-reviewer inventories are 26/5/3. Separate
+is 57. Query/intake/source-reviewer inventories are 26/5/3. Separate
 `relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
 4/3/2 tools. The separate `supersession-reviewer` exposes 2 tools; `core-records` exposes six record/configuration tools. The full
-migration chain through 56 and role policy v8 are required. Do not perform a
+migration chain through 57 and role policy v8 are required. Do not perform a
 binary-only replacement against an older schema or reuse source-review
 credentials for endpoint/relation writes.
 
@@ -176,7 +176,7 @@ DATABASE_DSN="$(cat /absolute/private/ahe/migration-database-dns)" \
 Success returns credential-free JSON containing `schema_version`, `schema`,
 `changed`, `applied_migrations`, and `latest_migration`. Repeating the command is
 safe when the selected schema, migration ledger and checksums match. The current
-native schema is 56; migrations 1–55 retain their original checksums.
+native schema is 57; migrations 1–56 retain their original checksums.
 Migration 43 retains the partial unique source-extraction request index.
 Migration 44 requires no proposal/canonical/admission authority and exactly the
 native empty Supersession head before adding ordinary admission manifests;
@@ -306,7 +306,7 @@ transferred to a different process/visibility cut.
 
 These are separately provisioned profiles, not extra source-reviewer tools.
 These profiles were introduced in migration 49; the current build requires the
-full migration chain through 56 and role policy v8. Provision or upgrade and
+full migration chain through 57 and role policy v8. Provision or upgrade and
 verify matching roles with the operator workflow above.
 For fresh installations, provision distinct fresh
 pairs for the new installation and verify each one, rather than rerunning
@@ -328,10 +328,23 @@ pairs for the new installation and verify each one, rather than rerunning
   `record_reviewed_endpoint_disposition`. `kind=repository_code` requires a verified
   repository-backed Go proposal and forbids `derivation`.
   `kind=derived_spec` requires an original-source-backed statement proposal
-  plus `derivation`: 1–8 unique sorted admitted `parent_node_ids`, `method`,
+  plus `derivation`: 1–32 unique sorted admitted `parent_node_ids`, `method`,
   `producer` and `trace_ref`. Submit the statement through existing source
   and extractor intake; never invent an original document for a derivation.
   Complete AND ancestry is limited to 64 nodes and depth 8.
+
+The reviewed endpoint and independent implements review use the same 32-parent
+limit per derived node. The internal generic admission limit of 64 is not the
+standard reviewed profile's contract. Complete ancestry, source/display bytes
+and exact review requirements still apply: 32 direct parents do not guarantee
+that their combined ancestry fits. The existing lock-only helper retains its
+nine-ID limit per call; admission locks the complete set in batches within one
+transaction. Migration 57 and its matching binary are required. Existing migration checksums
+and database grants are retained. Recursive v2 retains a complete display up to
+512 KiB and its enclosing receipt up to 1 MiB; retained depth-one v1 remains at
+128 KiB / 256 KiB. Query readback uses these same version-specific bounds.
+Rollback refuses history above eight parents or the old byte bounds rather than
+restoring guards that cannot replay it.
 
 Show the current `lifecycle` together with the entire immutable `display`
 (at most 1 MiB), including source context, code
@@ -368,7 +381,7 @@ Never relabel code as a source claim to use source-disposition tools.
 
 ## Supersession reviewer
 
-The separately provisioned `supersession-reviewer` requires schema 56 / policy v8.
+The separately provisioned `supersession-reviewer` requires schema 57 / policy v8.
 Use the same protected launcher configuration as other reviewer profiles with
 its own fixed principal, bounded LOGIN and NOLOGIN group. Run
 `AHE_RUNTIME_PROFILE=supersession-reviewer ./bin/ahe-runtime-admin provision`
@@ -387,6 +400,41 @@ atomically. Preserve the unchanged request for uncertain-outcome retries;
 head/subject conflicts require new review and approval. Use the returned
 lineage key for Query currentness. Already ordinarily admitted replacements,
 repository code and derived endpoints are not supported by fresh-v2.
+
+### Stable slots and existing stores
+
+A slot identifies one human-reviewed semantic replacement scope within an
+external source object. Choose a documented `slot_kind` convention and a stable
+`slot_id` for the fact or aspect that can change independently. For example,
+`slot_kind=requirement` and `slot_id=request-timeout` can identify one requirement
+in a document. These are examples, not built-in slot types. A function or test
+with several independent facts may need several slots rather than one slot for
+the entire function/test. Do not use a revision, proposal ID or canonical node ID
+as the slot identity. The six-field basis determines the lineage key; changing
+any field creates a different key. AHE checks identity and structure, not whether
+the selected old/new claims really share that semantic scope.
+
+When only one fact changes, select the old claims belonging to that scope and
+keep the other independent claims out of the replacement. The target set must
+be complete for the replacement being approved, not all claims in the source
+object. An omitted claim is not thereby proved current or redundant.
+
+Fresh-v2 requires the old targets and the pending replacement to share exact
+`source_system`, `source_namespace`, `object_type` and `object_id`. A fresh source
+delivery with a new genuine revision can replace an old claim only when the
+connector-observed object identity actually remains the same. Do not transplant
+new bytes under an old identity or invent a revision to make this check pass.
+Per-commit IDs, file moves that change object identity, and identity-scheme changes
+cannot be bridged by this profile. A provider's genuinely stable object ID can
+remain usable across a move, but AHE does not infer such a mapping.
+
+Already ordinarily admitted newer claims remain immutable admitted records.
+Creating an eligible fresh replacement does not retract, relabel or deduplicate
+those records, and this profile has no redundancy marker. Retain and disclose
+that independent history; do not claim it joined the lineage or became redundant
+automatically. Cross-object identity migration, retrofit and duplicate retirement
+require a separately specified governed lifecycle contract, not ordinary intake,
+source disposition or direct SQL.
 
 The role has only bounded native replacement writes. Canonical UPDATE is denied;
 a schema-pinned helper locks at most 64 old nodes without changing them. Query,
@@ -612,7 +660,7 @@ An empty new database is expected; no search result alone is not a connection te
 
 ## Upgrade
 
-This build requires schema **56** and database role policy **v8**. Updating a
+This build requires schema **57** and database role policy **v8**. Updating a
 schema-49 installation is **not** a binary-only replacement: migrations 50–53 add
 Core record and consistency-history tables. From schema 49, all profiles need
 SELECT on eleven new tables; from schema 52, five new diagnostic tables. Refresh
@@ -655,7 +703,9 @@ LOGIN. All profiles gain SELECT on three new receipt/request tables; endpoint
 reviewer gains INSERT on its two new tables. Provision supersession-reviewer
 separately. Migration 56 retains original displays/receipts and registers
 historical endpoint admission request IDs without rewriting their decisions.
-Never copy credentials into repository artifacts.
+A schema-56/policy-v8 installation additionally needs migration 57 for the
+32-parent recursive implements guard, followed by runtime verification. It does
+not require broader role grants. Never copy credentials into repository artifacts.
 
 ### Separate database-adoption procedure
 

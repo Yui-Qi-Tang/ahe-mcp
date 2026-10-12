@@ -173,6 +173,10 @@ func validateDerivedAdmissionInput(input DerivedAdmissionInput) error {
 }
 
 func validateReviewedAdmissionEnvelope(input DerivedAdmissionInput) error {
+	return validateReviewedAdmissionEnvelopeWithBounds(input, MaxReviewDisplayBytes, maxDerivedAdmissionReceiptBytes)
+}
+
+func validateReviewedAdmissionEnvelopeWithBounds(input DerivedAdmissionInput, displayMaxBytes, receiptMaxBytes int) error {
 	if strings.TrimSpace(input.RequestID) != input.RequestID {
 		return fmt.Errorf("%w: request ID must not contain surrounding whitespace", ErrInvalid)
 	}
@@ -195,7 +199,7 @@ func validateReviewedAdmissionEnvelope(input DerivedAdmissionInput) error {
 	if len(input.ProducerSessionRef) > 2000 || !utf8.ValidString(input.ProducerSessionRef) || strings.ContainsRune(input.ProducerSessionRef, '\x00') {
 		return fmt.Errorf("%w: invalid producer session metadata", ErrInvalid)
 	}
-	if len(input.Receipt.Display.PayloadUTF8) > MaxReviewDisplayBytes || !utf8.ValidString(input.Receipt.Display.PayloadUTF8) ||
+	if len(input.Receipt.Display.PayloadUTF8) > displayMaxBytes || !utf8.ValidString(input.Receipt.Display.PayloadUTF8) ||
 		strings.ContainsRune(input.Receipt.Display.PayloadUTF8, '\x00') {
 		return fmt.Errorf("%w: derived display exceeds byte bound", ErrInvalid)
 	}
@@ -219,7 +223,7 @@ func validateReviewedAdmissionEnvelope(input DerivedAdmissionInput) error {
 		}
 	}
 	encoded, err := json.Marshal(input.Receipt)
-	if err != nil || len(encoded) > maxDerivedAdmissionReceiptBytes {
+	if err != nil || len(encoded) > receiptMaxBytes {
 		return fmt.Errorf("%w: derived receipt exceeds byte bound", ErrInvalid)
 	}
 	return nil

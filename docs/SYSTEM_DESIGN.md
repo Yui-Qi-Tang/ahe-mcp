@@ -288,8 +288,15 @@ Lifecycle is not part of the subject, so existing displays and receipts retain
 their hashes; its presence never authorizes a new decision or changed replay.
 Admission rebuilds it under repeatable read, locks the proposal and retains
 native derivation/cycle checks. A schema-pinned definer helper obtains the
-original `FOR KEY SHARE` locks on up to nine node IDs without granting canonical
-UPDATE; the native writer retains its original lock path. The helper cannot
+original `FOR KEY SHARE` locks on up to nine node IDs per call without granting canonical
+UPDATE. Reviewed admission accepts 1–32 direct AND parents and batches the full
+parent/target lock set through this helper in the same transaction; the native
+writer retains its original lock path. Independent implements review uses the
+same per-node parent limit; migration 57 synchronizes the recursive SQL guard
+and permits a 512 KiB complete v2 display / 1 MiB receipt, with version-matched
+Query readback. Retained v1 bounds remain 128 KiB / 256 KiB. Rollback refuses
+history beyond the old parent or byte limits. Complete ancestry remains bounded to 64 nodes and
+depth 8, with its existing edge and byte bounds. The helper cannot
 select a schema or mutate evidence, and all other helper EXECUTE remains denied.
 
 The endpoint, support/AND edges, ordinary manifest and immutable

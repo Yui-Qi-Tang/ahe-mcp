@@ -17,6 +17,10 @@ const ReviewedEndpointAdmissionV1 = "reviewed-endpoint-admission/v1"
 const EndpointReviewV1 = "endpoint-review/v1"
 const endpointReviewMaxBytes = 1 << 20
 
+// ReviewedDerivationMaxParents bounds each reviewed AND basis. Complete ancestry
+// and display-size limits apply independently.
+const ReviewedDerivationMaxParents = 32
+
 // EndpointDerivation is an explicit AND composition, not a model correctness claim.
 type EndpointDerivation struct {
 	ParentNodeIDs []string `json:"parent_node_ids"`
@@ -93,9 +97,9 @@ func validateEndpointRequest(req EndpointReviewRequest) error {
 		}
 	case "derived_spec":
 		d := req.Derivation
-		if d == nil || len(d.ParentNodeIDs) < 1 || len(d.ParentNodeIDs) > 8 ||
+		if d == nil || len(d.ParentNodeIDs) < 1 || len(d.ParentNodeIDs) > ReviewedDerivationMaxParents ||
 			!validateEndpointText(d.Method, 4000) || !validateEndpointText(d.Producer, 200) || !validateEndpointText(d.TraceRef, 500) {
-			return newDomainError(ErrorInvalidInput, "derived endpoint requires one to eight unique sorted AND parents, method, producer and trace_ref")
+			return newDomainError(ErrorInvalidInput, "derived endpoint requires one to %d unique sorted AND parents, method, producer and trace_ref", ReviewedDerivationMaxParents)
 		}
 		for i, id := range d.ParentNodeIDs {
 			if !validateEndpointText(id, 200) || !strings.HasPrefix(id, "canon-node:") || (i > 0 && d.ParentNodeIDs[i-1] >= id) {

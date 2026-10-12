@@ -76,9 +76,10 @@ func validateRecursiveAdmissionInput(input RecursiveAdmissionInput) error {
 	if input.Receipt.ContractVersion != RecursiveReceiptVersion || input.Receipt.Display.ContractVersion != RecursiveDisplayVersion {
 		return fmt.Errorf("%w: recursive writer requires an explicit v2 receipt and display", ErrInvalid)
 	}
-	return validateReviewedAdmissionEnvelope(DerivedAdmissionInput{RequestID: input.RequestID, Decision: input.Decision,
+	return validateReviewedAdmissionEnvelopeWithBounds(DerivedAdmissionInput{RequestID: input.RequestID, Decision: input.Decision,
 		ProducerSessionRef: input.ProducerSessionRef, Receipt: input.Receipt, Review: DerivedReviewRequest{
-			SpecificationNodeID: input.Review.SpecificationNodeID, ImplementationNodeID: input.Review.ImplementationNodeID}})
+			SpecificationNodeID: input.Review.SpecificationNodeID, ImplementationNodeID: input.Review.ImplementationNodeID}},
+		MaxRecursiveReviewDisplayBytes, evidenceingestion.RecursiveImplementsReceiptMaxBytes)
 }
 
 func admitReviewedRecursiveAttempt(ctx context.Context, pool *pgxpool.Pool, input RecursiveAdmissionInput) (DerivedAdmissionResult, error) {

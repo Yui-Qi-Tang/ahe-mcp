@@ -201,7 +201,7 @@ func loadRecursiveImplementsHeader(ctx context.Context, tx sqlTx, nodeID string)
 		return header, newDomainError(ErrorDerivationInvariant, "recursive implements derived node requires exactly one nonempty AND derivation")
 	}
 	rows, err := tx.query(ctx, `SELECT dp.parent_node_id FROM canonical_derivation_parents dp JOIN canonical_derivations d USING(derivation_id)
-		WHERE d.node_id=$1 ORDER BY dp.parent_node_id LIMIT 9`, nodeID)
+		WHERE d.node_id=$1 ORDER BY dp.parent_node_id LIMIT $2`, nodeID, derivedImplementsMaxParents+1)
 	if err != nil {
 		return header, fmt.Errorf("reading recursive implements AND parents: %w", err)
 	}

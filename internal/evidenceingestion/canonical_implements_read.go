@@ -12,6 +12,12 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 )
 
+// RecursiveImplementsDisplayMaxBytes bounds the complete v2 review display.
+const RecursiveImplementsDisplayMaxBytes = 512 << 10
+
+// RecursiveImplementsReceiptMaxBytes includes the retained complete v2 display.
+const RecursiveImplementsReceiptMaxBytes = 1 << 20
+
 // CanonicalImplementsAdmissionAuthority is the native persistence authority for
 // one reviewed implements edge. OriginProposalOccurrenceID is a source carrier;
 // that proposal's earlier node admission did not authorize this relation. The
@@ -51,9 +57,11 @@ func loadCanonicalImplementsAdmission(ctx context.Context, db sqlQueryer, edge C
 			receipt_payload_hash, display_payload_hash
 		FROM canonical_implements_admissions WHERE canonical_edge_id = $1
 			AND octet_length(basis_payload_utf8) BETWEEN 1 AND 8388608
-			AND octet_length(receipt_payload_utf8) BETWEEN 1 AND 262144
-			AND octet_length(display_payload_utf8) BETWEEN 1 AND 131072
-	`, edge.ID).Scan(
+			AND octet_length(receipt_payload_utf8) BETWEEN 1 AND
+			 CASE WHEN contract_version='canonical-derived-implements-admission/v2' THEN $2::int ELSE 262144 END
+			AND octet_length(display_payload_utf8) BETWEEN 1 AND
+			 CASE WHEN contract_version='canonical-derived-implements-admission/v2' THEN $3::int ELSE 131072 END
+	`, edge.ID, RecursiveImplementsReceiptMaxBytes, RecursiveImplementsDisplayMaxBytes).Scan(
 		&result.RequestID, &result.ContractVersion, &result.ReceiptID, &result.CanonicalEdgeID,
 		&result.SpecificationNodeID, &result.ImplementationNodeID, &result.OriginProposalOccurrenceID,
 		&result.ReviewerID, &result.DecisionReason, &result.ProducerSessionRef,
@@ -73,12 +81,14 @@ func loadCanonicalImplementsAdmission(ctx context.Context, db sqlQueryer, edge C
 
 func validateCanonicalImplementsReadAuthority(edge CanonicalGraphEdge, authority CanonicalImplementsAdmissionAuthority) error {
 	var methodVersion, receiptContract, displayMediaType string
+	receiptMaxBytes, displayMaxBytes := 256<<10, 128<<10
 	switch authority.ContractVersion {
 	case "canonical-derived-implements-admission/v1":
 		methodVersion = "v1"
 		receiptContract = "lab-canonical-implements-derived-review-receipt/v1"
 		displayMediaType = "application/vnd.ahe.lab-implements-derived-review.v1+json"
 	case "canonical-derived-implements-admission/v2":
+		receiptMaxBytes, displayMaxBytes = RecursiveImplementsReceiptMaxBytes, RecursiveImplementsDisplayMaxBytes
 		methodVersion = "v2"
 		receiptContract = "canonical-implements-recursive-review-receipt/v2"
 		displayMediaType = "application/vnd.ahe.implements-recursive-review.v2+json"
@@ -102,8 +112,8 @@ func validateCanonicalImplementsReadAuthority(edge CanonicalGraphEdge, authority
 		max  int
 	}{
 		{authority.BasisPayloadUTF8, authority.BasisPayloadHash, 8 << 20},
-		{authority.ReceiptPayloadUTF8, authority.ReceiptPayloadHash, 256 << 10},
-		{authority.DisplayPayloadUTF8, authority.DisplayPayloadHash, 128 << 10},
+		{authority.ReceiptPayloadUTF8, authority.ReceiptPayloadHash, receiptMaxBytes},
+		{authority.DisplayPayloadUTF8, authority.DisplayPayloadHash, displayMaxBytes},
 	} {
 		if len(body.text) == 0 || len(body.text) > body.max {
 			return newDomainError(ErrorCanonicalAdmissionInvariant, "canonical implements retained payload exceeds its byte bound")

@@ -1036,6 +1036,9 @@ func validateDerivedAdmissionWithLock(ctx context.Context, tx sqlTx, mutation ca
 		return newDomainError(ErrorDerivationInvariant, "derived admission must create exactly one derived node")
 	}
 	derivation := *mutation.derivation
+	if reviewedLock && len(derivation.Parents) > ReviewedDerivationMaxParents {
+		return newDomainError(ErrorInvalidInput, "reviewed derivation exceeds %d AND parents", ReviewedDerivationMaxParents)
+	}
 	if mutation.nodes[0].ID != derivation.NodeID || (mutation.nodes[0].Kind != evidencegraph.CanonicalDerivedClaim && mutation.nodes[0].Kind != evidencegraph.CanonicalCandidate) {
 		return newDomainError(ErrorDerivationInvariant, "derivation target must be the new derived claim")
 	}
@@ -1066,7 +1069,16 @@ func validateDerivedAdmissionWithLock(ctx context.Context, tx sqlTx, mutation ca
   WHERE canonical_node_id = ANY($1::text[]) FOR KEY SHARE
  `
 	if reviewedLock {
-		nodeQuery = "SELECT canonical_endpoint_lock_nodes_v1($1::text[])"
+		// Migration 49 bounds the lock-only helper to nine IDs per call. Lock the
+		// complete reviewed set in batches within this same transaction, retaining
+		// every acquired lock through the subsequent invariant checks and commit.
+		nodeQuery = `
+  SELECT canonical_endpoint_lock_nodes_v1(ARRAY(
+   SELECT node_id FROM unnest($1::text[]) WITH ORDINALITY AS nodes(node_id, ordinal)
+   WHERE ordinal > chunk_start AND ordinal <= chunk_start + 9 ORDER BY ordinal
+  ))
+  FROM generate_series(0, cardinality($1::text[]) - 1, 9) AS chunks(chunk_start)
+ `
 	}
 	rows, err := tx.query(ctx, nodeQuery, requested)
 	if err != nil {

@@ -25,7 +25,9 @@ const (
 	// MaxRecursiveEdges bounds all parent-to-derived edges in the ancestor cut.
 	MaxRecursiveEdges = 128
 	// MaxRecursiveParents bounds each derivation's complete AND parent set.
-	MaxRecursiveParents = 8
+	MaxRecursiveParents = evidenceingestion.ReviewedDerivationMaxParents
+	// MaxRecursiveReviewDisplayBytes retains every source review without truncation.
+	MaxRecursiveReviewDisplayBytes = evidenceingestion.RecursiveImplementsDisplayMaxBytes
 )
 
 // RecursiveDerivationRule binds an explicit reviewed semantic assertion to one
@@ -191,7 +193,7 @@ func BuildRecursiveReviewDisplay(cut AdmittedCut, report CandidateReport, candid
 		return fail(err)
 	}
 	payload, err := json.Marshal(review)
-	if err != nil || len(payload) > MaxReviewDisplayBytes {
+	if err != nil || len(payload) > MaxRecursiveReviewDisplayBytes {
 		return fail(fmt.Errorf("%w: complete recursive display byte bound", ErrInvalid))
 	}
 	display := DerivedReviewDisplay{ContractVersion: RecursiveDisplayVersion,
