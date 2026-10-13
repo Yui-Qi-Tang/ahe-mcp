@@ -706,6 +706,8 @@ func (r mockExecResult) RowsAffected() int64 {
 
 func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 	switch {
+	case strings.Contains(query, "SET LOCAL row_security=off"):
+		return mockExecResult(0), nil
 	case strings.Contains(query, "INSERT INTO canonical_ordinary_admission_manifests"):
 		decisionID := args[0].(string)
 		if _, exists := db.ordinaryManifests[decisionID]; exists {
@@ -1069,6 +1071,38 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 
 func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sqlRows, error) {
 	switch {
+	case strings.Contains(query, "FROM canonical_withdrawal_events") || strings.Contains(query, "FROM source_assessment_events"):
+		return &mockRows{}, nil
+	case strings.Contains(query, "SELECT n.canonical_node_id,n.node_kind,n.temporal"):
+		rows := []mockRow{}
+		for id, n := range db.canonicalGraphNodes {
+			p := db.proposalOccurrences[n.OriginProposalOccurrenceID]
+			a := db.extractionAttempts[p.ExtractionAttemptID]
+			r := db.extractionRuns[a.runID]
+			raw, _ := json.Marshal(n.Temporal)
+			rows = append(rows, mockRow{values: []any{id, string(n.Kind), raw, p.AdmissionOutcome, r.sourceSnapshotID, ""}})
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+	case strings.Contains(query, "SELECT d.node_id,p.parent_node_id,p.canonical_edge_id"):
+		rows := []mockRow{}
+		for _, d := range db.canonicalDerivations {
+			for _, parent := range d.Parents {
+				eid := db.derivationParentEdges[d.ID][parent]
+				e := db.canonicalGraphEdges[eid]
+				rows = append(rows, mockRow{values: []any{d.NodeID, parent, eid, e.From, e.To, string(e.Relation)}})
+			}
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+	case strings.Contains(query, "WHERE relation='contradicts'"):
+		rows := []mockRow{}
+		for _, e := range db.canonicalGraphEdges {
+			if e.Relation == evidencegraph.CanonicalContradicts {
+				raw, _ := json.Marshal(e.Provenance)
+				rows = append(rows, mockRow{values: []any{e.ID, e.From, e.To, raw}})
+			}
+		}
+		return &mockRows{rows: rows, index: -1}, nil
+
 	case strings.Contains(query, "FROM canonical_graph_edges") && strings.Contains(query, "WHERE canonical_edge_id = $1"):
 		edgeID := args[0].(string)
 		from := args[1].(string)
@@ -1365,6 +1399,16 @@ func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sql
 
 func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) sqlRow {
 	switch {
+	case strings.Contains(query, "SELECT store_id,revision FROM evidence_governance_head"):
+		return mockRow{values: []any{"store:unit-test", int64(0)}}
+	case strings.Contains(query, "SELECT source_snapshot_id,raw_content_hash,source_version,origin_metadata,source_system FROM source_snapshots"):
+		id := args[0].(string)
+		s, ok := db.sourceSnapshots[id]
+		if !ok {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		return mockRow{values: []any{id, s.rawContentHash, s.sourceVersion, s.originMetadata, s.sourceSystem}}
+
 	case strings.Contains(query, "SELECT (SELECT receipt_payload FROM canonical_endpoint_review_bindings"):
 		return mockRow{values: []any{[]byte(nil)}}
 	case strings.Contains(query, "canonical-node-exact-semantic-row"):

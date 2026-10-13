@@ -29,7 +29,7 @@ func TestIntegrationReviewedDerivationParentLimitUpgradeRollback(t *testing.T) {
 		t.Fatalf("upgrade57: changed=%v err=%v", changed, err)
 	}
 	status, err := VerifyCurrentInSchema(ctx, pool, schema)
-	if err != nil || status.AppliedMigrations != 57 {
+	if err != nil || status.AppliedMigrations != 58 {
 		t.Fatalf("schema 57 readiness: %+v %v", status, err)
 	}
 	after := ordinaryFenceRows(t, ctx, pool)
@@ -41,6 +41,10 @@ func TestIntegrationReviewedDerivationParentLimitUpgradeRollback(t *testing.T) {
 	if changed, err := ApplyUpInSchema(ctx, pool, schema); err != nil || changed {
 		t.Fatal("migration57 is not idempotent")
 	}
+	governanceDown, err := os.ReadFile("000058_evidence_governance.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
 	down, err := os.ReadFile("000057_reviewed_derivation_parent_limit.down.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -50,10 +54,10 @@ func TestIntegrationReviewedDerivationParentLimitUpgradeRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(ctx)
-	if _, err := tx.Exec(ctx, string(down)); err != nil {
+	if _, err := tx.Exec(ctx, string(governanceDown)+string(down)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tx.Exec(ctx, "DELETE FROM schema_migrations WHERE migration_name='000057_reviewed_derivation_parent_limit.up.sql'"); err != nil {
+	if _, err := tx.Exec(ctx, "DELETE FROM schema_migrations WHERE migration_name IN ('000057_reviewed_derivation_parent_limit.up.sql','000058_evidence_governance.up.sql')"); err != nil {
 		t.Fatal(err)
 	}
 	var restored string

@@ -188,7 +188,7 @@ func TestIntegrationSWERelationPackets(t *testing.T) {
 					ExtractorOutput:     evidenceingestion.FrozenExtractorOutput{Proposals: []evidenceingestion.ExtractorProposalOutput{{ProposalLocalID: "candidate", StatementText: sentence, EvidenceRefs: refs}}}})
 				parents := []string{canonicalByID[link.From], canonicalByID[link.To]}
 				slices.Sort(parents)
-				request := evidenceingestion.EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: proposal.ProposalOccurrenceID, Derivation: &evidenceingestion.EndpointDerivation{
+				request := evidenceingestion.EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: proposal.ProposalOccurrenceID, Derivation: &evidenceingestion.EndpointDerivation{UsePolicy: "current-action/v1",
 					ParentNodeIDs: parents, Method: link.Rule, Producer: "six-case-python-ast-adapter", TraceRef: fmt.Sprintf("public-syntax-link:%s:%d", c.ID, i)}}
 				review := sixCaseCall[evidenceingestion.EndpointReview](t, endpoints, &trace, mcpendpoints.ToolReview, request)
 				if len(review.Display.SourceLeaves) != 2 {

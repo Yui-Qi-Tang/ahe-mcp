@@ -170,7 +170,7 @@ func waitForSourceSnapshotInsertLock(t *testing.T, ctx context.Context, pool *pg
 			SELECT EXISTS (
 				SELECT 1 FROM pg_stat_activity
 				WHERE pid = $1 AND wait_event_type = 'Lock'
-				  AND query LIKE '%INSERT INTO source_snapshots%'
+				  AND (query LIKE '%INSERT INTO source_snapshots%' OR query LIKE '%INSERT INTO source_blobs%')
 				  AND cardinality(pg_blocking_pids(pid)) > 0
 			)
 		`, pid).Scan(&blocked); err != nil {

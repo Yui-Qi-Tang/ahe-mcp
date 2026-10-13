@@ -8,8 +8,10 @@
 
 [Results](#evaluation) · [Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [MCP setup](INSTALL.md)
 
-Development version: **unreleased** · schema **57** · role policy **v8** ·
+Development version: **unreleased** · schema **58** · role policy **v9** ·
 consistency watch **v1**. Go **1.27.0** module.
+
+Issue #18 Batch 1/2 contracts: [evidence governance, native review and current-use gates](internal/evidenceingestion/GOVERNANCE.md).
 
 ## Evaluation
 

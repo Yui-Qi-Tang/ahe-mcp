@@ -36,6 +36,7 @@ type OpenCanonicalReadViewRequest struct {
 // CanonicalReadViewDescriptor preserves the exact bounded scope associated
 // with an external read handle.
 type CanonicalReadViewDescriptor struct {
+	GovernanceDigest              string                                `json:"governance_digest,omitempty"`
 	Handle                        string                                `json:"handle"`
 	SnapshotID                    string                                `json:"snapshot_id"`
 	RootNodeIDs                   []string                              `json:"root_node_ids"`
@@ -53,9 +54,10 @@ type CanonicalReadViewDescriptor struct {
 // handle for repeated path and diagnostics reads against the same materialized
 // view.
 type OpenCanonicalReadViewResponse struct {
-	SchemaVersion string                          `json:"schema_version"`
-	View          CanonicalReadViewDescriptor     `json:"view"`
-	Artifact      evidencegraph.CanonicalArtifact `json:"artifact"`
+	UseState      *evidenceingestion.EvidenceUseProjection `json:"use_state,omitempty"`
+	SchemaVersion string                                   `json:"schema_version"`
+	View          CanonicalReadViewDescriptor              `json:"view"`
+	Artifact      evidencegraph.CanonicalArtifact          `json:"artifact"`
 }
 
 // FindCanonicalPathRequest asks for a relation-scoped path inside one opened
@@ -226,6 +228,7 @@ func (s *Server) OpenCanonicalReadView(
 	s.readViews.put(cached)
 	return OpenCanonicalReadViewResponse{
 		SchemaVersion: CanonicalReadViewQuerySchemaV1,
+		UseState:      view.UseState,
 		View:          canonicalReadViewDescriptor(cached),
 		Artifact:      view.Artifact,
 	}, nil
@@ -296,7 +299,12 @@ func (s *Server) cachedCanonicalReadView(ctx context.Context, handle string) (*c
 }
 
 func canonicalReadViewDescriptor(cached *cachedCanonicalReadView) CanonicalReadViewDescriptor {
+	digest := ""
+	if cached.view.UseState != nil {
+		digest = cached.view.UseState.Assessment.StateDigest
+	}
 	return CanonicalReadViewDescriptor{
+		GovernanceDigest:              digest,
 		Handle:                        cached.handle,
 		SnapshotID:                    cached.view.Artifact.SnapshotID,
 		RootNodeIDs:                   append([]string(nil), cached.view.RootNodeIDs...),
@@ -315,24 +323,34 @@ func canonicalReadViewHandle(owner string, view evidenceingestion.CanonicalReadV
 	if owner == "" {
 		return "", errors.New("canonical read view owner is required")
 	}
+	digest := ""
+	if view.UseState != nil {
+		var err error
+		digest, err = view.UseState.Snapshot.Digest()
+		if err != nil {
+			return "", err
+		}
+	}
 	identity := struct {
-		Owner       string                                `json:"owner"`
-		SnapshotID  string                                `json:"snapshot_id"`
-		RootNodeIDs []string                              `json:"root_node_ids"`
-		Relations   []evidencegraph.CanonicalEdgeRelation `json:"relations"`
-		MaxDepth    int                                   `json:"max_depth"`
-		MaxNodes    int                                   `json:"max_nodes"`
-		MaxEdges    int                                   `json:"max_edges"`
-		Truncated   bool                                  `json:"truncated"`
+		GovernanceDigest string                                `json:"governance_digest,omitempty"`
+		Owner            string                                `json:"owner"`
+		SnapshotID       string                                `json:"snapshot_id"`
+		RootNodeIDs      []string                              `json:"root_node_ids"`
+		Relations        []evidencegraph.CanonicalEdgeRelation `json:"relations"`
+		MaxDepth         int                                   `json:"max_depth"`
+		MaxNodes         int                                   `json:"max_nodes"`
+		MaxEdges         int                                   `json:"max_edges"`
+		Truncated        bool                                  `json:"truncated"`
 	}{
-		Owner:       owner,
-		SnapshotID:  view.Artifact.SnapshotID,
-		RootNodeIDs: view.RootNodeIDs,
-		Relations:   view.Relations,
-		MaxDepth:    view.MaxDepth,
-		MaxNodes:    view.MaxNodes,
-		MaxEdges:    view.MaxEdges,
-		Truncated:   view.Truncated,
+		GovernanceDigest: digest,
+		Owner:            owner,
+		SnapshotID:       view.Artifact.SnapshotID,
+		RootNodeIDs:      view.RootNodeIDs,
+		Relations:        view.Relations,
+		MaxDepth:         view.MaxDepth,
+		MaxNodes:         view.MaxNodes,
+		MaxEdges:         view.MaxEdges,
+		Truncated:        view.Truncated,
 	}
 	data, err := json.Marshal(identity)
 	if err != nil {
@@ -341,6 +359,6 @@ func canonicalReadViewHandle(owner string, view evidenceingestion.CanonicalReadV
 	if identity.SnapshotID == "" {
 		return "", errors.New("canonical read view snapshot_id is required")
 	}
-	digest := sha256.Sum256(data)
-	return "canonical-read-view:" + hex.EncodeToString(digest[:]), nil
+	hash := sha256.Sum256(data)
+	return "canonical-read-view:" + hex.EncodeToString(hash[:]), nil
 }

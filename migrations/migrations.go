@@ -20,6 +20,7 @@ import (
 var upFiles embed.FS
 
 var requiredTablesByMigration = map[string][]string{
+	governanceMigration:              {"evidence_governance_head", "canonical_withdrawal_events", "source_assessment_events"},
 	candidateRelationSourceMigration: nil,
 	consistencyContractMigration:     nil, // Guard-only migration; no new tables.
 	consistencyMigration:             {"consistency_watches", "consistency_watch_versions", "consistency_runs", "consistency_run_artifacts", "consistency_events"},
@@ -197,6 +198,7 @@ var requiredTablesByMigration = map[string][]string{
 }
 
 var requiredTables = []string{
+	"evidence_governance_head", "canonical_withdrawal_events", "source_assessment_events",
 	"endpoint_disposition_review_bindings", "endpoint_review_requests", "supersession_review_bindings",
 	"consistency_watches", "consistency_watch_versions", "consistency_runs", "consistency_run_artifacts", "consistency_events",
 	"canonical_propositions",

@@ -664,8 +664,15 @@ func validatePrincipalSnapshot(
 	if !expectation.login {
 		expectedFunctions = manifest.FunctionExecute
 	}
-	if !slices.Equal(snapshot.functionExecute, expectedFunctions) {
-		return policyViolation("role %q has forbidden function EXECUTE %v", expectation.name, snapshot.functionExecute)
+	for _, got := range snapshot.functionExecute {
+		if !slices.Contains(expectedFunctions, got) {
+			return policyViolation("role %q has forbidden function EXECUTE %v", expectation.name, snapshot.functionExecute)
+		}
+	}
+	for _, want := range expectedFunctions {
+		if !slices.Contains(snapshot.functionExecute, want) {
+			return policyViolation("role %q is missing function EXECUTE %q", expectation.name, want)
+		}
 	}
 	if len(snapshot.grantOptions) != 0 {
 		return policyViolation("role %q has forbidden grant option %v", expectation.name, snapshot.grantOptions)

@@ -36,6 +36,7 @@ type CanonicalReadInput struct {
 // CanonicalReadView is a repeatable-read projection around explicit roots.
 // Truncated reports budget truncation; MaxDepth remains an intentional scope.
 type CanonicalReadView struct {
+	UseState    *EvidenceUseProjection `json:"use_state,omitempty"`
 	Artifact    evidencegraph.CanonicalArtifact
 	RootNodeIDs []string
 	Relations   []evidencegraph.CanonicalEdgeRelation
@@ -81,6 +82,11 @@ func readCanonicalGraphView(ctx context.Context, db sqlDB, input CanonicalReadIn
 		}
 		view.Artifact = artifact
 		view.Truncated = truncated
+		projection, err := loadEvidenceUseProjection(ctx, tx, input.RootNodeIDs)
+		if err != nil {
+			return err
+		}
+		view.UseState = &projection
 		return nil
 	})
 	if err != nil {

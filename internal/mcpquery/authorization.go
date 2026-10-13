@@ -76,7 +76,7 @@ var queryRuntimeToolNames = []string{
 	"get_consistency_watch",
 	"get_consistency_events",
 	"get_consistency_run",
-	"get_consistency_artifact",
+	"get_consistency_artifact", "get_evidence_use_state", "get_evidence_governance_history", "check_current_evidence_plan",
 }
 
 // NewQueryRuntimeAuthorization binds one exact launcher identity to a

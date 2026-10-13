@@ -92,7 +92,7 @@ func TestIntegrationRoleUpgradePreservesIdentityAndEvidence(t *testing.T) {
 					t.Fatalf("upgrade through ApplyUp: changed=%t err=%v", changed, err)
 				}
 				status, err := migrations.VerifyCurrent(ctx, pool)
-				if err != nil || status.AppliedMigrations != 57 {
+				if err != nil || status.AppliedMigrations != 58 {
 					t.Fatalf("upgraded schema: %+v %v", status, err)
 				}
 			}
@@ -546,6 +546,11 @@ func roleUpgradeRejectOldPolicy(t *testing.T, ctx context.Context, actor roleUpg
 		t.Fatal(buildErr)
 	}
 	missing := map[string]bool{}
+	for _, fn := range current.FunctionExecute {
+		if !slices.Contains(old.FunctionExecute, fn) {
+			missing[fmt.Sprintf("is missing function EXECUTE %q", fn)] = true
+		}
+	}
 	for _, rule := range current.Tables {
 		for _, p := range rule.Privileges {
 			missing[fmt.Sprintf("is missing %s on table %q", p, rule.Table)] = true

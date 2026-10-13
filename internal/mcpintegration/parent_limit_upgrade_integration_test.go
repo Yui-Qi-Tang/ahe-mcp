@@ -61,14 +61,21 @@ func verifyParentLimitUpgradeRetainsRelation(t *testing.T, ctx context.Context, 
 	if _, err := tx.Exec(ctx, string(down)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tx.Exec(ctx, "DELETE FROM schema_migrations WHERE migration_name='000057_reviewed_derivation_parent_limit.up.sql'"); err != nil {
+	// Exercise the parent-limit DDL round trip without removing the later
+	// governance migration or its runtime grants. Full native upgrade coverage
+	// is owned by the migrations suite.
+	up, err := os.ReadFile("../../migrations/000057_reviewed_derivation_parent_limit.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, string(up)); err != nil {
 		t.Fatal(err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
 	// Runtime requests resume only after the native schema is upgraded again.
-	if changed, err := migrations.ApplyUpInSchema(ctx, f.pool, f.schema); err != nil || !changed {
+	if changed, err := migrations.ApplyUpInSchema(ctx, f.pool, f.schema); err != nil || changed {
 		t.Fatalf("history-preserving upgrade57: changed=%v err=%v", changed, err)
 	}
 	if _, err := migrations.VerifyCurrentInSchema(ctx, f.pool, f.schema); err != nil {

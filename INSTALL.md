@@ -9,10 +9,10 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 ## Installation scope
 
 Build the reviewed source commit using the steps below. The current MCP schema
-is 57. Query/intake/source-reviewer inventories are 26/5/3. Separate
+is 58. Query/intake/source-reviewer inventories are 29/5/3. Separate
 `relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
 4/3/2 tools. The separate `supersession-reviewer` exposes 2 tools; `core-records` exposes six record/configuration tools. The full
-migration chain through 57 and role policy v8 are required. Do not perform a
+migration chain through 58 and role policy v9 are required. Do not perform a
 binary-only replacement against an older schema or reuse source-review
 credentials for endpoint/relation writes.
 
@@ -28,7 +28,8 @@ The current MCP implementation uses explicit
 launcher and database authority. Query is read-only; the ingestion executable
 separates five source/extractor intake tools from a three-tool
 `source-claim-reviewer`, a four-tool `relation-reviewer`, and three-tool `endpoint-reviewer`, two-tool `supersession-reviewer` and
-`repository-intake` profiles.
+`repository-intake` profiles, plus four-tool `withdrawal-reviewer` and
+`source-assessment-reviewer` profiles.
 Its legacy reviewer/operator profiles remain
 disabled. Existing internal typed writers remain retained
 implementation assets, not newly enabled MCP entrypoints. See
@@ -176,7 +177,7 @@ DATABASE_DSN="$(cat /absolute/private/ahe/migration-database-dns)" \
 Success returns credential-free JSON containing `schema_version`, `schema`,
 `changed`, `applied_migrations`, and `latest_migration`. Repeating the command is
 safe when the selected schema, migration ledger and checksums match. The current
-native schema is 57; migrations 1–56 retain their original checksums.
+native schema is 58; migrations 1–57 retain their original checksums.
 Migration 43 retains the partial unique source-extraction request index.
 Migration 44 requires no proposal/canonical/admission authority and exactly the
 native empty Supersession head before adding ordinary admission manifests;
@@ -306,7 +307,7 @@ transferred to a different process/visibility cut.
 
 These are separately provisioned profiles, not extra source-reviewer tools.
 These profiles were introduced in migration 49; the current build requires the
-full migration chain through 57 and role policy v8. Provision or upgrade and
+full migration chain through 58 and role policy v9. Provision or upgrade and
 verify matching roles with the operator workflow above.
 For fresh installations, provision distinct fresh
 pairs for the new installation and verify each one, rather than rerunning
@@ -379,9 +380,32 @@ canonical materialization, and is readable as `endpoint_disposition` through
 Query. Historical terminal review permits only the original exact retry.
 Never relabel code as a source claim to use source-disposition tools.
 
+## Withdrawal and source assessment reviewers
+
+Use distinct protected launcher configurations with profiles
+`withdrawal-reviewer` and `source-assessment-reviewer`. Each exposes native
+`get_*_review`, `apply_reviewed_*`, `prepare_*_batch` and
+`apply_reviewed_*_batch` tools. The launcher binds the reviewer; historical local
+reviewer fields do not authenticate the new decision. Always discover the exact
+schemas and retain unchanged native requests/subjects for retries. Batch
+preparation takes `items: [{record, reason}]` and returns an exact manifest plus
+native displays. Applying an approved subset requires that unchanged manifest,
+its `expected_manifest_subject` and `approved_items`; retain the manifest with
+the resulting per-item receipts.
+
+Query adds `get_evidence_use_state`, `get_evidence_governance_history` and
+`check_current_evidence_plan`. Use-state and plan checks require explicit `policy`
+(`current-action/v1` or `grounded-current-action/v1`). Consumers must check declared bases before planning
+and recheck the complete emitted action-to-basis mapping afterward. A SAT result,
+historical read-view handle or prior receipt does not authorize new current use.
+New public derived endpoint requests require `derivation.use_policy`; admission
+binds it in native review and rechecks it inside its committing transaction.
+See [governance contracts and acceptance](internal/evidenceingestion/GOVERNANCE.md)
+for source findings, migration readback, cache reuse and the commit-point limit.
+
 ## Supersession reviewer
 
-The separately provisioned `supersession-reviewer` requires schema 57 / policy v8.
+The separately provisioned `supersession-reviewer` requires schema 58 / policy v9.
 Use the same protected launcher configuration as other reviewer profiles with
 its own fixed principal, bounded LOGIN and NOLOGIN group. Run
 `AHE_RUNTIME_PROFILE=supersession-reviewer ./bin/ahe-runtime-admin provision`
@@ -543,7 +567,7 @@ binding. Tool arguments cannot supply reviewer identity. Its canonical writes
 require the exact complete display/subject, explicit approval and reason.
 Reviewed `reject`/`audit_only` also require the exact review and explicit human
 decision, but create no canonical nodes or edges. `pending` is a local pause,
-not a reviewer write. Intake/reviewer/Query inventories are 5/3/26.
+not a reviewer write. Intake/reviewer/Query inventories are 5/3/29.
 
 Preserve exact connector-observed text/JSON and provider identity/revision.
 `exact_excerpt` and `truncated_document` coverage require limitations;
@@ -660,7 +684,7 @@ An empty new database is expected; no search result alone is not a connection te
 
 ## Upgrade
 
-This build requires schema **57** and database role policy **v8**. Updating a
+This build requires schema **58** and database role policy **v9**. Updating a
 schema-49 installation is **not** a binary-only replacement: migrations 50–53 add
 Core record and consistency-history tables. From schema 49, all profiles need
 SELECT on eleven new tables; from schema 52, five new diagnostic tables. Refresh
@@ -707,6 +731,15 @@ A schema-56/policy-v8 installation additionally needs migration 57 for the
 32-parent recursive implements guard, followed by runtime verification. It does
 not require broader role grants. Never copy credentials into repository artifacts.
 
+A schema-57/policy-v8 installation needs migration 58 and policy v9. All
+profiles gain SELECT on the three governance tables. Endpoint reviewer gains
+EXECUTE on the qualified governance-lock helper; the two new governance reviewer
+profiles additionally gain INSERT only on their own event table. Upgrade and
+verify existing roles, and separately provision each newly authorized reviewer.
+The shared transaction guard covers relevant canonical/source/admission writes.
+Migration 58 preserves existing evidence and receipts; rollback refuses populated
+governance history.
+
 ### Separate database-adoption procedure
 
 Use this procedure when adopting retained evidence into a separately provisioned
@@ -745,7 +778,7 @@ embedded migration names and checksums.
 - missing/invalid runtime principal, profile, role or schema: configure the
   protected launcher; do not inject replacement identity through tool arguments.
 - `legacy writer runtime profiles are not enabled`: this executable currently
-  accepts `core-records`, `intake`, `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer`, `supersession-reviewer` or `repository-intake`; do not weaken the gate to recover old writer exposure.
+  accepts `core-records`, `intake`, `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer`, `supersession-reviewer`, `withdrawal-reviewer`, `source-assessment-reviewer` or `repository-intake`; do not weaken the gate to recover old writer exposure.
 - schema/search-path rejection: pre-provision the exact private schema and
   remove fallback from the migration connection configuration, not from an
   existing database's ACLs.

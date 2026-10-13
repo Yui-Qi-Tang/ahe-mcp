@@ -50,7 +50,7 @@ func TestBackendExposesOnlyShippingQueryToolsAndDelegatesCalls(t *testing.T) {
 		"list_external_checks",
 		"get_external_representation",
 		"get_external_representation_material",
-		"get_external_dependency_users", "get_consistency_scope", "get_consistency_watch", "get_consistency_events", "get_consistency_run", "get_consistency_artifact",
+		"get_external_dependency_users", "get_consistency_scope", "get_consistency_watch", "get_consistency_events", "get_consistency_run", "get_consistency_artifact", "get_evidence_use_state", "get_evidence_governance_history", "check_current_evidence_plan",
 	}
 	if !reflect.DeepEqual(gotNames, wantNames) {
 		t.Fatalf("query tools = %v, want %v", gotNames, wantNames)

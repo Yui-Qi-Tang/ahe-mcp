@@ -94,6 +94,12 @@ func verifyLifecycleFaults(t *testing.T, ctx context.Context, f authorityProcess
 	if committed.Admission.EventRevision != headRevision+1 {
 		t.Fatal("unchanged retry after rollback failed")
 	}
+	// The fault/retry above superseded the original race parent. Review this
+	// terminal-state race against the now-current replacement so admission and
+	// disposition are both valid contenders under the current-use contract.
+	derivation := *req.Derivation
+	derivation.ParentNodeIDs = []string{committed.Admission.CanonicalRef}
+	req.Derivation = &derivation
 	review := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, req)
 	input := evidenceingestion.ReviewedEndpointAdmissionInput{RequestID: "fault-then-race", Review: req, ExpectedSubject: review.Subject, Decision: "reject", DecisionReason: "TEST APPROVAL STUB: synthetic fault and terminal race."}
 	before := relationCounts(t, ctx, f.pool)

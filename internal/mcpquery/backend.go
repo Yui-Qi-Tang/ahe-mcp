@@ -203,7 +203,7 @@ func queryTools() []mcpstdio.Tool {
 				IdempotentHint:  &idempotent,
 			},
 		},
-	}, mcpcorerecords.ReadTools()...)
+	}, append(mcpcorerecords.ReadTools(), evidencequerymcp.GovernanceTools()...)...)
 }
 
 func openCanonicalReadViewSchema() map[string]any {

@@ -2,6 +2,7 @@ package evidenceingestion
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -47,8 +48,12 @@ func TestReadCanonicalGraphViewLoadsAdmittedNeighborhood(t *testing.T) {
 	if err := first.Artifact.Validate(); err != nil {
 		t.Fatalf("artifact.Validate() error = %v", err)
 	}
+	// Evaluation time is deliberately fresh even for an unchanged data cut.
+	second.UseState.Assessment.EvaluatedAt = first.UseState.Assessment.EvaluatedAt
 	if !reflect.DeepEqual(second, first) {
-		t.Fatalf("repeatable read differs:\nfirst  %+v\nsecond %+v", first, second)
+		a, _ := json.Marshal(first)
+		b, _ := json.Marshal(second)
+		t.Fatalf("repeatable read differs:\nfirst  %s\nsecond %s", a, b)
 	}
 }
 

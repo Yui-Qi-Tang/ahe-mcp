@@ -40,10 +40,10 @@ func TestIntegrationVerifyCurrentAcceptsAppliedSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
 	}
-	if status.AppliedMigrations != 57 {
-		t.Fatalf("AppliedMigrations = %d, want 57", status.AppliedMigrations)
+	if status.AppliedMigrations != 58 {
+		t.Fatalf("AppliedMigrations = %d, want 58", status.AppliedMigrations)
 	}
-	if status.LatestMigration != "000057_reviewed_derivation_parent_limit.up.sql" {
+	if status.LatestMigration != "000058_evidence_governance.up.sql" {
 		t.Fatalf("LatestMigration = %q", status.LatestMigration)
 	}
 }
@@ -142,7 +142,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	}
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM schema_migrations
-		WHERE migration_name = '000057_reviewed_derivation_parent_limit.up.sql'
+		WHERE migration_name = '000058_evidence_governance.up.sql'
 	`); err != nil {
 		t.Fatalf("delete latest migration row: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestIntegrationVerifyCurrentRejectsIncompleteMigrationLedger(t *testing.T) 
 	if !errors.Is(err, ErrSchemaNotCurrent) {
 		t.Fatalf("VerifyCurrent() error = %v, want ErrSchemaNotCurrent", err)
 	}
-	if !strings.Contains(err.Error(), "56/57 embedded migrations are applied") {
+	if !strings.Contains(err.Error(), "57/58 embedded migrations are applied") {
 		t.Fatalf("VerifyCurrent() error = %v, want migration count detail", err)
 	}
 }
@@ -320,7 +320,7 @@ func TestIntegrationApplyUpAllowsRepositoryRunRequestReuseAndOneSourceRun(t *tes
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want migration 000043 applied")
 	}
-	assertMigrationCount(t, ctx, pool, 57)
+	assertMigrationCount(t, ctx, pool, 58)
 	assertMigrationIndexExists(t, ctx, pool, "extraction_runs_source_request_id_uq")
 	if _, err := VerifyCurrent(ctx, pool); err != nil {
 		t.Fatalf("VerifyCurrent() error = %v", err)
@@ -1204,7 +1204,7 @@ func TestIntegrationApplyUpBootstrapsLegacyBaseline(t *testing.T) {
 	if !changed {
 		t.Fatal("ApplyUp() changed = false, want true")
 	}
-	assertMigrationCount(t, ctx, pool, 57)
+	assertMigrationCount(t, ctx, pool, 58)
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "source_file_snapshots")
 	assertMigrationTableExists(t, ctx, pool, "repository_snapshot_intake_requests")
@@ -2351,22 +2351,22 @@ func TestIntegrationSchemaBoundAPIsRejectTemporaryRelationShadowing(t *testing.T
 	qualifiedLedger := pgx.Identifier{schema, "schema_migrations"}.Sanitize()
 	if _, err := pool.Exec(ctx, `
 		DELETE FROM `+qualifiedLedger+`
-		WHERE migration_name = '000057_reviewed_derivation_parent_limit.up.sql'
+		WHERE migration_name = '000058_evidence_governance.up.sql'
 	`); err != nil {
 		t.Fatalf("make target migration ledger incomplete: %v", err)
 	}
-	// This preserves the pre-guard failure witness: the legacy verifier reads the
-	// complete pg_temp ledger and mistakes the incomplete target schema for a
-	// current one. The strict verifier must reject the same physical session.
-	if _, err := VerifyCurrent(ctx, pool); err != nil {
-		t.Fatalf("legacy VerifyCurrent() did not reproduce temporary-ledger shadowing: %v", err)
+	// The legacy verifier now also notices schema-qualified governance FKs
+	// when temporary source tables shadow the real schema. Both routes must fail.
+	if _, err := VerifyCurrent(ctx, pool); err == nil {
+		t.Fatal("temporary shadows passed legacy verification")
 	}
+
 	if _, err := VerifyCurrentInSchema(ctx, pool, schema); err == nil || !strings.Contains(err.Error(), "active temporary schema") {
 		t.Fatalf("VerifyCurrentInSchema() error = %v, want active temporary schema rejection", err)
 	}
 
 	pool.Reset()
-	if _, err := VerifyCurrentInSchema(ctx, pool, schema); !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), "56/57") {
+	if _, err := VerifyCurrentInSchema(ctx, pool, schema); !errors.Is(err, ErrSchemaNotCurrent) || !strings.Contains(err.Error(), "57/58") {
 		t.Fatalf("VerifyCurrentInSchema() after reset error = %v, want incomplete target ledger", err)
 	}
 }

@@ -20,8 +20,8 @@ import (
 func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 	server := newServer(&fakeQueryCore{})
 	tools := server.Tools()
-	if len(tools) != 26 {
-		t.Fatalf("len(Tools()) = %d, want 26", len(tools))
+	if len(tools) != 29 {
+		t.Fatalf("len(Tools()) = %d, want 29", len(tools))
 	}
 	if tools[0].Name != ToolGetEvidenceRecord {
 		t.Fatalf("tool name = %q, want %q", tools[0].Name, ToolGetEvidenceRecord)
@@ -44,7 +44,7 @@ func TestToolsExposeReadOnlyQueryTools(t *testing.T) {
 		ToolGetCanonicalSupersessionHead,
 		ToolGetCanonicalSupersessionCurrentness,
 	}
-	wantNames = append(wantNames, "get_proposition_members", "get_proposition_binding_history", "get_external_check_subject", "get_external_check", "list_external_checks", "get_external_representation", "get_external_representation_material", "get_external_dependency_users", "get_consistency_scope", "get_consistency_watch", "get_consistency_events", "get_consistency_run", "get_consistency_artifact")
+	wantNames = append(wantNames, "get_proposition_members", "get_proposition_binding_history", "get_external_check_subject", "get_external_check", "list_external_checks", "get_external_representation", "get_external_representation_material", "get_external_dependency_users", "get_consistency_scope", "get_consistency_watch", "get_consistency_events", "get_consistency_run", "get_consistency_artifact", "get_evidence_use_state", "get_evidence_governance_history", "check_current_evidence_plan")
 	for i, want := range wantNames {
 		if tools[i].Name != want {
 			t.Fatalf("tool[%d] name = %q, want %q", i, tools[i].Name, want)
@@ -154,6 +154,8 @@ func TestMapSourceInfoExposesTypedExternalSourceProvenance(t *testing.T) {
 	})
 
 	if source.ExternalSource == nil ||
+		source.ExternalSource.DeclarationAuthority != "original_intake_declaration" ||
+		source.ExternalSource.AssessmentProjection != "not_projected" ||
 		source.ExternalSource.SchemaVersion != evidenceingestion.ExternalSourceEnvelopeSchemaV1 ||
 		source.ExternalSource.SourceSystem != "jira" ||
 		source.ExternalSource.SourceNamespace != "acme/eng" ||

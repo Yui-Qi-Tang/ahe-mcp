@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -457,6 +458,9 @@ func policyStatements(
 	}
 	if manifest.Profile == ProfileSupersessionReviewer {
 		statements = append(statements, "GRANT EXECUTE ON FUNCTION "+pgx.Identifier{schema, "canonical_supersession_lock_targets_v1"}.Sanitize()+"(text[]) TO "+roleID)
+	}
+	if slices.Contains(manifest.FunctionExecute, "evidence_governance_lock_v1(regclass)") {
+		statements = append(statements, "GRANT EXECUTE ON FUNCTION "+pgx.Identifier{schema, "evidence_governance_lock_v1"}.Sanitize()+"(regclass) TO "+roleID)
 	}
 	return statements, nil
 }

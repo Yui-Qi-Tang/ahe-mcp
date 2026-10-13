@@ -22,6 +22,7 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencequerymcp"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpendpoints"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcprelations"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpsupersession"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -44,7 +45,7 @@ func testEndpointWritersStandardMCP(t *testing.T, parentCount int) {
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 180*time.Second)
 	defer cancel()
-	f := newAuthorityProcessFixture(t, ctx, dsn, dbrole.ProfileSourceClaimReviewer, dbrole.ProfileRelationReviewer, dbrole.ProfileEndpointReviewer, dbrole.ProfileRepositoryIntake)
+	f := newAuthorityProcessFixture(t, ctx, dsn, dbrole.ProfileSourceClaimReviewer, dbrole.ProfileRelationReviewer, dbrole.ProfileEndpointReviewer, dbrole.ProfileRepositoryIntake, dbrole.ProfileSupersessionReviewer)
 	directory := provisioningProtectedDirectory(t, dsn)
 	binaries := buildProvisioningCommands(t, ctx, directory)
 	start := func(login authorityProcessLogin, profile, repositoryRoot string) *authorityProcess {
@@ -79,6 +80,7 @@ func testEndpointWritersStandardMCP(t *testing.T, parentCount int) {
 	endpoints := start(f.endpoints, "endpoint-reviewer", "")
 	relations := start(f.relations, "relation-reviewer", "")
 	query := start(f.query, "query", "")
+	replacements := start(f.supersession, "supersession-reviewer", "")
 	endpoints.assertTools(t, []string{mcpendpoints.ToolReview, mcpendpoints.ToolAdmit, mcpendpoints.ToolDisposition})
 	for _, name := range []string{"admit_pending_proposal", "submit_external_source", "admit_reviewed_implements", "admit_reviewed_source_claim", "capture_repository_snapshot"} {
 		endpoints.assertDenied(t, name, map[string]any{})
@@ -121,7 +123,7 @@ func testEndpointWritersStandardMCP(t *testing.T, parentCount int) {
 			// A source admission can invalidate an already prepared endpoint review.
 			staleReview = relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, evidenceingestion.EndpointReviewRequest{
 				Kind: "derived_spec", ProposalOccurrenceID: proposal.ProposalOccurrenceID,
-				Derivation: &evidenceingestion.EndpointDerivation{ParentNodeIDs: []string{parents[0]},
+				Derivation: &evidenceingestion.EndpointDerivation{UsePolicy: "current-action/v1", ParentNodeIDs: []string{parents[0]},
 					Method: "Synthetic pending review before a different admission.", Producer: "synthetic-extractor", TraceRef: "synthetic:stale-review"},
 			})
 		}
@@ -142,15 +144,34 @@ func testEndpointWritersStandardMCP(t *testing.T, parentCount int) {
 				Decision: "approved", DecisionReason: "APPROVE STUB: stale review must not authorize a different admission.",
 			}, evidenceingestion.ErrorAdmissionStateConflict)
 			after := relationTool[evidencequerymcp.GetEvidenceRecordResponse](t, query, "get_evidence_record", map[string]any{"canonical_id": admission.CanonicalRef})
+			if original.UseState != nil && after.UseState != nil {
+				after.UseState.Assessment.EvaluatedAt = original.UseState.Assessment.EvaluatedAt
+			}
 			if relationCounts(t, ctx, f.pool) != before || !reflect.DeepEqual(original, after) {
 				t.Fatal("rejected endpoint review/write changed the existing source admission")
 			}
 		}
 	}
+	// TEST APPROVAL STUB: classify every premise with a reviewed same-object
+	// fresh replacement. Ordinary admission alone leaves currentness unknown.
+	for i, oldID := range parents {
+		label := fmt.Sprintf("premise-%02d", i)
+		if i < 2 {
+			label = []string{"a", "b"}[i]
+		}
+		src := relationTool[evidenceingestionmcp.SubmitExternalSourceResponse](t, intake, "submit_external_source", evidenceingestion.ExternalSourceEnvelopeV1{
+			SchemaVersion: evidenceingestion.ExternalSourceEnvelopeSchemaV1, RequestID: "current-source-" + label, SourceSystem: "lab", SourceNamespace: "endpoint-synthetic", ObjectType: "document", ObjectID: label, Revision: "v2",
+			SourceLocation: "https://example.invalid/endpoint-" + label, Title: "Synthetic current refund contract", ContentFormat: evidenceingestion.ExternalSourceContentFormatPlainText, ContentFidelity: evidenceingestion.ExternalSourceContentFidelityVerbatim, Content: statements[i] + "\n", Coverage: evidenceingestion.ExternalSourceCoverageFullDocument, Limitations: []string{}, CollectorID: "synthetic-collector", ConnectorID: "synthetic-connector", ObservedAt: "2026-10-13T00:00:00Z"})
+		proposal := relationTool[evidenceingestionmcp.SubmitExtractorOutputResponse](t, intake, "submit_extractor_output", evidenceingestionmcp.SubmitExtractorOutputRequest{RequestID: "current-extract-" + label, SourceSnapshotID: src.SourceSnapshotID, ExtractionViewID: src.ExtractionViewID, ExtractorDefinition: evidenceingestion.ExtractorDefinitionInput{Name: "synthetic-endpoint-extractor", Version: "v1"}, ExtractorOutput: evidenceingestion.FrozenExtractorOutput{Proposals: []evidenceingestion.ExtractorProposalOutput{{ProposalLocalID: "claim", StatementText: statements[i], EvidenceRefs: []string{src.Spans[0].SpanID}}}}})
+		selection := map[string]any{"proposal_occurrence_id": proposal.ProposalOccurrenceID, "basis": evidenceingestion.SupersessionLineageBasis{SourceSystem: "lab", SourceNamespace: "endpoint-synthetic", ObjectType: "document", ObjectID: label, SlotKind: "field", SlotID: "premise"}, "target_node_ids": []string{oldID}}
+		reviewed := relationTool[evidenceingestion.SupersessionReview](t, replacements, mcpsupersession.ToolReview, selection)
+		receipt := relationTool[evidenceingestion.SupersessionReviewReceipt](t, replacements, mcpsupersession.ToolAdmit, evidenceingestion.ReviewedSupersessionInput{RequestID: "current-replace-" + label, Review: reviewed.Display.Request, ExpectedSubject: reviewed.Subject, Decision: "approved", DecisionReason: "TEST APPROVAL STUB: classify exact current synthetic premise"})
+		parents[i] = receipt.Admission.CanonicalRef
+	}
 	slices.Sort(parents)
 	derived := submit(0, "extract-derived", "refund.ValidateRefundWindow is the integer refund-window predicate governed by the reviewed days <= 30 contract.")
 	req := evidenceingestion.EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: derived.ProposalOccurrenceID,
-		Derivation: &evidenceingestion.EndpointDerivation{ParentNodeIDs: parents, Method: "Combine every AND parent without adding a time origin or nonnegative bound.", Producer: "synthetic-extractor", TraceRef: "synthetic:derived"}}
+		Derivation: &evidenceingestion.EndpointDerivation{UsePolicy: "current-action/v1", ParentNodeIDs: parents, Method: "Combine every AND parent without adding a time origin or nonnegative bound.", Producer: "synthetic-extractor", TraceRef: "synthetic:derived"}}
 	before := relationCounts(t, ctx, f.pool)
 	review := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, req)
 	assertPendingEndpointReview(t, review)
@@ -305,11 +326,11 @@ func testEndpointWritersStandardMCP(t *testing.T, parentCount int) {
 	var nodes, edges, decisions, endpointBindings, sourceBindings, unreviewed, active int
 	if err := f.pool.QueryRow(ctx, `SELECT (SELECT count(*) FROM canonical_graph_nodes),(SELECT count(*) FROM canonical_graph_edges),
  (SELECT count(*) FROM admission_decisions),(SELECT count(*) FROM canonical_endpoint_review_bindings),
- (SELECT count(*) FROM canonical_source_claim_review_bindings),(SELECT count(*) FROM admission_decisions WHERE review_binding_contract_version IS NULL),
+ (SELECT count(*) FROM canonical_source_claim_review_bindings),(SELECT count(*) FROM admission_decisions WHERE review_binding_contract_version IS NULL AND supersession_review_binding_contract_version IS NULL),
  (SELECT count(*) FROM repository_source_heads)`).Scan(&nodes, &edges, &decisions, &endpointBindings, &sourceBindings, &unreviewed, &active); err != nil {
 		t.Fatal(err)
 	}
-	if nodes != 2*parentCount+3 || edges != 2*parentCount+2 || decisions != parentCount+2 || endpointBindings != 2 || sourceBindings != parentCount || unreviewed != 0 || active != 0 {
+	if nodes != 4*parentCount+3 || edges != 4*parentCount+2 || decisions != 2*parentCount+2 || endpointBindings != 2 || sourceBindings != parentCount || unreviewed != 0 || active != 0 {
 		t.Fatalf("unexpected fully reviewed MCP graph: nodes=%d edges=%d decisions=%d endpoints=%d sources=%d unreviewed=%d active=%d", nodes, edges, decisions, endpointBindings, sourceBindings, unreviewed, active)
 	}
 	t.Logf("standard MCP only: %d reviewed source claims, complete %d-parent AND endpoint, repository code endpoint, independent implements, exact replay and commit rollback; no native canonical bootstrap", parentCount, parentCount)

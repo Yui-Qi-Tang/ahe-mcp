@@ -15,7 +15,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// AdmitPendingProposal admits one pending statement proposal into the canonical graph tables.
+// AdmitPendingProposal is internal historical materialization. It grants no
+// current-use authority and is not enabled in any public runtime profile.
+// Current-purpose derivation uses AdmitReviewedEndpoint and its guarded policy.
 func AdmitPendingProposal(ctx context.Context, pool *pgxpool.Pool, input AdmissionInput) (AdmissionResult, error) {
 	if pool == nil {
 		return AdmissionResult{}, newDomainError(ErrorInvalidInput, "postgres pool is required")

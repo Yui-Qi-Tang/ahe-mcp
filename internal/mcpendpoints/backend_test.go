@@ -111,7 +111,7 @@ func TestEndpointProfileTableAndFunctionAuthority(t *testing.T) {
 			}
 		}
 		if tc.profile == dbrole.ProfileEndpointReviewer {
-			if !reflect.DeepEqual(m.FunctionExecute, []string{"canonical_endpoint_lock_nodes_v1(text[])"}) {
+			if !reflect.DeepEqual(m.FunctionExecute, []string{"canonical_endpoint_lock_nodes_v1(text[])", "evidence_governance_lock_v1(regclass)"}) {
 				t.Fatal("lock-only function boundary differs")
 			}
 		} else if len(m.FunctionExecute) != 0 {

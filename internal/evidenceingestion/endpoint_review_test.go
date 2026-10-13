@@ -1,6 +1,7 @@
 package evidenceingestion
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -8,7 +9,7 @@ import (
 
 func TestEndpointReviewRequestContract(t *testing.T) {
 	valid := EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: "occ:synthetic",
-		Derivation: &EndpointDerivation{ParentNodeIDs: []string{"canon-node:a", "canon-node:b"}, Method: "AND", Producer: "synthetic", TraceRef: "synthetic:trace"}}
+		Derivation: &EndpointDerivation{UsePolicy: "current-action/v1", ParentNodeIDs: []string{"canon-node:a", "canon-node:b"}, Method: "AND", Producer: "synthetic", TraceRef: "synthetic:trace"}}
 	if err := validateEndpointRequest(valid); err != nil {
 		t.Fatal(err)
 	}
@@ -22,6 +23,7 @@ func TestEndpointReviewRequestContract(t *testing.T) {
 		func(v *EndpointReviewRequest) { v.Derivation.Method = "" },
 		func(v *EndpointReviewRequest) { v.Derivation.TraceRef = " vague" },
 		func(v *EndpointReviewRequest) { v.Derivation.Producer = strings.Repeat("x", 201) },
+		func(v *EndpointReviewRequest) { v.Derivation.UsePolicy = "historical" },
 		func(v *EndpointReviewRequest) { v.Kind = "repository_code" },
 	} {
 		copy := valid
@@ -38,6 +40,23 @@ func TestEndpointReviewRequestContract(t *testing.T) {
 	}
 }
 
+func TestEndpointHistoricalRequestDoesNotAcquireUsePolicyOnDecode(t *testing.T) {
+	// A stored request from before governance policy selection must keep its old
+	// JSON shape. New pending admission separately rejects this omitted purpose.
+	const historical = `{"kind":"derived_spec","proposal_occurrence_id":"occ:synthetic","derivation":{"parent_node_ids":["canon-node:a"],"method":"AND","producer":"synthetic","trace_ref":"synthetic:trace"}}`
+	var request EndpointReviewRequest
+	if err := json.Unmarshal([]byte(historical), &request); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateEndpointRequest(request); err != nil {
+		t.Fatal("historical request cannot enter exact replay", err)
+	}
+	raw, err := json.Marshal(request)
+	if err != nil || strings.Contains(string(raw), "use_policy") || request.Derivation.UsePolicy != "" {
+		t.Fatal("historical subject acquired a new purpose", string(raw), err)
+	}
+}
+
 func TestEndpointReviewParentCountBoundaries(t *testing.T) {
 	for _, count := range []int{0, 1, 8, 9, 12, 32, 33} {
 		t.Run(fmt.Sprint(count), func(t *testing.T) {
@@ -46,7 +65,7 @@ func TestEndpointReviewParentCountBoundaries(t *testing.T) {
 				parents[i] = fmt.Sprintf("canon-node:parent-%02d", i)
 			}
 			req := EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: "occ:synthetic",
-				Derivation: &EndpointDerivation{ParentNodeIDs: parents, Method: "AND", Producer: "synthetic", TraceRef: "synthetic:trace"}}
+				Derivation: &EndpointDerivation{UsePolicy: "current-action/v1", ParentNodeIDs: parents, Method: "AND", Producer: "synthetic", TraceRef: "synthetic:trace"}}
 			err := validateEndpointRequest(req)
 			if count == 0 || count == 33 {
 				assertKind(t, err, ErrorInvalidInput)

@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceuse"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,10 +24,12 @@ const ReviewedDerivationMaxParents = 32
 
 // EndpointDerivation is an explicit AND composition, not a model correctness claim.
 type EndpointDerivation struct {
-	ParentNodeIDs []string `json:"parent_node_ids"`
-	Method        string   `json:"method"`
-	Producer      string   `json:"producer"`
-	TraceRef      string   `json:"trace_ref"`
+	// Omitted only for exact replay of a pre-policy historical receipt.
+	UsePolicy     evidenceuse.Policy `json:"use_policy,omitempty"`
+	ParentNodeIDs []string           `json:"parent_node_ids"`
+	Method        string             `json:"method"`
+	Producer      string             `json:"producer"`
+	TraceRef      string             `json:"trace_ref"`
 }
 type EndpointReviewRequest struct {
 	Kind                 string              `json:"kind"`
@@ -56,6 +59,7 @@ type EndpointReviewLifecycle struct {
 	DispositionReceipt *EndpointDispositionReceipt `json:"disposition_receipt,omitempty"`
 }
 type EndpointReviewDisplay struct {
+	UseReview       *EndpointUseReview                   `json:"use_review,omitempty"`
 	ContractVersion string                               `json:"contract_version"`
 	Request         EndpointReviewRequest                `json:"request"`
 	Proposal        ProposalQueryResult                  `json:"proposal"`
@@ -106,6 +110,11 @@ func validateEndpointRequest(req EndpointReviewRequest) error {
 				return newDomainError(ErrorInvalidInput, "derived parents must be exact unique sorted canonical IDs")
 			}
 		}
+		if d.UsePolicy != "" {
+			if err := evidenceuse.ValidatePolicy(d.UsePolicy); err != nil {
+				return newDomainError(ErrorInvalidInput, "%v", err)
+			}
+		}
 	default:
 		return newDomainError(ErrorUnsupportedAdmission, "endpoint kind must be derived_spec or repository_code")
 	}
@@ -149,6 +158,11 @@ func loadEndpointReview(ctx context.Context, tx sqlTx, req EndpointReviewRequest
 	}
 	if p.AdmissionOutcome == admissionOutcomeRejected || p.AdmissionOutcome == admissionOutcomeAuditOnly {
 		return loadEndpointDispositionReview(ctx, tx, p, &req)
+	}
+	if req.Kind == "derived_spec" && p.AdmissionOutcome == admissionOutcomePending {
+		if err := evidenceuse.ValidatePolicy(req.Derivation.UsePolicy); err != nil {
+			return EndpointReview{}, newDomainError(ErrorInvalidInput, "new derived review requires an explicit use_policy: %v", err)
+		}
 	}
 	if p.ExtractionAttemptStatus != attemptStatusSucceeded || p.ProposalKind != ProposalKindStatement ||
 		(p.AdmissionOutcome != admissionOutcomePending && p.AdmissionOutcome != admissionOutcomeAdmitted) {
@@ -204,6 +218,30 @@ func loadEndpointReview(ctx context.Context, tx sqlTx, req EndpointReviewRequest
 		display.SourceBasis = &basis
 		if err := loadEndpointAncestors(ctx, tx, req.Derivation.ParentNodeIDs, &display); err != nil {
 			return EndpointReview{}, err
+		}
+	}
+	if req.Kind == "derived_spec" {
+		if lifecycle.Mode == "exact_replay_only" {
+			var raw string
+			if err := tx.queryRow(ctx, `SELECT display_payload FROM canonical_endpoint_review_bindings WHERE proposal_occurrence_id=$1`, req.ProposalOccurrenceID).Scan(&raw); err != nil {
+				return EndpointReview{}, err
+			}
+			var saved EndpointReviewDisplay
+			if err := json.Unmarshal([]byte(raw), &saved); err != nil {
+				return EndpointReview{}, err
+			}
+			display.UseReview = saved.UseReview
+		} else {
+			var err error
+			display.UseReview, err = loadEndpointUseReview(ctx, tx, req.Derivation.UsePolicy, req.Derivation.ParentNodeIDs)
+			if err != nil {
+				return EndpointReview{}, err
+			}
+			source, err := loadGovernanceSourceState(ctx, tx, p.SourceSnapshotID)
+			if err != nil {
+				return EndpointReview{}, err
+			}
+			display.UseReview.Sources[p.SourceSnapshotID] = source
 		}
 	}
 	payload, err := deterministicJSON(display)
@@ -319,6 +357,11 @@ func AdmitReviewedEndpoint(ctx context.Context, pool *pgxpool.Pool, input Review
 			if err != nil {
 				return err
 			}
+			if input.Review.Kind == "derived_spec" && p.AdmissionOutcome == admissionOutcomePending {
+				if err := lockGovernance(ctx, tx); err != nil {
+					return err
+				}
+			}
 			review, err := loadEndpointReview(ctx, tx, input.Review)
 			if err != nil {
 				return err
@@ -357,6 +400,9 @@ func AdmitReviewedEndpoint(ctx context.Context, pool *pgxpool.Pool, input Review
 				return err
 			}
 			if mutation.derivation != nil {
+				if err := guardDerivedCurrentUse(ctx, tx, mutation, input.Review.Derivation.UsePolicy); err != nil {
+					return err
+				}
 				if err := validateDerivedAdmissionWithLock(ctx, tx, mutation, true); err != nil {
 					return err
 				}

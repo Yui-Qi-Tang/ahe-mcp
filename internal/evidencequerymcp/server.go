@@ -449,6 +449,7 @@ type ListEvidenceNeighborsResponse struct {
 
 // GetEvidenceRecordResponse preserves proposal lifecycle and provenance metadata.
 type GetEvidenceRecordResponse struct {
+	UseState                   *evidenceingestion.EvidenceUseProjection       `json:"use_state,omitempty"`
 	SupersessionAdmission      *evidenceingestion.SupersessionReviewReceipt   `json:"supersession_admission,omitempty"`
 	EndpointDisposition        *evidenceingestion.EndpointDispositionReceipt  `json:"endpoint_disposition,omitempty"`
 	EndpointAdmission          *evidenceingestion.EndpointAdmissionReceipt    `json:"endpoint_admission,omitempty"`
@@ -503,6 +504,10 @@ type SourceInfo struct {
 // ExternalSourceProvenance exposes the provider-neutral source authority
 // declared by the external agent or connector before proposal production.
 type ExternalSourceProvenance struct {
+	// These labels describe the projection, not a source review result. Older
+	// envelopes may contain incorrect declarations; retaining them is not proof.
+	DeclarationAuthority          string   `json:"declaration_authority"`
+	AssessmentProjection          string   `json:"assessment_projection"`
 	SchemaVersion                 string   `json:"schema_version"`
 	SourceSystem                  string   `json:"source_system"`
 	SourceNamespace               string   `json:"source_namespace"`
@@ -701,7 +706,7 @@ func (s *Server) Tools() []ToolDefinition {
 			ReadOnly:    true,
 		},
 	}
-	for _, t := range mcpcorerecords.ReadTools() {
+	for _, t := range append(mcpcorerecords.ReadTools(), GovernanceTools()...) {
 		result = append(result, ToolDefinition{Name: t.Name, Description: t.Description, ReadOnly: true})
 	}
 	return result
@@ -709,6 +714,9 @@ func (s *Server) Tools() []ToolDefinition {
 
 // CallTool decodes one read-only query JSON request and encodes its response.
 func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]byte, error) {
+	if name == ToolGetEvidenceUseState || name == ToolGetGovernanceHistory || name == ToolCheckCurrentPlan {
+		return s.callGovernance(ctx, name, payload)
+	}
 	if mcpcorerecords.IsReadTool(name) {
 		return mcpcorerecords.CallRead(ctx, s.recordsPool, name, payload)
 	}
@@ -1286,11 +1294,11 @@ func (c postgresCore) GetCanonicalSupersessionCurrentness(ctx context.Context, l
 }
 
 func (c postgresCore) TraceProposalProvenance(ctx context.Context, occurrenceID string) (evidenceingestion.ProposalQueryResult, error) {
-	return evidenceingestion.TraceProposalProvenance(ctx, c.pool, occurrenceID)
+	return evidenceingestion.TraceProposalEvidenceState(ctx, c.pool, occurrenceID)
 }
 
 func (c postgresCore) GetCanonicalEvidenceByID(ctx context.Context, canonicalID string) (evidenceingestion.CanonicalQueryResult, error) {
-	return evidenceingestion.GetCanonicalEvidenceByID(ctx, c.pool, canonicalID)
+	return evidenceingestion.GetCanonicalEvidenceStateByID(ctx, c.pool, canonicalID)
 }
 
 func (c postgresCore) ListProposalRecords(ctx context.Context, input evidenceingestion.ProposalListInput) ([]evidenceingestion.ProposalQueryResult, error) {
@@ -1488,7 +1496,12 @@ func mapProposalResult(result evidenceingestion.ProposalQueryResult) GetEvidence
 		value := result.CanonicalRef
 		canonicalRef = &value
 	}
+	source := mapSourceInfo(result)
+	if result.UseState != nil && source.ExternalSource != nil {
+		source.ExternalSource.AssessmentProjection = "evidence-use-projection/v1"
+	}
 	return GetEvidenceRecordResponse{
+		UseState:            result.UseState,
 		EndpointDisposition: result.EndpointDisposition,
 		RecordRef: RecordRef{
 			Kind: "proposal",
@@ -1501,7 +1514,7 @@ func mapProposalResult(result evidenceingestion.ProposalQueryResult) GetEvidence
 		StatementText:              result.StatementText,
 		AdmissionOutcome:           result.AdmissionOutcome,
 		CanonicalRef:               canonicalRef,
-		Source:                     mapSourceInfo(result),
+		Source:                     source,
 		SourceRefs:                 append([]evidenceingestion.ResolvedSourceRef(nil), result.SourceRefs...),
 		CodeFact:                   cloneCodeFact(result.CodeFact),
 		CodeRelation:               cloneCodeRelation(result.CodeRelation),
@@ -1527,7 +1540,12 @@ func mapProposalResult(result evidenceingestion.ProposalQueryResult) GetEvidence
 func mapCanonicalResult(result evidenceingestion.CanonicalQueryResult) GetEvidenceRecordResponse {
 	origin := result.OriginProposal
 	canonicalRef := result.CanonicalID
+	source := mapSourceInfo(origin)
+	if result.UseState != nil && source.ExternalSource != nil {
+		source.ExternalSource.AssessmentProjection = "evidence-use-projection/v1"
+	}
 	return GetEvidenceRecordResponse{
+		UseState:              result.UseState,
 		SupersessionAdmission: result.SupersessionAdmission,
 		EndpointAdmission:     result.EndpointAdmission,
 		RecordRef: RecordRef{
@@ -1552,7 +1570,7 @@ func mapCanonicalResult(result evidenceingestion.CanonicalQueryResult) GetEviden
 			Temporal:   result.Temporal,
 			Integrity:  result.Integrity,
 		},
-		Source:              mapSourceInfo(origin),
+		Source:              source,
 		SourceRefs:          append([]evidenceingestion.ResolvedSourceRef(nil), origin.SourceRefs...),
 		CodeFact:            cloneCodeFact(origin.CodeFact),
 		CodeRelation:        cloneCodeRelation(origin.CodeRelation),
@@ -2761,6 +2779,8 @@ func mapSourceInfo(result evidenceingestion.ProposalQueryResult) SourceInfo {
 			&limitations,
 		)
 		source.ExternalSource = &ExternalSourceProvenance{
+			DeclarationAuthority:          "original_intake_declaration",
+			AssessmentProjection:          "not_projected",
 			SchemaVersion:                 result.OriginMetadata["external_source_schema"],
 			SourceSystem:                  result.OriginMetadata["external_source_system"],
 			SourceNamespace:               result.OriginMetadata["external_source_namespace"],

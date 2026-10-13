@@ -57,8 +57,8 @@
   its dedicated atomic admission and read-only currentness tools.
 - Standard ingestion profiles are separately authorized `core-records`, `intake`,
   `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer`,
-  `supersession-reviewer` and
-  `relation-reviewer`. Bounded exact-reviewed derived/code endpoints use the
+  `supersession-reviewer`, `relation-reviewer`, `withdrawal-reviewer` and
+  `source-assessment-reviewer`. Bounded exact-reviewed derived/code endpoints use the
   endpoint profile. Exact fresh-v2 replacement uses the separate supersession
   reviewer; generic derived admission, contradiction and repository activation
   writers remain internal contracts, not enabled
@@ -145,6 +145,30 @@ occurrence and creates no canonical evidence. Show lifecycle alongside the
 historical display; Query reads `endpoint_disposition` using the occurrence ID.
 Admission and disposition share request-ID authority. Changed decisions are not
 retries, and source disposition tools cannot substitute for endpoint review.
+
+## Reviewed Withdrawal and Source Assessments
+
+The separately provisioned `withdrawal-reviewer` and
+`source-assessment-reviewer` profiles append governance events after exact native
+review. Their authority is distinct: withdrawal stops new current use of a claim;
+source assessment annotates an exact snapshot and its original declarations.
+Neither edits admission, source bytes, canonical relations or AND parents.
+Correction references do not imply supersession or truth. Display the complete
+native subject and preserve explicit per-item decisions, human reasons, launcher
+identity and exact retry inputs. Historical local records are review material,
+not new approval. Do not migrate operational records under code-change approval.
+
+Query exposes versioned use state and governance history. Check current bases
+with explicit `current-action/v1` or `grounded-current-action/v1` before planning,
+then `check_current_evidence_plan` with the same purpose on every emitted action's
+explicit basis IDs after planning/SAT. A cached view, verification report, SAT
+result or old receipt is insufficient. Public derived admission repeats the gate
+inside its committing transaction; later external execution needs its own
+coordination. See [governance contracts](internal/evidenceingestion/GOVERNANCE.md)
+for batch preparation, readback, source resolution and bounded completeness.
+Batch approval binds the unchanged manifest, native per-item subjects and new
+human reasons. Original local records remain review material, including purely
+human exclusions that never ran a checker.
 
 ## Internal Relation Contracts (Not Standard MCP Operations)
 

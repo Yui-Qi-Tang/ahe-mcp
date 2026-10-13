@@ -11,6 +11,7 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestionmcp"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpadmin"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpendpoints"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpgovernance"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcprelations"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpstdio"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/mcpsupersession"
@@ -36,7 +37,7 @@ func run(ctx context.Context, args []string) error {
 			fmt.Fprintln(os.Stdout, "Environment:")
 			fmt.Fprintln(os.Stdout, "  DATABASE_DSN  PostgreSQL DSN for the authoritative AHE store")
 			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PRINCIPAL_ID  Launcher-fixed identity (not proof of human review)")
-			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PROFILE       core-records, intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer, repository-intake or supersession-reviewer (legacy writers remain disabled)")
+			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PROFILE       withdrawal-reviewer, source-assessment-reviewer, core-records, intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer, repository-intake or supersession-reviewer (legacy writers remain disabled)")
 			fmt.Fprintln(os.Stdout, "  AHE_DATABASE_ROLE         Installed matching NOLOGIN role")
 			fmt.Fprintln(os.Stdout, "  AHE_DATABASE_SCHEMA       Explicit authoritative schema")
 			fmt.Fprintln(os.Stdout, "")
@@ -55,6 +56,10 @@ func run(ctx context.Context, args []string) error {
 	}
 	var databaseProfile dbrole.Profile
 	switch profile {
+	case mcpadmin.RuntimeProfileWithdrawalReviewer:
+		databaseProfile = dbrole.ProfileWithdrawalReviewer
+	case mcpadmin.RuntimeProfileSourceAssessmentReviewer:
+		databaseProfile = dbrole.ProfileSourceAssessmentReviewer
 	case mcpadmin.RuntimeProfileSupersessionReviewer:
 		databaseProfile = dbrole.ProfileSupersessionReviewer
 	case mcpadmin.RuntimeProfileCoreRecords:
@@ -93,6 +98,17 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("verifying database schema: %w", err)
 	}
 
+	if profile == mcpadmin.RuntimeProfileWithdrawalReviewer || profile == mcpadmin.RuntimeProfileSourceAssessmentReviewer {
+		backend, err := mcpgovernance.NewBackend(pool, principal, string(profile))
+		if err != nil {
+			return err
+		}
+		server, err := mcpstdio.NewServer("ahe-ingest-mcp", version, backend)
+		if err != nil {
+			return err
+		}
+		return server.Serve(ctx, os.Stdin, os.Stdout)
+	}
 	if profile == mcpadmin.RuntimeProfileSupersessionReviewer {
 		backend, err := mcpsupersession.NewBackend(pool, principal)
 		if err != nil {

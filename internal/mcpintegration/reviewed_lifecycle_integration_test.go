@@ -150,7 +150,7 @@ func TestIntegrationReviewedLifecycleStandardMCP(t *testing.T) {
 	for i, decision := range []string{"reject", "audit_only"} {
 		label := []string{"decline", "audit"}[i]
 		p := submit(label, "v"+label, "Synthetic derived candidate "+label+" requires unimplemented behavior.")
-		req := evidenceingestion.EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: p.ProposalOccurrenceID, Derivation: &evidenceingestion.EndpointDerivation{ParentNodeIDs: []string{receipt.Admission.CanonicalRef}, Method: "synthetic AND derivation", Producer: "synthetic-planner", TraceRef: "synthetic:" + label}}
+		req := evidenceingestion.EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: p.ProposalOccurrenceID, Derivation: &evidenceingestion.EndpointDerivation{UsePolicy: "current-action/v1", ParentNodeIDs: []string{receipt.Admission.CanonicalRef}, Method: "synthetic AND derivation", Producer: "synthetic-planner", TraceRef: "synthetic:" + label}}
 
 		if previousRequest != "" {
 			pendingReview := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, req)
@@ -163,7 +163,7 @@ func TestIntegrationReviewedLifecycleStandardMCP(t *testing.T) {
 		verifyLifecycleDisposition(t, ctx, f, endpoints, query, req, decision)
 	}
 	raceProposal := submit("race", "vrace", "Synthetic concurrent endpoint candidate.")
-	raceReq := evidenceingestion.EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: raceProposal.ProposalOccurrenceID, Derivation: &evidenceingestion.EndpointDerivation{ParentNodeIDs: []string{latest.Admission.CanonicalRef}, Method: "synthetic concurrent AND", Producer: "synthetic-planner", TraceRef: "synthetic:race"}}
+	raceReq := evidenceingestion.EndpointReviewRequest{Kind: "derived_spec", ProposalOccurrenceID: raceProposal.ProposalOccurrenceID, Derivation: &evidenceingestion.EndpointDerivation{UsePolicy: "current-action/v1", ParentNodeIDs: []string{latest.Admission.CanonicalRef}, Method: "synthetic concurrent AND", Producer: "synthetic-planner", TraceRef: "synthetic:race"}}
 	faultReplacement := submit("fault-replacement", "v4", "The synthetic policy value is four.")
 	faultSelection := map[string]any{"proposal_occurrence_id": faultReplacement.ProposalOccurrenceID, "basis": laterInput.Review.Basis, "target_node_ids": []string{latest.Admission.CanonicalRef}}
 	faultReview := relationTool[evidenceingestion.SupersessionReview](t, replacements, mcpsupersession.ToolReview, faultSelection)
