@@ -179,7 +179,8 @@ native events were appended.
 Migration/readiness checks verify exact function
 bodies, triggers, columns and constraints. Rollback refuses populated governance
 history. Private run records under `lab/issue-18` identify the checkout, test
-selection and limitations. Batches 3 and 4 are separate follow-ups.
+selection and limitations. The implemented Batch 3 and 4 contracts are described
+below.
 
 ## Independent contradiction review (Batch 3)
 
