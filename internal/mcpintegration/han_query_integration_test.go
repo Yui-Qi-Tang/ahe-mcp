@@ -227,7 +227,7 @@ func TestIntegrationHanQueryMCPIsolatedLab(t *testing.T) {
 	intake := startAuthorityProcess(t, ctx, "ahe-ingest-mcp", fixture.intake, fixture.schema, "intake")
 	query := startAuthorityProcess(t, ctx, "ahe-query-mcp", fixture.query, fixture.schema, "")
 	report.LiveQueryTools = hanQueryLabTools(t, query)
-	intake.assertTools(t, []string{"submit_manual_evidence", "submit_text_source", "submit_external_source", "submit_extractor_output", "get_extractor_input"})
+	intake.assertTools(t, []string{"suggest_intake_conflicts", "submit_manual_evidence", "submit_text_source", "submit_external_source", "submit_extractor_output", "get_extractor_input"})
 	report.Sources = hanQueryLabSourcePlan()
 	report.SourcePlanSHA256 = hanQueryLabJSONHash(t, report.Sources)
 	report.Stage = "source_fixture_setup"

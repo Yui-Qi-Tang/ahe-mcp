@@ -38,7 +38,7 @@ func TestIntegrationEndpointUpgradeRetainsNativeHistory(t *testing.T) {
 		t.Fatal("historical native admission was relabeled as exact endpoint review")
 	}
 	status, err := VerifyCurrentInSchema(ctx, pool, schema)
-	if err != nil || status.AppliedMigrations != 58 {
+	if err != nil || status.AppliedMigrations != 59 {
 		t.Fatal("endpoint schema not current")
 	}
 	again, err := ApplyUpInSchema(ctx, pool, schema)

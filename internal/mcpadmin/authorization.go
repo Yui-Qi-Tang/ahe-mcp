@@ -19,6 +19,7 @@ import (
 type RuntimeProfile string
 
 const (
+	RuntimeProfileContradictionReviewer    RuntimeProfile = "contradiction-reviewer"
 	RuntimeProfileWithdrawalReviewer       RuntimeProfile = "withdrawal-reviewer"
 	RuntimeProfileSourceAssessmentReviewer RuntimeProfile = "source-assessment-reviewer"
 	RuntimeProfileSupersessionReviewer     RuntimeProfile = "supersession-reviewer"
@@ -36,7 +37,7 @@ const (
 // ParseRuntimeProfile rejects absent, unknown, or normalized-by-guess profiles.
 func ParseRuntimeProfile(value string) (RuntimeProfile, error) {
 	switch profile := RuntimeProfile(value); profile {
-	case RuntimeProfileWithdrawalReviewer, RuntimeProfileSourceAssessmentReviewer, RuntimeProfileSupersessionReviewer, RuntimeProfileCoreRecords, RuntimeProfileIntake, RuntimeProfileSourceClaimReviewer, RuntimeProfileRelationReviewer, RuntimeProfileEndpointReviewer, RuntimeProfileRepositoryIntake, RuntimeProfileLegacyReviewer, RuntimeProfileLegacyOperator:
+	case RuntimeProfileContradictionReviewer, RuntimeProfileWithdrawalReviewer, RuntimeProfileSourceAssessmentReviewer, RuntimeProfileSupersessionReviewer, RuntimeProfileCoreRecords, RuntimeProfileIntake, RuntimeProfileSourceClaimReviewer, RuntimeProfileRelationReviewer, RuntimeProfileEndpointReviewer, RuntimeProfileRepositoryIntake, RuntimeProfileLegacyReviewer, RuntimeProfileLegacyOperator:
 		return profile, nil
 	default:
 		return "", runtimeauth.NewUnauthorizedError("an explicit supported ingestion runtime profile is required")
@@ -45,7 +46,7 @@ func ParseRuntimeProfile(value string) (RuntimeProfile, error) {
 
 // RuntimeProfileNames returns the exact supported ingestion profile names.
 func RuntimeProfileNames() []string {
-	return []string{string(RuntimeProfileWithdrawalReviewer), string(RuntimeProfileSourceAssessmentReviewer), string(RuntimeProfileSupersessionReviewer), string(RuntimeProfileCoreRecords), string(RuntimeProfileIntake), string(RuntimeProfileSourceClaimReviewer), string(RuntimeProfileLegacyReviewer), string(RuntimeProfileLegacyOperator), string(RuntimeProfileRelationReviewer), string(RuntimeProfileEndpointReviewer), string(RuntimeProfileRepositoryIntake)}
+	return []string{string(RuntimeProfileContradictionReviewer), string(RuntimeProfileWithdrawalReviewer), string(RuntimeProfileSourceAssessmentReviewer), string(RuntimeProfileSupersessionReviewer), string(RuntimeProfileCoreRecords), string(RuntimeProfileIntake), string(RuntimeProfileSourceClaimReviewer), string(RuntimeProfileLegacyReviewer), string(RuntimeProfileLegacyOperator), string(RuntimeProfileRelationReviewer), string(RuntimeProfileEndpointReviewer), string(RuntimeProfileRepositoryIntake)}
 }
 
 // AuthorizedBackend binds one immutable launcher identity and capability set.
@@ -73,7 +74,7 @@ func NewAuthorizedBackend(backend mcpstdio.Backend, principal runtimeauth.Princi
 	if _, err := ParseRuntimeProfile(string(profile)); err != nil {
 		return nil, err
 	}
-	if profile == RuntimeProfileWithdrawalReviewer || profile == RuntimeProfileSourceAssessmentReviewer || profile == RuntimeProfileSupersessionReviewer || profile == RuntimeProfileCoreRecords || profile == RuntimeProfileRelationReviewer || profile == RuntimeProfileEndpointReviewer || profile == RuntimeProfileRepositoryIntake {
+	if profile == RuntimeProfileContradictionReviewer || profile == RuntimeProfileWithdrawalReviewer || profile == RuntimeProfileSourceAssessmentReviewer || profile == RuntimeProfileSupersessionReviewer || profile == RuntimeProfileCoreRecords || profile == RuntimeProfileRelationReviewer || profile == RuntimeProfileEndpointReviewer || profile == RuntimeProfileRepositoryIntake {
 		return nil, errors.New("selected profile requires its dedicated native backend")
 	}
 	if profile == RuntimeProfileSourceClaimReviewer {
@@ -83,7 +84,7 @@ func NewAuthorizedBackend(backend mcpstdio.Backend, principal runtimeauth.Princi
 		}
 	}
 	native, incoming := ingestionTools(), backend.Tools()
-	if len(native) != 43 || len(incoming) != len(native) {
+	if len(native) != 44 || len(incoming) != len(native) {
 		return nil, errors.New("ingestion tool inventory differs from the reviewed contract")
 	}
 	expected := make(map[string][]byte, len(native))
@@ -293,7 +294,7 @@ func ingestionAuthorityForTool(name string) ingestionAuthorityClass {
 	switch name {
 	case evidenceingestionmcp.ToolGetSourceClaimReview, evidenceingestionmcp.ToolAdmitReviewedSourceClaim, evidenceingestionmcp.ToolRecordReviewedSourceClaimDisposition:
 		return authoritySourceClaimReview
-	case evidenceingestionmcp.ToolSubmitManualEvidence, evidenceingestionmcp.ToolSubmitTextSource,
+	case evidenceingestionmcp.ToolSuggestIntakeConflicts, evidenceingestionmcp.ToolSubmitManualEvidence, evidenceingestionmcp.ToolSubmitTextSource,
 		evidenceingestionmcp.ToolSubmitExternalSource, evidenceingestionmcp.ToolSubmitExtractorOutput,
 		evidenceingestionmcp.ToolGetExtractorInput:
 		return authorityIntake

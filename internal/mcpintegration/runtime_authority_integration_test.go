@@ -44,10 +44,12 @@ func TestIntegrationRuntimeAuthoritySubprocessPendingRoundTrip(t *testing.T) {
 	intake := startAuthorityProcess(t, ctx, "ahe-ingest-mcp", fixture.intake, fixture.schema, "intake")
 	query := startAuthorityProcess(t, ctx, "ahe-query-mcp", fixture.query, fixture.schema, "")
 	intake.assertTools(t, []string{
+		evidenceingestionmcp.ToolSuggestIntakeConflicts,
 		"submit_manual_evidence", "submit_text_source", "submit_external_source",
 		"submit_extractor_output", "get_extractor_input",
 	})
 	query.assertTools(t, []string{
+		"get_evidence_use_state", "get_evidence_governance_history", "check_current_evidence_plan",
 		"get_evidence_record", "list_evidence_records", "search_evidence_records",
 		"get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance",
 		"get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path",
@@ -168,6 +170,7 @@ type authorityProcessLogin struct {
 }
 
 type authorityProcessFixture struct {
+	contradiction    authorityProcessLogin
 	withdrawal       authorityProcessLogin
 	sourceAssessment authorityProcessLogin
 	supersession     authorityProcessLogin
@@ -274,6 +277,8 @@ func newAuthorityProcessFixture(t *testing.T, ctx context.Context, databaseURL s
 			fixture.withdrawal = binding
 		} else if profile == dbrole.ProfileSourceAssessmentReviewer {
 			fixture.sourceAssessment = binding
+		} else if profile == dbrole.ProfileContradictionReviewer {
+			fixture.contradiction = binding
 		} else if profile == dbrole.ProfileSupersessionReviewer {
 			fixture.supersession = binding
 		} else if profile == dbrole.ProfileEndpointReviewer {

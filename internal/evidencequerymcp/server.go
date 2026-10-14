@@ -371,11 +371,12 @@ type CanonicalContradictionDecisionInfo struct {
 // CanonicalContradictionProposalResponse is the minimum human review card:
 // the proposal rationale, both complete grounded claims, and any decision.
 type CanonicalContradictionProposalResponse struct {
-	SourceProposal *GetEvidenceRecordResponse          `json:"source_proposal,omitempty"`
-	Proposal       CanonicalContradictionProposalInfo  `json:"proposal"`
-	NodeA          GetEvidenceRecordResponse           `json:"node_a"`
-	NodeB          GetEvidenceRecordResponse           `json:"node_b"`
-	Decision       *CanonicalContradictionDecisionInfo `json:"decision,omitempty"`
+	ReviewReceipt  *evidenceingestion.ContradictionReviewReceipt `json:"review_receipt,omitempty"`
+	SourceProposal *GetEvidenceRecordResponse                    `json:"source_proposal,omitempty"`
+	Proposal       CanonicalContradictionProposalInfo            `json:"proposal"`
+	NodeA          GetEvidenceRecordResponse                     `json:"node_a"`
+	NodeB          GetEvidenceRecordResponse                     `json:"node_b"`
+	Decision       *CanonicalContradictionDecisionInfo           `json:"decision,omitempty"`
 }
 
 // GetCanonicalSupersessionCurrentnessRequest selects one deterministic lineage.
@@ -2677,6 +2678,7 @@ func mapCanonicalRelationProvenance(result evidenceingestion.CanonicalRelationQu
 func mapCanonicalContradictionProposal(result evidenceingestion.CanonicalContradictionQueryResult) CanonicalContradictionProposalResponse {
 	proposal := result.Proposal
 	response := CanonicalContradictionProposalResponse{
+		ReviewReceipt: result.ReviewReceipt,
 		Proposal: CanonicalContradictionProposalInfo{
 			SourceProposalOccurrenceID:       proposal.SourceProposalOccurrenceID,
 			CanonicalContradictionProposalID: proposal.ID,

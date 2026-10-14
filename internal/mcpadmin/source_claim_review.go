@@ -65,6 +65,7 @@ func (b *Backend) SourceClaimReviewerPrincipal() runtimeauth.Principal {
 func ingestionTools() []mcpstdio.Tool {
 	readOnly, write, terminal, no, idempotent := true, false, true, false, true
 	return append(legacyIngestionTools(),
+		mcpstdio.Tool{Name: evidenceingestionmcp.ToolSuggestIntakeConflicts, Title: "Suggest Intake Conflicts", Description: evidenceingestionmcp.SuggestIntakeConflictsDescription, InputSchema: evidenceingestionmcp.ConflictSuggestionSchema(), Annotations: mcpstdio.Annotations{ReadOnlyHint: &readOnly, DestructiveHint: &no, IdempotentHint: &idempotent}},
 		mcpstdio.Tool{Name: evidenceingestionmcp.ToolGetSourceClaimReview, Title: "Get Source Claim Review", Description: evidenceingestionmcp.GetSourceClaimReviewDescription,
 			InputSchema: getSourceClaimReviewSchema(), Annotations: mcpstdio.Annotations{ReadOnlyHint: &readOnly, DestructiveHint: &no, IdempotentHint: &idempotent}},
 		mcpstdio.Tool{Name: evidenceingestionmcp.ToolAdmitReviewedSourceClaim, Title: "Admit Reviewed Source Claim", Description: evidenceingestionmcp.AdmitReviewedSourceClaimDescription,

@@ -180,3 +180,61 @@ Migration/readiness checks verify exact function
 bodies, triggers, columns and constraints. Rollback refuses populated governance
 history. Private run records under `lab/issue-18` identify the checkout, test
 selection and limitations. Batches 3 and 4 are separate follow-ups.
+
+## Independent contradiction review (Batch 3)
+
+`contradiction-review/v1` binds the exact two admitted records, their available
+retained sources (including source-backed AND ancestry), optional grounded
+rationale occurrence, rationale, declared scope/conditions, producer, symmetric
+`contradicts` effect, store ID and governance revision. No semantic verdict is
+inferred. A bounded display that cannot fit its receipt is refused, not truncated.
+Getters are read-only: an abandoned preview does not consume a pair. Applying an
+explicit independent decision creates the existing pair-v1 proposal and terminal
+decision atomically with `reviewed-contradiction/v1` receipt, and with one edge on
+approval only. Existing pending pairs require identical legacy payload; native
+scope/conditions are additional exact review material, not a new pair identity.
+
+Only `contradiction-reviewer` exposes this path. Its role can INSERT the immutable
+receipt command, with no direct canonical/proposal/decision DML. The fixed SQL
+trigger restricts effects to that pair. A deferred decision-to-receipt FK makes
+receipt collision/ignore or later transaction failure roll back all effects.
+Repeatable-read reconstruction takes the shared governance lock before lookup;
+exact request replay precedes current-state checks. Changed inputs/reviewer/reason
+or terminal re-decisions conflict. A global revision change conservatively stales
+an uncommitted review, including unrelated changes; it does not invalidate the
+historical receipt. Two concurrent exact retries preserve one original decision.
+
+Query exposes native receipt/display through the existing contradiction proposal
+and relation provenance records. Endpoints remain admitted; this relation alone
+neither decides which endpoint is false nor changes withdrawal/supersession.
+Current-use consumers still apply Batch 2's conflict policy. Component membership
+never manufactures pairwise edges. Legacy terminal pairs remain terminal; review
+reopening and erroneous-relation withdrawal need a separate lifecycle contract.
+
+## Bounded intake conflict suggestions (Batch 4)
+
+`suggest_intake_conflicts` accepts one successful persisted statement occurrence,
+`limit` (default 20, maximum 100), `scan_limit` (default 250, maximum 1000), and an
+optional six-field `basis`. The output contract is
+`intake-conflict-suggestions/v1`. It scans source/derived claims in canonical-ID
+order at one read-only repeatable-read cut. It reports scanned, matched and
+returned counts, scan/result truncation, relation and slot bounds, lexical
+truncation, available object/anchor/slot basis and store/revision.
+
+Candidates include exact claim/proposal/source coordinates, original statement,
+external identity and each matching basis. Object matching requires all four
+non-placeholder provider coordinates; unrelated `unknown` values do not coalesce.
+Slot matches use persisted lineage membership or a clearly labelled caller hint
+whose object matches the proposal's source; a hint does not assign that proposal
+to a lineage. Existing-relation matches show only actual direct
+contradicts/supersedes edges of an admitted input, including direction and
+provenance. Pending inputs have no relation anchor. No transitive clique is built.
+
+Lexical matching uses lowercase words and Han bigrams, at most 256 distinct terms
+per statement and at least two shared terms. Ranking prioritizes direct relations,
+slot, object, then shared terms; it is not truth confidence. A bounded prefix can
+miss relevant later claims, other records, omitted extraction and external
+revisions. RLS/inaccessible query failure is an error rather than an empty result.
+No suggestions is never proof of no conflict. Suggestions do not create any
+proposal, relation, admission, withdrawal, source assessment or supersession;
+an independent exact human review remains necessary for every relation decision.

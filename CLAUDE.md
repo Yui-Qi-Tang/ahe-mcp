@@ -58,9 +58,9 @@
 - Standard ingestion profiles are separately authorized `core-records`, `intake`,
   `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer`,
   `supersession-reviewer`, `relation-reviewer`, `withdrawal-reviewer` and
-  `source-assessment-reviewer`. Bounded exact-reviewed derived/code endpoints use the
+  `source-assessment-reviewer` and `contradiction-reviewer`. Bounded exact-reviewed derived/code endpoints use the
   endpoint profile. Exact fresh-v2 replacement uses the separate supersession
-  reviewer; generic derived admission, contradiction and repository activation
+  reviewer; generic derived admission and repository activation
   writers remain internal contracts, not enabled
   standard MCP tools. Their read-only tools do not authorize these writes.
   If the required tool is absent, stop and report the unavailable capability;
@@ -170,29 +170,37 @@ Batch approval binds the unchanged manifest, native per-item subjects and new
 human reasons. Original local records remain review material, including purely
 human exclusions that never ran a checker.
 
-## Internal Relation Contracts (Not Standard MCP Operations)
+## Reviewed Contradiction and Intake Suggestions
 
-The following describes retained domain behavior, not an executable intake
-recipe. These writers are disabled in the standard installation; stop and
-report the missing capability rather than changing profiles or using SQL.
+A separately provisioned `contradiction-reviewer` exposes
+`get_contradiction_review` and `apply_reviewed_contradiction`. Select both exact
+admitted endpoints, rationale, explicit scope/conditions, producer identity and
+`relation=contradicts`. Show the complete native display and its limitations.
+Node approval does not authorize this relation. The getter is read-only; only
+an explicit independent `approved`, `reject` or `audit_only` decision with a
+human reason persists the pair-v1 proposal and receipt. Copy unchanged
+`display.request` as `review` and `subject` as `expected_subject`; use a stable
+request ID. Launcher supplies reviewer identity. Preserve all inputs for retry.
 
-- When two admitted canonical nodes appear incompatible, call
-  `submit_canonical_contradiction_proposal`, then read
-  `get_canonical_contradiction_proposal`. Show both grounded canonical records,
-  their exact excerpts and source metadata, plus the agent rationale. Call
-  `admit_pending_canonical_contradiction` only after explicit approval;
-  otherwise use the dedicated contradiction disposition tool.
-- `contradicts` is symmetric. Do not submit both A/B and B/A; AHE canonicalizes
-  endpoint order and keeps one governed relation per node pair.
-- In v1 that node pair is single-use even after `rejected` or `audit_only`.
-  Changed rationale, producer metadata, or session reference conflicts rather
-  than creating a new proposal version. Do not manufacture replacement nodes
-  to bypass this limitation.
-- Do not infer replacement or stable slot identity from revision order or
-  repository source-generation lifecycle. See `docs/SYSTEM_DESIGN.md#graph-relations-and-versions`.
-- Never place credentials, tokens, DSNs, private conversation text, or other
-  secrets in source metadata, extractor configuration, session references, or
-  committed files.
+A single symmetric pair is stored, with no false-endpoint choice or implied
+pairwise edges across a component. `exact_replay_only` is historical material,
+not new approval or current-use permission. Rejected/audit-only pairs cannot be
+reopened. Correcting an erroneous relation requires a future explicit lifecycle;
+do not manufacture duplicate nodes. Legacy contradiction writers remain internal
+and disabled in standard profiles. Query exposes actual edges and review receipts.
+
+The intake tool `suggest_intake_conflicts` reads bounded candidates for a
+persisted statement proposal using external object identity, recorded or
+explicitly hinted slots, direct relations and lexical overlap. Inspect matching
+basis, snapshot and all coverage/truncation limits. A slot hint creates no binding;
+lexical similarity is not a contradiction verdict, and no suggestion is not
+proof of no conflict. Suggestions never admit relations, withdraw or supersede.
+See [contracts](internal/evidenceingestion/GOVERNANCE.md) and
+[setup](INSTALL.md#independent-contradiction-reviewer).
+
+Never place credentials, tokens, DSNs, private conversation text, or other
+secrets in source metadata, extractor configuration, session references, or
+committed files.
 
 ## Controlled Experiments
 

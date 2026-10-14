@@ -43,7 +43,7 @@ extraction remain separate workflows.
   the missing capability. Do not substitute a model-generated source.
 - The standard executable requires an explicitly selected `intake`,
   `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer`,
-  `supersession-reviewer` or
+  `supersession-reviewer`, `contradiction-reviewer` or
   `repository-intake` profile; it has no default
   profile. Intake exposes
   `submit_external_source`, `get_extractor_input`, and `submit_extractor_output`.
@@ -51,8 +51,8 @@ extraction remain separate workflows.
   `admit_reviewed_source_claim`, and `record_reviewed_source_claim_disposition`.
   Independent implementation/reference review uses a separately authorized
   `relation-reviewer`, described below. Legacy admission/disposition,
-  generic derived-node and contradiction writers are not enabled. Supersession
-  requires its separately provisioned exact-review profile.
+  generic derived-node writers are not enabled. Supersession and contradiction
+  require their separately provisioned exact-review profiles.
   Exact-reviewed endpoints use the separately authorized profile below. Do not
   enable a legacy profile, change a launcher, or use direct SQL to work around
   a missing capability. See [installation scope](../../../INSTALL.md#bounded-external-intake-mcp-installation).
@@ -319,7 +319,7 @@ this profile. See [stable slots and existing stores](../../../INSTALL.md#stable-
 ## Relations and Repository Extraction Are Separate
 
 Source intake/review does not itself expose endpoint admission. Generic derived
-admission, contradiction and repository activation remain disabled. If the task
+admission and repository activation remain disabled. If the task
 needs these capabilities, report the unavailable workflow and stop. Do not
 substitute an ordinary statement, generic edge, fake replacement node, legacy
 profile, or direct SQL. Provider revision order alone does not prove semantic
@@ -344,3 +344,23 @@ Report results per provider object and proposal:
 Do not claim that AHE cryptographically or independently verified the human
 review conversation. The cooperating agent is responsible for showing the
 review cards and waiting for the decision.
+
+## Independent Contradiction Review and Intake Suggestions
+
+The separately provisioned `contradiction-reviewer` exposes
+`get_contradiction_review` and `apply_reviewed_contradiction`. Discover their live
+schemas. Select both admitted endpoints, grounded rationale when available,
+explicit scope/conditions, producer identity and symmetric `contradicts` effect.
+Show the entire native display with sources and limitations. Node admission is
+not relation approval. Only after an explicit human `approved`, `reject` or
+`audit_only` decision and reason, copy unchanged `display.request` as `review`
+and `subject` as `expected_subject` with a stable request ID. Launcher binds the
+reviewer. Preserve exact inputs for retries; changed subjects need new review.
+A getter reserves nothing. Terminal pairs cannot reopen; `exact_replay_only`
+is historical material, not new approval. Never duplicate nodes to bypass it.
+
+Intake's read-only `suggest_intake_conflicts` can supply bounded candidates from
+a persisted statement occurrence. Inspect each matching basis, scan/return limits,
+truncation and source coordinates. A caller-declared slot hint is not a lineage
+binding. Lexical overlap is not a contradiction verdict; no candidates is not
+proof of no conflict. Suggestions never admit, withdraw or supersede evidence.

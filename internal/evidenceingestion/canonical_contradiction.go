@@ -313,7 +313,16 @@ func hydrateCanonicalContradictionProposal(
 		}
 		source = &loaded
 	}
+	receipt, err := readContradictionReviewReceipt(ctx, db, "proposal_id", proposalID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return CanonicalContradictionQueryResult{}, err
+	}
+	var binding *ContradictionReviewReceipt
+	if err == nil {
+		binding = &receipt
+	}
 	return CanonicalContradictionQueryResult{
+		ReviewReceipt:  binding,
 		SourceProposal: source,
 		Proposal:       proposal,
 		NodeA:          nodeA,

@@ -659,6 +659,7 @@ type goplsWorkspaceInventoryCollector func(context.Context, evidenceingestion.Go
 type Server struct {
 	core                           ingestionCore
 	sourceReview                   sourceReviewCore
+	conflictSuggestions            conflictSuggestionCore
 	reviewPrincipal                runtimeauth.Principal
 	collectGoplsWorkspaceInventory goplsWorkspaceInventoryCollector
 }
@@ -673,9 +674,11 @@ func NewServer(pool *pgxpool.Pool) (*Server, error) {
 
 func newServer(core ingestionCore) *Server {
 	review, _ := core.(sourceReviewCore)
+	suggestions, _ := core.(conflictSuggestionCore)
 	return &Server{
 		core:                           core,
 		sourceReview:                   review,
+		conflictSuggestions:            suggestions,
 		collectGoplsWorkspaceInventory: evidenceingestion.CollectGoplsWorkspaceInventory,
 	}
 }
@@ -683,6 +686,7 @@ func newServer(core ingestionCore) *Server {
 // Tools returns ingestion and grounded discovery tools, but no external evidence query tools.
 func (s *Server) Tools() []ToolDefinition {
 	return []ToolDefinition{
+		{Name: ToolSuggestIntakeConflicts, Description: SuggestIntakeConflictsDescription, Write: false},
 		{Name: ToolGetSourceClaimReview, Description: GetSourceClaimReviewDescription, Write: false},
 		{Name: ToolAdmitReviewedSourceClaim, Description: AdmitReviewedSourceClaimDescription, Write: true},
 		{Name: ToolRecordReviewedSourceClaimDisposition, Description: RecordReviewedSourceClaimDispositionDescription, Write: true},
@@ -888,6 +892,8 @@ func (s *Server) Tools() []ToolDefinition {
 // CallTool decodes one MCP-shaped JSON tool request and encodes its response.
 func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]byte, error) {
 	switch name {
+	case ToolSuggestIntakeConflicts:
+		return s.suggestIntakeConflicts(ctx, payload)
 	case ToolSubmitManualEvidence:
 		var req SubmitManualEvidenceRequest
 		if err := decodeStrict(payload, &req); err != nil {

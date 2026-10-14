@@ -9,10 +9,10 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 ## Installation scope
 
 Build the reviewed source commit using the steps below. The current MCP schema
-is 58. Query/intake/source-reviewer inventories are 29/5/3. Separate
+is 59. Query/intake/source-reviewer inventories are 29/6/3. Separate
 `relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
-4/3/2 tools. The separate `supersession-reviewer` exposes 2 tools; `core-records` exposes six record/configuration tools. The full
-migration chain through 58 and role policy v9 are required. Do not perform a
+4/3/2 tools. The separate `supersession-reviewer` and `contradiction-reviewer` each expose 2 tools; `core-records` exposes six record/configuration tools. The full
+migration chain through 59 and role policy v10 are required. Do not perform a
 binary-only replacement against an older schema or reuse source-review
 credentials for endpoint/relation writes.
 
@@ -26,7 +26,7 @@ separate. See [search contracts and limits](docs/SYSTEM_DESIGN.md#search).
 
 The current MCP implementation uses explicit
 launcher and database authority. Query is read-only; the ingestion executable
-separates five source/extractor intake tools from a three-tool
+separates six source/extractor intake tools (including read-only conflict suggestions) from a three-tool
 `source-claim-reviewer`, a four-tool `relation-reviewer`, and three-tool `endpoint-reviewer`, two-tool `supersession-reviewer` and
 `repository-intake` profiles, plus four-tool `withdrawal-reviewer` and
 `source-assessment-reviewer` profiles.
@@ -177,7 +177,7 @@ DATABASE_DSN="$(cat /absolute/private/ahe/migration-database-dns)" \
 Success returns credential-free JSON containing `schema_version`, `schema`,
 `changed`, `applied_migrations`, and `latest_migration`. Repeating the command is
 safe when the selected schema, migration ledger and checksums match. The current
-native schema is 58; migrations 1–57 retain their original checksums.
+native schema is 59; migrations 1–58 retain their original checksums.
 Migration 43 retains the partial unique source-extraction request index.
 Migration 44 requires no proposal/canonical/admission authority and exactly the
 native empty Supersession head before adding ordinary admission manifests;
@@ -307,7 +307,7 @@ transferred to a different process/visibility cut.
 
 These are separately provisioned profiles, not extra source-reviewer tools.
 These profiles were introduced in migration 49; the current build requires the
-full migration chain through 58 and role policy v9. Provision or upgrade and
+full migration chain through 59 and role policy v10. Provision or upgrade and
 verify matching roles with the operator workflow above.
 For fresh installations, provision distinct fresh
 pairs for the new installation and verify each one, rather than rerunning
@@ -372,7 +372,7 @@ schema-pinned, bounded `FOR KEY SHARE` reader. Exact review is not proof of
 human attention or semantic entailment.
 
 Only after both endpoints are admitted should the separate relation reviewer
-prepare `implements`. Generic and contradiction writers remain disabled. Endpoint `reject`/`audit_only`
+prepare `implements`. Generic writers remain disabled; contradiction uses its own separately provisioned reviewer. Endpoint `reject`/`audit_only`
 uses `record_reviewed_endpoint_disposition` after the same complete exact review,
 with the unchanged request/subject, human decision/reason and stable request ID.
 The independent disposition receipt is terminal for the occurrence, creates no
@@ -405,7 +405,7 @@ for source findings, migration readback, cache reuse and the commit-point limit.
 
 ## Supersession reviewer
 
-The separately provisioned `supersession-reviewer` requires schema 58 / policy v9.
+The separately provisioned `supersession-reviewer` requires schema 59 / policy v10.
 Use the same protected launcher configuration as other reviewer profiles with
 its own fixed principal, bounded LOGIN and NOLOGIN group. Run
 `AHE_RUNTIME_PROFILE=supersession-reviewer ./bin/ahe-runtime-admin provision`
@@ -684,7 +684,7 @@ An empty new database is expected; no search result alone is not a connection te
 
 ## Upgrade
 
-This build requires schema **58** and database role policy **v9**. Updating a
+This build requires schema **59** and database role policy **v10**. Updating a
 schema-49 installation is **not** a binary-only replacement: migrations 50–53 add
 Core record and consistency-history tables. From schema 49, all profiles need
 SELECT on eleven new tables; from schema 52, five new diagnostic tables. Refresh
@@ -789,3 +789,39 @@ embedded migration names and checksums.
   selected; use external connector intake or a supported local source instead.
 - JSON-RPC parse failures: ensure no wrapper, logger, or shell startup file
   writes non-protocol output to MCP stdout.
+
+## Independent contradiction reviewer
+
+The separately provisioned `contradiction-reviewer` requires schema 59 / policy
+v10. Its exact tools are `get_contradiction_review` and
+`apply_reviewed_contradiction`. Provision a dedicated role/LOGIN and protected
+launcher configuration with this profile using the same runtime-admin procedure
+as the other reviewers. Source-node reviewer credentials do not authorize it.
+
+The role gains SELECT on the shipping tables, INSERT only on
+`canonical_contradiction_review_bindings`, and EXECUTE only on the qualified
+`evidence_governance_lock_v1(regclass)` helper. It cannot directly insert nodes,
+edges, pair proposals or decisions. A fixed migration-owned trigger materializes
+only the exact reviewed contradiction pair and terminal decision; a deferred
+receipt FK prevents an ignored receipt insert from retaining trigger side effects.
+Startup checks qualify the function body/owner/settings, trigger and constraints.
+This preserves the existing database trust boundary: a receipt records a reviewer
+binding but cannot prove that a human read or semantically verified the display.
+
+Review the complete returned display, including endpoints, retained sources,
+rationale, scope/conditions and requested symmetric effect. After an explicit
+independent human decision, copy `display.request` unchanged as `review`, copy
+`subject` as `expected_subject`, and supply `request_id`, `decision` (`approved`,
+`reject`, or `audit_only`) and `decision_reason`. The launcher binds identity.
+Getter calls are read-only and do not reserve a pair. Any governance revision
+change requires fresh review for a new decision; exact retry returns its original
+receipt even after later governance changes. Pair-v1 terminal decisions cannot
+reopen or remove relations. Query's existing contradiction proposal and relation
+provenance tools expose the receipt and the actual pair, never an inferred clique.
+
+A schema-58/policy-v9 installation needs migration 59 and policy v10. Upgrade and
+verify every existing runtime role: each gains only SELECT on the receipt table.
+Provision the contradiction writer separately. Migration 59 preserves legacy
+pair-v1 IDs and decisions; rollback refuses populated native review receipts.
+Intake adds the read-only `suggest_intake_conflicts` tool without new write grants.
+Its optional six-field `basis` is a caller-declared slot hint, not a new binding.

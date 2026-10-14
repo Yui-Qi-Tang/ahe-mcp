@@ -22,13 +22,14 @@ func TestRuntimeProfileRequiresExplicitExactName(t *testing.T) {
 			t.Fatalf("invalid profile did not fail closed with a safe error: %v", err)
 		}
 	}
-	if got := RuntimeProfileNames(); !reflect.DeepEqual(got, []string{"withdrawal-reviewer", "source-assessment-reviewer", "supersession-reviewer", "core-records", "intake", "source-claim-reviewer", "legacy-reviewer", "legacy-operator", "relation-reviewer", "endpoint-reviewer", "repository-intake"}) {
+	if got := RuntimeProfileNames(); !reflect.DeepEqual(got, []string{"contradiction-reviewer", "withdrawal-reviewer", "source-assessment-reviewer", "supersession-reviewer", "core-records", "intake", "source-claim-reviewer", "legacy-reviewer", "legacy-operator", "relation-reviewer", "endpoint-reviewer", "repository-intake"}) {
 		t.Fatalf("unexpected accepted profile inventory: %v", got)
 	}
 }
 
 func TestAuthorizedBackendScopesBothInventoryAndCalls(t *testing.T) {
 	intake := []string{
+		evidenceingestionmcp.ToolSuggestIntakeConflicts,
 		evidenceingestionmcp.ToolSubmitManualEvidence,
 		evidenceingestionmcp.ToolSubmitTextSource,
 		evidenceingestionmcp.ToolSubmitExternalSource,
@@ -49,7 +50,7 @@ func TestAuthorizedBackendScopesBothInventoryAndCalls(t *testing.T) {
 	}{
 		{RuntimeProfileIntake, intake},
 		{RuntimeProfileLegacyReviewer, reviewer},
-		{RuntimeProfileLegacyOperator, toolNames(legacyIngestionTools())},
+		{RuntimeProfileLegacyOperator, append(toolNames(legacyIngestionTools()), evidenceingestionmcp.ToolSuggestIntakeConflicts)},
 	} {
 		t.Run(string(tc.profile), func(t *testing.T) {
 			recorder, backend := authorizedFixture(t, tc.profile)

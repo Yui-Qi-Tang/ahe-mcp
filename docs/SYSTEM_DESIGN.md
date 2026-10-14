@@ -309,8 +309,8 @@ and relation approvals remain independent.
 ### Implemented internal domain contracts
 
 The domain registry is broader than the standard runtime. Only the bounded
-exact-reviewed endpoint subset above is exposed; generic derived, contradiction
-writers remain disabled; fresh-v2 Supersession uses its separate exact-review profile. Do not bypass the entry point with
+exact-reviewed endpoint subset above is exposed; generic derived writers remain
+disabled. Fresh-v2 Supersession and pair-v1 contradiction use separate exact-review profiles. Do not bypass the entry point with
 `source-claim-reviewer` credentials or treat these internal paths as enabled client operations.
 
 - **Derived admission**: each new immutable derived claim requires 1–64 admitted
@@ -321,7 +321,8 @@ writers remain disabled; fresh-v2 Supersession uses its separate exact-review pr
 - **Candidate recording**: the internal admission API can record a hypothesis with
   complete parents as `candidate`. Recording it does not establish the claim;
   proposition binding and promotion through a derived-claim parent reject candidates.
-- **Contradiction**: create a complete proposal before approval. Node-pair identity is
+- **Contradiction**: show a complete native review before an independent relation
+  decision; the standard reviewer persists the proposal with the decision atomically. Node-pair identity is
   single-use, including `rejected` and `audit_only` terminal states. Changing the rationale
   does not create a new version. Do not duplicate nodes to bypass this rule.
   The internal API optionally binds an independent source proposal whose statement

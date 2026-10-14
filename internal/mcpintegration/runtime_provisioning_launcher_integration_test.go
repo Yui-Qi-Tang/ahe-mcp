@@ -44,7 +44,7 @@ func TestIntegrationRuntimeProvisioningLauncherRoundTrip(t *testing.T) {
 	fixture := newProvisioningLauncherFixture(t, ctx, databaseURL, binaries["ahe-runtime-admin"])
 	configs := make(map[dbrole.Profile]provisioningLauncherConfig)
 	paths := make(map[dbrole.Profile]string)
-	for _, profile := range []dbrole.Profile{dbrole.ProfileQuery, dbrole.ProfileIntake, dbrole.ProfileSourceClaimReviewer, dbrole.ProfileCoreRecords, dbrole.ProfileEndpointReviewer, dbrole.ProfileSupersessionReviewer} {
+	for _, profile := range []dbrole.Profile{dbrole.ProfileQuery, dbrole.ProfileIntake, dbrole.ProfileSourceClaimReviewer, dbrole.ProfileCoreRecords, dbrole.ProfileEndpointReviewer, dbrole.ProfileSupersessionReviewer, dbrole.ProfileContradictionReviewer} {
 		identity := fixture.identities[profile]
 		command := "ahe-ingest-mcp"
 		if profile == dbrole.ProfileQuery {
@@ -64,11 +64,14 @@ func TestIntegrationRuntimeProvisioningLauncherRoundTrip(t *testing.T) {
 
 	// New lifecycle profiles must be provisioned and started through the actual
 	// operator and protected launcher, not only an in-process ACL installer.
-	for _, profile := range []dbrole.Profile{dbrole.ProfileEndpointReviewer, dbrole.ProfileSupersessionReviewer} {
+	for _, profile := range []dbrole.Profile{dbrole.ProfileEndpointReviewer, dbrole.ProfileSupersessionReviewer, dbrole.ProfileContradictionReviewer} {
 		process := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], paths[profile], "ahe-ingest-mcp")
 		names := []string{"get_endpoint_review", "admit_reviewed_endpoint", "record_reviewed_endpoint_disposition"}
 		if profile == dbrole.ProfileSupersessionReviewer {
 			names = []string{"get_supersession_review", "admit_reviewed_supersession"}
+		}
+		if profile == dbrole.ProfileContradictionReviewer {
+			names = []string{"get_contradiction_review", "apply_reviewed_contradiction"}
 		}
 		process.assertTools(t, names)
 		process.assertDenied(t, "admit_pending_proposal", map[string]any{})
@@ -131,7 +134,7 @@ func TestIntegrationRuntimeProvisioningLauncherRoundTrip(t *testing.T) {
 	intake := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], paths[dbrole.ProfileIntake], "ahe-ingest-mcp")
 	reviewer := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], paths[dbrole.ProfileSourceClaimReviewer], "ahe-ingest-mcp")
 	query := startProvisionedLauncher(t, ctx, binaries["ahe-mcp-launch"], paths[dbrole.ProfileQuery], "ahe-query-mcp")
-	intake.assertTools(t, []string{"submit_manual_evidence", "submit_text_source", "submit_external_source", "submit_extractor_output", "get_extractor_input"})
+	intake.assertTools(t, []string{"suggest_intake_conflicts", "submit_manual_evidence", "submit_text_source", "submit_external_source", "submit_extractor_output", "get_extractor_input"})
 	reviewer.assertTools(t, []string{"get_source_claim_review", "admit_reviewed_source_claim", "record_reviewed_source_claim_disposition"})
 	query.assertTools(t, []string{"get_evidence_record", "list_evidence_records", "search_evidence_records", "get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance", "get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path", "get_canonical_topology_diagnostics", "get_canonical_contradiction_proposal", "get_canonical_supersession_head", "get_canonical_supersession_currentness", "get_proposition_members", "get_proposition_binding_history", "get_external_check_subject", "get_external_check", "list_external_checks", "get_external_representation", "get_external_representation_material", "get_external_dependency_users", "get_consistency_scope", "get_consistency_watch", "get_consistency_events", "get_consistency_run", "get_consistency_artifact", "get_evidence_use_state", "get_evidence_governance_history", "check_current_evidence_plan"})
 	const statement = "合成啟動器測試：退款應於七日內完成。"
@@ -349,7 +352,7 @@ func newProvisioningLauncherFixture(t *testing.T, ctx context.Context, databaseU
 		t.Fatalf("apply private native migrations: %v", err)
 	}
 	operatorURL := provisioningExplicitURL(cfg, fixture.database, cfg.ConnConfig.User, cfg.ConnConfig.Password)
-	for index, profile := range []dbrole.Profile{dbrole.ProfileQuery, dbrole.ProfileIntake, dbrole.ProfileSourceClaimReviewer, dbrole.ProfileCoreRecords, dbrole.ProfileEndpointReviewer, dbrole.ProfileSupersessionReviewer} {
+	for index, profile := range []dbrole.Profile{dbrole.ProfileQuery, dbrole.ProfileIntake, dbrole.ProfileSourceClaimReviewer, dbrole.ProfileCoreRecords, dbrole.ProfileEndpointReviewer, dbrole.ProfileSupersessionReviewer, dbrole.ProfileContradictionReviewer} {
 		identity := provisioningIdentity{group: "ahe_launch_group_" + strconv.Itoa(index) + "_" + suffix, login: "ahe_launch_login_" + strconv.Itoa(index) + "_" + suffix, profile: profile}
 		var existing int
 		if err := admin.QueryRow(ctx, `SELECT count(*) FROM pg_roles WHERE rolname=ANY($1::text[])`, []string{identity.group, identity.login}).Scan(&existing); err != nil || existing != 0 {
@@ -437,7 +440,7 @@ func runProvisioningAdmin(t *testing.T, ctx context.Context, command, operation,
 		return provisioningAdminResult{}
 	}
 	var result provisioningAdminResult
-	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.UpdatedExistingPair != (operation == "upgrade") || result.RuntimeLoginVerified != (operation == "verify") || result.SessionUser != identity.login || result.AppliedMigrations != 57 || result.LatestMigration != "000057_reviewed_derivation_parent_limit.up.sql" {
+	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.UpdatedExistingPair != (operation == "upgrade") || result.RuntimeLoginVerified != (operation == "verify") || result.SessionUser != identity.login || result.AppliedMigrations != 59 || result.LatestMigration != "000059_reviewed_contradictions.up.sql" {
 		t.Fatalf("compiled runtime admin %s did not return its exact credential-free receipt (output suppressed)", operation)
 	}
 	if strings.Contains(stdout.String(), dsn) {

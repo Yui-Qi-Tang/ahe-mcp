@@ -29,7 +29,7 @@ func TestIntegrationReviewedDerivationParentLimitUpgradeRollback(t *testing.T) {
 		t.Fatalf("upgrade57: changed=%v err=%v", changed, err)
 	}
 	status, err := VerifyCurrentInSchema(ctx, pool, schema)
-	if err != nil || status.AppliedMigrations != 58 {
+	if err != nil || status.AppliedMigrations != 59 {
 		t.Fatalf("schema 57 readiness: %+v %v", status, err)
 	}
 	after := ordinaryFenceRows(t, ctx, pool)
@@ -41,6 +41,7 @@ func TestIntegrationReviewedDerivationParentLimitUpgradeRollback(t *testing.T) {
 	if changed, err := ApplyUpInSchema(ctx, pool, schema); err != nil || changed {
 		t.Fatal("migration57 is not idempotent")
 	}
+	rollbackContradictionReviewForTest(t, ctx, pool)
 	governanceDown, err := os.ReadFile("000058_evidence_governance.down.sql")
 	if err != nil {
 		t.Fatal(err)

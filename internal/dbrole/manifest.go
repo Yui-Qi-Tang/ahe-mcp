@@ -10,7 +10,7 @@ import (
 )
 
 // PolicyVersion identifies the native ordinary/review authority policy, not Core's policy.
-const PolicyVersion = "ahe-mcp-database-role-policy/v9"
+const PolicyVersion = "ahe-mcp-database-role-policy/v10"
 
 // Profile identifies an implemented database capability set.
 type Profile string
@@ -28,6 +28,9 @@ const ProfileIntake Profile = "intake"
 // activate repositories. The Go entry point enforces the review-only routing;
 // table privileges alone are not an authenticated-human or row-level policy.
 const ProfileSourceClaimReviewer Profile = "source-claim-reviewer"
+
+// ProfileContradictionReviewer inserts exact-review receipts for one contradiction pair.
+const ProfileContradictionReviewer Profile = "contradiction-reviewer"
 
 // ProfileRelationReviewer only appends independently reviewed relation receipts and edges.
 const ProfileRelationReviewer Profile = "relation-reviewer"
@@ -83,6 +86,7 @@ var queryTables = []string{
 	"admission_decisions",
 	"canonical_contradiction_admission_decisions",
 	"canonical_contradiction_proposals",
+	"canonical_contradiction_review_bindings",
 	"canonical_derivation_parents",
 	"canonical_derivations",
 	"canonical_endpoint_review_bindings",
@@ -182,7 +186,7 @@ var queryTables = []string{
 
 // ProfileNames returns implemented profile names only.
 func ProfileNames() []string {
-	return []string{string(ProfileWithdrawalReviewer), string(ProfileSourceAssessmentReviewer), string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer), string(ProfileRelationReviewer), string(ProfileEndpointReviewer), string(ProfileRepositoryIntake), string(ProfileCoreRecords), string(ProfileSupersessionReviewer)}
+	return []string{string(ProfileContradictionReviewer), string(ProfileWithdrawalReviewer), string(ProfileSourceAssessmentReviewer), string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer), string(ProfileRelationReviewer), string(ProfileEndpointReviewer), string(ProfileRepositoryIntake), string(ProfileCoreRecords), string(ProfileSupersessionReviewer)}
 }
 
 // ParseProfile accepts an exact implemented profile without normalization.
@@ -201,7 +205,9 @@ func BuildManifest(profile Profile) (Manifest, error) {
 	rules := make([]TableRule, 0, len(queryTables))
 	for _, table := range queryTables {
 		privileges := []Privilege{PrivilegeSelect}
-		if profile == ProfileWithdrawalReviewer && table == "canonical_withdrawal_events" || profile == ProfileSourceAssessmentReviewer && table == "source_assessment_events" {
+		if profile == ProfileContradictionReviewer && table == "canonical_contradiction_review_bindings" {
+			privileges = append(privileges, PrivilegeInsert)
+		} else if profile == ProfileWithdrawalReviewer && table == "canonical_withdrawal_events" || profile == ProfileSourceAssessmentReviewer && table == "source_assessment_events" {
 			privileges = append(privileges, PrivilegeInsert)
 		} else if profile == ProfileCoreRecords {
 			switch table {
@@ -255,7 +261,7 @@ func BuildManifest(profile Profile) (Manifest, error) {
 	if profile == ProfileSupersessionReviewer {
 		manifest.FunctionExecute = []string{"canonical_supersession_lock_targets_v1(text[])"}
 	}
-	if profile == ProfileWithdrawalReviewer || profile == ProfileSourceAssessmentReviewer || profile == ProfileEndpointReviewer {
+	if profile == ProfileContradictionReviewer || profile == ProfileWithdrawalReviewer || profile == ProfileSourceAssessmentReviewer || profile == ProfileEndpointReviewer {
 		manifest.FunctionExecute = append(manifest.FunctionExecute, "evidence_governance_lock_v1(regclass)")
 	}
 	return manifest, nil

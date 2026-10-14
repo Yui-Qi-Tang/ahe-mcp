@@ -53,6 +53,7 @@ func TestIntegrationGovernanceUpgradePreservesHistoryAndRollbackRefusesEvents(t 
 	if err != nil {
 		t.Fatal(err)
 	}
+	rollbackContradictionReviewForTest(t, ctx, pool)
 	down, err := os.ReadFile("000058_evidence_governance.down.sql")
 	if err != nil {
 		t.Fatal(err)

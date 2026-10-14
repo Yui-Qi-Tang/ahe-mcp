@@ -19,8 +19,8 @@
 
 Discover the live MCP tools and input schemas before calling them. Standard
 `relation-reviewer` and `endpoint-reviewer` capabilities are available only
-through their separately provisioned profiles. Contradiction and Supersession
-**writers**, generic derived admission and repository activation remain internal
+through their separately provisioned profiles. Contradiction and Supersession writers use their separately provisioned exact-review
+profiles. Generic derived admission and repository activation remain internal
 capabilities; their query/readback tools do not authorize writes. Do not enable
 a legacy profile or substitute direct SQL when a required operation is absent.
 

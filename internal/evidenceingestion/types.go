@@ -1134,6 +1134,7 @@ type CanonicalQueryResult struct {
 // CanonicalContradictionQueryResult returns the proposal, both grounded
 // canonical endpoints, and its optional terminal decision.
 type CanonicalContradictionQueryResult struct {
+	ReviewReceipt  *ContradictionReviewReceipt
 	SourceProposal *ProposalQueryResult
 	Proposal       CanonicalContradictionProposal
 	NodeA          CanonicalQueryResult
