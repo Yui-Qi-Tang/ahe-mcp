@@ -76,8 +76,8 @@ produce new handles while existing cached views remain immutable historical
 reads. A cached view, prior receipt, verification report or SAT result is not a
 new-use permit.
 
-Select an explicit versioned purpose in `get_evidence_use_state` and
-`check_current_evidence_plan`: `current-action/v1` or
+For use as a current action basis, select an explicit versioned purpose in
+`get_evidence_use_state` and `check_current_evidence_plan`: `current-action/v1` or
 `grounded-current-action/v1`. The grounded purpose additionally requires passing
 retained-byte integrity, source correspondence and coverage checks; missing, disputed
 or inconclusive mandatory checks block use. Neither an omitted policy nor an
@@ -85,19 +85,27 @@ unknown/historical policy is a default clearance. After generating a plan/SAT
 result, call `check_current_evidence_plan` with the same purpose, every action and
 its explicit canonical basis IDs. The server rereads state and evaluates all AND
 ancestors; one failed premise cannot be hidden inside a derived wrapper.
-`accepted=false` is a governance rejection, not UNSAT. A pass does not establish
-semantic entailment or detect omitted premises. Existing consistency/SAT
-profiles retain diagnostic semantics and must not stand in for this action gate.
+`accepted=false` is a governance rejection, not UNSAT. `accepted=true` means
+the declared basis IDs pass the selected policy at the assessed state and time.
+The action manifest contains action IDs and basis IDs, not executable action
+content. A pass does not validate the action, establish semantic entailment or
+detect omitted premises. Existing consistency/SAT profiles retain diagnostic
+semantics and must not stand in for this action gate.
 
 New public `derived_spec` requests require `derivation.use_policy`; the exact
-review binds that selected policy and scoped state. Omission is retained only
-for replay of historical terminal requests that predate this field.
+review binds that selected policy and the scoped governance material in its
+native display. Omission is retained only for replay of historical terminal
+requests that predate this field.
 The public `derived_spec` endpoint review includes the scoped use policy/state,
 and `AdmitReviewedEndpoint` rechecks both parents and its own bound source inside
 the committing transaction. Unclassified source currentness blocks new current
 admission. Internal legacy historical materialization remains internal and
 confers no current-use authority; public runtimes do not enable that route.
 A caller cannot downgrade the public action/derived gate with a historical flag.
+This gate limits the public entry point to current-use derived admission; it
+does not redefine every admitted canonical record as currently usable. Human
+review must still judge the derived claim's support, scope and conditions.
+The gate is an additional governance check, not an entailment proof.
 
 Every relevant canonical, admission, supersession, source and extraction binding
 write first updates the same store head via statement triggers. Current derived
@@ -110,6 +118,35 @@ The guarantee concerns governance data through this transaction and eligibility
 at the recorded assessment time. Wall-clock expiry can advance independently;
 there is no lease for future execution. External actions after commit require a
 separate coordination contract. Historical replay performs no new admission.
+
+### Consumer responsibilities
+
+AHE owns the recorded governance state, its policy evaluation and the guard on
+its own committing transaction. Consumers use those authoritative assessments;
+they must not turn unknown state into currentness or replace the guard with a
+prior local check. Consumers own the mapping from evidence to actual actions:
+
+- Select the policy required by the intended use and supply every action's
+  complete basis. Omitting a premise or changing the purpose to obtain a pass
+  does not make the action supported.
+- Check that the evidence supports the action under its actual scope and
+  conditions. Review of the canonical derived claim remains a separate
+  obligation before admission; action review cannot repair an unsupported claim.
+- Recheck required external revisions/content and current governance before
+  current use. Coordinate subsequent external execution, including intervening
+  changes and expiry; AHE supplies no execution lease or cross-system atomicity.
+- Keep historical cache reuse separate from current-use clearance. An unchanged
+  verification report can remain valid for its original inputs while current
+  eligibility changes. Neither a cache hit, SAT result nor admission receipt
+  replaces the current basis check.
+
+For example, `D = AND(A, B)` may be admitted while its parents are eligible.
+Withdrawing A later preserves D's admission and receipt, but blocks D's current
+use through its ancestry. An admitted-only consumer would still be wrong to
+execute using D. Verify each consumer's actual read and execution path; passing
+the admission guard or the AHE integration suite does not establish that an
+external consumer enforces this boundary. Historical inspection and consistency
+diagnosis remain distinct uses; they do not authorize a new current-use write.
 
 ## Interim records and batch migration
 

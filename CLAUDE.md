@@ -158,13 +158,21 @@ native subject and preserve explicit per-item decisions, human reasons, launcher
 identity and exact retry inputs. Historical local records are review material,
 not new approval. Do not migrate operational records under code-change approval.
 
-Query exposes versioned use state and governance history. Check current bases
-with explicit `current-action/v1` or `grounded-current-action/v1` before planning,
-then `check_current_evidence_plan` with the same purpose on every emitted action's
-explicit basis IDs after planning/SAT. A cached view, verification report, SAT
-result or old receipt is insufficient. Public derived admission repeats the gate
-inside its committing transaction; later external execution needs its own
-coordination. See [governance contracts](internal/evidenceingestion/GOVERNANCE.md)
+Query exposes versioned use state and governance history. When planning actions
+that rely on current evidence, check bases with explicit `current-action/v1` or
+`grounded-current-action/v1` before planning, then `check_current_evidence_plan`
+with the same purpose on every emitted action's complete basis IDs after
+planning/SAT. Its `accepted` result concerns the declared bases under that
+policy, not the correctness of the action or completeness of its premises.
+A cached view, verification report, SAT result or old receipt is insufficient.
+Public derived admission retains the gate inside its committing transaction;
+an earlier client check cannot replace it. Admission, current-use eligibility
+and action approval remain distinct. Human review must judge whether the parents
+support the derived claim and its conditions. The consumer separately validates
+the concrete action, required external freshness and execution conditions;
+later execution needs its own coordination. Historical inspection does not
+enable a historical flag or an internal writer to bypass the public gate.
+See [governance contracts](internal/evidenceingestion/GOVERNANCE.md)
 for batch preparation, readback, source resolution and bounded completeness.
 Batch approval binds the unchanged manifest, native per-item subjects and new
 human reasons. Original local records remain review material, including purely

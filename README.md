@@ -125,6 +125,11 @@ For a database-free contract example, run `make evidence-boundary`.
 - Only explicit review can admit claims or independent relations.
 - PostgreSQL is authoritative. Ordinary agents receive read-only Query access.
 
+Canonical admission, current-use eligibility and action approval are distinct.
+Public `derived_spec` admission also enforces a current-use gate in its committing
+transaction. Consumers still validate action support, current bases and execution
+conditions. See [responsibility boundaries](docs/SYSTEM_DESIGN.md#evidence-and-use-responsibilities).
+
 This is a single-user controlled preview with schema-wide visibility; use a
 separate database and trusted operator. Unattended production writing is not qualified.
 See [review and state transitions](docs/SYSTEM_DESIGN.md#review).

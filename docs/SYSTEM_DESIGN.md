@@ -44,6 +44,27 @@ External clients communicate through separately authorized MCP processes.
 Collected sources, pending proposals, admitted canonical evidence, active repository
 generations and downstream answers remain distinct states or layers.
 
+### Evidence and use responsibilities
+
+| Boundary | AHE responsibility | Review workflow / consumer responsibility |
+| --- | --- | --- |
+| Derived admission | Preserve the exact reviewed claim, source basis, complete AND parents and decision; enforce native identity, structural and transactional constraints | The human review must judge whether the parents support the proposed derived claim within its stated scope and conditions |
+| Current-use eligibility | Evaluate complete recorded governance and recursive ancestry under a named policy at a recorded state and time; enforce that check inside a public derived admission transaction | Select the policy required by the intended use and declare every basis; do not omit premises or change purpose merely to obtain a pass |
+| Action and execution | Return evidence, assessment reasons and limits | Judge whether the evidence supports the actual action, check applicable conditions and required external source freshness, and coordinate execution with subsequent changes |
+
+The native checks do not prove semantic entailment. Human review of a derived
+claim and consumer validation of a concrete action are separate obligations;
+the latter cannot substitute for reviewing the claim before admission. AND
+parents are necessary premises, not a loose collection of citations or records
+whose existence alone supports a diagnostic statement.
+
+Admission is durable history; current-use eligibility is a policy assessment
+that can change. Neither is approval to execute an external action. Query and
+consistency diagnostics remain evidence services, not final action decisions.
+The public derived endpoint has the additional admission-time gate described
+below; this bounded entry point does not make all canonical evidence currently
+usable. See [governance and consumer duties](../internal/evidenceingestion/GOVERNANCE.md#consumer-responsibilities).
+
 <a id="data-model"></a>
 
 ## Data model and identity
@@ -275,7 +296,22 @@ numbers, parser fact and fingerprint. A derived specification starts with an
 original-source-backed proposal plus explicit complete AND parents, method,
 producer and trace. Recursive parents use the same bounded native origin
 checks as `implements`; exact quotations remain separate from the proposed
-derived statement. This is not semantic entailment verification.
+derived statement. These mechanical checks do not establish semantic entailment;
+the human review must assess the proposed derivation, including its conditions.
+
+Every new public `derived_spec` request also selects `derivation.use_policy`:
+`current-action/v1` or `grounded-current-action/v1`. The exact review binds that
+policy and the scoped governance material included in the native display.
+Admission rechecks the complete recursive AND ancestry and the endpoint's own
+source assessments inside the committing transaction, in addition to native
+derivation validation. A consumer's earlier check cannot replace this guard.
+The receipt records that admission; it is not permanent current-use clearance
+or approval of a downstream action.
+
+This is the current public entry-point contract. Historical reads and exact
+replay remain available, but neither enables a new historical derived admission
+or a flag that bypasses the current-use gate. Generic internal derived writers
+remain outside the supported public workflow.
 
 The digest binds the complete deterministic display and requested effect.
 The review response keeps current DB `lifecycle` separate from that immutable
