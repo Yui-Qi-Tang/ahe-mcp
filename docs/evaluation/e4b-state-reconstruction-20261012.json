@@ -1,0 +1,1689 @@
+{
+  "schema_version": 1,
+  "method": "state-decision-retry-v1",
+  "scope": "Posthoc observation of the original autonomous E4B+AHE rounds 1-34 only; no rerun or old score changes.",
+  "product": {
+    "checkout": "ahe-mcp",
+    "branch": "develop",
+    "head": "0ac2d441e65b57901cbe889e903c968da1d2f7a6",
+    "tracked_tree_clean_at_execution": true
+  },
+  "case": {
+    "instance_id": "scikit-learn__scikit-learn-25570",
+    "source_commit": "cd25abee0ad0ac95225d4a9be8948eff69f49690",
+    "target_tests": 3,
+    "existing_tests": 184,
+    "original_records": 15
+  },
+  "model": {
+    "model": "gemma4:e4b-it-qat",
+    "digest": "ee665637121887cf3befff38abbb1be4ee117c7db867d97a67e29049ecd7e15f",
+    "options": {
+      "temperature": 0,
+      "seed": 42,
+      "num_ctx": 65536,
+      "num_predict": 12288
+    },
+    "think": true
+  },
+  "limits": [
+    "Reconstruction uses both AHE receipts and external experiment logs.",
+    "Source admission used synthetic test approvals.",
+    "Matching a quote is not full semantic support or internal adoption.",
+    "The old final contract did not require a retry-purpose field.",
+    "Original round 34 success stayed in external evaluation records; no next-round feedback admission.",
+    "Public summaries and hashes are not a standalone reproducibility package."
+  ],
+  "summary": {
+    "rounds": 34,
+    "models": 194,
+    "tools": 160,
+    "source_admissions": 1104,
+    "previous_audit_manifest_verified": 592,
+    "state_and_decision_receipts_linked": 34,
+    "citation_categories": {
+      "invalid_citation": [
+        1,
+        5,
+        6,
+        9,
+        30
+      ],
+      "no_citation": [
+        2,
+        3
+      ],
+      "matched_citation": [
+        4,
+        7,
+        8,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        31,
+        32,
+        33,
+        34
+      ]
+    },
+    "identical_failed_patch_repeats": [
+      12,
+      14,
+      15,
+      16,
+      17,
+      20,
+      22,
+      23,
+      25,
+      26,
+      29,
+      31,
+      33
+    ],
+    "repeat_count": 13,
+    "full_tested_candidates": 20,
+    "distinct_patch_bytes": 7,
+    "patch_groups": [
+      [
+        4
+      ],
+      [
+        7
+      ],
+      [
+        10,
+        12,
+        23,
+        29,
+        31
+      ],
+      [
+        13,
+        14,
+        15,
+        16,
+        17,
+        20,
+        22,
+        25,
+        26,
+        33
+      ],
+      [
+        19
+      ],
+      [
+        28
+      ],
+      [
+        34
+      ]
+    ],
+    "evaluation_condition_fingerprints": 1,
+    "direct_failure_record_reads": 0,
+    "success_feedback_in_original_run": false,
+    "new_model_calls": 0,
+    "new_pg_operations": 0,
+    "new_test_runs": 0,
+    "cause_certainty_self_reported_supported_rounds": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34
+    ],
+    "outcome_counts": {
+      "insufficient_evidence": 5,
+      "tested_failure": 19,
+      "patch_not_constructed": 9,
+      "all_pass": 1
+    },
+    "semantic_support_fully_adjudicated_rounds": 0,
+    "independent_handoff_reviews": 0,
+    "retry_events_after_first_round": 33,
+    "repeat_denominator": "20 fully tested candidate submissions; descriptive, not a rate of unjustified decisions"
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "records_before_decision": 15,
+      "own_prior_observations": 0,
+      "decision": "insufficient_evidence",
+      "calls": 16,
+      "tools": 15,
+      "citation_class": "invalid_citation",
+      "category": "insufficient_evidence",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ]
+      },
+      "search_delivery_matches": [
+        {
+          "step": 5,
+          "first_statement_matches": [
+            "context-5"
+          ],
+          "first_statement_complete_in_page": true,
+          "first_statement_delivered_prefix_characters": 2645
+        },
+        {
+          "step": 15,
+          "first_statement_matches": [
+            "context-4"
+          ],
+          "first_statement_complete_in_page": true,
+          "first_statement_delivered_prefix_characters": 1964
+        }
+      ],
+      "delivered_summary": "參數說明；搜尋送達兩個相關函式正文",
+      "decision_and_difference": "不交補丁，仍稱缺 `_iter`；交付與缺件說明不一致",
+      "outcome_summary": "未送測",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 2,
+      "records_before_decision": 17,
+      "own_prior_observations": 1,
+      "decision": "insufficient_evidence",
+      "calls": 16,
+      "tools": 15,
+      "citation_class": "no_citation",
+      "category": "insufficient_evidence",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ],
+        "source-6": [
+          [
+            841,
+            941
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明、修補位置片段",
+      "decision_and_difference": "不交補丁，要求相關函式；本輪未取得其正文",
+      "outcome_summary": "未送測",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 3,
+      "records_before_decision": 18,
+      "own_prior_observations": 2,
+      "decision": "insufficient_evidence",
+      "calls": 5,
+      "tools": 4,
+      "citation_class": "no_citation",
+      "category": "insufficient_evidence",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            100
+          ],
+          [
+            800,
+            1800
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明、修補位置分段",
+      "decision_and_difference": "不交補丁，要求 `_iter` 細節",
+      "outcome_summary": "未送測",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 4,
+      "records_before_decision": 19,
+      "own_prior_observations": 3,
+      "decision": "propose_fix",
+      "calls": 5,
+      "tools": 4,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "2f8a7ec0514f678a0f7c7647dd0683f994dc39743bcc31e3a003857f03cdc950",
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明、修補位置",
+      "decision_and_difference": "首次可送測候選：以輸出索引取設定名稱，過濾空輸出",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 5,
+      "records_before_decision": 20,
+      "own_prior_observations": 4,
+      "decision": "propose_fix",
+      "calls": 17,
+      "tools": 16,
+      "citation_class": "invalid_citation",
+      "category": "patch_not_constructed",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ]
+      },
+      "search_delivery_matches": [
+        {
+          "step": 13,
+          "first_statement_matches": [
+            "source-feedback-r01-ahe"
+          ],
+          "first_statement_complete_in_page": false,
+          "first_statement_delivered_prefix_characters": 9013
+        }
+      ],
+      "delivered_summary": "參數說明；搜尋含第 1 輪觀測卡片段",
+      "decision_and_difference": "嘗試改前綴函式；引用及舊碼定位不合",
+      "outcome_summary": "未能構造",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 6,
+      "records_before_decision": 21,
+      "own_prior_observations": 5,
+      "decision": "propose_fix",
+      "calls": 4,
+      "tools": 3,
+      "citation_class": "invalid_citation",
+      "category": "patch_not_constructed",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "context-8": [
+          [
+            0,
+            2216
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明片段、`transform` 函式",
+      "decision_and_difference": "嘗試改前綴函式；引用及舊碼定位不合",
+      "outcome_summary": "未能構造",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 7,
+      "records_before_decision": 22,
+      "own_prior_observations": 6,
+      "decision": "propose_fix",
+      "calls": 12,
+      "tools": 11,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 0,
+      "existing": 179,
+      "tests_executed": 187,
+      "patch_sha256": "55a0e39fa4f2c4f0e3ed433b2616fe1b5a5f03da08e72d147cb9e8917e4635d3",
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            100
+          ],
+          [
+            800,
+            2300
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置分段；補件回傳的 ID 讀取失敗",
+      "decision_and_difference": "新候選把迭代結果按兩值解包；實測出現解包錯誤",
+      "outcome_summary": "0/3；179/184",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 8,
+      "records_before_decision": 23,
+      "own_prior_observations": 7,
+      "decision": "propose_fix",
+      "calls": 6,
+      "tools": 5,
+      "citation_class": "matched_citation",
+      "category": "patch_not_constructed",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "嘗試使用 `self.transformers`，含無變更／不唯一的舊碼定位",
+      "outcome_summary": "未能構造",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 9,
+      "records_before_decision": 24,
+      "own_prior_observations": 8,
+      "decision": "propose_fix",
+      "calls": 2,
+      "tools": 1,
+      "citation_class": "invalid_citation",
+      "category": "patch_not_constructed",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "同方向候選，但引用與舊碼不匹配",
+      "outcome_summary": "未能構造",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 10,
+      "records_before_decision": 25,
+      "own_prior_observations": 9,
+      "decision": "propose_fix",
+      "calls": 3,
+      "tools": 2,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "02e91077b4ffdefe46fe34793ed2a331c4b1fec9bbe4b9f883f73b650f3453ad",
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "`self.transformers` 方案首次構造成功；有新候選的評測價值",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 11,
+      "records_before_decision": 26,
+      "own_prior_observations": 10,
+      "decision": "insufficient_evidence",
+      "calls": 5,
+      "tools": 4,
+      "citation_class": "matched_citation",
+      "category": "insufficient_evidence",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2000
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明、修補位置前段",
+      "decision_and_difference": "不交補丁，要求兩個相關函式；庫內已有，本輪未讀其正文",
+      "outcome_summary": "未送測",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 12,
+      "records_before_decision": 27,
+      "own_prior_observations": 11,
+      "decision": "propose_fix",
+      "calls": 7,
+      "tools": 6,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "02e91077b4ffdefe46fe34793ed2a331c4b1fec9bbe4b9f883f73b650f3453ad",
+      "prior_identical_patch_rounds": [
+        10
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置、參數說明",
+      "decision_and_difference": "**與第 10 輪補丁相同**；未交代新增重試依據",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 13,
+      "records_before_decision": 28,
+      "own_prior_observations": 12,
+      "decision": "propose_fix",
+      "calls": 7,
+      "tools": 6,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明、修補位置",
+      "decision_and_difference": "與第 10 輪使用同一式子，保留不同換行；bytes 新，不是新功能方案",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 14,
+      "records_before_decision": 29,
+      "own_prior_observations": 13,
+      "decision": "propose_fix",
+      "calls": 2,
+      "tools": 1,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [
+        13
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**與第 13 輪補丁相同**；未交代新增重試依據",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 15,
+      "records_before_decision": 30,
+      "own_prior_observations": 14,
+      "decision": "propose_fix",
+      "calls": 3,
+      "tools": 2,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [
+        13,
+        14
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**與第 13 輪補丁相同**；未交代新增重試依據",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 16,
+      "records_before_decision": 31,
+      "own_prior_observations": 15,
+      "decision": "propose_fix",
+      "calls": 2,
+      "tools": 1,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [
+        13,
+        14,
+        15
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**與第 13 輪補丁相同**；未交代新增重試依據",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 17,
+      "records_before_decision": 32,
+      "own_prior_observations": 16,
+      "decision": "propose_fix",
+      "calls": 3,
+      "tools": 2,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [
+        13,
+        14,
+        15,
+        16
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**與第 13 輪補丁相同**；未交代新增重試依據",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 18,
+      "records_before_decision": 33,
+      "own_prior_observations": 17,
+      "decision": "propose_fix",
+      "calls": 10,
+      "tools": 9,
+      "citation_class": "matched_citation",
+      "category": "patch_not_constructed",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            2000
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明片段、修補位置",
+      "decision_and_difference": "另改特徵名取得方式，但含無變更的 edit",
+      "outcome_summary": "未能構造",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 19,
+      "records_before_decision": 34,
+      "own_prior_observations": 18,
+      "decision": "propose_fix",
+      "calls": 2,
+      "tools": 1,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 1,
+      "existing": 182,
+      "tests_executed": 187,
+      "patch_sha256": "7407be489918d3b07a04c1d7c3bb2d0afa020e06b3c83c8024b6d56e2d14461f",
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "新候選從設定第三欄取得特徵名；測試表現退步",
+      "outcome_summary": "1/3；182/184",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 20,
+      "records_before_decision": 35,
+      "own_prior_observations": 19,
+      "decision": "propose_fix",
+      "calls": 2,
+      "tools": 1,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**重回第 13 輪補丁**；未交代回退目的",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 21,
+      "records_before_decision": 36,
+      "own_prior_observations": 20,
+      "decision": "propose_fix",
+      "calls": 4,
+      "tools": 3,
+      "citation_class": "matched_citation",
+      "category": "patch_not_constructed",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2000
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明片段、修補位置前段",
+      "decision_and_difference": "仍用 `self.transformers`，舊碼不匹配",
+      "outcome_summary": "未能構造",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 22,
+      "records_before_decision": 37,
+      "own_prior_observations": 21,
+      "decision": "propose_fix",
+      "calls": 4,
+      "tools": 3,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        20
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            1000
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2300
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明片段、修補位置前段",
+      "decision_and_difference": "恢復可送測，但**與第 13 輪補丁相同**；交付改善未解決既有反例",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 23,
+      "records_before_decision": 38,
+      "own_prior_observations": 22,
+      "decision": "propose_fix",
+      "calls": 3,
+      "tools": 2,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "02e91077b4ffdefe46fe34793ed2a331c4b1fec9bbe4b9f883f73b650f3453ad",
+      "prior_identical_patch_rounds": [
+        10,
+        12
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**與第 10 輪補丁相同**；未交代新增重試依據",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 24,
+      "records_before_decision": 39,
+      "own_prior_observations": 23,
+      "decision": "propose_fix",
+      "calls": 14,
+      "tools": 13,
+      "citation_class": "matched_citation",
+      "category": "patch_not_constructed",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            1700
+          ]
+        ]
+      },
+      "search_delivery_matches": [
+        {
+          "step": 8,
+          "first_statement_matches": [
+            "source-feedback-history-24"
+          ],
+          "first_statement_complete_in_page": false,
+          "first_statement_delivered_prefix_characters": 6754
+        },
+        {
+          "step": 11,
+          "first_statement_matches": [
+            "source-feedback-history-24"
+          ],
+          "first_statement_complete_in_page": false,
+          "first_statement_delivered_prefix_characters": 7367
+        }
+      ],
+      "delivered_summary": "修補位置部分；搜尋含歷史索引片段",
+      "decision_and_difference": "工具 2→13 次；仍用同方向方案，舊碼換行不符",
+      "outcome_summary": "未能構造",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 25,
+      "records_before_decision": 40,
+      "own_prior_observations": 24,
+      "decision": "propose_fix",
+      "calls": 2,
+      "tools": 1,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        20,
+        22
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "恢復可送測，但**與第 13 輪補丁相同**",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 26,
+      "records_before_decision": 41,
+      "own_prior_observations": 25,
+      "decision": "propose_fix",
+      "calls": 3,
+      "tools": 2,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        20,
+        22,
+        25
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**與第 13 輪補丁相同**；未交代新增重試依據",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 27,
+      "records_before_decision": 42,
+      "own_prior_observations": 26,
+      "decision": "propose_fix",
+      "calls": 10,
+      "tools": 9,
+      "citation_class": "matched_citation",
+      "category": "patch_not_constructed",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明、修補位置",
+      "decision_and_difference": "仍用 `self.transformers`，舊碼不匹配",
+      "outcome_summary": "未能構造",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 28,
+      "records_before_decision": 43,
+      "own_prior_observations": 27,
+      "decision": "propose_fix",
+      "calls": 5,
+      "tools": 4,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 0,
+      "existing": 184,
+      "tests_executed": 187,
+      "patch_sha256": "f5a72d38fec6ceb82c59d9bbbfde5e3fffc7dbfd6d7b47592422729f3a1a8645",
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "新候選將迭代與輸出配對、過濾零欄；既有全過，目標未修好",
+      "outcome_summary": "0/3；184/184",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 29,
+      "records_before_decision": 44,
+      "own_prior_observations": 28,
+      "decision": "propose_fix",
+      "calls": 2,
+      "tools": 1,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "02e91077b4ffdefe46fe34793ed2a331c4b1fec9bbe4b9f883f73b650f3453ad",
+      "prior_identical_patch_rounds": [
+        10,
+        12,
+        23
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**重回第 10 輪補丁**；未交代回退目的",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 30,
+      "records_before_decision": 45,
+      "own_prior_observations": 29,
+      "decision": "propose_fix",
+      "calls": 3,
+      "tools": 2,
+      "citation_class": "invalid_citation",
+      "category": "patch_not_constructed",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "嘗試改為配對／過濾迴圈；引用及舊碼不匹配",
+      "outcome_summary": "未能構造",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 31,
+      "records_before_decision": 46,
+      "own_prior_observations": 30,
+      "decision": "propose_fix",
+      "calls": 2,
+      "tools": 1,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "02e91077b4ffdefe46fe34793ed2a331c4b1fec9bbe4b9f883f73b650f3453ad",
+      "prior_identical_patch_rounds": [
+        10,
+        12,
+        23,
+        29
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**與第 10 輪補丁相同**；未交代新增重試依據",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 32,
+      "records_before_decision": 47,
+      "own_prior_observations": 31,
+      "decision": "insufficient_evidence",
+      "calls": 6,
+      "tools": 5,
+      "citation_class": "matched_citation",
+      "category": "insufficient_evidence",
+      "target": null,
+      "existing": null,
+      "tests_executed": 0,
+      "patch_sha256": null,
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            1000
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明、修補位置前段",
+      "decision_and_difference": "不交補丁，要求兩個相關函式；庫內已有，本輪未讀其正文",
+      "outcome_summary": "未送測",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 33,
+      "records_before_decision": 48,
+      "own_prior_observations": 32,
+      "decision": "propose_fix",
+      "calls": 2,
+      "tools": 1,
+      "citation_class": "matched_citation",
+      "category": "tested_failure",
+      "target": 3,
+      "existing": 183,
+      "tests_executed": 187,
+      "patch_sha256": "b1660dd0abb32625a2bc8ee5d02cc28e1205ae58417c69578c17b6b1496bd252",
+      "prior_identical_patch_rounds": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        20,
+        22,
+        25,
+        26
+      ],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            2463
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "修補位置",
+      "decision_and_difference": "**與第 13 輪補丁相同**；未交代新增重試依據",
+      "outcome_summary": "3/3；183/184",
+      "identical_failed_patch_repeat": true,
+      "retry_purpose_in_final": "not_stated",
+      "related_failed_patch_body_delivered": false,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    },
+    {
+      "round": 34,
+      "records_before_decision": 49,
+      "own_prior_observations": 33,
+      "decision": "propose_fix",
+      "calls": 5,
+      "tools": 4,
+      "citation_class": "matched_citation",
+      "category": "all_pass",
+      "target": 3,
+      "existing": 184,
+      "tests_executed": 187,
+      "patch_sha256": "35b29a9dd3b46184a3f77530183128f3b45a0e68e0b33f1c4304be4f858d9cc3",
+      "prior_identical_patch_rounds": [],
+      "direct_body_ranges": {
+        "issue": [
+          [
+            0,
+            5590
+          ]
+        ],
+        "source-6": [
+          [
+            0,
+            1500
+          ]
+        ],
+        "source-5": [
+          [
+            0,
+            3005
+          ]
+        ]
+      },
+      "search_delivery_matches": [],
+      "delivered_summary": "參數說明、修補位置部分",
+      "decision_and_difference": "新候選使用 `self.transformers_`，可以定位到具體修改",
+      "outcome_summary": "**3/3；184/184**",
+      "identical_failed_patch_repeat": false,
+      "retry_purpose_in_final": "not_rated",
+      "related_failed_patch_body_delivered": null,
+      "semantic_support_verdict": "not_fully_adjudicated",
+      "internal_adoption": "unobserved"
+    }
+  ],
+  "provenance": {
+    "private_audit_sha256": "29cb62824ebc05f2b2f77135da929079e9df069fdae5c3489d9cfe7eafda1182",
+    "prior_tool_audit_sha256": "87883c49e49b8e8dfbd175488f582b02b25726f7e4f3eac3bb5761fcc51e57fa",
+    "private_source_manifest_files": 735
+  }
+}

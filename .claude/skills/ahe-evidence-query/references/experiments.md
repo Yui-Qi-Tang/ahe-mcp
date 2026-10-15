@@ -78,6 +78,16 @@ infrastructure failures. Score reasons and task progress separately; record
 unknown judgments without treating them as successful abstentions. Adding this
 rubric does not authorize a run or change any earlier frozen protocol or score.
 
+For state, decision-grounding or retry evaluations, use the
+[state/decision/retry method](../../../../docs/STATE_DECISION_EVALUATION.md).
+Separate the system version, the evidence stored in AHE, the text delivered to
+the model, its stated grounds and the observed outcome. Identify which links
+require external records. Classify retries by changes and stated purpose;
+identical failed patches alone do not prove that the model knowingly ignored
+counterevidence. A retrospective audit must disclose its new lens, preserve old
+scores and distinguish missing explanation from violation of the original
+contract. Do not add prompts, skip repeated tests or rerun from this guidance.
+
 Report model/version, cases, source scope, controls, actual operations and the
 observed gains or failures. Repeated conditions are not independent tasks.
 Passing tests does not validate every explanation; no observed error does not

@@ -4,6 +4,11 @@ The [README evaluation](../README.md#evaluation) presents model comparisons
 and evidence storage/lifecycle checks.
 The reports below retain each experiment's own method, counts and limitations:
 
+- [Experiment coverage and next steps](EXPERIMENT_COVERAGE.md): completed
+  Product runs, retrospective audits and unexecuted plans are listed separately.
+  The original 17-case capture finished; its 612 human-answer cells remain
+  unscored. The SAT/governance-wired v6 is still an unfrozen review draft.
+
 - [E4B autonomous repair, continuation and exact-input replay](E4B_AUTONOMOUS_REPAIR_20261012.md):
   only first passed at round 18, AHE at round 34. Neither passed the next
   history-extended round; both reproduced their original success once with
@@ -160,6 +165,24 @@ outdated-review family. Its AHE citation failures (E4B 3/18; 31B 18/18) remain i
 the [evidence-answer report](EVALUATION_20261008.md#evidence-answers).
 
 ## Evaluation goals
+
+The primary evaluation direction is [state reconstruction, decision grounds
+and justified retries](STATE_DECISION_EVALUATION.md): can a reviewer recover the
+bounded system state, check what supported a decision, and distinguish an
+informative retry from a repeated failure with no stated new basis? Fewer failed
+retries are an additional benefit; repair speed alone does not measure this goal.
+The [retrospective E4B+AHE audit](E4B_STATE_RECONSTRUCTION_20261012.md) uses the
+existing 34-round trajectory without new inference or tests. It keeps archival
+reconstruction, semantic support and independent handoff validation separate.
+
+The [pre-admission comparison study](INTAKE_STATE_EVALUATION_PLAN.md) compares
+source-based admission with an external lookup, comparison and unresolved issue
+record. Its original 17-case native capture completed at `fa1168a`: 94/102 cards
+passed receipt/state checks and eight retained precondition blockages. No model
+or solver ran; the 612 human-answer cells remain unscored. The full cell-level
+answer key was not frozen before that capture. Posthoc keys do not repair that
+omission. The later v6 targeting `bde9ccc` adds planned SAT/governance wiring and
+is not frozen or executed; see [scope and remaining work](EXPERIMENT_COVERAGE.md).
 
 Future experiments on abstention, evidence requests and withdrawal use the
 [decision restraint evaluation method](DECISION_RESTRAINT_EVALUATION.md).
