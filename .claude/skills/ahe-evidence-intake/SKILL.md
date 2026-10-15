@@ -254,7 +254,11 @@ another profile to obtain write access.
 With the separately provisioned `endpoint-reviewer`, admit a source-backed
 statement as `kind=derived_spec` through `get_endpoint_review` → explicit
 human approval → `admit_reviewed_endpoint`. Supply the complete 1–32 sorted
-admitted AND parents and explicit method/producer/trace reference. Retain source
+admitted AND parents, explicit method/producer/trace reference and
+`derivation.use_policy` (`current-action/v1` or `grounded-current-action/v1`).
+The review and admission recheck that policy; diagnose blocked bases with the
+[reason code reference](../../../docs/CURRENT_USE_GUIDANCE.md), without changing
+policy or omitting parents to pass. Retain source
 bytes and qualifications; do not invent a manual source for the derivation.
 The same per-node limit applies to independent implements review. Complete AND
 ancestry remains bounded to 64 nodes and depth 8, with unchanged byte/display
@@ -315,6 +319,25 @@ moves or a changed ID scheme. An already ordinarily admitted newer claim is not
 retrofitted or retired by this flow; disclose any duplicate admitted history.
 There is no redundancy marker or cross-object identity-migration operation in
 this profile. See [stable slots and existing stores](../../../INSTALL.md#stable-slots-and-existing-stores).
+
+Successful replacement does not guarantee closure or current-use eligibility.
+Every admitted external source claim in the source-object manifest needs a
+reviewed lineage assignment, possibly in a different semantic slot. Assignment
+comes from justified fresh-v2 replacement; there is no standalone assignment or
+mark-current writer. Do not replace unrelated claims together or split a real
+provider object merely to close a lineage. Withdrawal alone does not remove an
+unclassified claim from the manifest. Old targets become superseded; they are
+not marked current and do not revive when their replacement is withdrawn.
+
+When Query returns `unclassified_currentness`, `incomplete_currentness` or
+another blocked/excluded reason, follow the
+[current-use prerequisites and stop conditions](../../../docs/CURRENT_USE_GUIDANCE.md).
+If a genuine eligible pending replacement, faithful same-object identity,
+complete semantic target set, exact human decision or authorized reviewer is
+unavailable, stop that write/current-use path and report the missing condition.
+After an authorized change, read currentness and reassess all affected bases
+under the same policy; a closed lineage can still have an ambiguous frontier
+or fail another gate. Do not treat a reason code as automatic write approval.
 
 ## Relations and Repository Extraction Are Separate
 

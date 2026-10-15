@@ -41,6 +41,11 @@ const (
 	CanonicalDerivedFrom   CanonicalEdgeRelation = "derived_from"
 )
 
+// TemporalStatus describes a stored record, not a public currentness command.
+// Public admission records unknown; no public writer sets current, stale or
+// superseded here. Reviewed supersession derives source-claim currentness from
+// lineage closure without rewriting this field. Derived use depends on its AND
+// ancestry. See docs/CURRENT_USE_GUIDANCE.md for prerequisites and stop conditions.
 type TemporalStatus string
 
 const (

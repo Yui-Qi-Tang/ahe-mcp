@@ -703,7 +703,7 @@ func (s *Server) Tools() []ToolDefinition {
 		},
 		{
 			Name:        ToolGetCanonicalSupersessionCurrentness,
-			Description: "Derive snapshot-bound current, superseded, ambiguous, or unknown status for one governed lineage from an authoritative repeatable-read cut. The server derives completeness, membership, frontier, hashes, and witness; callers supply only lineage_key.",
+			Description: "Derive snapshot-bound current, superseded, ambiguous, or unknown status for one governed lineage from an authoritative repeatable-read cut. The server derives completeness, membership, frontier, hashes, and witness; callers supply only lineage_key. If closure is unavailable because source-object claims lack reviewed lineage assignments, inspect those claims and docs/CURRENT_USE_GUIDANCE.md. Only justified fresh-v2 replacements can establish assignments through the public flow; no standalone assignment or temporal-status setter exists. Stop dependent use when replacement prerequisites or reviewer authority are missing. Closure still needs a unique frontier for currentness and does not prove provider freshness or full current-use eligibility.",
 			ReadOnly:    true,
 		},
 	}

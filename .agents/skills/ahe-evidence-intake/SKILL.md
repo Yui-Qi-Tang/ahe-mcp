@@ -25,6 +25,10 @@ report the mismatch. The live MCP schema controls call shape; the shared skill
 controls workflow and safety boundaries. For existing-evidence lookup or support
 tracing, use [the query skill](../ahe-evidence-query/SKILL.md) instead.
 
+Use the shared [current-use guidance](../../../docs/CURRENT_USE_GUIDANCE.md)
+when a gate blocks the workflow. A listed review flow is conditional on its
+prerequisites and exact human decision, not a promise or permission to repair.
+
 Inherit the shared restriction on summary-first engineering intake. Exact
 quotes, retained original bytes, or no observed fabrication do not establish
 that the proposed evidence preserves the requested information. Keep known

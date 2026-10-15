@@ -142,6 +142,11 @@ func consistencyEligibility(a evidencegraph.CanonicalArtifact, lineages map[stri
 			done[id] = s
 			return s, nil
 		}
+		// The temporal branches interpret stored values, not public write routes:
+		// admission records unknown and no public writer sets current/stale/superseded.
+		// Public source currentness is projected from reviewed supersession closure.
+		// This diagnostic selection (including ambiguous frontiers) is not the
+		// current-action gate. See docs/CURRENT_USE_GUIDANCE.md.
 		switch {
 		case window != "":
 			s.State, s.Reason = "excluded", window

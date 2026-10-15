@@ -232,6 +232,11 @@ func explicitState(n Node, now time.Time) (Outcome, []string) {
 	} else if reason != "" {
 		a.add(Excluded, reason, "")
 	}
+	// Temporal status branches interpret supplied records; no public writer sets
+	// TemporalCurrent, TemporalStale or TemporalSuperseded. Public source-claim
+	// currentness comes from reviewed lineage closure, not a temporal-field update.
+	// A closed lineage still needs a unique current frontier and the other gates.
+	// See docs/CURRENT_USE_GUIDANCE.md; a reason code is not write authorization.
 	switch {
 	case n.Currentness.Status == evidencesupersession.CurrentnessSuperseded:
 		a.add(Excluded, "superseded", "")

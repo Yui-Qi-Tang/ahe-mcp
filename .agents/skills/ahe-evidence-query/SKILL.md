@@ -9,6 +9,10 @@ Read [the shared query workflow](../../../.claude/skills/ahe-evidence-query/SKIL
 before using AHE evidence. It defines evidence lookup, relation traversal,
 bounded absence, state interpretation and supported answers for every agent.
 
+For blocked/excluded current-use results, follow the shared workflow's
+[reason code reference](../../../docs/CURRENT_USE_GUIDANCE.md), including
+preconditions and stop conditions; Query access does not authorize its writers.
+
 Use the caller's authorized Query access and the live tool schemas. This skill
 does not grant connector, writer or repository-intake access. When delegated,
 return the evidence and its limitations within the assigned source scope.

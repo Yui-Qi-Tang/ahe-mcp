@@ -56,6 +56,10 @@ visible; a later timestamp or pass does not silently erase an earlier failure.
 
 ## Query, cache and consumers
 
+For returned reason codes, conditional review flows and stop conditions, use
+the [current-use guidance](../../docs/CURRENT_USE_GUIDANCE.md). A reason code
+does not authorize a write or promise that a supported repair exists.
+
 `get_evidence_record` (canonical ID or an admitted proposal occurrence), `open_canonical_read_view` and
 `get_evidence_use_state` expose `evidence-use-projection/v1` from one unfiltered
 repeatable-read cut. Admission, withdrawal, source findings, currentness, time,

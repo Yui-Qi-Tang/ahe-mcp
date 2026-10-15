@@ -29,6 +29,7 @@ Choose the smallest useful entry point for the question:
 | Supporting links and their recorded basis | `list_evidence_neighbors`, `get_relation_provenance` |
 | A path or topology within a bounded snapshot | `open_canonical_read_view`, then `find_canonical_path` or `get_canonical_topology_diagnostics` |
 | Source revision or governed lineage state | `get_mcp_read_source_states`, or `get_canonical_supersession_currentness` with an observed `lineage_key` |
+| Current-action eligibility and final basis check | `get_evidence_use_state`, then `check_current_evidence_plan` under the same explicit policy |
 
 `get_grounded_evidence_brief` is a deterministic read-only evidence package,
 not a model-generated news summary. Inspect its source context, record state,
@@ -83,6 +84,29 @@ is unnecessary.
   component does not imply that every pair has a contradiction edge. Governed
   lineage currentness does not prove external source freshness; never invent
   lineage keys, source revisions or missing authority fields.
+
+## Interpret Current-Use Reasons
+
+When current use is requested, select `current-action/v1` or
+`grounded-current-action/v1` according to the requested purpose. Read
+`get_evidence_use_state` before planning; after planning/SAT, recheck every
+action's complete declared basis with `check_current_evidence_plan` under the
+same policy. Admission history or an old pass is not current-use clearance.
+
+For a blocked/excluded result or a currentness limitation, read the
+[reason code reference](../../../docs/CURRENT_USE_GUIDANCE.md). Follow each
+`related_id` to the actual parent, source or conflict edge. Outcomes are not
+terminality labels: reviewed restore clears only withdrawal, while superseded
+predecessors do not revive. Do not assume every reason has a public repair.
+
+`unclassified_currentness` is not an instruction to set `Temporal.Status`.
+Fresh-v2 requires a genuine same-object pending replacement and exact human
+review; it does not retrofit an admitted replacement. `incomplete_currentness`
+can require justified lineage assignments for other claims in the same source
+object, without collapsing their semantic slots. If the prerequisites or
+separately authorized reviewer are absent, report the gap and stop dependent
+current use. This read-only skill does not authorize the writer flow. Continue
+supported historical analysis without presenting it as current clearance.
 
 ## Handle Missing or Bounded Evidence
 

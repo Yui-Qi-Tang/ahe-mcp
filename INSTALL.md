@@ -405,6 +405,12 @@ for source findings, migration readback, cache reuse and the commit-point limit.
 
 ## Supersession reviewer
 
+For `unclassified_currentness`, `incomplete_currentness` and other gate results,
+read the [reason code reference and prerequisites](docs/CURRENT_USE_GUIDANCE.md)
+before choosing a flow. Provisioning a reviewer does not supply a valid
+replacement or a human decision, and successful replacement does not guarantee
+closure or current-use eligibility.
+
 The separately provisioned `supersession-reviewer` requires schema 59 / policy v10.
 Use the same protected launcher configuration as other reviewer profiles with
 its own fixed principal, bounded LOGIN and NOLOGIN group. Run
