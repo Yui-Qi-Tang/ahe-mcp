@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-10-15",
+  "scope": "Summary of existing Product native capture and an unexecuted successor design; no new execution or grading.",
+  "original_run": {
+    "product_revision": "fa1168a7f063bd1a8224c06cb0ed07b3ee803ea6",
+    "schema_version": 57,
+    "role_policy": "ahe-mcp-database-role-policy/v8",
+    "status": "native_capture_complete_human_handoff_unscored",
+    "stories": 17,
+    "case_arm_databases": 34,
+    "summary": {
+      "checkpoint_denominator": 102,
+      "receipt_checked": 94,
+      "blocked": 8,
+      "failed": 0,
+      "missing": 0,
+      "native_parity_matched": 51,
+      "native_parity_denominator": 51,
+      "human_six_question_scores": "NOT_RUN; 612 question cells pending",
+      "semantic_detection_accuracy": "NOT_MEASURED; external judgments assumed correct",
+      "native_governance_and_enforcement": "NOT_IMPLEMENTED_OR_NOT_EXECUTED; no repair claim"
+    },
+    "model_calls": 0,
+    "solver_calls": 0,
+    "bounded_profile_login_verifications": 170,
+    "native_tool_calls": {
+      "A": 536,
+      "B": 669
+    },
+    "comparison_records": {
+      "A": 0,
+      "B": 87
+    },
+    "cases": [
+      {
+        "case": 1,
+        "description": "重複說法",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 2,
+        "description": "互補條件",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 3,
+        "description": "同條件相反",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 4,
+        "description": "不同補丁的結果",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 5,
+        "description": "明確取代",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 6,
+        "description": "時間缺件後補齊",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 7,
+        "description": "取代後尚未重查",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 8,
+        "description": "下一頁讀取失敗",
+        "checkpoint_cards": 6,
+        "receipt_checked": 2,
+        "blocked": 4,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 9,
+        "description": "三份共同矛盾",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 10,
+        "description": "另一 client 插入新資料",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 11,
+        "description": "同一 pending 審閱過期",
+        "checkpoint_cards": 6,
+        "receipt_checked": 2,
+        "blocked": 4,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 12,
+        "description": "跨物件更正",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 13,
+        "description": "一句話混入另一檔案行為",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 14,
+        "description": "來源摘要錯標逐字",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 15,
+        "description": "今日支持與歷史未知",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 16,
+        "description": "推導祖先與用途限制",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      },
+      {
+        "case": 17,
+        "description": "歷史查證與後續排除",
+        "checkpoint_cards": 6,
+        "receipt_checked": 6,
+        "blocked": 0,
+        "human_question_cells": 36,
+        "human_score": null
+      }
+    ],
+    "formal_contradicts_edges_in_archived_databases": 0,
+    "full_human_cell_key_frozen_before_capture": false
+  },
+  "posthoc_review": {
+    "versions": [
+      "posthoc-review-v1",
+      "posthoc-review-v2",
+      "posthoc-review-v3"
+    ],
+    "author_saw_original_results": true,
+    "reader_materials_revised": true,
+    "human_handoff_scored": false,
+    "original_capture_repeated": false,
+    "cannot_retroactively_make_original_key_prefrozen": true
+  },
+  "successor_design": {
+    "version": "develop-rerun-v6-draft",
+    "product_target": "bde9cccee7c02bc4de6cc94df8b8ab4c74be1612",
+    "schema_version": 59,
+    "role_policy": "ahe-mcp-database-role-policy/v10",
+    "status": "DRAFT_PENDING_USER_REVIEW",
+    "frozen": false,
+    "executed": false,
+    "scored": false,
+    "checkpoint_cards": 102,
+    "human_question_cells": 612,
+    "paired_common_cells": 306,
+    "sat_cases": [
+      3,
+      7,
+      9,
+      10,
+      16,
+      17
+    ],
+    "precondition_concerns": [
+      8,
+      11,
+      16
+    ],
+    "query_visibility_control": "QV-C1",
+    "control_databases": 2,
+    "control_included_in_handoff_denominator": false,
+    "harness_and_live_materials_ready": false,
+    "improvement_rule": "B has more cards with all six questions correct, with no additional false state assertions; this is not a six-card minimum gain."
+  },
+  "limits": [
+    "Receipt checks are not human handoff scores or semantic extraction accuracy.",
+    "The original capture ran no solver and created no formal contradicts edge.",
+    "Schema 59 implementation is not a replay of the original 17 cases.",
+    "Retrospective keys and revised packets do not repair missing pre-run freezing.",
+    "A/B use fixed correct external comparison assumptions; model spontaneous compliance and causal AHE advantage are not measured.",
+    "Raw captures, DB archives and complete review packages remain private; hashes alone are not a reproduction kit."
+  ],
+  "provenance": {
+    "private_source_hashes": {
+      "evaluator/RESULTS.json": "d0aa4927ee2164a8840cabd12304d45ca0eb2a492ff1a9a0df63c991d1d99004",
+      "evaluator/METRICS.json": "5e56f1697e5877c536f490cfa138646fbba02e75bee1995d8d077dfb8bc18499",
+      "EXECUTION_COMPLETE.json": "0daa2eff4c3a62d1fab71fec2e9ff3a9b99ff4dffe9c57ea6c8420c20a212c32",
+      "RESULTS.md": "15a0ce9e673ab310cf00c9d735ff1b3f428a128b17323a9101e32ce065fa1775",
+      "operator-notes/conflict-audit-20261014.json": "a68e13cca51ff999984498e773990540d6ded368627196284543ba2b965abceb",
+      "posthoc-review-v3/ANSWER_KEY.json": "ff40521f1fcd5ce217777cac062b8692ab8d77b3c4ffbdee729449ee6d8f404d",
+      "develop-rerun-v6/ANSWER_KEY.json": "121b53420f88e0e0ff04c89f93fb14476efbe06800426f7b031c5672c5789280",
+      "develop-rerun-v6/GRADING_BLANK.json": "d0a051d158d837043e992e486dbf4b992f48a6eb3a5c446355ab18d69dacb0e5",
+      "develop-rerun-v6/WIRING_MATRIX.json": "84bd3305e4d2aef9680f77bb31b9a1f06c6f7dacd89821114cf7a40ddbe4fa50",
+      "develop-rerun-v6/DOCUMENT_VALIDATION.json": "a961bcbedcc85a684b6967ea5938f6dd795d40f05dde659a47c4ac4e73796cc2"
+    },
+    "summarized_without_new_model_calls": true,
+    "summarized_without_new_pg_operations": true,
+    "summarized_without_new_tests_or_grading": true
+  }
+}
