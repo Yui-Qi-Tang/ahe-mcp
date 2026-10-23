@@ -37,6 +37,10 @@ tools are:
   `request` as `review`, returned `subject` as `expected_subject`,
   `decision="approved"`, and the human's `decision_reason`.
 
+Set `observation_receipt_id` to the `request_id` supplied in the selected
+successful `submit_external_source` call. That persisted intake receipt must
+match C's original snapshot and extraction view.
+
 Show the complete native review, including original admission, quotes and
 source refs, observation, singleton manifest, stable slot, anchor, governance,
 derived-use effects and limitations. Source admission approval does not approve

@@ -91,7 +91,9 @@ func (b *Backend) Tools() []mcpstdio.Tool {
 		return nil
 	}
 	basis := object(map[string]any{"source_system": text(64), "source_namespace": text(200), "object_type": text(100), "object_id": text(500), "slot_kind": text(100), "slot_id": text(500)})
-	selection := object(map[string]any{"claim_id": text(200), "observation_receipt_id": text(200), "basis": basis})
+	observationReceipt := text(200)
+	observationReceipt["description"] = "The request_id supplied in the selected successful submit_external_source call. That persisted intake receipt must match the claim's original snapshot and extraction view."
+	selection := object(map[string]any{"claim_id": text(200), "observation_receipt_id": observationReceipt, "basis": basis})
 	ro, no, yes := true, false, true
 	return []mcpstdio.Tool{
 		{Name: ToolReview, Title: "Review Initial Lineage Registration", Description: "Read one complete native review for an admitted external source claim's first lineage membership. Requires a singleton admitted source object, an unclassified claim, a fresh six-field lineage and a persisted observation of the original snapshot/view. Display the entire grounding, observation, effect and limitations for independent human review. Receipt IDs and timestamps do not prove provider recontact, freshness or truth. This read grants no membership or current-use permission.", InputSchema: selection, Annotations: mcpstdio.Annotations{ReadOnlyHint: &ro, DestructiveHint: &no, IdempotentHint: &yes}},
