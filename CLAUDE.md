@@ -110,6 +110,11 @@ identity is separate, and database audit text alone is not authentication. Read
 
 ## External Evidence Invariants
 
+- The user owns collection scope and desired claim granularity. Keep the current
+  bounded intake contract; do not expand JSON segmentation or capacity controls
+  to work around issue #25. Use already authorized exact excerpts with honest
+  omissions, or report that the requested scope cannot be completed. Follow the
+  shared [granularity requirements and current limits](.claude/skills/ahe-evidence-intake/SKILL.md#user-controlled-granularity-and-current-limits).
 - Engineering evidence intake must not be replaced by Brief, model highlights,
   or summary chunks. Retained source bytes and individually grounded claims do
   not compensate for omitted in-scope information. Preserve requirements,

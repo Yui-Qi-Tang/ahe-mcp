@@ -37,6 +37,12 @@ quotes, retained original bytes, or no observed fabrication do not establish
 that the proposed evidence preserves the requested information. Keep known
 omissions visible; do not use Brief/manual_text as an external-intake fallback.
 
+Apply the shared [user-controlled granularity and current limits](../../../.claude/skills/ahe-evidence-intake/SKILL.md#user-controlled-granularity-and-current-limits).
+The user chooses source scope and claim granularity; native spans remain
+line-based. Do not silently narrow scope, rewrite originals, or expand
+segmentation/capacity controls to make a task fit. Existing scope authorization
+need not be requested again; a materially narrower scope needs the user's choice.
+
 ## Codex-Specific Overrides
 
 - Identify Codex source collection with `collector_id: codex-agent`. Preserve

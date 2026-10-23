@@ -50,6 +50,21 @@ a legacy profile or substitute direct SQL when a required operation is absent.
   permitted only under the shared experiment protocol, never as substitutes for
   a human decision in an operational evidence store.
 
+## User-Controlled Intake Granularity
+
+The user owns the collection scope and desired claim granularity. Follow the
+already authorized scope; do not silently replace a complete extraction with
+selected highlights or discard conditions to fit a limit. User-selected exact
+excerpts are allowed with truthful coverage and omissions. Native spans remain
+line-based; this does not grant caller-defined segmentation or permission to
+rewrite source bytes, identity or revision.
+
+Retain the current bounded intake contract. Issue #25 does not authorize new
+JSON renderers, segmentation controls or higher/configurable limits: their
+additional flexibility does not justify changing evidence, review and replay
+contracts for this workflow. Follow the shared [granularity requirements and
+current limits](.claude/skills/ahe-evidence-intake/SKILL.md#user-controlled-granularity-and-current-limits).
+
 ## Environment
 
 This repository and all its worktrees belong to AHE MCP. Their private `lab/`

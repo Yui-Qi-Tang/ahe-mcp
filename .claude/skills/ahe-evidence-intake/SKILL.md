@@ -86,6 +86,60 @@ source intake operation.
 Do not include credentials, access tokens, connector secrets, or private chat
 content in the envelope or metadata.
 
+## User-Controlled Granularity and Current Limits
+
+The user chooses collection scope and desired claim granularity. Use the scope
+already authorized; do not ask for it again. Each proposal must still state one
+clear, supported claim and preserve its conditions, exceptions and uncertainty.
+User-selected subsets are valid. If fitting a limit would materially narrow the
+requested scope, explain the omission and obtain the user's choice before
+submitting that narrower source. Do not silently substitute selected highlights
+for a requested complete extraction.
+
+The current external-intake contract is deliberately bounded:
+
+- Source content is at most 512 KiB of UTF-8 bytes and 4,096 physical lines.
+- External sources use `external-document-line-v1`, including
+  `application/json`. Compact JSON is one span; escaped `\n` is not a physical
+  newline. The caller cannot supply alternate span boundaries or JSON pointer
+  selectors.
+- A source-claim review display is at most 128 KiB for the complete serialized
+  review package, including quotes, JSON escaping and metadata. A source or
+  excerpt below that size is not automatically reviewable; the native getter
+  must produce the complete valid display before a human decision.
+
+Select a reviewable source scope before intake. Use a smaller genuine provider
+object when it meets the task, or a user-authorized exact contiguous byte
+excerpt with `coverage=exact_excerpt`. State the retained section and omitted
+material in `limitations`; keep any known original position in review notes or
+limitations without inventing unsupported MCP fields. Partial collection does
+not establish global absence or complete extraction. If the task requires the
+whole object and it cannot fit, report the unmet scope rather than treating an
+excerpt as completion.
+
+Preserve the selected bytes exactly. Do not replace them with decoded JSON/HTML
+text, pretty-print, insert newlines, join disjoint excerpts, summarize or
+reserialize them to create smaller spans. `application/json` requires the
+submitted content itself to be valid JSON. For an exact raw fragment that is
+not standalone JSON, use a
+truthful supported format such as `text/plain` and disclose its JSON origin;
+do not manufacture JSON wrappers. This is still external intake, not
+`manual_text` or a model-generated source.
+
+Keep the real provider object identity and revision. Different excerpts, or an
+excerpt and the full body, can conflict under the same object/revision. Changing
+only the request ID cannot fix that conflict. Do not invent chunk object IDs or
+provider revisions, overwrite the stored source, or silently replace an earlier
+excerpt. Stop and report the conflict.
+
+For issue #25, the product decision is to keep these limits and let the user
+control acquisition scope and claim granularity. Opening automatic JSON
+segmentation, caller-defined catalogs or configurable/higher limits adds
+identity, exact-review and replay complexity without sufficient benefit for this
+workflow. Those extensions are not adopted capabilities. Do not enable or build
+them as an intake workaround; preserve existing views, claims, review subjects
+and receipts. Never trim a native display or bypass its approval boundary.
+
 ## Fix the Source in AHE
 
 1. Create one non-secret request ID for the intended delivery. Retain it for an
