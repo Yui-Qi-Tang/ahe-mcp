@@ -29,7 +29,7 @@ func TestIntegrationReviewedDerivationParentLimitUpgradeRollback(t *testing.T) {
 		t.Fatalf("upgrade57: changed=%v err=%v", changed, err)
 	}
 	status, err := VerifyCurrentInSchema(ctx, pool, schema)
-	if err != nil || status.AppliedMigrations != 59 {
+	if err != nil || status.AppliedMigrations != 60 {
 		t.Fatalf("schema 57 readiness: %+v %v", status, err)
 	}
 	after := ordinaryFenceRows(t, ctx, pool)

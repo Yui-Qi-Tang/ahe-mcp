@@ -166,7 +166,7 @@ func loadSupersessionTargetRecords(ctx context.Context, tx sqlTx, targetNodeIDs 
 			COALESCE(ss.source_system, ''),
 			COALESCE(ss.origin_metadata, '{}'::jsonb),
 			COALESCE(m.lineage_key, ''),
-			COALESCE(m.first_admission_event_id, ''),
+			COALESCE(m.first_admission_event_id, m.initial_registration_event_id, ''),
 			COALESCE(m.was_bootstrapped, false)
 		FROM canonical_graph_nodes n
 		JOIN proposal_occurrences po

@@ -65,7 +65,8 @@ It requires all of the following:
   `exact_replay_only` permits only the original retry.
 
 This admits a replacement and enrolls its reviewed targets; it does not mark an
-existing claim current in place or expose a standalone lineage-assignment tool.
+existing claim current in place. Independent initial registration is a separate
+reviewed capability described below.
 For closure, every admitted external source claim in the source-object manifest
 must have a reviewed lineage assignment. Each assignment must be supported by
 the actual replacement scope. An unclassified sibling can therefore block
@@ -85,6 +86,25 @@ identity migration or duplicate-retirement operation in fresh-v2. Repository
 code and derived endpoints are outside this replacement flow. See
 [installation and stable slots](../INSTALL.md#supersession-reviewer).
 
+## Unchanged singleton initial registration
+
+When a repeated source occurrence resolves to the same canonical C, fresh-v2
+rejects self-targeting. Schema 60 offers independently approved
+`get_initial_lineage_registration_review` →
+`apply_reviewed_initial_lineage_registration` through a separately provisioned
+`initial-lineage-reviewer`. It requires exactly one admitted external source
+claim in the source object, no prior membership, an unused stable lineage and a
+persisted observation of C's original snapshot/view. No fake revision is needed.
+This grants first membership, keeps the v2 head and derived parent IDs, and leaves
+the repeated occurrence pending. It does not prove provider recontact/freshness.
+
+Query returns legacy `projection` when the store-wide registration catalog is
+empty; otherwise it returns versioned `joint_projection`. A complete joint
+witness with one frontier can classify C, but source, withdrawal, contradiction
+and AND-ancestry gates still apply. A subsequent genuine v2 replacement excludes
+C without retargeting existing derived claims. See [the exact native contract,
+review fields and limits](INITIAL_LINEAGE_REGISTRATION.md).
+
 ## Reason code reference
 
 "Diagnose" below means inspect exact native records and authoritative coverage;
@@ -94,7 +114,7 @@ Do not set completeness flags yourself or assume another retry will repair data.
 
 | Reason code | Meaning and disposition | Governed next step, prerequisites and stop condition |
 | --- | --- | --- |
-| `unclassified_currentness` | No recognized currentness for this record; blocked. | For an external source claim, consider only the fresh-v2 flow above when all prerequisites hold. Select and reassess the resulting replacement as a basis; the old target does not become current. Without an eligible fresh replacement, stop current use. For other kinds, diagnose the record; do not relabel it to fit fresh-v2. |
+| `unclassified_currentness` | No recognized currentness for this record; blocked. | For an external source claim, consider fresh-v2, or independent initial registration below for a singleton unchanged claim, only when their prerequisites hold. Select and reassess the resulting replacement as a basis; the old target does not become current. Without an eligible reviewed route, stop current use. For other kinds, diagnose the record; do not relabel it to fit fresh-v2. |
 | `incomplete_currentness` | Currentness coverage is incomplete; blocked. | Read the observed lineage with `get_canonical_supersession_currentness`. If its limitation identifies unclassified source-object claims, inspect each and use fresh-v2 only for justified replacements in their own reviewed scopes. Stop if any required assignment cannot be established. Never assert closure from a partial view. |
 | `unresolved_lineage_currentness` | A lineage exists but lacks a current status or usable witness; blocked. | Inspect closure, frontier and witness. An ambiguous frontier may be resolved by a genuine reviewed fresh replacement of its complete semantic target set, subject to fresh-v2. Missing/inconsistent authority needs diagnosis. Closure alone is insufficient when multiple frontier nodes remain. |
 | `currentness_without_lineage` | A non-unknown currentness status has no lineage coordinate; blocked. | Diagnose projection and retained authority. No public field setter repairs this condition; do not invent a lineage key or use temporal status as a workaround. |
@@ -135,7 +155,7 @@ the relevant earlier events and cover their criteria.
 
 | Returned limitation or state | Interpretation and next step |
 | --- | --- |
-| `one or more admitted external source_claim records for this source object have no reviewed lineage assignment` | The source-object manifest prevents closure. Inspect the unclassified claims and the fresh-v2 prerequisites above. Assignment is a consequence of justified reviewed replacement, not a separate tool. If any claim cannot be classified through an eligible flow, report the gap and stop dependent current use. |
+| `one or more admitted external source_claim records for this source object have no reviewed lineage assignment` | The source-object manifest prevents closure. Inspect the unclassified claims and the fresh-v2 prerequisites above. Multi-claim assignment requires justified reviewed replacement; the singleton initial-registration route does not cover admitted siblings. If any claim cannot be classified through an eligible flow, report the gap and stop dependent current use. |
 | `currentness is limited to this exact admitted PostgreSQL snapshot; it does not prove provider freshness or global truth` | An enduring scope boundary, not a defect the writer can remove. Obtain separately authorized provider observations when external freshness matters; never report lineage currentness as a freshness/truth check. |
 | `closure_available=false` or an unknown/ambiguous frontier | Do not choose a current winner. Read the limitation, coverage and frontier; follow the applicable currentness row above. An otherwise valid graph may still lack closure or a unique frontier. |
 

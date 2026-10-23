@@ -44,7 +44,10 @@ func TestGetCanonicalSupersessionCurrentnessMapsMissingLineage(t *testing.T) {
 	t.Parallel()
 
 	tx := &closureScriptTx{
-		queryRowFunc: func(_ string, _ ...any) sqlRow {
+		queryRowFunc: func(q string, _ ...any) sqlRow {
+			if strings.Contains(q, "canonical_initial_lineage_registrations") {
+				return closureScriptRow{values: []any{false}}
+			}
 			return closureScriptRow{err: pgx.ErrNoRows}
 		},
 	}

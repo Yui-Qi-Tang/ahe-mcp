@@ -30,7 +30,7 @@ Environment:
   AHE_DATABASE_SCHEMA   Existing private schema with current native migrations
   AHE_DATABASE_ROLE     Selected NOLOGIN group role
   AHE_DATABASE_LOGIN    Distinct LOGIN session identity
-  AHE_RUNTIME_PROFILE   query, core-records, intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer, supersession-reviewer or repository-intake
+  AHE_RUNTIME_PROFILE   query, core-records, intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer, supersession-reviewer, initial-lineage-reviewer or repository-intake
 
 provision creates a fresh role pair and installs the closed policy atomically.
 Use separate trusted operator credentials. Existing roles are never adopted.
@@ -195,7 +195,7 @@ func loadConfiguration(getenv func(string) string) (configuration, error) {
 	}
 	profile, err := dbrole.ParseProfile(getenv("AHE_RUNTIME_PROFILE"))
 	if err != nil {
-		return configuration{}, errors.New("runtime profile must be query, core-records, intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer, supersession-reviewer or repository-intake")
+		return configuration{}, errors.New("runtime profile must be query, core-records, intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer, supersession-reviewer, initial-lineage-reviewer or repository-intake")
 	}
 	cfg.profile = profile
 	return cfg, nil

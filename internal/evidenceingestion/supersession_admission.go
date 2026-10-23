@@ -151,6 +151,14 @@ func admitPendingSupersessionInTx(ctx context.Context, tx sqlTx, input Supersess
 		return supersessionInputError(err)
 	}
 
+	// Both native and reviewed fresh admission must order their locks as
+	// proposal -> governance -> supersession head. The reviewed caller also
+	// takes governance before reconstructing its review; reacquiring that fence
+	// here is safe and keeps the shared native path from taking the head first.
+	// Historical replay returns above without introducing a current-use gate.
+	if err := lockGovernance(ctx, tx); err != nil {
+		return err
+	}
 	head, err := loadCanonicalSupersessionHead(ctx, tx, true)
 	if err != nil {
 		return err

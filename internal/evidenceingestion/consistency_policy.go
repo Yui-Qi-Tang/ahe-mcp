@@ -29,10 +29,14 @@ type ConsistencySelection struct {
 // It includes dependencies outside the proposition scope, so their changes also
 // invalidate a view. The underlying loader validates the entire admission chain.
 type ConsistencyLineage struct {
-	Projection evidencesupersession.CurrentnessProjection `json:"projection"`
+	Projection      *evidencesupersession.CurrentnessProjection      `json:"projection,omitempty"`
+	JointProjection *evidencesupersession.JointCurrentnessProjection `json:"joint_projection,omitempty"`
 }
 
 func selectConsistencyFrontier(ctx context.Context, tx pgx.Tx, view *ConsistencyView) error {
+	if _, err := tx.Exec(ctx, `SET LOCAL row_security=off`); err != nil {
+		return err
+	}
 	ids := make([]string, 0, len(view.Members))
 	for _, m := range view.Members {
 		ids = append(ids, m.NodeID)
@@ -67,17 +71,47 @@ func selectConsistencyFrontier(ctx context.Context, tx pgx.Tx, view *Consistency
 	}
 	slices.Sort(keys)
 	statuses := map[string]evidencesupersession.CurrentnessStatus{}
-	for _, key := range keys {
-		input, err := loadCanonicalSupersessionClosureInput(ctx, pgxTx{tx: tx}, key)
+	var authority *evidencesupersession.JointProjector
+	present, err := hasInitialLineageRegistrations(ctx, pgxTx{tx: tx})
+	if err != nil {
+		return err
+	}
+	if present {
+		cut, err := loadJointLineageAuthority(ctx, pgxTx{tx: tx})
 		if err != nil {
 			return err
 		}
-		projection, err := evidencesupersession.ProjectCurrentness(input)
+		authority, err = evidencesupersession.PrepareJointAuthority(cut)
 		if err != nil {
 			return canonicalSupersessionClosureInvariantError(err)
 		}
-		view.Currentness = append(view.Currentness, ConsistencyLineage{Projection: projection})
-		for _, node := range projection.Nodes {
+	}
+	for _, key := range keys {
+		var nodes []evidencesupersession.NodeCurrentness
+		if authority != nil {
+			cut, err := loadJointLineageMaterialization(ctx, pgxTx{tx: tx}, key)
+			if err != nil {
+				return err
+			}
+			p, err := authority.ProjectLineage(cut)
+			if err != nil {
+				return canonicalSupersessionClosureInvariantError(err)
+			}
+			view.Currentness = append(view.Currentness, ConsistencyLineage{JointProjection: &p})
+			nodes = p.Nodes
+		} else {
+			cut, err := loadCanonicalSupersessionClosureInput(ctx, pgxTx{tx: tx}, key)
+			if err != nil {
+				return err
+			}
+			p, err := evidencesupersession.ProjectCurrentness(cut)
+			if err != nil {
+				return canonicalSupersessionClosureInvariantError(err)
+			}
+			view.Currentness = append(view.Currentness, ConsistencyLineage{Projection: &p})
+			nodes = p.Nodes
+		}
+		for _, node := range nodes {
 			statuses[node.NodeID] = node.Status
 		}
 	}

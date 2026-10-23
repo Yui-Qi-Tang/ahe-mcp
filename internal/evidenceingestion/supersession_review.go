@@ -4,6 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"reflect"
+	"slices"
+	"strings"
+
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencesupersession"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -25,13 +29,14 @@ type SupersessionReviewRequest struct {
 
 // SupersessionReviewDisplay retains exact new and old grounding, without inferring semantic replacement.
 type SupersessionReviewDisplay struct {
-	ContractVersion   string                                `json:"contract_version"`
-	Request           SupersessionReviewRequest             `json:"request"`
-	Proposal          ProposalQueryResult                   `json:"proposal"`
-	SourceBasis       ReviewableSourceClaimReviewSnapshot   `json:"source_basis"`
-	Targets           []CanonicalQueryResult                `json:"targets"`
-	TargetSourceBases []ReviewableSourceClaimReviewSnapshot `json:"target_source_bases"`
-	Limitations       string                                `json:"limitations"`
+	TargetMemberships []evidencesupersession.JointMemberRecord `json:"target_memberships,omitempty"`
+	ContractVersion   string                                   `json:"contract_version"`
+	Request           SupersessionReviewRequest                `json:"request"`
+	Proposal          ProposalQueryResult                      `json:"proposal"`
+	SourceBasis       ReviewableSourceClaimReviewSnapshot      `json:"source_basis"`
+	Targets           []CanonicalQueryResult                   `json:"targets"`
+	TargetSourceBases []ReviewableSourceClaimReviewSnapshot    `json:"target_source_bases"`
+	Limitations       string                                   `json:"limitations"`
 }
 
 // SupersessionReview distinguishes a new decision from immutable terminal replay.
@@ -139,6 +144,13 @@ func loadSupersessionReview(ctx context.Context, tx sqlTx, req SupersessionRevie
 	if err = validateProposalSupersessionBasis(p, basis); err != nil {
 		return SupersessionReview{}, err
 	}
+	replacement, err := buildClaimNode(p)
+	if err != nil {
+		return SupersessionReview{}, err
+	}
+	if slices.Contains(req.TargetNodeIDs, replacement.ID) {
+		return SupersessionReview{}, newDomainError(ErrorInvalidInput, "replacement node cannot target itself; unchanged evidence requires an independent initial lineage registration review")
+	}
 	head, err := loadCanonicalSupersessionHead(ctx, tx, false)
 	if err != nil {
 		return SupersessionReview{}, err
@@ -165,6 +177,26 @@ func loadSupersessionReview(ctx context.Context, tx sqlTx, req SupersessionRevie
 		return SupersessionReview{}, err
 	}
 	display := SupersessionReviewDisplay{ContractVersion: SupersessionReviewV1, Request: req, Proposal: p, SourceBasis: source, Targets: []CanonicalQueryResult{}, TargetSourceBases: []ReviewableSourceClaimReviewSnapshot{}, Limitations: "Fresh-v2 external source_claim replacement only. Review the complete target set and stable semantic slot explicitly. Exact retained old/new revisions and excerpts are shown; revision ordering does not prove replacement, source freshness, semantic entailment or global truth. No inferred version difference or source coverage is supplied."}
+	for _, record := range records {
+		member := evidencesupersession.JointMemberRecord{NodeID: record.NodeID, LineageKey: record.LineageKey}
+		if record.LineageKey != "" {
+			member.Origin = evidencesupersession.MembershipOrigin{Kind: evidencesupersession.MembershipReplacement, EventID: record.FirstAdmissionEvent}
+			if record.WasBootstrapped {
+				member.Origin.Kind = evidencesupersession.MembershipBootstrap
+			}
+			if strings.HasPrefix(record.FirstAdmissionEvent, "initial-lineage-registration:v1:") {
+				member.Origin.Kind = evidencesupersession.MembershipRegistration
+				cut, err := loadJointLineageCut(ctx, tx, record.LineageKey)
+				if err != nil {
+					return SupersessionReview{}, err
+				}
+				if _, err := evidencesupersession.ProjectJointCurrentness(cut); err != nil {
+					return SupersessionReview{}, err
+				}
+			}
+		}
+		display.TargetMemberships = append(display.TargetMemberships, member)
+	}
 	for _, id := range req.TargetNodeIDs {
 		node, err := getCanonicalEvidenceByID(ctx, tx, id)
 		if err != nil {
@@ -215,6 +247,14 @@ func AdmitReviewedSupersession(ctx context.Context, pool *pgxpool.Pool, input Re
 			p, err := loadProposalForAdmission(ctx, tx, in.ProposalOccurrenceID)
 			if err != nil {
 				return err
+			}
+			// Fresh admission orders proposal -> governance -> supersession head.
+			// Historical replay must not wait on governance while holding the
+			// original proposal: references may hold that fence before its FK lock.
+			if p.AdmissionOutcome == admissionOutcomePending {
+				if err := lockGovernance(ctx, tx); err != nil {
+					return err
+				}
 			}
 			if p.AdmissionOutcome == admissionOutcomeAdmitted {
 				review, err := loadSupersessionRecordedReview(ctx, tx, p, input.Review, true)

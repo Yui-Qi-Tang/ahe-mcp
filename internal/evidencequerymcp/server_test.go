@@ -2510,7 +2510,7 @@ func testCanonicalSupersessionCurrentnessResult(lineageKey string) evidenceinges
 		SlotID:          "description",
 	}
 	return evidenceingestion.CanonicalSupersessionCurrentness{
-		Projection: evidencesupersession.CurrentnessProjection{
+		Projection: &evidencesupersession.CurrentnessProjection{
 			ContractVersion:         evidencesupersession.ClosureCutContractVersionV1,
 			AlgorithmVersion:        evidencesupersession.CurrentnessAlgorithmVersionV1,
 			Semantics:               evidencesupersession.CurrentnessSemanticsV1,

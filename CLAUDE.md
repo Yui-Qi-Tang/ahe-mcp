@@ -57,7 +57,7 @@
   its dedicated atomic admission and read-only currentness tools.
 - Standard ingestion profiles are separately authorized `core-records`, `intake`,
   `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer`,
-  `supersession-reviewer`, `relation-reviewer`, `withdrawal-reviewer` and
+  `supersession-reviewer`, `initial-lineage-reviewer`, `relation-reviewer`, `withdrawal-reviewer` and
   `source-assessment-reviewer` and `contradiction-reviewer`. Bounded exact-reviewed derived/code endpoints use the
   endpoint profile. Exact fresh-v2 replacement uses the separate supersession
   reviewer; generic derived admission and repository activation
@@ -137,6 +137,16 @@ is historical material and permits only the original retry. Read currentness
 with the returned lineage key; it does not prove provider freshness or truth.
 Repository code, derived endpoints and already ordinarily admitted replacements
 are outside fresh-v2. Never relabel an endpoint or manufacture a revision.
+
+A separately provisioned `initial-lineage-reviewer` exposes
+`get_initial_lineage_registration_review` and
+`apply_reviewed_initial_lineage_registration`. Only an exact independently
+approved singleton/unclassified original external claim can gain first
+membership; retain the complete review and unchanged subject. The launcher binds
+reviewer. Registration preserves the original admission and v2 head; historical
+retry is not present clearance. Read currentness and reassess all bases. See
+[the native contract](docs/INITIAL_LINEAGE_REGISTRATION.md). Never reuse source
+approval, manufacture freshness or silently retire the repeated occurrence.
 
 Endpoint review supports approved admission or explicit `reject`/`audit_only`
 through `record_reviewed_endpoint_disposition`, with the same unchanged review,

@@ -56,7 +56,7 @@ func TestQueryManifestMatchesShippingMigrationInventory(t *testing.T) {
 			t.Fatalf("query privileges on %s = %v", rule.Table, rule.Privileges)
 		}
 	}
-	if len(got) != 99 || !slices.Equal(got, want) {
+	if len(got) != 100 || !slices.Equal(got, want) {
 		t.Fatalf("shipping migration manifest = %v, want %v", got, want)
 	}
 	if len(slices.Compact(slices.Clone(got))) != len(got) {
@@ -108,7 +108,7 @@ func TestIntakeManifestHasOnlySourceAndPendingWrites(t *testing.T) {
 		"proposal_batches":                {PrivilegeInsert, PrivilegeUpdate},
 		"proposal_occurrences":            {PrivilegeInsert},
 	}
-	if !manifest.TrustedRawDML || len(manifest.Tables) != 99 {
+	if !manifest.TrustedRawDML || len(manifest.Tables) != 100 {
 		t.Fatalf("unexpected intake manifest: %+v", manifest)
 	}
 	for _, rule := range manifest.Tables {
@@ -145,7 +145,7 @@ func TestSourceClaimReviewerManifestHasOnlyExactReviewedWrites(t *testing.T) {
 		"proposal_occurrences":                       {PrivilegeUpdate},
 	}
 	// The profile narrows tables, not human authentication or all possible raw DML.
-	if !manifest.TrustedRawDML || len(manifest.Tables) != 99 {
+	if !manifest.TrustedRawDML || len(manifest.Tables) != 100 {
 		t.Fatal("reviewer trust boundary or table inventory changed")
 	}
 	for _, rule := range manifest.Tables {
@@ -162,5 +162,24 @@ func TestSourceClaimReviewerManifestHasOnlyExactReviewedWrites(t *testing.T) {
 	}
 	if len(want) != 0 {
 		t.Fatalf("reviewer manifest omits %v", want)
+	}
+}
+
+func TestRelationReviewerGovernanceFenceDoesNotExpandTableWrites(t *testing.T) {
+	manifest, err := BuildManifest(ProfileRelationReviewer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(manifest.FunctionExecute, []string{"evidence_governance_lock_v1(regclass)"}) {
+		t.Fatal("relation reviewer must have only the bounded governance helper")
+	}
+	for _, rule := range manifest.Tables {
+		want := []Privilege{PrivilegeSelect}
+		if rule.Table == "canonical_graph_edges" || rule.Table == "canonical_implements_admissions" || rule.Table == "canonical_references_admissions" {
+			want = []Privilege{PrivilegeInsert, PrivilegeSelect}
+		}
+		if !slices.Equal(rule.Privileges, want) {
+			t.Fatalf("relation table authority changed: %s = %v", rule.Table, rule.Privileges)
+		}
 	}
 }

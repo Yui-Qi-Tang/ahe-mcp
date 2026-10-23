@@ -13,6 +13,7 @@ import (
 
 func rollbackContradictionReviewForTest(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	t.Helper()
+	rollbackInitialRegistrationForTest(t, ctx, pool)
 	down, err := os.ReadFile("000059_reviewed_contradictions.down.sql")
 	if err != nil {
 		t.Fatal(err)

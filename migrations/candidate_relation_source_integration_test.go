@@ -23,7 +23,7 @@ func rollbackCandidateRelationSourceForTest(t *testing.T, ctx context.Context, p
 	defer tx.Rollback(ctx)
 	// Revert dependent lifecycle objects and their ledger entry before schema55.
 	// Native down guards still refuse populated review or relation history.
-	for _, migration := range []string{"000059_reviewed_contradictions", "000058_evidence_governance", "000057_reviewed_derivation_parent_limit", "000056_reviewed_lifecycle_writers", "000055_evidence_ingestion_candidate_relation_source"} {
+	for _, migration := range []string{"000060_initial_lineage_registration", "000059_reviewed_contradictions", "000058_evidence_governance", "000057_reviewed_derivation_parent_limit", "000056_reviewed_lifecycle_writers", "000055_evidence_ingestion_candidate_relation_source"} {
 		down, err := os.ReadFile(migration + ".down.sql")
 		if err != nil {
 			t.Fatal(err)
@@ -82,7 +82,7 @@ func TestIntegrationCandidateRelationUpgrade54PreservesHistory(t *testing.T) {
 		}
 	}
 	status, err := VerifyCurrentInSchema(ctx, pool, schema)
-	if err != nil || status.AppliedMigrations != 59 {
+	if err != nil || status.AppliedMigrations != 60 {
 		t.Fatalf("upgraded readiness: %+v %v", status, err)
 	}
 	replay, err := evidenceingestion.SubmitCanonicalContradictionProposal(ctx, pool, evidenceingestion.CanonicalContradictionProposalInput{RequestID: "research-REPEATABLE READ", NodeAID: a, NodeBID: b, Rationale: "The supplied statements disagree.", ProducerName: "frozen-lab-fixture", ProducerVersion: "v1"})

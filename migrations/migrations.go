@@ -20,14 +20,15 @@ import (
 var upFiles embed.FS
 
 var requiredTablesByMigration = map[string][]string{
-	contradictionReviewMigration:     {"canonical_contradiction_review_bindings"},
-	governanceMigration:              {"evidence_governance_head", "canonical_withdrawal_events", "source_assessment_events"},
-	candidateRelationSourceMigration: nil,
-	consistencyContractMigration:     nil, // Guard-only migration; no new tables.
-	consistencyMigration:             {"consistency_watches", "consistency_watch_versions", "consistency_runs", "consistency_run_artifacts", "consistency_events"},
-	propositionBindingMigration:      {"canonical_propositions", "canonical_proposition_bindings", "canonical_proposition_binding_events"},
-	externalCheckMigration:           {"external_check_records"},
-	externalRepresentationMigration:  {"external_representation_records", "external_check_representation_links"},
+	"000060_initial_lineage_registration.up.sql": {"canonical_initial_lineage_registrations"},
+	contradictionReviewMigration:                 {"canonical_contradiction_review_bindings"},
+	governanceMigration:                          {"evidence_governance_head", "canonical_withdrawal_events", "source_assessment_events"},
+	candidateRelationSourceMigration:             nil,
+	consistencyContractMigration:                 nil, // Guard-only migration; no new tables.
+	consistencyMigration:                         {"consistency_watches", "consistency_watch_versions", "consistency_runs", "consistency_run_artifacts", "consistency_events"},
+	propositionBindingMigration:                  {"canonical_propositions", "canonical_proposition_bindings", "canonical_proposition_binding_events"},
+	externalCheckMigration:                       {"external_check_records"},
+	externalRepresentationMigration:              {"external_representation_records", "external_check_representation_links"},
 
 	"000047_evidence_ingestion_implements_admission.up.sql": {"canonical_implements_admissions"},
 	"000048_evidence_ingestion_references_admission.up.sql": {"canonical_references_admissions"},
@@ -212,6 +213,7 @@ var requiredTables = []string{
 
 	"canonical_endpoint_review_bindings",
 	"canonical_implements_admissions",
+	"canonical_initial_lineage_registrations",
 	"canonical_references_admissions",
 	"source_claim_disposition_review_bindings",
 	"source_blobs",

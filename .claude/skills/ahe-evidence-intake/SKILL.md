@@ -43,7 +43,7 @@ extraction remain separate workflows.
   the missing capability. Do not substitute a model-generated source.
 - The standard executable requires an explicitly selected `intake`,
   `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer`,
-  `supersession-reviewer`, `contradiction-reviewer` or
+  `supersession-reviewer`, `initial-lineage-reviewer`, `contradiction-reviewer` or
   `repository-intake` profile; it has no default
   profile. Intake exposes
   `submit_external_source`, `get_extractor_input`, and `submit_extractor_output`.
@@ -323,11 +323,26 @@ this profile. See [stable slots and existing stores](../../../INSTALL.md#stable-
 Successful replacement does not guarantee closure or current-use eligibility.
 Every admitted external source claim in the source-object manifest needs a
 reviewed lineage assignment, possibly in a different semantic slot. Assignment
-comes from justified fresh-v2 replacement; there is no standalone assignment or
-mark-current writer. Do not replace unrelated claims together or split a real
+comes from justified fresh-v2 replacement, or the separately reviewed singleton
+initial-registration route below. There is no arbitrary mark-current writer. Do not replace unrelated claims together or split a real
 provider object merely to close a lineage. Withdrawal alone does not remove an
 unclassified claim from the manifest. Old targets become superseded; they are
 not marked current and do not revive when their replacement is withdrawn.
+
+For unchanged same-C observations, do not self-target or invent a revision.
+A separately provisioned `initial-lineage-reviewer` can register first membership
+only for an unclassified singleton admitted external source object and an unused
+lineage. Call `get_initial_lineage_registration_review` with C, the persisted
+original snapshot/view receipt and six-field basis; display the entire native
+review for independent human approval. Copy returned `request` as `review` and
+`subject` as `expected_subject`; send `apply_reviewed_initial_lineage_registration`
+with `decision=approved`, stable `request_id` and human `decision_reason`.
+The launcher supplies identity. Source-admission approval is not this decision.
+Keep the exact request for retries; changed subjects need fresh review. C,
+its admission and derived parents stay unchanged, as does the v2 head. The repeated
+pending occurrence remains pending. Read joint currentness and reassess all
+bases; receipt IDs and timestamps do not prove provider recontact or freshness.
+See [registration limits and native authority](../../../docs/INITIAL_LINEAGE_REGISTRATION.md).
 
 When Query returns `unclassified_currentness`, `incomplete_currentness` or
 another blocked/excluded reason, follow the

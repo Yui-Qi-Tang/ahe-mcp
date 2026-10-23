@@ -143,6 +143,11 @@ func LoadEndpointReview(ctx context.Context, pool *pgxpool.Pool, req EndpointRev
 	return out, err
 }
 func loadEndpointReview(ctx context.Context, tx sqlTx, req EndpointReviewRequest) (EndpointReview, error) {
+	return loadEndpointReviewInCut(ctx, &endpointUseCut{tx: tx}, req)
+}
+
+func loadEndpointReviewInCut(ctx context.Context, cut *endpointUseCut, req EndpointReviewRequest) (EndpointReview, error) {
+	tx := cut.tx
 	// Bound persisted JSON before the general-purpose native loader allocates it.
 	var size int
 	if err := tx.queryRow(ctx, `SELECT octet_length(statement_text)+octet_length(source_refs::text)+octet_length(proposed_payload::text)
@@ -233,7 +238,7 @@ func loadEndpointReview(ctx context.Context, tx sqlTx, req EndpointReviewRequest
 			display.UseReview = saved.UseReview
 		} else {
 			var err error
-			display.UseReview, err = loadEndpointUseReview(ctx, tx, req.Derivation.UsePolicy, req.Derivation.ParentNodeIDs)
+			display.UseReview, err = loadEndpointUseReview(ctx, cut, req.Derivation.UsePolicy, req.Derivation.ParentNodeIDs)
 			if err != nil {
 				return EndpointReview{}, err
 			}
@@ -362,7 +367,8 @@ func AdmitReviewedEndpoint(ctx context.Context, pool *pgxpool.Pool, input Review
 					return err
 				}
 			}
-			review, err := loadEndpointReview(ctx, tx, input.Review)
+			cut := &endpointUseCut{tx: tx}
+			review, err := loadEndpointReviewInCut(ctx, cut, input.Review)
 			if err != nil {
 				return err
 			}
@@ -400,7 +406,7 @@ func AdmitReviewedEndpoint(ctx context.Context, pool *pgxpool.Pool, input Review
 				return err
 			}
 			if mutation.derivation != nil {
-				if err := guardDerivedCurrentUse(ctx, tx, mutation, input.Review.Derivation.UsePolicy); err != nil {
+				if err := guardDerivedCurrentUse(ctx, cut, mutation, input.Review.Derivation.UsePolicy); err != nil {
 					return err
 				}
 				if err := validateDerivedAdmissionWithLock(ctx, tx, mutation, true); err != nil {

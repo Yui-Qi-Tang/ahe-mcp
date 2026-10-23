@@ -86,6 +86,12 @@ func admitAttempt(ctx context.Context, pool *pgxpool.Pool, in AdmissionInput) (A
 			return AdmissionResult{}, fmt.Errorf("%w: immutable references reconstruction differs", ErrReplayConflict)
 		}
 	} else {
+		// Match lifecycle writers before the authority row's endpoint FKs take
+		// KEY SHARE locks. Waiting until the edge INSERT can deadlock with a
+		// supersession writer holding governance and locking those same targets.
+		if _, err = tx.Exec(ctx, `SELECT evidence_governance_lock_v1('evidence_governance_head'::regclass)`); err != nil {
+			return AdmissionResult{}, fmt.Errorf("locking references governance: %w", err)
+		}
 		var pairExists bool
 		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM canonical_references_admissions WHERE from_node_id=$1 AND to_node_id=$2)`, in.Review.FromNodeID, in.Review.ToNodeID).Scan(&pairExists); err != nil {
 			return AdmissionResult{}, fmt.Errorf("checking references directed pair: %w", err)

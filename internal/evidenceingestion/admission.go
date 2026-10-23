@@ -105,6 +105,11 @@ func admitPendingProposal(ctx context.Context, db sqlDB, input AdmissionInput) (
 			return err
 		}
 		if mutation.derivation != nil {
+			// Both native and reviewed derived writes take proposal, governance,
+			// then derivation locks. Historical replay returns above this fence.
+			if err := lockGovernance(ctx, tx); err != nil {
+				return err
+			}
 			if err := validateDerivedAdmissionInvariant(ctx, tx, mutation); err != nil {
 				return err
 			}

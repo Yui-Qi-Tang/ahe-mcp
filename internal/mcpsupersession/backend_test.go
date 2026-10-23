@@ -55,7 +55,7 @@ func TestSupersessionProfileClosed(t *testing.T) {
 			t.Fatalf("unexpected supersession privilege %s %s", rule.Table, p)
 		}
 	}
-	if len(manifest.FunctionExecute) != 1 || manifest.FunctionExecute[0] != "canonical_supersession_lock_targets_v1(text[])" {
+	if len(manifest.FunctionExecute) != 2 || manifest.FunctionExecute[0] != "canonical_supersession_lock_targets_v1(text[])" {
 		t.Fatal("internal helpers exposed")
 	}
 }

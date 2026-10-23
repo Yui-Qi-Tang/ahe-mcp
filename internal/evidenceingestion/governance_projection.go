@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -132,25 +133,64 @@ func loadEvidenceUseSnapshot(ctx context.Context, tx sqlTx) (evidenceuse.Snapsho
 	if len(s.Contradictions) > 100000 {
 		return s, fmt.Errorf("governance contradiction limit exceeded")
 	}
+	var jointAuthority *evidencesupersession.JointProjector
+	if len(lineages) > 0 {
+		hasRegistration, err := hasInitialLineageRegistrations(ctx, tx)
+		if err != nil {
+			return s, err
+		}
+		if hasRegistration {
+			authority, err := loadJointLineageAuthority(ctx, tx)
+			if err != nil {
+				return s, err
+			}
+			jointAuthority, err = evidencesupersession.PrepareJointAuthority(authority)
+			if err != nil {
+				return s, err
+			}
+		}
+	}
 	for key := range lineages {
-		input, err := loadCanonicalSupersessionClosureInput(ctx, tx, key)
-		if err != nil {
-			return s, err
+		var nodes []evidencesupersession.NodeCurrentness
+		var complete bool
+		witnessID := ""
+		if jointAuthority != nil {
+			input, err := loadJointLineageMaterialization(ctx, tx, key)
+			if err != nil {
+				return s, err
+			}
+			p, err := jointAuthority.ProjectLineage(input)
+			if err != nil {
+				return s, err
+			}
+			nodes = p.Nodes
+			complete = p.ClosureAvailable
+			if p.Witness != nil {
+				witnessID = p.Witness.ID
+			}
+		} else {
+			input, err := loadCanonicalSupersessionClosureInput(ctx, tx, key)
+			if err != nil {
+				return s, err
+			}
+			p, err := evidencesupersession.ProjectCurrentness(input)
+			if err != nil {
+				return s, err
+			}
+			nodes = p.Nodes
+			complete = p.ClosureAvailable
+			if p.Witness != nil {
+				witnessID = p.Witness.ID
+			}
 		}
-		p, err := evidencesupersession.ProjectCurrentness(input)
-		if err != nil {
-			return s, err
-		}
-		for _, state := range p.Nodes {
+		for _, state := range nodes {
 			n, ok := s.Nodes[state.NodeID]
 			if !ok {
 				return s, fmt.Errorf("missing lineage member")
 			}
 			n.Currentness.Status = state.Status
-			n.Currentness.Complete = p.ClosureAvailable
-			if p.Witness != nil {
-				n.Currentness.WitnessID = p.Witness.ID
-			}
+			n.Currentness.Complete = complete
+			n.Currentness.WitnessID = witnessID
 			s.Nodes[state.NodeID] = n
 		}
 	}
@@ -239,14 +279,18 @@ func CheckCurrentEvidencePlan(ctx context.Context, pool *pgxpool.Pool, policy ev
 	})
 	return p, err
 }
-func guardDerivedCurrentUse(ctx context.Context, tx sqlTx, mutation canonicalAdmissionMutation, policy evidenceuse.Policy) error {
+func guardDerivedCurrentUse(ctx context.Context, cut *endpointUseCut, mutation canonicalAdmissionMutation, policy evidenceuse.Policy) error {
+	tx := cut.tx
 	if err := lockGovernance(ctx, tx); err != nil {
 		return err
 	}
-	s, err := loadEvidenceUseSnapshot(ctx, tx)
+	s, err := cut.snapshot(ctx)
 	if err != nil {
 		return err
 	}
+	// Add the candidate only to this assessment, not the shared native snapshot.
+	s.Nodes = maps.Clone(s.Nodes)
+	s.Sources = maps.Clone(s.Sources)
 	node := mutation.nodes[0]
 	var sid string
 	if err := tx.queryRow(ctx, `SELECT r.source_snapshot_id FROM proposal_occurrences p JOIN extraction_attempts a USING(extraction_attempt_id) JOIN extraction_runs r USING(extraction_run_id) WHERE p.proposal_occurrence_id=$1`, node.OriginProposalOccurrenceID).Scan(&sid); err != nil {
@@ -331,8 +375,13 @@ type EndpointUseReview struct {
 	Decisions      []evidenceuse.NodeAssessment  `json:"decisions"`
 }
 
-func loadEndpointUseReview(ctx context.Context, tx sqlTx, policy evidenceuse.Policy, roots []string) (*EndpointUseReview, error) {
-	p, err := loadEvidenceUseProjectionForPolicy(ctx, tx, policy, roots)
+func loadEndpointUseReview(ctx context.Context, cut *endpointUseCut, policy evidenceuse.Policy, roots []string) (*EndpointUseReview, error) {
+	snapshot, err := cut.snapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	assessment, err := evidenceuse.Assess(snapshot, policy, roots, time.Now().UTC())
+	p := EvidenceUseProjection{Snapshot: snapshot, Assessment: assessment}
 	if err != nil {
 		return nil, err
 	}

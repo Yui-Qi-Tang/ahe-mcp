@@ -10,13 +10,16 @@ import (
 )
 
 // PolicyVersion identifies the native ordinary/review authority policy, not Core's policy.
-const PolicyVersion = "ahe-mcp-database-role-policy/v10"
+const PolicyVersion = "ahe-mcp-database-role-policy/v11"
 
 // Profile identifies an implemented database capability set.
 type Profile string
 
 // ProfileQuery grants read access to the shipping schema and no writer authority.
 const ProfileQuery Profile = "query"
+
+// ProfileInitialLineageReviewer appends independently reviewed first memberships.
+const ProfileInitialLineageReviewer Profile = "initial-lineage-reviewer"
 
 // ProfileIntake permits the five source/extractor intake tools to persist source
 // authority and pending proposals. It cannot update proposal disposition, write
@@ -93,6 +96,7 @@ var queryTables = []string{
 	"canonical_graph_edges",
 	"canonical_graph_nodes",
 	"canonical_implements_admissions",
+	"canonical_initial_lineage_registrations",
 	"canonical_ordinary_admission_edge_bindings",
 	"canonical_ordinary_admission_manifests",
 	"canonical_ordinary_admission_node_bindings",
@@ -186,7 +190,7 @@ var queryTables = []string{
 
 // ProfileNames returns implemented profile names only.
 func ProfileNames() []string {
-	return []string{string(ProfileContradictionReviewer), string(ProfileWithdrawalReviewer), string(ProfileSourceAssessmentReviewer), string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer), string(ProfileRelationReviewer), string(ProfileEndpointReviewer), string(ProfileRepositoryIntake), string(ProfileCoreRecords), string(ProfileSupersessionReviewer)}
+	return []string{string(ProfileInitialLineageReviewer), string(ProfileContradictionReviewer), string(ProfileWithdrawalReviewer), string(ProfileSourceAssessmentReviewer), string(ProfileQuery), string(ProfileIntake), string(ProfileSourceClaimReviewer), string(ProfileRelationReviewer), string(ProfileEndpointReviewer), string(ProfileRepositoryIntake), string(ProfileCoreRecords), string(ProfileSupersessionReviewer)}
 }
 
 // ParseProfile accepts an exact implemented profile without normalization.
@@ -205,7 +209,9 @@ func BuildManifest(profile Profile) (Manifest, error) {
 	rules := make([]TableRule, 0, len(queryTables))
 	for _, table := range queryTables {
 		privileges := []Privilege{PrivilegeSelect}
-		if profile == ProfileContradictionReviewer && table == "canonical_contradiction_review_bindings" {
+		if profile == ProfileInitialLineageReviewer && table == "canonical_initial_lineage_registrations" {
+			privileges = append(privileges, PrivilegeInsert)
+		} else if profile == ProfileContradictionReviewer && table == "canonical_contradiction_review_bindings" {
 			privileges = append(privileges, PrivilegeInsert)
 		} else if profile == ProfileWithdrawalReviewer && table == "canonical_withdrawal_events" || profile == ProfileSourceAssessmentReviewer && table == "source_assessment_events" {
 			privileges = append(privileges, PrivilegeInsert)
@@ -261,7 +267,7 @@ func BuildManifest(profile Profile) (Manifest, error) {
 	if profile == ProfileSupersessionReviewer {
 		manifest.FunctionExecute = []string{"canonical_supersession_lock_targets_v1(text[])"}
 	}
-	if profile == ProfileContradictionReviewer || profile == ProfileWithdrawalReviewer || profile == ProfileSourceAssessmentReviewer || profile == ProfileEndpointReviewer {
+	if profile == ProfileInitialLineageReviewer || profile == ProfileSupersessionReviewer || profile == ProfileRelationReviewer || profile == ProfileContradictionReviewer || profile == ProfileWithdrawalReviewer || profile == ProfileSourceAssessmentReviewer || profile == ProfileEndpointReviewer {
 		manifest.FunctionExecute = append(manifest.FunctionExecute, "evidence_governance_lock_v1(regclass)")
 	}
 	return manifest, nil

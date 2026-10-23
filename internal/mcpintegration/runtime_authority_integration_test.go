@@ -170,6 +170,7 @@ type authorityProcessLogin struct {
 }
 
 type authorityProcessFixture struct {
+	initialLineage   authorityProcessLogin
 	contradiction    authorityProcessLogin
 	withdrawal       authorityProcessLogin
 	sourceAssessment authorityProcessLogin
@@ -279,6 +280,8 @@ func newAuthorityProcessFixture(t *testing.T, ctx context.Context, databaseURL s
 			fixture.sourceAssessment = binding
 		} else if profile == dbrole.ProfileContradictionReviewer {
 			fixture.contradiction = binding
+		} else if profile == dbrole.ProfileInitialLineageReviewer {
+			fixture.initialLineage = binding
 		} else if profile == dbrole.ProfileSupersessionReviewer {
 			fixture.supersession = binding
 		} else if profile == dbrole.ProfileEndpointReviewer {

@@ -489,7 +489,7 @@ func validatePersistedSupersessionMaterialization(
 			t.target_node_id,
 			t.canonical_edge_id,
 			m.lineage_key,
-			m.first_admission_event_id,
+			COALESCE(m.first_admission_event_id, m.initial_registration_event_id),
 			m.was_bootstrapped,
 			e.from_node_id,
 			e.to_node_id,
@@ -513,6 +513,7 @@ func validatePersistedSupersessionMaterialization(
 	targets := make([]string, 0, len(event.Payload.TargetNodeIDs))
 	edgeIDs := make([]string, 0, len(event.Payload.TargetNodeIDs))
 	bootstrapped := make([]string, 0, len(event.Payload.BootstrappedTargetNodeIDs))
+	registrationTargets := make(map[string]string)
 	for rows.Next() {
 		var (
 			targetID, edgeID, lineageKey, firstEventID string
@@ -546,6 +547,12 @@ func validatePersistedSupersessionMaterialization(
 			method != "supersession_admission_edge" {
 			return nil, newDomainError(ErrorSupersessionReplayConflict, "replacement target %s is inconsistent with event %s", targetID, event.ID)
 		}
+		if strings.HasPrefix(firstEventID, "initial-lineage-registration:v1:") {
+			if wasBootstrapped {
+				return nil, newDomainError(ErrorSupersessionReplayConflict, "registered target cannot bootstrap")
+			}
+			registrationTargets[targetID] = firstEventID
+		}
 		if wasBootstrapped && firstEventID == event.ID {
 			bootstrapped = append(bootstrapped, targetID)
 		}
@@ -554,6 +561,21 @@ func validatePersistedSupersessionMaterialization(
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating supersession replacement targets: %w", err)
+	}
+	rows.Close()
+	for targetID, registrationID := range registrationTargets {
+		var requestID string
+		if err := tx.queryRow(ctx, `SELECT request_id FROM canonical_initial_lineage_registrations WHERE event_id=$1`, registrationID).Scan(&requestID); err != nil {
+			return nil, err
+		}
+		r, err := readInitialLineageRegistration(ctx, tx, requestID)
+		if err != nil {
+			return nil, err
+		}
+		b := r.Record.Payload.Binding
+		if r.Record.ID != registrationID || b.ClaimID != targetID || b.LineageKey != event.LineageKey || b.Anchor.Revision >= event.Revision {
+			return nil, newDomainError(ErrorSupersessionReplayConflict, "registration authority does not precede replacement")
+		}
 	}
 	if !slices.Equal(targets, event.Payload.TargetNodeIDs) ||
 		!slices.Equal(bootstrapped, event.Payload.BootstrappedTargetNodeIDs) {

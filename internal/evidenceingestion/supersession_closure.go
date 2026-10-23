@@ -19,10 +19,12 @@ const (
 // CanonicalSupersessionCurrentness is a read-consistent derived projection.
 // Limitations records the admitted-snapshot boundary and any additional reason
 // the valid topology cannot prove currentness. Projection and witness are not
-// stored.
+// stored. Exactly one of Projection and JointProjection is returned; the latter
+// carries the versioned joint cut and witness when the store has registrations.
 type CanonicalSupersessionCurrentness struct {
-	Projection  evidencesupersession.CurrentnessProjection `json:"projection"`
-	Limitations []string                                   `json:"limitations,omitempty"`
+	Projection      *evidencesupersession.CurrentnessProjection      `json:"projection,omitempty"`
+	JointProjection *evidencesupersession.JointCurrentnessProjection `json:"joint_projection,omitempty"`
+	Limitations     []string                                         `json:"limitations,omitempty"`
 }
 
 // GetCanonicalSupersessionCurrentness derives one lineage projection from an
@@ -60,6 +62,26 @@ func getCanonicalSupersessionCurrentness(
 		if _, err := tx.exec(ctx, `SET LOCAL row_security = off`); err != nil {
 			return fmt.Errorf("requiring an unfiltered supersession closure read: %w", err)
 		}
+		hasRegistration, err := hasInitialLineageRegistrations(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if hasRegistration {
+			input, err := loadJointLineageCut(ctx, tx, lineageKey)
+			if err != nil {
+				return err
+			}
+			projection, err := evidencesupersession.ProjectJointCurrentness(input)
+			if err != nil {
+				return canonicalSupersessionClosureInvariantError(err)
+			}
+			result.JointProjection = &projection
+			result.Limitations = []string{canonicalSupersessionSnapshotLimitation}
+			if !projection.ClosureAvailable {
+				result.Limitations = append(result.Limitations, canonicalSupersessionUnclassifiedObjectClaimsLimitation)
+			}
+			return nil
+		}
 		input, err := loadCanonicalSupersessionClosureInput(ctx, tx, lineageKey)
 		if err != nil {
 			return err
@@ -68,7 +90,7 @@ func getCanonicalSupersessionCurrentness(
 		if err != nil {
 			return canonicalSupersessionClosureInvariantError(err)
 		}
-		result.Projection = projection
+		result.Projection = &projection
 		result.Limitations = []string{canonicalSupersessionSnapshotLimitation}
 		if !projection.ClosureAvailable {
 			result.Limitations = append(

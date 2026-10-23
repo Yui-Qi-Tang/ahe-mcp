@@ -92,7 +92,7 @@ func TestIntegrationRoleUpgradePreservesIdentityAndEvidence(t *testing.T) {
 					t.Fatalf("upgrade through ApplyUp: changed=%t err=%v", changed, err)
 				}
 				status, err := migrations.VerifyCurrent(ctx, pool)
-				if err != nil || status.AppliedMigrations != 59 {
+				if err != nil || status.AppliedMigrations != 60 {
 					t.Fatalf("upgraded schema: %+v %v", status, err)
 				}
 			}
@@ -170,6 +170,27 @@ func TestIntegrationRoleUpgradePreservesIdentityAndEvidence(t *testing.T) {
 					}
 					if actor.Group != "" {
 						roleUpgradeWriteMatrix(t, ctx, runtime, actor)
+					}
+					if stage == "schema53_current_policy" && actor.Profile == ProfileRelationReviewer {
+						// The original role gains only the lock helper. It cannot update
+						// the head directly or redirect SECURITY DEFINER to another table.
+						var before, locked, after int64
+						if err := runtime.QueryRow(ctx, `SELECT revision FROM evidence_governance_head WHERE singleton`).Scan(&before); err != nil {
+							t.Fatal(err)
+						}
+						if err := runtime.QueryRow(ctx, `SELECT evidence_governance_lock_v1('evidence_governance_head'::regclass)`).Scan(&locked); err != nil {
+							t.Fatal("upgraded relation role cannot acquire governance", err)
+						}
+						if err := runtime.QueryRow(ctx, `SELECT revision FROM evidence_governance_head WHERE singleton`).Scan(&after); err != nil || before != locked || before != after {
+							t.Fatal("lock-only helper changed governance revision", err)
+						}
+						_, err := runtime.Exec(ctx, `SELECT evidence_governance_lock_v1('canonical_graph_nodes'::regclass)`)
+						var pgErr *pgconn.PgError
+						if !errors.As(err, &pgErr) || pgErr.Code != "23514" {
+							t.Fatal("governance helper accepted an unrelated table", err)
+						}
+						_, err = runtime.Exec(ctx, `UPDATE evidence_governance_head SET revision=revision WHERE false`)
+						roleUpgradePermissionDenied(t, err)
 					}
 					if got := roleUpgradeSession(t, ctx, runtime, actor); got != identity {
 						t.Fatal("physical session changed during identity comparison")

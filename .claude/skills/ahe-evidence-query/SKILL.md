@@ -101,7 +101,12 @@ predecessors do not revive. Do not assume every reason has a public repair.
 
 `unclassified_currentness` is not an instruction to set `Temporal.Status`.
 Fresh-v2 requires a genuine same-object pending replacement and exact human
-review; it does not retrofit an admitted replacement. `incomplete_currentness`
+review; it does not retrofit an admitted replacement. An unchanged singleton
+external source claim may qualify for separate exact-reviewed initial lineage
+registration; this read-only skill does not approve it. An empty registration
+catalog retains `projection`; a nonempty catalog returns `joint_projection`.
+Inspect its complete witness and the full use policy. See the
+[native contract](../../../docs/INITIAL_LINEAGE_REGISTRATION.md). `incomplete_currentness`
 can require justified lineage assignments for other claims in the same source
 object, without collapsing their semantic slots. If the prerequisites or
 separately authorized reviewer are absent, report the gap and stop dependent

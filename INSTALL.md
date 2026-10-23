@@ -9,10 +9,10 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 ## Installation scope
 
 Build the reviewed source commit using the steps below. The current MCP schema
-is 59. Query/intake/source-reviewer inventories are 29/6/3. Separate
+is 60. Query/intake/source-reviewer inventories are 29/6/3. Separate
 `relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
-4/3/2 tools. The separate `supersession-reviewer` and `contradiction-reviewer` each expose 2 tools; `core-records` exposes six record/configuration tools. The full
-migration chain through 59 and role policy v10 are required. Do not perform a
+4/3/2 tools. The separate `supersession-reviewer`, `initial-lineage-reviewer` and `contradiction-reviewer` each expose 2 tools; `core-records` exposes six record/configuration tools. The full
+migration chain through 60 and role policy v11 are required. Do not perform a
 binary-only replacement against an older schema or reuse source-review
 credentials for endpoint/relation writes.
 
@@ -177,7 +177,7 @@ DATABASE_DSN="$(cat /absolute/private/ahe/migration-database-dns)" \
 Success returns credential-free JSON containing `schema_version`, `schema`,
 `changed`, `applied_migrations`, and `latest_migration`. Repeating the command is
 safe when the selected schema, migration ledger and checksums match. The current
-native schema is 59; migrations 1–58 retain their original checksums.
+native schema is 60; migrations 1–59 retain their original checksums.
 Migration 43 retains the partial unique source-extraction request index.
 Migration 44 requires no proposal/canonical/admission authority and exactly the
 native empty Supersession head before adding ordinary admission manifests;
@@ -307,7 +307,7 @@ transferred to a different process/visibility cut.
 
 These are separately provisioned profiles, not extra source-reviewer tools.
 These profiles were introduced in migration 49; the current build requires the
-full migration chain through 59 and role policy v10. Provision or upgrade and
+full migration chain through 60 and role policy v11. Provision or upgrade and
 verify matching roles with the operator workflow above.
 For fresh installations, provision distinct fresh
 pairs for the new installation and verify each one, rather than rerunning
@@ -411,7 +411,7 @@ before choosing a flow. Provisioning a reviewer does not supply a valid
 replacement or a human decision, and successful replacement does not guarantee
 closure or current-use eligibility.
 
-The separately provisioned `supersession-reviewer` requires schema 59 / policy v10.
+The separately provisioned `supersession-reviewer` requires schema 60 / policy v11.
 Use the same protected launcher configuration as other reviewer profiles with
 its own fixed principal, bounded LOGIN and NOLOGIN group. Run
 `AHE_RUNTIME_PROFILE=supersession-reviewer ./bin/ahe-runtime-admin provision`
@@ -688,9 +688,31 @@ After connecting the client, follow the [first evidence workflow](docs/FIRST_WOR
 to check the tool inventories, pending/admitted states and exact source readback.
 An empty new database is expected; no search result alone is not a connection test.
 
+## Initial-lineage-reviewer
+
+Schema 60 / policy v11 adds a separate two-tool `initial-lineage-reviewer`.
+Provision a new authorized group/LOGIN pair using
+`AHE_RUNTIME_PROFILE=initial-lineage-reviewer ./bin/ahe-runtime-admin provision`,
+then verify the bounded LOGIN and launch it through the standard launcher.
+Existing reviewer credentials do not gain this write capability.
+
+Use `get_initial_lineage_registration_review` for one admitted, unclassified
+external source claim, its original snapshot/view observation receipt and a
+stable six-field lineage basis. It requires a singleton admitted source object
+and unused lineage. Show the complete review for independent human approval;
+then pass its returned `request` as `review`, `subject` as `expected_subject`,
+a stable request ID, `decision=approved` and human `decision_reason` to
+`apply_reviewed_initial_lineage_registration`. The launcher binds reviewer.
+
+Registration adds first membership while keeping C, its admission/source,
+derived parents and the v2 head unchanged. A repeated pending occurrence is not
+retired. Subsequent genuine replacement still uses v2. Re-read Query currentness
+and the complete use policy; neither observation nor registration proves provider
+freshness. See [native contract and limits](docs/INITIAL_LINEAGE_REGISTRATION.md).
+
 ## Upgrade
 
-This build requires schema **59** and database role policy **v10**. Updating a
+This build requires schema **60** and database role policy **v11**. Updating a
 schema-49 installation is **not** a binary-only replacement: migrations 50–53 add
 Core record and consistency-history tables. From schema 49, all profiles need
 SELECT on eleven new tables; from schema 52, five new diagnostic tables. Refresh
@@ -713,6 +735,18 @@ startup until refreshed. For a group shared by multiple logins, upgrade one exac
 pair, then verify every serving login. Coordinate all role administration while
 services are stopped; concurrent privileged role deletion/recreation is outside
 this operator contract. Repository validation does not deploy this upgrade.
+
+A schema-59/policy-v10 installation requires migration 60 and policy v11.
+Migrations 1–59 and old v2 event/receipt bytes remain unchanged. Upgrade the same
+existing roles and verify every original runtime LOGIN: all profiles gain SELECT
+on the registration table, and supersession-reviewer and relation-reviewer gain
+the governance-lock function. The relation grant lets references serialize before
+endpoint FK locks; it adds no table write privileges. Provision the new registration
+writer separately only when authorized.
+Its only new INSERT privilege is on the guarded registration table. Rollback
+refuses nonempty registration authority. A nonempty registration catalog changes
+currentness output to versioned `joint_projection`; update query consumers to
+accept it. Empty catalogs preserve the legacy `projection` field.
 
 Schema 53 requires migration 54 before this binary starts. Stop all writers and
 workers, then migrate and verify the original LOGINs. This guard-only upgrade
@@ -784,7 +818,7 @@ embedded migration names and checksums.
 - missing/invalid runtime principal, profile, role or schema: configure the
   protected launcher; do not inject replacement identity through tool arguments.
 - `legacy writer runtime profiles are not enabled`: this executable currently
-  accepts `core-records`, `intake`, `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer`, `supersession-reviewer`, `withdrawal-reviewer`, `source-assessment-reviewer` or `repository-intake`; do not weaken the gate to recover old writer exposure.
+  accepts `core-records`, `intake`, `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer`, `supersession-reviewer`, `initial-lineage-reviewer`, `withdrawal-reviewer`, `source-assessment-reviewer` or `repository-intake`; do not weaken the gate to recover old writer exposure.
 - schema/search-path rejection: pre-provision the exact private schema and
   remove fallback from the migration connection configuration, not from an
   existing database's ACLs.
@@ -798,8 +832,8 @@ embedded migration names and checksums.
 
 ## Independent contradiction reviewer
 
-The separately provisioned `contradiction-reviewer` requires schema 59 / policy
-v10. Its exact tools are `get_contradiction_review` and
+The separately provisioned `contradiction-reviewer` requires schema 60 / policy
+v11. Its exact tools are `get_contradiction_review` and
 `apply_reviewed_contradiction`. Provision a dedicated role/LOGIN and protected
 launcher configuration with this profile using the same runtime-admin procedure
 as the other reviewers. Source-node reviewer credentials do not authorize it.

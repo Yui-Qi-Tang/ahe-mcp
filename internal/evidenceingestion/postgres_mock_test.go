@@ -743,6 +743,10 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 		return mockExecResult(1), nil
 	case strings.Contains(query, "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"):
 		return mockExecResult(0), nil
+	case query == `SELECT evidence_governance_lock_v1('evidence_governance_head'::regclass)`:
+		// The serial in-memory fixture has no lock manager. PostgreSQL
+		// interleaving tests verify the actual governance/derivation order.
+		return mockExecResult(1), nil
 	case strings.Contains(query, "pg_advisory_xact_lock"):
 		return mockExecResult(1), nil
 	case strings.Contains(query, "INSERT INTO source_blobs"):
