@@ -11,8 +11,11 @@ For architecture, authority, and algorithms, see [system design](docs/SYSTEM_DES
 Build the reviewed source commit using the steps below. The current MCP schema
 is 60. Query/intake/source-reviewer inventories are 29/6/3. Separate
 `relation-reviewer`, `endpoint-reviewer` and `repository-intake` profiles expose
-4/3/2 tools. The separate `supersession-reviewer`, `initial-lineage-reviewer` and `contradiction-reviewer` each expose 2 tools; `core-records` exposes six record/configuration tools. The full
-migration chain through 60 and role policy v11 are required. Do not perform a
+4/3/2 tools. The separate `supersession-reviewer`, `initial-lineage-reviewer` and
+`contradiction-reviewer` each expose 2 tools; `withdrawal-reviewer` and
+`source-assessment-reviewer` each expose 4 tools. `core-records` exposes six
+record/configuration tools. The full migration chain through 60 and role policy
+v11 are required. Do not perform a
 binary-only replacement against an older schema or reuse source-review
 credentials for endpoint/relation writes.
 
@@ -24,15 +27,11 @@ server; an older binary lacking this contract must not be treated as equivalent
 or silently replaced with another search mode. The research v6 route remains
 separate. See [search contracts and limits](docs/SYSTEM_DESIGN.md#search).
 
-The current MCP implementation uses explicit
-launcher and database authority. Query is read-only; the ingestion executable
-separates six source/extractor intake tools (including read-only conflict suggestions) from a three-tool
-`source-claim-reviewer`, a four-tool `relation-reviewer`, and three-tool `endpoint-reviewer`, two-tool `supersession-reviewer` and
-`repository-intake` profiles, plus four-tool `withdrawal-reviewer` and
-`source-assessment-reviewer` profiles.
-Its legacy reviewer/operator profiles remain
-disabled. Existing internal typed writers remain retained
-implementation assets, not newly enabled MCP entrypoints. See
+The current MCP implementation uses explicit launcher and database authority.
+Query is read-only. Each ingestion profile above has its own bounded capability;
+intake includes read-only conflict suggestions but cannot admit evidence.
+Legacy reviewer/operator profiles remain disabled. Existing internal typed
+writers remain retained implementation assets, not newly enabled MCP entrypoints. See
 [runtime authority](docs/SYSTEM_DESIGN.md#authority). This guide describes
 installation requirements, not completed deployment acceptance.
 

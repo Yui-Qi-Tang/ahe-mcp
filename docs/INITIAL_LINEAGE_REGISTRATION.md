@@ -81,11 +81,15 @@ then validate each lineage's materialization and current manifest against it.
 Derived commit shares that transaction's verified snapshot between review and
 the final assessment, while evaluating eligibility again at the current time.
 Neither the frame nor an eligibility result is reused across transactions or
-serialization retries. Proposal admissions acquire the proposal lock before
-the governance fence. Both retained native v2 and reviewed fresh supersession
-then acquire the supersession head, using the complete order
-`proposal → governance → supersession head`. The native live writer remains
-available internally; this does not enable a legacy MCP profile.
+serialization retries. Pending fresh native v2 and reviewed v2 acquire locks in
+the order `proposal → governance → supersession head`. Native v2 replay returns
+before that fresh fence. Historical reviewed-v2 replay keeps its original
+proposal lock and complete request, subject/reviewer bindings,
+receipt and native-authority verification, but does not acquire the fresh
+governance fence. References can hold that fence before its origin-proposal FK
+lock, so adding it to historical replay would reverse the lock order. This is a
+v2 replay boundary, not a rule removing locks from other governance APIs.
+The native live writer remains available internally; no legacy MCP profile is enabled.
 
 The joint witness binds store, lineage/basis, algorithm/semantics/coverage,
 v2 head/history, registration/membership/edge/object manifests and frontier.
@@ -112,9 +116,9 @@ head revisions and membership origins. Existing roles need a policy-v11 upgrade
 and verification using the same LOGINs. All profiles gain one table read;
 supersession and relation reviewers also gain the shared governance lock. References
 take it before endpoint FK locks; native and reviewed derived writes take it
-before the derivation lock. Historical retries retain their original authority.
-Only the new
-registration profile gains INSERT on the registration table. It has no direct
+before the derivation lock. Historical retries retain their original authority;
+the v2 replay fence exception is described above. Only the new registration
+profile gains INSERT on the registration table. It has no direct
 node, membership, lineage, admission or v2 writer grants. Rollback refuses to
 discard a nonempty registration catalog.
 

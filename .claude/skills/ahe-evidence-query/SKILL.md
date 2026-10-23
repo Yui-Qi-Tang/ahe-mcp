@@ -11,6 +11,12 @@ connected model or agent remains responsible for its explanation.
 
 ## Scope and Entry Points
 
+The primary agent performs queries and verification under the
+[shared division of work](../../../CLAUDE.md#agent-division-of-work). Subagents
+only return text challenging supplied material; they cannot query tools,
+research, read/write files or data, execute, or delegate further. The primary
+agent verifies any challenge before using it in the answer.
+
 Use the already authorized Query launcher and discover its live schemas.
 No intake, admission, source rewriting, profile changes or direct database
 writes are part of this skill. If AHE is unavailable, report the limitation;
@@ -155,3 +161,7 @@ A terminal historical display is not a pending review. For reviewed fresh-v2
 Supersession, read `supersession_admission` by its canonical ID and use Query currentness
 with its observed lineage key. Superseded source claims remain admitted;
 currentness is snapshot-bound and does not prove provider freshness or truth.
+The reviewed-v2 writer's historical replay retains its proposal lock and complete
+exact/native-authority checks, but not the pending fresh governance fence. Query
+access does not authorize invoking that writer; see the
+[shared replay boundary](../../../CLAUDE.md#reviewed-supersession-and-endpoint-disposition).

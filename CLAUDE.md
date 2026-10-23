@@ -3,8 +3,9 @@
 ## Read First
 
 - This is the shared operational contract for all cooperating agents. AHE is
-  an evidence layer, not the downstream agent. Models may explore freely;
-  claims enter canonical evidence only through explicit review.
+  an evidence layer, not the downstream agent. The primary agent may explore
+  within the user's scope; claims enter canonical evidence only through explicit
+  review.
 - Use the task routing below. Do not read all of `README.md` by default.
 - For installation or operating-system support, read `INSTALL.md`.
 - Consult only the matching `README.md` section when changing its contract:
@@ -22,6 +23,34 @@
   Consult `README.md`'s evaluation section only when its reported results matter.
 - Discover the currently exposed MCP input schemas before calling tools. Do not
   reconstruct schemas from memory or invent provider-specific AHE tool names.
+
+## Agent Division of Work
+
+Unless the user explicitly changes this division, subagents serve only as
+text-only adversaries. This applies when creating, reusing or continuing a
+subagent; a normal task assignment does not change the division.
+
+- The user and primary agent own problem definition, assumptions, research
+  direction, source lookup, design, implementation, experiments, file/data
+  operations, verification and final conclusions. Do not delegate those tasks,
+  including by relabeling execution or routine review as adversarial work.
+- Use a subagent only to challenge an explicit proposition or seek a counterexample
+  or logical gap. Supply the fixed assumptions and scope, necessary evidence
+  excerpts, verified and unverified parts, and criteria for a valid counterexample.
+- The subagent reasons only from material supplied by the primary agent and
+  returns textual challenges. It must not research, browse, call tools, write
+  code, execute commands/tests, read or write files/data, or create further subagents. Missing
+  material must be reported to the primary agent, not collected independently.
+- Each challenge identifies the claim, counterexample or gap, why it could hold,
+  and what still needs checking. Stay within the fixed scope; label any challenge
+  to the assumptions separately instead of changing the problem silently.
+- Feedback is provisional. The primary agent must check or reproduce it before
+  adopting it, acknowledge valid counterevidence and retain final responsibility.
+  Agent agreement or failure to find a counterexample is not independent proof.
+
+An evidence-admission decision does not authorize subagent execution or change
+this division. Human approval of exact evidence and authorization for repository
+work remain separate under the contracts below.
 
 ## Authority and Lifecycle
 
@@ -57,8 +86,9 @@
   its dedicated atomic admission and read-only currentness tools.
 - Standard ingestion profiles are separately authorized `core-records`, `intake`,
   `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer`,
-  `supersession-reviewer`, `initial-lineage-reviewer`, `relation-reviewer`, `withdrawal-reviewer` and
-  `source-assessment-reviewer` and `contradiction-reviewer`. Bounded exact-reviewed derived/code endpoints use the
+  `supersession-reviewer`, `initial-lineage-reviewer`, `relation-reviewer`,
+  `withdrawal-reviewer`, `source-assessment-reviewer` and `contradiction-reviewer`.
+  Bounded exact-reviewed derived/code endpoints use the
   endpoint profile. Exact fresh-v2 replacement uses the separate supersession
   reviewer; generic derived admission and repository activation
   writers remain internal contracts, not enabled
@@ -137,6 +167,13 @@ is historical material and permits only the original retry. Read currentness
 with the returned lineage key; it does not prove provider freshness or truth.
 Repository code, derived endpoints and already ordinarily admitted replacements
 are outside fresh-v2. Never relabel an endpoint or manufacture a revision.
+
+Pending fresh reviewed v2 locks `proposal → governance → supersession head`.
+Its historical replay still locks the original proposal and performs complete
+request, subject, reviewer/reason, receipt and native-authority verification,
+but does not acquire the fresh governance fence. This avoids a reverse wait with
+references holding governance before its origin-proposal FK lock. Do not add a
+fresh-use gate to that replay or generalize this exception to other governance APIs.
 
 A separately provisioned `initial-lineage-reviewer` exposes
 `get_initial_lineage_registration_review` and

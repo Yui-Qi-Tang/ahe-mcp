@@ -2,7 +2,7 @@
 
 ## Unreleased — current baseline
 
-The current development build requires schema **55** and role policy **v7**.
+The current development build requires schema **60** and role policy **v11**.
 This summary covers implemented changes since the dated entries below; it is
 not a release announcement.
 
@@ -11,7 +11,7 @@ not a release announcement.
   representations. These records do not admit evidence or prove semantic
   equivalence.
 - Added migrations 53–54 for consistency watches, diagnostic history, proof
-  artifacts and record-integrity guards. Query now exposes 26 read-only tools;
+  artifacts and record-integrity guards. They brought Query to 26 read-only tools;
   the separate `core-records` profile exposes six record/configuration tools.
 - Added the explicitly started `ahe-consistency-worker`: external Boolean
   declarations, currentness policy, checked SAT/UNSAT, conflict localization
@@ -22,6 +22,21 @@ not a release announcement.
   uses SAT; Z3 UNSAT results have no independently checked proof.
 - Added migration 55 for explicitly typed candidate hypotheses and optional
   contradiction-source bindings while preserving prior admission history.
+- Added migration 56 / policy v8 for reviewed supersession and endpoint
+  disposition, then migration 57 for up to 32 reviewed AND parents while
+  retaining historical receipts.
+- Added migration 58 / policy v9 for withdrawal, source assessments and
+  current-use guards. Its three Query tools bring the current inventory to 29.
+- Added migration 59 / policy v10 for exact-reviewed contradiction decisions
+  and read-only intake conflict suggestions; intake now exposes six tools.
+- Added migration 60 / policy v11 for independently reviewed initial lineage
+  registration of an unchanged singleton external claim and joint closure
+  proofs. Existing claims, admissions, v2 receipts and derived parents remain
+  unchanged. See [registration and limits](docs/INITIAL_LINEAGE_REGISTRATION.md).
+- Aligned native/reviewed v2, references and derived writer lock order. Pending
+  fresh reviewed v2 acquires governance; its historical replay keeps complete
+  verification without that fresh fence. Joint authority and snapshot data are
+  reused only within their owning transaction, with current-use checks retained.
 - Added runtime-role upgrades that retain the existing group/LOGIN pair.
   Existing installations require the documented migration and role checks;
   see [upgrade instructions](INSTALL.md#upgrade).

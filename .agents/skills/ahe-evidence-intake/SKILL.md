@@ -1,12 +1,15 @@
 ---
 name: ahe-evidence-intake
-description: Use when a Codex agent or sub-agent collects exact external provider evidence, produces scope-preserving grounded proposals, or prepares and applies exact human source review through AHE MCP. Do not use for news briefs, read-only lookup, or repository code extraction.
+description: Use when the primary Codex agent collects exact external provider evidence, produces scope-preserving grounded proposals, or prepares and applies exact human source review through AHE MCP. Do not use for news briefs, read-only lookup, or repository code extraction.
 ---
 
 # AHE Evidence Intake for Codex Agents
 
 Follow the same evidence workflow used by Claude Code while preserving the
-actual producer identity and the parent/sub-agent approval boundary.
+actual producer identity and the human approval boundary. Follow the shared
+[agent division of work](../../../CLAUDE.md#agent-division-of-work): the primary
+agent owns operations; subagents only challenge supplied material in text and
+may not use tools, research, execute, read/write files or data, or delegate further.
 
 ## Load the Shared Workflow
 
@@ -48,18 +51,18 @@ omissions visible; do not use Brief/manual_text as an external-intake fallback.
   semantics change. Formatting-only edits do not change the version.
 - Supply a stable, opaque, non-secret session reference only when the host
   exposes one. Omit it rather than inventing or reconstructing one.
-- When delegating, give the sub-agent an explicit provider-object scope and the
-  minimum source access required. Do not broaden connector access merely to
-  make collection easier.
+- For an adversarial challenge, supply the proposition, fixed assumptions,
+  scope, evidence excerpts and counterexample criteria. Collect any missing
+  evidence yourself and verify the returned challenge before adopting it.
 
-## Sub-Agent Stop Rule
+## Human Decision Boundary
 
-Unless the assignment carries an explicit human decision for exact proposal
-IDs, the sub-agent must stop after producing and reading back the review
-package. It returns the package to the parent agent; the parent displays it and
-waits for the human.
+The primary agent prepares and reads back the complete review package, then
+presents it to the human. Without an explicit decision for the exact unchanged
+subject, stop before admission or disposition. Approval of evidence does not
+permit a subagent to execute the workflow or change its text-only role.
 
-A valid delegated decision contains all of:
+A valid human decision contains all of:
 
 - the exact proposal occurrence IDs;
 - for standard source review, the exact extraction attempt ID and unchanged
@@ -89,7 +92,7 @@ Test approval stubs belong only to an explicitly authorized isolated experiment
 under the [experiment protocol](../../../.claude/skills/ahe-evidence-query/references/experiments.md).
 They are not human decisions for operational intake.
 
-## Parent Handoff
+## Review Handoff
 
 Return a compact, directly inspectable package containing:
 

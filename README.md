@@ -150,7 +150,7 @@ See [profiles and setup](INSTALL.md#bounded-external-intake-mcp-installation).
 ## MCP Client
 
 Register the protected Query launcher as a stdio MCP server and use `tools/list`
-to discover its schemas. Query has 26 read-only tools; the separate core-records
+to discover its schemas. Query has 29 read-only tools; the separate core-records
 profile has six record/configuration tools. Results are evidence packages, not
 final answers. [Client configuration](INSTALL.md).
 

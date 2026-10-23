@@ -196,9 +196,11 @@ URLs, provider links and manual-review-profile admission are not supported.
 
 Product migrations 47–48 preserve the product's existing ordinary and
 Supersession authority contracts while adding these independent receipts.
-Startup verifies receipt columns, constraints, guarded functions and triggers;
-role policy v8 permits relation-reviewer INSERT only on the edge and two receipt
-tables. Trusted role credentials still do not authenticate a human conversation.
+Startup verifies receipt columns, constraints, guarded functions and triggers.
+Current role policy v11 retains relation-reviewer INSERT only on the edge and
+two receipt tables. Its bounded governance helper lets references take the fence
+before endpoint/origin-proposal FK locks; it grants no direct head or node UPDATE.
+Trusted role credentials still do not authenticate a human conversation.
 
 The graph adapter obtains AHE-selected relations and a bounded scope from one read
 snapshot, then passes them to general topology algorithms. A path proves only structural
@@ -389,7 +391,17 @@ target set, six-field basis, retained new/old grounding and CAS coordinate.
 Admission and review receipt share one transaction. Exact retries use the saved
 historical display and remain valid after later events; head conflicts during a
 new admission require a fresh review. Repository and derived endpoints are outside
-this contract.
+this contract. The getter rejects a self-target before asking for an impossible
+approval; an unchanged singleton claim may instead qualify for independent
+initial registration below.
+
+Pending fresh native/reviewed v2 locks `proposal → governance → supersession head`
+before its target locks. Historical reviewed-v2 replay retains the original
+proposal lock and full request, subject, reviewer/reason, receipt and native
+authority checks, but does not acquire the fresh governance fence. Native-v2
+replay also returns before that fence. This prevents the reverse wait with
+references holding governance before its origin-proposal FK lock; it is not a
+general instruction to remove serialization from other governance replays.
 
 ```mermaid
 sequenceDiagram
@@ -407,7 +419,7 @@ sequenceDiagram
     A->>H: Show complete targets, six-field basis and observed head
     H-->>A: Explicit approval and reason
     A->>W: admit_reviewed_supersession with unchanged request and subject
-    W->>P: Begin transaction, read proposal and lock head
+    W->>P: Begin fresh transaction; lock proposal, governance, then head
     P-->>W: Stored source, proposal and current head
     W->>W: Check fresh replacement, targets, lineage, hashes and head
     W->>P: Atomically save replacement, relations, decision, event, head and receipt
@@ -429,8 +441,8 @@ set must be atomic in one transaction. Partial admission and later target additi
 not allowed. Bootstrap registers existing admitted claims that meet source-object
 conditions as old members; it does not recreate or review those nodes again.
 
-All lineages share one global revision/head. A command supplies the expected revision
-and head event ID it read. After locking the head, the command checks them again and
+All v2 replacement events share one global revision/head. A command supplies the
+expected revision and head event ID it read. After locking the head, the command checks them again and
 advances N to N+1 only on a match. This is a database serialization point, not provider
 time or a multi-node consensus protocol. Request/decision/event hashes bind their complete
 semantics; differences cannot be treated as exact replay. PostgreSQL constraints and
@@ -438,7 +450,7 @@ deferred triggers check relational mirrors, append-only history and head progres
 The Go domain recomputes semantic hashes; these are not two independently editable
 JSON canonicalization schemes.
 
-The stored relationships are:
+The stored relationships for v2 replacement are:
 
 ```mermaid
 flowchart LR
@@ -454,7 +466,7 @@ flowchart LR
     E -.-> N
 ```
 
-All writes belong to the same transaction:
+All writes for that v2 replacement belong to the same transaction:
 
 ```mermaid
 flowchart LR
@@ -469,12 +481,44 @@ flowchart LR
     V -->|No| R["Roll back all writes"]
 ```
 
+### Independent first lineage membership
+
+An unchanged observation can produce a new pending occurrence with the same
+canonical claim C. A separately provisioned `initial-lineage-reviewer` can append
+an independently reviewed registration R for an unclassified singleton external,
+verbatim source claim with no prior membership and an unused six-field lineage.
+C must not be withdrawn
+or already superseded. The observation binds C's original snapshot/view; receipt
+IDs or timestamps alone do not prove provider recontact or freshness.
+
+R supplies a distinct first-membership origin. A member has either v2 event
+authority or registration authority, never both. R is anchored after an exact
+v2 prefix: revision zero has a null head event ID; a positive anchor names the
+matching prefix head. It does not advance the v2 head, replace C, rewrite its
+admission/source or retarget derived parents. The repeated occurrence remains
+pending. A later genuine v2 replacement can target C without bootstrapping it.
+See the [registration contract and review workflow](INITIAL_LINEAGE_REGISTRATION.md).
+
 ### Currentness: what one snapshot can establish
 
-The read-only loader reads the head, complete global event chain, selected lineage
-members/edges/targets and claims for the same object. It checks hashes, continuity,
-acyclicity and classification completeness, then computes the frontier of nodes with no
-incoming `supersedes`. Status is per node: nodes with valid incoming `supersedes` remain
+One read-only repeatable-read cut selects the authority family by the complete,
+store-wide registration catalog. An empty catalog retains the pure-v2 loader
+and legacy `projection`: head, complete global v2 chain, selected lineage
+members/edges/targets and current claims for the same object.
+
+A nonempty catalog returns `joint_projection`, including for old-only lineages.
+Readers validate and replay the complete v2 prefix and registration catalog once,
+then check each selected lineage's typed membership/edge materialization and
+current object manifest. Replay applies R at anchor zero, then each v2 event N
+followed by registrations anchored at N, before event N+1. This permits a valid
+registered lineage at head zero without inventing a replacement event. Historical
+registration validity preserves the creation-time singleton condition; current
+closure uses today's complete manifest, so a later unclassified sibling can
+block closure without invalidating the original registration receipt.
+
+Both branches check hashes, continuity, acyclicity and classification completeness,
+then compute the frontier of nodes with no incoming `supersedes`. Status is per
+node: nodes with valid incoming `supersedes` remain
 `superseded`. Only the remaining frontier nodes are classified by closure completeness
 and frontier size; not all nodes become `current` or `unknown` together.
 
@@ -486,17 +530,23 @@ and frontier size; not all nodes become `current` or `unknown` together.
 | `unknown` | Unclassified claims for the same object prevent proof of frontier completeness |
 
 Corrupt structures, missing events, hash/mirror mismatches, cycles and exceeded limits
-return errors, not `unknown`. Current hard limits: 10,000 global events, 10,000 lineage
-members, 100,000 lineage edges and 50,000 object claims. A witness binds the snapshot;
-it is not a signed certificate. `current` does not mean latest at the provider or true
+return errors, not `unknown`. Current hard limits: 10,000 global v2 events, 10,000 lineage
+members, 100,000 lineage edges and 50,000 object claims. The registration catalog
+is separately bounded to 10,000 records and 16 MiB of canonical JSON. A joint witness
+binds store/lineage, v2 head/history, registration/member/edge/current-object
+manifests, frontier and algorithm/semantics/coverage versions. It is neither a
+signed certificate nor a use permit. `current` does not mean latest at the provider or true
 in the real world. Query accepts only the lineage key, not caller-declared winners,
 members or completeness.
 
 ```mermaid
 flowchart TD
     Q["Lineage key"] --> R["One Repeatable Read / Read Only snapshot"]
-    R --> L["Load global head, full event chain and selected lineage"]
+    R --> A{"Registration catalog empty?"}
+    A -->|Yes| L["Load v2 prefix and selected lineage"]
+    A -->|No| J["Load full v2 prefix and registration catalog; joint replay"]
     L --> V["Validate hashes, mirrors, continuity, bounds and acyclicity"]
+    J --> V
     V -->|Invalid| E["Return an error"]
     V -->|Valid| N{"Node has incoming supersedes?"}
     N -->|Yes| S["superseded"]
@@ -508,7 +558,9 @@ flowchart TD
 ```
 
 See [lineage / event](../internal/evidencesupersession/supersession.go),
-[closure / currentness](../internal/evidencesupersession/closure.go).
+[pure-v2 closure](../internal/evidencesupersession/closure.go),
+[joint closure](../internal/evidencesupersession/joint_closure.go) and
+[native joint loader](../internal/evidenceingestion/joint_lineage_closure.go).
 Migration 42 retires pair-v1 without guessing old data: nonempty existing pair authority
 stops the migration. Old edges cannot stand in for fresh-v2 history.
 
@@ -533,8 +585,9 @@ integrity checks without adding tables or changing policy v7. Configuration
 writes and workers use separate locks, allowing a new version during solving.
 The native worker applies an explicit currentness policy,
 localizes one contradictory condition set and recomputes changed snapshots.
-The `ahe-consistency-worker` command requires explicit startup and database role
-policy v7. Query exposes five consistency read tools; core-records appends watch configuration
+The current `ahe-consistency-worker` command requires explicit startup, schema 60
+and database role policy v11. Query exposes five consistency read tools;
+core-records appends watch configuration
 with a launcher-bound recorder. Neither endpoint executes semantic extraction or
 admission. See [product operation](CONSISTENCY.md) and
 [consistency contracts](../internal/evidenceingestion/CONSISTENCY.md).
@@ -654,12 +707,16 @@ implement BM25, PathSim or a paper's scoring model.
 
 | Program/profile | Current public scope |
 | --- | --- |
-| Query | 26 read-only tools, including Core records and consistency readback; no model calls or evidence writes |
-| Intake | 5 source/extractor tools; source/extraction/pending only |
+| Query | 29 read-only tools, including Core records, consistency and governance/use-state readback; no model calls or evidence writes |
+| Intake | 6 source/extractor/suggestion tools; source/extraction/pending only, no admission |
 | `source-claim-reviewer` | 3 exact source-review tools; admit/reject/audit_only |
 | `relation-reviewer` | 4 exact implementation/reference review/admission tools; no node writes |
 | `repository-intake` | 2 fixed-repository capture/parser tools; pending and inactive generations |
 | `supersession-reviewer` | 2 exact fresh-v2 external replacement review/admission tools |
+| `initial-lineage-reviewer` | 2 independent first-membership review/apply tools; no replacement or original-admission rewrite |
+| `withdrawal-reviewer` | 4 single/batch withdrawal review/apply tools; preserves admitted history |
+| `source-assessment-reviewer` | 4 single/batch exact-snapshot assessment review/apply tools; no source rewrite |
+| `contradiction-reviewer` | 2 exact pair review/decision tools; no automatic truth or endpoint selection |
 | `endpoint-reviewer` | 3 exact endpoint review/admission/disposition tools; no collection or independent relations |
 | `core-records` | 6 identity/check/representation/watch record tools; no admission or solver execution during MCP calls |
 | `ahe-consistency-worker` | Separately started process using the core-records DB role; checks configured watches and persists diagnostic history |
@@ -672,7 +729,7 @@ schema, not row-level tenant isolation. Reviewer table ACLs still permit trusted
 ACLs alone do not prove that all direct SQL passes exact review. DB owners/superusers
 remain within the trusted operations boundary.
 
-MCP has its own migration ledger, currently through 56, and requires role policy v8.
+MCP has its own migration ledger, currently through 60, and requires role policy v11.
 Same-numbered migrations from another Core repository cannot be applied directly.
 Migration/runtime checks cover names,
 checksums and protected schema objects. Failures do not automatically delete data or

@@ -3,7 +3,7 @@
 Native Go APIs in `internal/evidenceingestion` check one exact proposition
 namespace and scope. The [product workflow](../../docs/CONSISTENCY.md) exposes
 readback through Query and configuration through core-records. The current
-runtime requires schema **55** and role policy **v7**. Consistency record guards
+runtime requires schema **60** and role policy **v11**. Consistency record guards
 were introduced in schema 54 and remain active. Diagnostic history remains
 separate from canonical admission. Pouch and external consumers are unchanged.
 
@@ -22,11 +22,19 @@ AND parents, binding heads, definitions, payloads, provenance, temporal records,
 integrity and edges remain in the result. Missing parents, limits and row-level
 filtering fail the read. It does not silently expand the proposition scope.
 
-The frontier policy reads complete admitted supersession lineages, including
-source-object claims and replacement events outside the proposition scope, in
-the same repeatable-read transaction. These dependencies and the participation
-reasons are included in the view fingerprint. An unrelated supersession-chain
-change can conservatively trigger recomputation. An unclassified object claim
+The frontier policy reads complete admitted lineages, including source-object
+claims and replacement events outside the proposition scope, in the same
+repeatable-read transaction. An empty registration catalog uses the legacy
+`projection`; a nonempty catalog loads the complete registration/v2 authority
+once and returns `joint_projection` for each selected lineage. Independent
+registration can establish membership at v2 head zero without replacing the
+original claim.
+See the [joint closure contract](../../docs/INITIAL_LINEAGE_REGISTRATION.md#joint-currentness-and-derived-evidence).
+
+These dependencies and the participation reasons are included in the view
+fingerprint. Registration/catalog changes and unrelated supersession-chain
+changes can conservatively trigger recomputation. Registration does not rewrite
+derived parents or alter solver semantics. An unclassified object claim
 blocks a frontier verdict; it cannot be hidden by a stored `current` label.
 Without a lineage, an explicit stored `current` temporal status is accepted as
 recorded. This is admitted-database currentness, not provider freshness or truth.

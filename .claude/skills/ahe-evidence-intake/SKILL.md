@@ -13,6 +13,12 @@ uses real human decisions. Test approval stubs are confined to explicitly
 authorized isolated experiments under the
 [experiment protocol](../ahe-evidence-query/references/experiments.md).
 
+The primary agent performs collection, intake, review preparation and readback
+under the [shared division of work](../../../CLAUDE.md#agent-division-of-work).
+Subagents may only return text challenging supplied material; they may not use
+tools, research, read/write files or data, execute, or delegate further. A human
+evidence decision does not change that division or authorize subagent operations.
+
 ## Engineering Evidence Is Not a Brief
 
 For engineering intake, do not replace the requested evidence with a model's
@@ -41,11 +47,10 @@ extraction remain separate workflows.
   frozen JSON contract.
 - If the source connector or required AHE tool is unavailable, stop and report
   the missing capability. Do not substitute a model-generated source.
-- The standard executable requires an explicitly selected `intake`,
-  `source-claim-reviewer`, `relation-reviewer`, `endpoint-reviewer`,
-  `supersession-reviewer`, `initial-lineage-reviewer`, `contradiction-reviewer` or
-  `repository-intake` profile; it has no default
-  profile. Intake exposes
+- The standard executable requires an explicitly selected profile; it has no
+  default. Use the [current profile inventory](../../../INSTALL.md#installation-scope)
+  and discover the installed tools. For this intake sequence, use `intake` and
+  the separate `source-claim-reviewer`. Intake exposes
   `submit_external_source`, `get_extractor_input`, and `submit_extractor_output`.
   A separately authorized reviewer exposes `get_source_claim_review`,
   `admit_reviewed_source_claim`, and `record_reviewed_source_claim_disposition`.
@@ -180,8 +185,9 @@ Include:
 
 If a complete, valid human decision already exists for this exact unchanged
 native subject/display, apply it without requesting the same decision again.
-This includes an exact decision delegated by the parent agent with all required
-fields and the authorized reviewer binding. Otherwise ask which proposal
+The primary agent may use an exact human decision supplied with the task when
+all required fields and reviewer bindings are present; this does not authorize
+subagent execution. Otherwise ask which proposal
 numbers the human approves, rejects, or retains as `audit_only`, and wait for
 that explicit decision and reason. A changed subject requires fresh review.
 Do not interpret silence, a request to continue analysis, or approval of the
@@ -300,6 +306,11 @@ and send `admit_reviewed_supersession` with `decision=approved` and stable
 Read the returned receipt and Query currentness with its lineage key. The entire
 replacement and receipt commit together. Preserve the original request for
 uncertain outcomes; exact replay remains available after later head advancement.
+Pending fresh reviewed v2 uses `proposal → governance → supersession head`.
+Historical replay keeps its proposal lock and complete exact/native-authority
+verification, but does not acquire that fresh governance fence. This exception
+does not remove locks from other governance APIs or turn a receipt into current-use
+permission; see the [shared contract](../../../CLAUDE.md#reviewed-supersession-and-endpoint-disposition).
 A head/subject conflict requires a fresh review and new decision. An
 `exact_replay_only` display is historical material. Already ordinarily admitted
 new claims, repository code and derived endpoints are outside fresh-v2. Never
@@ -324,10 +335,12 @@ Successful replacement does not guarantee closure or current-use eligibility.
 Every admitted external source claim in the source-object manifest needs a
 reviewed lineage assignment, possibly in a different semantic slot. Assignment
 comes from justified fresh-v2 replacement, or the separately reviewed singleton
-initial-registration route below. There is no arbitrary mark-current writer. Do not replace unrelated claims together or split a real
-provider object merely to close a lineage. Withdrawal alone does not remove an
-unclassified claim from the manifest. Old targets become superseded; they are
-not marked current and do not revive when their replacement is withdrawn.
+initial-registration route below. There is no arbitrary mark-current writer.
+Do not replace unrelated claims together or split a real provider object merely
+to close a lineage. Withdrawal alone does not remove an unclassified claim from
+the manifest. In fresh-v2, old targets become superseded; reassess the replacement,
+and do not revive its predecessors when it is withdrawn. Initial registration
+instead retains C and requires reassessing that same C under the complete policy.
 
 For unchanged same-C observations, do not self-target or invent a revision.
 A separately provisioned `initial-lineage-reviewer` can register first membership
