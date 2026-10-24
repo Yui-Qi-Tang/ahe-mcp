@@ -567,7 +567,7 @@ func legacyIngestionTools() []mcpstdio.Tool {
 		{
 			Name:        evidenceingestionmcp.ToolAdmitPendingSupersession,
 			Title:       "Admit Pending Supersession",
-			Description: "Call only after the cooperating agent has displayed the fresh pending proposal sentence, exact source quotes, source title and location, provider revision, the complete set of older canonical claims it replaces, version differences, coverage/limitations, the reviewed six-field source-object/slot basis, and the current supersession head coordinate (revision and event ID), then received explicit human approval. This call immediately and terminally admits the fresh source-backed claim and exact new-to-old supersedes edge set. AHE checks the first four basis fields against grounded source identity; slot_kind and slot_id are human-reviewed stable semantic-slot declarations. AHE derives lineage, event identity, and the next revision, and records but does not prove the human review. Use record_pending_proposal_disposition for rejected or audit-only outcomes.",
+			Description: "Call only after the cooperating agent has displayed the fresh pending proposal sentence, exact source quotes, source title and location, externally assigned source revision, the complete set of older canonical claims it replaces, version differences, coverage/limitations, the reviewed six-field source-object/slot basis, and the current supersession head coordinate (revision and event ID), then received explicit human approval. This call immediately and terminally admits the fresh source-backed claim and exact new-to-old supersedes edge set. AHE checks the first four basis fields against grounded source identity; slot_kind and slot_id are human-reviewed stable semantic-slot declarations. AHE derives lineage, event identity, and the next revision, and records but does not prove the human review. Use record_pending_proposal_disposition for rejected or audit-only outcomes.",
 			InputSchema: supersessionAdmissionSchema(),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &write,
@@ -714,7 +714,7 @@ func submitExternalSourceSchema() map[string]any {
 		"source_namespace": stringSchema("Provider account, tenant, site, project, or space namespace."),
 		"object_type":      stringSchema("Provider-neutral object kind, such as issue, page, or comment."),
 		"object_id":        stringSchema("Stable provider object identifier within the declared namespace."),
-		"revision":         stringSchema("Immutable provider revision, version, or update token for these exact bytes."),
+		"revision":         stringSchema("Externally assigned opaque source version or snapshot identifier, including a content digest. Provider issuance is not required. The same source-object/revision must retain identical content and source metadata."),
 		"source_location":  stringSchema("Auditable provider locator or URL for the source object."),
 		"title":            stringSchema("Optional source-provided title; do not synthesize one."),
 		"content_format": enumStringSchema(

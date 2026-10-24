@@ -256,6 +256,24 @@ func TestDeclaredLabelsAndWrongRevisionNeverSupplyMissingChecks(t *testing.T) {
 	}
 }
 
+func TestCollectorDigestDoesNotReplaceSourceFindings(t *testing.T) {
+	s := fixture()
+	x := s.Sources["source:a"]
+	x.ProviderRevision = x.ContentHash
+	for i := range x.Checks {
+		x.Checks[i].ComparedRevision = x.ProviderRevision
+	}
+	s.Sources["source:a"] = x
+	if outcome(t, assess(t, s, "a"), "a") != Eligible {
+		t.Fatal("externally assigned digest rejected despite complete reviewed findings")
+	}
+	x.Checks = nil
+	s.Sources["source:a"] = x
+	if outcome(t, assess(t, s, "a"), "a") != Blocked {
+		t.Fatal("matching digest supplied missing source findings")
+	}
+}
+
 func TestMissingGovernanceOrANDDataFailsClosed(t *testing.T) {
 	for _, kind := range []string{"withdrawal", "currentness", "incident_edges", "source_bindings", "source", "parent_manifest", "parent_node", "empty_parents"} {
 		t.Run(kind, func(t *testing.T) {

@@ -87,7 +87,9 @@ const (
 )
 
 const (
-	RetentionV1           = "retained-byte-integrity/v1"
+	RetentionV1 = "retained-byte-integrity/v1"
+	// CorrespondenceV1 keeps its wire name; it assesses source fidelity against
+	// comparison materials, not who issued the externally assigned revision.
 	CorrespondenceV1      = "provider-revision-correspondence/v1"
 	CoverageV1            = "declared-source-coverage/v1"
 	RetainedSnapshotScope = "entire_retained_snapshot"
@@ -97,6 +99,8 @@ const (
 // Checks contains unresolved applicable findings, plus any explicit reviewed
 // resolutions supplied by the adapter. The adapter must not choose a finding
 // by timestamp. Statement-support findings cannot stand in for these checks.
+// ProviderRevision is the original source revision declaration. Its legacy JSON
+// name is retained for compatibility and does not require provider issuance.
 type Source struct {
 	SnapshotID          string        `json:"source_snapshot_id"`
 	ContentHash         string        `json:"content_hash"`
@@ -109,7 +113,7 @@ type Source struct {
 }
 
 // SourceCheck is a reviewed finding about the exact snapshot and original
-// provider revision. A comparison only with today's code has a different
+// externally assigned source revision. A comparison only with today's code has a different
 // revision and cannot establish historical source correspondence.
 type SourceCheck struct {
 	AssessedField    string      `json:"assessed_field,omitempty"`

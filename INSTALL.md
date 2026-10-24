@@ -450,9 +450,9 @@ object. An omitted claim is not thereby proved current or redundant.
 
 Fresh-v2 requires the old targets and the pending replacement to share exact
 `source_system`, `source_namespace`, `object_type` and `object_id`. A fresh source
-delivery with a new genuine revision can replace an old claim only when the
+delivery with an externally assigned revision can replace an old claim only when the
 connector-observed object identity actually remains the same. Do not transplant
-new bytes under an old identity or invent a revision to make this check pass.
+new bytes under an unrelated identity or treat a new revision as proof of replacement.
 Per-commit IDs, file moves that change object identity, and identity-scheme changes
 cannot be bridged by this profile. A provider's genuinely stable object ID can
 remain usable across a move, but AHE does not infer such a mapping.
@@ -574,9 +574,15 @@ Reviewed `reject`/`audit_only` also require the exact review and explicit human
 decision, but create no canonical nodes or edges. `pending` is a local pause,
 not a reviewer write. Intake/reviewer/Query inventories are 5/3/29.
 
-Preserve exact connector-observed text/JSON and provider identity/revision.
+Preserve exact connector-observed text/JSON and source-object identity. The
+external collector assigns `revision`, an opaque source version or snapshot
+identifier. Provider tokens and content digests are both accepted; AHE does not
+authenticate the issuer or prescribe the numbering method. For example, use a
+stable API URL as object identity and a digest of the exact submitted response
+body as revision. No provider update timestamp is required. Do not present a
+collector-issued identifier as provider-issued.
 `exact_excerpt` and `truncated_document` coverage require limitations;
-`full_document` forbids them. Reusing a provider revision with different source
+`full_document` forbids them. Reusing the same source-object/revision with different source
 content or source-level metadata conflicts. Extraction request IDs are reusable
 only for exact retries; use a new ID for different source/extractor inputs.
 An empty proposal list records abstention, not a failure or admission.

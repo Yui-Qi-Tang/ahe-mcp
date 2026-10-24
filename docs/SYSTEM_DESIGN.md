@@ -86,8 +86,12 @@ rendering must retain the renderer and source relationship; a model summary must
 overwrite original evidence. Multiple quotes from one document are not automatically
 independent support.
 
-External sources use provider object identity and revision. Content or source metadata
-changes under the same revision cause a conflict. The external envelope requires
+External sources use source-object identity and an externally assigned opaque
+revision. The collector chooses its numbering method; a provider token or a
+digest of the exact captured content can identify a version. AHE neither requires
+provider issuance nor interprets revision order as semantic replacement.
+Content or source metadata changes under the same object/revision cause a
+conflict. Receipt identity remains separate from snapshot identity. The external envelope requires
 `content_fidelity=verbatim`. `exact_excerpt` and `truncated_document` require stated
 limitations; `full_document` requires empty `limitations`. This submission contract does
 not externally certify provider identity or completeness.
@@ -368,7 +372,7 @@ disabled. Fresh-v2 Supersession and pair-v1 contradiction use separate exact-rev
   endpoints in the same transaction. This preserves relation provenance, not proof
   of semantic correctness. Existing proposals without that source retain their identity.
 - **Supersession**: approve a new external-source pending proposal, fresh replacement,
-  complete targets and head conditions together. Provider revision order does not
+  complete targets and head conditions together. External revision order does not
   automatically create a replacement relation.
 
 See [admission](../internal/evidenceingestion/admission.go),
@@ -430,7 +434,7 @@ sequenceDiagram
 
 Six basis fields define lineage: `source_system`, `source_namespace`, `object_type`,
 `object_id`, `slot_kind`, `slot_id`. The first four must match the stored source; the
-last two are reviewed declarations of a stable semantic slot. Content, provider revision,
+last two are reviewed declarations of a stable semantic slot. Content, external revision,
 time, model and session are not part of lineage identity. Identical content does not imply
 identical lineage.
 

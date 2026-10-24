@@ -16,10 +16,10 @@ review decision or an operational migration.
 - Supersession keeps the existing same-object, six-field lineage and verbatim
   fresh-v2 contract. A withdrawn replacement does not revive its predecessor.
 - Source assessments bind one exact snapshot/hash and original declarations.
-  Retained-byte integrity, provider-revision correspondence, declared coverage
+  Retained-byte integrity, source correspondence, declared coverage
   and statement support are separate findings. A statement-support finding does
   not establish provenance or automatically withdraw every bound claim.
-  Missing original provider revision makes historical comparison inconclusive.
+  Missing originally declared source revision makes historical comparison inconclusive.
   Comparison snapshots and their retained bytes are shown in the native display.
   Each finding names its assessed field. An optional corrected fidelity/coverage
   value annotates a failed declaration; it never changes the original envelope
@@ -27,6 +27,21 @@ review decision or an operational migration.
   human-reviewed findings. Comparison material identities remain visible to the human reviewer; matching
   revision text alone does not prove correspondence.
   Re-grounding requires independent capture/admission; no text-match relinking.
+
+External collectors assign source revisions, including content digests. The
+`provider_revision` wire field and `provider-revision-correspondence/v1` criterion
+retain their historical names for compatibility; they do not authenticate the
+issuer. Correspondence still assesses the original `content_fidelity`
+declaration against the exact source snapshot and comparison materials. A digest
+or matching revision is a binding, not a positive finding. Existing findings
+retain their original displays, methods, materials and limitations. For external
+sources, a missing original `external_revision` stays missing; another stored
+version field cannot supply it retroactively.
+
+Updated governance review wording changes the subject of a new review, including
+withdrawal displays and affected batch manifests. Obtain a fresh display and decision for an uncommitted old
+subject. Committed receipts retain their original bytes and support only the
+unchanged historical retry; they are not rebuilt with the new wording.
 
 ## Native review and authority
 

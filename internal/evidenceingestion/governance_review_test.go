@@ -3,12 +3,44 @@ package evidenceingestion
 import (
 	"bytes"
 	"encoding/json"
+	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceuse"
 )
+
+func TestGovernanceHistoricalSourceAssessmentReceipt(t *testing.T) {
+	// Native TEST APPROVAL STUB receipt captured at 6baecc6979e6 in a disposable
+	// database before the external-revision wording changed. Never regenerate it
+	// from the current display template: historical display bytes are authority.
+	raw, err := os.ReadFile("testdata/governance_source_assessment_v1_receipt.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture struct {
+		Receipt GovernanceReceipt
+		Body    string
+	}
+	if err := json.Unmarshal(raw, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	want := fixture.Receipt
+	row := mockRow{values: []any{want.EventID, want.RequestID, want.TargetID, want.Revision, want.PreviousEventID, want.RecordedAt, fixture.Body}}
+	got, err := scanGovernanceReceipt(row)
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Fatal("historical native receipt changed", err)
+	}
+	if !strings.Contains(strings.Join(got.Display.Limitations, " "), "Missing historical provider revision") {
+		t.Fatal("original review wording was replaced")
+	}
+	row.values[6] = strings.Replace(fixture.Body, "historical provider revision", "declared external revision", 1)
+	if _, err := scanGovernanceReceipt(row); err == nil {
+		t.Fatal("rewritten historical display accepted")
+	}
+}
 
 func TestGovernanceReviewReservesCompleteEventEnvelope(t *testing.T) {
 	// A retained source is JSON base64, so legitimate material alone can take a

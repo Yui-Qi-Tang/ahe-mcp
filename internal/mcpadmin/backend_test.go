@@ -228,7 +228,7 @@ func TestCanonicalSupersessionToolMetadataStatesFreshAdmissionContract(t *testin
 		"fresh pending proposal",
 		"exact source quotes",
 		"source title and location",
-		"provider revision",
+		"externally assigned source revision",
 		"complete set",
 		"coverage/limitations",
 		"reviewed six-field",

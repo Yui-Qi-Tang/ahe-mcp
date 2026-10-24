@@ -56,7 +56,7 @@ var (
 )
 
 // Basis contains the immutable source-object and source-slot fields that
-// participate in lineage identity. Provider revision, content, model,
+// participate in lineage identity. External revision, content, model,
 // extractor, and session metadata are intentionally excluded.
 type Basis struct {
 	SourceSystem    string `json:"source_system"`

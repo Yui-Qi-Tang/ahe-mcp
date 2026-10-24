@@ -425,8 +425,8 @@ func loadGovernanceSourceState(ctx context.Context, tx sqlQueryer, id string) (e
 		return source, err
 	}
 	source.DeclaredFidelity, source.DeclaredCoverage = declarations["external_content_fidelity"], declarations["external_coverage"]
-	// External source_version is an intake identity; only the original external
-	// provider revision can support a historical correspondence claim.
+	// Preserve the original external revision declaration, regardless of issuer.
+	// An internal source_version cannot fill a missing historical declaration.
 	if system == SourceSystemExternalDocument {
 		source.ProviderRevision = declarations["external_revision"]
 	}

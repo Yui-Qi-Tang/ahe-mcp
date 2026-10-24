@@ -1,0 +1,107 @@
+{
+  "Receipt": {
+    "event_id": "governance:sha256:2330491bae0d40a3aaacde36d2fb970620feccc9202abdd00c997b42bc15958c",
+    "request_id": "issue26-old-decision-committed",
+    "target_id": "srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7",
+    "revision": 1,
+    "recorded_at": "2026-10-24T17:06:00.063264+08:00",
+    "subject": "governance-review:sha256:ef1b18b8e532fe062e0b2da29a06d1adfc92e3287d862d5b7ba5fedfacd6fc51",
+    "display": {
+      "contract": "evidence-governance-review/v1",
+      "store_id": "store:6d6f774e-df27-4600-95eb-41cb8968729d",
+      "request": {
+        "kind": "source_assessment",
+        "target_id": "srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7",
+        "operation": "assess",
+        "expected_revision": 0,
+        "correction_ids": [],
+        "checks": [
+          {
+            "assessed_field": "retained_bytes",
+            "assessment_id": "",
+            "source_snapshot_id": "srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7",
+            "content_hash": "sha256:54a8367d28338a2b6307f78737f76a2ec3f6cf2357b75a74a41fdc50997d241a",
+            "scope": "entire_retained_snapshot",
+            "criterion": "retained-byte-integrity/v1",
+            "result": "pass",
+            "compared_revision": "",
+            "material_ref": "srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7",
+            "limitations": []
+          }
+        ],
+        "material_ids": [
+          "srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7"
+        ],
+        "resolves_event_ids": [],
+        "method": "TEST APPROVAL STUB: retained synthetic fixture",
+        "checker_name": "TEST APPROVAL STUB",
+        "checker_version": "v1",
+        "checked_at": "2026-10-24T00:00:00Z",
+        "limitations": [
+          "synthetic historical replay only"
+        ]
+      },
+      "source": {
+        "snapshot": {
+          "ID": "srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7",
+          "SourceSystem": "external_document",
+          "SourceID": "extsrc:9112a683c9ff062ee1ae91e1c0fb0f16fe5f774a4c4c04ca1b6c1d512449a055",
+          "SourceVersion": "fixture-r1",
+          "RawContentHash": "sha256:54a8367d28338a2b6307f78737f76a2ec3f6cf2357b75a74a41fdc50997d241a",
+          "OriginMetadata": {
+            "external_content_fidelity": "verbatim",
+            "external_content_format": "text/plain",
+            "external_coverage": "full_document",
+            "external_limitations_json": "[]",
+            "external_object_id": "committed",
+            "external_object_type": "api-response",
+            "external_revision": "fixture-r1",
+            "external_source_location": "https://example.test/committed",
+            "external_source_namespace": "https://example.test",
+            "external_source_schema": "external-source-envelope-v1",
+            "external_source_system": "synthetic",
+            "global_absence_inference_allowed": "false"
+          }
+        },
+        "retained_bytes": "U3ludGhldGljIHJlcGxheSBmaXh0dXJlLgo="
+      },
+      "materials": [
+        {
+          "snapshot": {
+            "ID": "srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7",
+            "SourceSystem": "external_document",
+            "SourceID": "extsrc:9112a683c9ff062ee1ae91e1c0fb0f16fe5f774a4c4c04ca1b6c1d512449a055",
+            "SourceVersion": "fixture-r1",
+            "RawContentHash": "sha256:54a8367d28338a2b6307f78737f76a2ec3f6cf2357b75a74a41fdc50997d241a",
+            "OriginMetadata": {
+              "external_content_fidelity": "verbatim",
+              "external_content_format": "text/plain",
+              "external_coverage": "full_document",
+              "external_limitations_json": "[]",
+              "external_object_id": "committed",
+              "external_object_type": "api-response",
+              "external_revision": "fixture-r1",
+              "external_source_location": "https://example.test/committed",
+              "external_source_namespace": "https://example.test",
+              "external_source_schema": "external-source-envelope-v1",
+              "external_source_system": "synthetic",
+              "global_absence_inference_allowed": "false"
+            }
+          },
+          "retained_bytes": "U3ludGhldGljIHJlcGxheSBmaXh0dXJlLgo="
+        }
+      ],
+      "corrections": [],
+      "history": [],
+      "limitations": [
+        "Retained bytes and original intake declarations are displayed as recorded; their fidelity is not presumed. Withdrawal does not decide truth or rewrite admission, parents, contradiction or supersession. Restoration clears withdrawal only.",
+        "Source assessment is scoped to this exact snapshot. Missing historical provider revision prevents a conclusive historical correspondence or coverage finding. Statement support is independent of source provenance."
+      ]
+    },
+    "decision": "approved",
+    "reason": "TEST APPROVAL STUB: historical synthetic finding",
+    "reviewer_id": "TEST APPROVAL STUB",
+    "replayed": false
+  },
+  "Body": "{\"contract\":\"evidence-governance-event/v1\",\"request_id\":\"issue26-old-decision-committed\",\"subject\":\"governance-review:sha256:ef1b18b8e532fe062e0b2da29a06d1adfc92e3287d862d5b7ba5fedfacd6fc51\",\"display\":\"{\\\"contract\\\":\\\"evidence-governance-review/v1\\\",\\\"store_id\\\":\\\"store:6d6f774e-df27-4600-95eb-41cb8968729d\\\",\\\"request\\\":{\\\"kind\\\":\\\"source_assessment\\\",\\\"target_id\\\":\\\"srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7\\\",\\\"operation\\\":\\\"assess\\\",\\\"expected_revision\\\":0,\\\"correction_ids\\\":[],\\\"checks\\\":[{\\\"assessed_field\\\":\\\"retained_bytes\\\",\\\"assessment_id\\\":\\\"\\\",\\\"source_snapshot_id\\\":\\\"srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7\\\",\\\"content_hash\\\":\\\"sha256:54a8367d28338a2b6307f78737f76a2ec3f6cf2357b75a74a41fdc50997d241a\\\",\\\"scope\\\":\\\"entire_retained_snapshot\\\",\\\"criterion\\\":\\\"retained-byte-integrity/v1\\\",\\\"result\\\":\\\"pass\\\",\\\"compared_revision\\\":\\\"\\\",\\\"material_ref\\\":\\\"srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7\\\",\\\"limitations\\\":[]}],\\\"material_ids\\\":[\\\"srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7\\\"],\\\"resolves_event_ids\\\":[],\\\"method\\\":\\\"TEST APPROVAL STUB: retained synthetic fixture\\\",\\\"checker_name\\\":\\\"TEST APPROVAL STUB\\\",\\\"checker_version\\\":\\\"v1\\\",\\\"checked_at\\\":\\\"2026-10-24T00:00:00Z\\\",\\\"limitations\\\":[\\\"synthetic historical replay only\\\"]},\\\"source\\\":{\\\"snapshot\\\":{\\\"ID\\\":\\\"srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7\\\",\\\"SourceSystem\\\":\\\"external_document\\\",\\\"SourceID\\\":\\\"extsrc:9112a683c9ff062ee1ae91e1c0fb0f16fe5f774a4c4c04ca1b6c1d512449a055\\\",\\\"SourceVersion\\\":\\\"fixture-r1\\\",\\\"RawContentHash\\\":\\\"sha256:54a8367d28338a2b6307f78737f76a2ec3f6cf2357b75a74a41fdc50997d241a\\\",\\\"OriginMetadata\\\":{\\\"external_content_fidelity\\\":\\\"verbatim\\\",\\\"external_content_format\\\":\\\"text/plain\\\",\\\"external_coverage\\\":\\\"full_document\\\",\\\"external_limitations_json\\\":\\\"[]\\\",\\\"external_object_id\\\":\\\"committed\\\",\\\"external_object_type\\\":\\\"api-response\\\",\\\"external_revision\\\":\\\"fixture-r1\\\",\\\"external_source_location\\\":\\\"https://example.test/committed\\\",\\\"external_source_namespace\\\":\\\"https://example.test\\\",\\\"external_source_schema\\\":\\\"external-source-envelope-v1\\\",\\\"external_source_system\\\":\\\"synthetic\\\",\\\"global_absence_inference_allowed\\\":\\\"false\\\"}},\\\"retained_bytes\\\":\\\"U3ludGhldGljIHJlcGxheSBmaXh0dXJlLgo=\\\"},\\\"materials\\\":[{\\\"snapshot\\\":{\\\"ID\\\":\\\"srcsnap:aeb84dbb23a0d6ab8c4d0b2d3f714e53a691a4668244191ff8c487964c5d7dd7\\\",\\\"SourceSystem\\\":\\\"external_document\\\",\\\"SourceID\\\":\\\"extsrc:9112a683c9ff062ee1ae91e1c0fb0f16fe5f774a4c4c04ca1b6c1d512449a055\\\",\\\"SourceVersion\\\":\\\"fixture-r1\\\",\\\"RawContentHash\\\":\\\"sha256:54a8367d28338a2b6307f78737f76a2ec3f6cf2357b75a74a41fdc50997d241a\\\",\\\"OriginMetadata\\\":{\\\"external_content_fidelity\\\":\\\"verbatim\\\",\\\"external_content_format\\\":\\\"text/plain\\\",\\\"external_coverage\\\":\\\"full_document\\\",\\\"external_limitations_json\\\":\\\"[]\\\",\\\"external_object_id\\\":\\\"committed\\\",\\\"external_object_type\\\":\\\"api-response\\\",\\\"external_revision\\\":\\\"fixture-r1\\\",\\\"external_source_location\\\":\\\"https://example.test/committed\\\",\\\"external_source_namespace\\\":\\\"https://example.test\\\",\\\"external_source_schema\\\":\\\"external-source-envelope-v1\\\",\\\"external_source_system\\\":\\\"synthetic\\\",\\\"global_absence_inference_allowed\\\":\\\"false\\\"}},\\\"retained_bytes\\\":\\\"U3ludGhldGljIHJlcGxheSBmaXh0dXJlLgo=\\\"}],\\\"corrections\\\":[],\\\"history\\\":[],\\\"limitations\\\":[\\\"Retained bytes and original intake declarations are displayed as recorded; their fidelity is not presumed. Withdrawal does not decide truth or rewrite admission, parents, contradiction or supersession. Restoration clears withdrawal only.\\\",\\\"Source assessment is scoped to this exact snapshot. Missing historical provider revision prevents a conclusive historical correspondence or coverage finding. Statement support is independent of source provenance.\\\"]}\",\"decision\":\"approved\",\"reason\":\"TEST APPROVAL STUB: historical synthetic finding\",\"reviewer_id\":\"TEST APPROVAL STUB\"}"
+}

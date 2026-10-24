@@ -70,6 +70,8 @@ const (
 
 // ExternalSourceEnvelopeV1 carries one exact external source object into AHE.
 // The caller owns collection; AHE owns validation, hashing, receipt time, and persistence.
+// Revision is an externally assigned opaque version or snapshot identifier,
+// including a content digest. It need not be issued by the source provider.
 type ExternalSourceEnvelopeV1 struct {
 	SchemaVersion   string   `json:"schema_version"`
 	RequestID       string   `json:"request_id"`

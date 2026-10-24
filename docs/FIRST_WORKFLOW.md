@@ -45,7 +45,9 @@ Call `submit_text_source` through intake:
 Save `source_snapshot_id` and `extraction_view_id`. These example IDs identify
 this delivery; reuse them only for an exact retry. This is genuinely manual
 synthetic input. Real connector objects use `submit_external_source` with their
-observed provider identity, revision and coverage instead.
+observed source-object identity, externally assigned revision and coverage instead.
+The revision may be a digest of the exact captured content; it need not come
+from the provider. See [external intake](../INSTALL.md#bounded-external-intake-mcp-installation).
 
 Call `get_extractor_input` with:
 

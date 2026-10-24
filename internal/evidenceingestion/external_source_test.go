@@ -2,10 +2,75 @@ package evidenceingestion
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestCaptureExternalSourceWithCollectorAssignedRevision(t *testing.T) {
+	ctx := context.Background()
+	db := newMockSQLDB()
+	input := validExternalSourceEnvelope("collector-digest-first")
+	input.SourceSystem, input.SourceNamespace, input.ObjectType = "synthetic-api", "https://example.test", "response"
+	input.ObjectID, input.SourceLocation = "https://example.test/api/article", "https://example.test/api/article"
+	input.SourceCreatedAt, input.SourceUpdatedAt = "", ""
+	input.ContentFormat = ExternalSourceContentFormatJSON
+	input.Content = `{"article":"Synthetic article","request_stamp":"first"}`
+	// The collector chooses this numbering method independently of AHE's hash.
+	input.Revision = fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(input.Content)))
+	first, err := captureExternalSource(ctx, db, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replayed, err := captureExternalSource(ctx, db, input)
+	if err != nil || !replayed.Replayed || replayed.SourceSnapshotID != first.SourceSnapshotID {
+		t.Fatal("exact delivery did not replay", err)
+	}
+	observation := input
+	observation.RequestID = "collector-digest-observed"
+	observation.ObservedAt = "2026-10-24T01:00:00Z"
+	observed, err := captureExternalSource(ctx, db, observation)
+	if err != nil || observed.Replayed || observed.SourceSnapshotID != first.SourceSnapshotID || len(db.externalSourceReceipts) != 2 {
+		t.Fatal("same content did not retain snapshot with a new receipt", err)
+	}
+	for _, change := range []struct {
+		name   string
+		mutate func(*ExternalSourceEnvelopeV1)
+	}{
+		{"content", func(e *ExternalSourceEnvelopeV1) { e.Content += " " }},
+		{"provenance", func(e *ExternalSourceEnvelopeV1) { e.Title = "Different declaration" }},
+	} {
+		t.Run(change.name, func(t *testing.T) {
+			conflict := input
+			conflict.RequestID = "collector-digest-conflict-" + change.name
+			change.mutate(&conflict)
+			_, err := captureExternalSource(ctx, db, conflict)
+			assertKind(t, err, ErrorOccurrenceConflict)
+			if len(db.sourceSnapshots) != 1 || len(db.externalSourceReceipts) != 2 {
+				t.Fatal("conflicting delivery changed retained authority")
+			}
+		})
+	}
+	changed := input
+	changed.RequestID = "collector-digest-changed"
+	changed.Content = `{"article":"Synthetic article","request_stamp":"second"}`
+	changed.Revision = fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(changed.Content)))
+	second, err := captureExternalSource(ctx, db, changed)
+	if err != nil || second.SourceSnapshotID == first.SourceSnapshotID || second.Revision != changed.Revision {
+		t.Fatal("changed response with a new external revision did not produce a new snapshot", err)
+	}
+	// An opaque non-digest scheme is also valid; AHE does not prescribe hashing.
+	other := input
+	other.RequestID, other.ObjectID, other.Revision = "collector-sequence", "another-api-object", "collector-sequence:42"
+	if _, err := captureExternalSource(ctx, db, other); err != nil {
+		t.Fatal("collector sequence rejected", err)
+	}
+	if len(db.proposalOccurrences) != 0 {
+		t.Fatal("source capture created claims")
+	}
+}
 
 func TestPrepareExternalSourceBuildsProviderNeutralAuthority(t *testing.T) {
 	input := validExternalSourceEnvelope("external-1")

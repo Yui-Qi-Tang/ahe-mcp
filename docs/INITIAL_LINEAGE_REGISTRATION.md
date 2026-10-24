@@ -7,10 +7,10 @@ number and runtime profiles are not Product deployment instructions.
 
 ## When it applies
 
-An unchanged provider revision, statement and source refs can produce a new
+An unchanged externally assigned revision, statement and source refs can produce a new
 pending occurrence that resolves to the same canonical claim C. C cannot replace
 itself. An independently reviewed initial registration can assign C's first
-lineage membership without inventing a revision or re-admitting C.
+lineage membership without assigning another revision or re-admitting C.
 
 The complete admitted source-object manifest must contain exactly one external,
 verbatim `source_claim`: C. C must be unclassified and not withdrawn, have no

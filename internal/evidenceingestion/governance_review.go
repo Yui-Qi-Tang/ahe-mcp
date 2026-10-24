@@ -202,7 +202,7 @@ func loadGovernanceReview(ctx context.Context, tx sqlTx, req GovernanceRequest) 
 	if _, err := tx.exec(ctx, `SET LOCAL row_security=off`); err != nil {
 		return GovernanceReview{}, err
 	}
-	d := GovernanceDisplay{Contract: GovernanceReviewV1, Request: req, Materials: []GovernanceSource{}, Corrections: []CanonicalQueryResult{}, History: []GovernanceEventSummary{}, Limitations: []string{"Retained bytes and original intake declarations are displayed as recorded; their fidelity is not presumed. Withdrawal does not decide truth or rewrite admission, parents, contradiction or supersession. Restoration clears withdrawal only.", "Source assessment is scoped to this exact snapshot. Missing historical provider revision prevents a conclusive historical correspondence or coverage finding. Statement support is independent of source provenance."}}
+	d := GovernanceDisplay{Contract: GovernanceReviewV1, Request: req, Materials: []GovernanceSource{}, Corrections: []CanonicalQueryResult{}, History: []GovernanceEventSummary{}, Limitations: []string{"Retained bytes and original intake declarations are displayed as recorded; their fidelity is not presumed. Withdrawal does not decide truth or rewrite admission, parents, contradiction or supersession. Restoration clears withdrawal only.", "Source assessment is scoped to this exact snapshot and its originally declared source revision. External collectors choose revision identifiers; provider issuance is not required. A matching identifier or digest alone does not establish correspondence or coverage. Missing original revision or comparison material prevents a conclusive finding. Statement support is independent of source provenance."}}
 	if err := tx.queryRow(ctx, `SELECT store_id FROM evidence_governance_head WHERE singleton`).Scan(&d.StoreID); err != nil {
 		return GovernanceReview{}, err
 	}
@@ -275,7 +275,7 @@ func loadGovernanceReview(ctx context.Context, tx sqlTx, req GovernanceRequest) 
 			}
 			if (c.Criterion == evidenceuse.CorrespondenceV1 || c.Criterion == evidenceuse.CoverageV1) && c.Result != evidenceuse.CheckInconclusive && c.Result != evidenceuse.CheckUnknown {
 				if governanceProviderRevision(s.Snapshot) == "" || c.ComparedRevision != governanceProviderRevision(s.Snapshot) {
-					return GovernanceReview{}, fmt.Errorf("historical finding requires the original provider revision")
+					return GovernanceReview{}, fmt.Errorf("historical finding requires the originally declared source revision")
 				}
 				for _, m := range d.Materials {
 					if m.Snapshot.ID == c.MaterialRef && governanceProviderRevision(m.Snapshot) != c.ComparedRevision {
@@ -485,6 +485,9 @@ func ReadGovernanceHistory(ctx context.Context, pool *pgxpool.Pool, kind, target
 	return out, err
 }
 
+// governanceProviderRevision retains its historical name; external_revision is
+// the collector's declared identifier, not proof of provider issuance. Do not
+// substitute SourceVersion when an old external envelope lacks this declaration.
 func governanceProviderRevision(s SourceSnapshot) string {
 	if s.SourceSystem == SourceSystemExternalDocument {
 		return s.OriginMetadata["external_revision"]

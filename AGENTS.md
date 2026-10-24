@@ -73,7 +73,8 @@ test selection; follow the reporting rules in `CLAUDE.md` before comparing runs.
 
 ## Handoff
 
-For intake/review work, return provider identity and revision; source and
+For intake/review work, return source-object identity and the externally assigned
+revision (without implying provider issuance); source and
 extraction IDs; exact native review material with source excerpts, coverage,
 limitations and available version differences; readback states; any missing
 decision or capability; and whether canonical mutation occurred. Preserve

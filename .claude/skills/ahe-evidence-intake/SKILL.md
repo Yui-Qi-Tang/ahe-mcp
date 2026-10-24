@@ -30,7 +30,7 @@ compensate for information omitted from the evidence being proposed.
 Keep the two workflows separate. Brief provides a short reading orientation
 for explicitly selected news/public events; it is not engineering extraction
 or a completeness assessment. Do not convert provider content to `manual_text`
-to bypass a missing revision, connector or capability. Repository code and git
+to bypass the external source contract, connector or capability. Repository code and git
 extraction remain separate workflows.
 
 ## Preconditions
@@ -71,12 +71,13 @@ source intake operation.
 2. Preserve the exact connector-observed text or JSON as `content`. Do not use a
    summary, paraphrase, inferred reconstruction, or rendered text copied from a
    model response.
-3. Collect the provider-controlled source system, namespace, object type,
-   object ID, revision, title, location, timestamps, content format, and
-   observation time. Record the actual connector identity.
-4. Use the provider revision returned by the connector. If no reliable revision
-   is available, stop and explain the missing authority instead of inventing
-   one.
+3. Preserve the actual source system, namespace, object type, object ID, title,
+   location, available source timestamps, content format and observation time.
+   Record the actual connector identity.
+4. Supply `revision` using the external collector's version or snapshot
+   identification method. Provider versions and content digests are both allowed;
+   AHE does not require provider issuance or prescribe a numbering algorithm.
+   Do not label a collector-issued identifier as provider-issued.
 5. Describe coverage honestly:
    - `full_document` has no limitations.
    - `exact_excerpt` and `truncated_document` state what was omitted in
@@ -85,6 +86,15 @@ source intake operation.
 
 Do not include credentials, access tokens, connector secrets, or private chat
 content in the envelope or metadata.
+
+For example, a stable API URL can identify the source object, with
+`revision = "sha256:" + SHA256(response_body)` computed outside AHE over the
+exact submitted UTF-8 body. Keep the object identity stable across observations.
+No provider update timestamp, extra revision-kind field or archiving service is
+required. AHE computes its own content hash independently of this opaque revision.
+The digest identifies bytes; it does not establish provenance, coverage,
+freshness or semantic replacement. A response containing per-request values
+will have a different digest when those bytes change; retain those bytes.
 
 ## User-Controlled Granularity and Current Limits
 
@@ -126,11 +136,13 @@ truthful supported format such as `text/plain` and disclose its JSON origin;
 do not manufacture JSON wrappers. This is still external intake, not
 `manual_text` or a model-generated source.
 
-Keep the real provider object identity and revision. Different excerpts, or an
+Keep the real source-object identity and the externally assigned revision. Different excerpts, or an
 excerpt and the full body, can conflict under the same object/revision. Changing
-only the request ID cannot fix that conflict. Do not invent chunk object IDs or
-provider revisions, overwrite the stored source, or silently replace an earlier
-excerpt. Stop and report the conflict.
+only the request ID cannot fix that conflict. The external numbering method
+must distinguish different captured content; identical content with different
+source-level metadata can still conflict. Do not invent chunk object IDs,
+overwrite the stored source, or silently replace an earlier excerpt. Diagnose
+the conflict and follow the external numbering method for any new delivery.
 
 For issue #25, the product decision is to keep these limits and let the user
 control acquisition scope and claim granularity. Opening automatic JSON
@@ -148,13 +160,14 @@ and receipts. Never trim a native display or bypass its approval boundary.
    `external-source-envelope-v1` and the exact collected source.
 3. Retain the returned source snapshot ID, extraction view ID, hashes, receipt
    timestamps, revision, and replay state.
-4. If AHE reports that the same provider revision already exists with different
+4. If AHE reports that the same source-object/revision already exists with different
    content or provenance, stop. Re-read the connector data and revision; do not
    work around the conflict by changing only the request ID.
 
 A repeated observation of unchanged content may use a new request ID and create
 a new receipt over the same immutable snapshot. Changed content must carry a
-new provider revision and a new request ID.
+new external revision and a new request ID. New IDs do not approve claims or
+establish an independently reviewed replacement.
 
 ## Produce Grounded Proposals
 
@@ -229,7 +242,7 @@ Include:
 - proposed sentence;
 - exact source excerpts and their span IDs;
 - source title and location;
-- provider revision;
+- externally assigned source revision;
 - coverage and limitations;
 - comparison with a prior revision when one is available, otherwise an explicit
   statement that no comparable prior revision was available;
@@ -378,8 +391,9 @@ from that source object. All six basis fields determine the lineage key, while
 their semantic suitability still requires human review.
 
 Fresh-v2 requires matching old/new source-object identity in all four provider
-fields. Only a genuine same-object new revision can supply a fresh pending
-replacement. Do not rewrite connector identity to bridge per-commit IDs, file
+fields. A fresh pending replacement retains the same source object and its
+externally assigned revision; a new revision alone does not justify replacement.
+Do not rewrite connector identity to bridge per-commit IDs, file
 moves or a changed ID scheme. An already ordinarily admitted newer claim is not
 retrofitted or retired by this flow; disclose any duplicate admitted history.
 There is no redundancy marker or cross-object identity-migration operation in
@@ -396,7 +410,8 @@ the manifest. In fresh-v2, old targets become superseded; reassess the replaceme
 and do not revive its predecessors when it is withdrawn. Initial registration
 instead retains C and requires reassessing that same C under the complete policy.
 
-For unchanged same-C observations, do not self-target or invent a revision.
+For unchanged same-C observations, do not self-target or assign a new revision
+merely to claim a semantic replacement.
 A separately provisioned `initial-lineage-reviewer` can register first membership
 only for an unclassified singleton admitted external source object and an unused
 lineage. Call `get_initial_lineage_registration_review` with C, the persisted
@@ -427,7 +442,7 @@ Source intake/review does not itself expose endpoint admission. Generic derived
 admission and repository activation remain disabled. If the task
 needs these capabilities, report the unavailable workflow and stop. Do not
 substitute an ordinary statement, generic edge, fake replacement node, legacy
-profile, or direct SQL. Provider revision order alone does not prove semantic
+profile, or direct SQL. External revision order alone does not prove semantic
 replacement. Internal relation theory remains in
 [system design](../../../docs/SYSTEM_DESIGN.md#graph-relations-and-versions); it is not permission to
 execute a disabled writer. Repository code extraction is outside this skill.
@@ -437,7 +452,7 @@ execute a disabled writer. Repository code extraction is outside this skill.
 Report results per provider object and proposal:
 
 - source snapshot ID and extraction view ID;
-- provider object identity and revision;
+- source-object identity and externally assigned revision;
 - extraction attempt and proposal occurrence IDs;
 - admitted canonical reference and admission decision ID, when admitted;
 - rejected, `audit_only`, abstained, replayed, conflicted, or unprocessed state;

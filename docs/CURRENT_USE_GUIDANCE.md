@@ -21,8 +21,9 @@ it adds no writer, policy exception or permission to change evidence.
    explicit human decision with a reason. Discover the live schemas. If the
    capability, source material or decision is missing, report it and stop the
    dependent write/current-use path. Continue supported historical analysis.
-4. Do not manufacture revisions, source identities, semantic slots, parents or
-   positive assessments to pass a gate. Do not change policy to escape a failed
+4. Newly assigned revisions do not by themselves clear a current-use gate. Do
+   not fabricate source identities, semantic slots, parents or positive
+   assessments to pass a gate. Do not change policy to escape a failed
    requirement, enable legacy writers, edit canonical records or use direct SQL.
 5. After an authorized change, reread the affected bases under the same policy.
    After planning/SAT, call `check_current_evidence_plan` with every action and
@@ -50,8 +51,9 @@ For an external source claim, the governed replacement flow is
 `admit_reviewed_supersession`, through `supersession-reviewer`.
 It requires all of the following:
 
-- A fresh **pending** external source-claim occurrence grounded in a genuine
-  new provider revision, and 1–64 older admitted external source-claim targets.
+- A fresh **pending** external source-claim occurrence grounded in an exact
+  source snapshot with an externally assigned revision, and 1–64 older admitted
+  external source-claim targets. A new revision alone does not justify replacement.
   An already ordinarily admitted replacement cannot be retrofitted by this flow.
 - Matching old/new `source_system`, `source_namespace`, `object_type` and
   `object_id`, faithfully identifying the actual provider object. Do not split
@@ -128,7 +130,7 @@ Do not set completeness flags yourself or assume another retry will repair data.
 | `unknown_conflict_peer` | A contradiction peer is missing, unconfirmed or explicitly blocked; blocked. | Follow the related edge, inspect the peer and resolve its actual reasons when supported. A blocked peer cannot make its own conflict disappear. Stop if peer authority remains unknown. |
 | `ineligible_parent` | A required AND parent is blocked or excluded; that outcome propagates. | Follow `related_id` to the parent's reasons. Apply only the parent's supported flow, then reassess descendants. Do not drop parents or wrap them in another derivation. Immutable ancestry cannot be rewritten through this gate. |
 | `source_check:retained-byte-integrity/v1` | Required or existing source findings fail or remain unresolved. | Inspect the exact snapshot/hash and source findings. `get_source_assessment_review` → approved `apply_reviewed_source_assessment` through `source-assessment-reviewer` can record supported findings/resolutions. A genuine pass is required where the policy demands it; absent proof means stop. Original bytes are not repaired by an assessment. |
-| `source_check:provider-revision-correspondence/v1` | Source correspondence is missing, failed, conflicting or inconclusive under the policy. | Use the same exact source-assessment flow with material bound to the original provider revision. Today's content or matching revision text alone cannot establish historical correspondence. If historical comparison is unavailable, preserve the uncertainty and stop dependent use. |
+| `source_check:provider-revision-correspondence/v1` | Source correspondence is missing, failed, conflicting or inconclusive under the policy. | This historical criterion name does not require provider-issued numbering. Use the same exact source-assessment flow with material bound to the originally declared external revision and snapshot. Today's content, matching revision text or a self-computed digest alone cannot establish source correspondence. If comparison material is unavailable, preserve the uncertainty and stop dependent use. |
 | `source_check:declared-source-coverage/v1` | Source coverage findings do not satisfy the policy. | Review the exact snapshot and original coverage declaration through the source-assessment flow. Corrected annotations do not rewrite the declaration or count as positive checks. Resolve all applicable findings explicitly; if coverage cannot be established, stop or use independently captured/admitted suitable evidence. |
 | `admission_not_confirmed` | Canonical admission is not confirmed; blocked. | Inspect `get_evidence_record` and its exact occurrence/receipt. A genuinely pending supported occurrence needs its own source or endpoint review and explicit admission decision. An inconsistent existing canonical record needs diagnosis, not re-admission. Admission alone does not resolve currentness. |
 | `missing_node` | The requested or required canonical node is absent from the snapshot; blocked. | Verify the exact ID/store with `get_evidence_record`. Correct a caller ID only from observed authority; missing ancestry needs diagnosis. Stop when the required record cannot be established. |

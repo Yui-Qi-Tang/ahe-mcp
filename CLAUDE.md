@@ -122,17 +122,21 @@ identity is separate, and database audit text alone is not authentication. Read
   separately from source coverage. No observed fabrication is not completeness.
 - Submit connector-observed text or JSON exactly. Never replace source content
   with a model summary or paraphrase.
-- Use provider identity and revision metadata from the connector. Never invent
-  a provider revision to make changed content pass validation.
+- Preserve the actual source-object identity. The external collector chooses
+  `revision`, an opaque source version or snapshot identifier; it need not be
+  issued by the provider. A content digest is allowed. Do not present a
+  collector-issued identifier as provider-issued or alter source identity to
+  bypass a conflict. AHE validates retained bindings, not the issuing method.
 - Reuse a request ID only for an exact retry. A new delivery uses a new request
-  ID; changed content requires a new provider revision.
+  ID; changed content requires a new external revision. The same object/revision
+  cannot be rebound to different content or source-level metadata.
 - Ground every proposal in persisted span IDs. Abstain when no supported
   proposal is warranted.
 - Always provide a stable extractor definition name and version. Supply
   `producer_session_ref` only when a stable, non-secret reference exists; omit
   it rather than inventing one.
 - Before admission, show the human the proposed sentence, exact excerpts,
-  source title and location, coverage and limitations, provider revision, and
+  source title and location, coverage and limitations, external revision, and
   the version difference when a comparable prior revision exists.
 - Obtain `get_source_claim_review` for each exact attempt/occurrence and show
   its complete native display. After an explicit decision and reason, use
@@ -171,7 +175,8 @@ uncertain outcomes require the unchanged original request. `exact_replay_only`
 is historical material and permits only the original retry. Read currentness
 with the returned lineage key; it does not prove provider freshness or truth.
 Repository code, derived endpoints and already ordinarily admitted replacements
-are outside fresh-v2. Never relabel an endpoint or manufacture a revision.
+are outside fresh-v2. Never relabel an endpoint or treat a newly assigned
+revision as proof of semantic replacement.
 
 Pending fresh reviewed v2 locks `proposal → governance → supersession head`.
 Its historical replay still locks the original proposal and performs complete
