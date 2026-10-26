@@ -235,14 +235,25 @@ Oversized, incomplete, conflicting or unavailable review material stops the
 decision path; do not trim it or fall back to a legacy writer.
 
 Before asking for a decision, check for conflicts with existing evidence. Call
-`suggest_intake_conflicts` for every pending statement occurrence, with a
-`scan_limit` that covers the store (at most 1000), and keep each result. Do not
-skip this step because candidates are only suggestions; if the tool is
-unavailable or fails, say so in the review material. For each proposal, report
-the candidate claims with their match kinds and source coordinates, or state
-"no candidates within the reported limits", together with the coverage and
-truncation fields. Point out candidates whose statements may be incompatible
-and offer a contradiction review (see
+`suggest_intake_conflicts` for every pending statement occurrence and keep each
+result. The scan is bounded: it reads at most `scan_limit` claims (maximum 1000)
+in canonical-ID order, with no pagination, so it cannot cover a larger store.
+Use the largest supported `scan_limit`, and say that claims beyond it were not
+searched. Report one of three states for each occurrence, together with the
+scan/return limits, truncation and other coverage fields:
+
+- candidates: the candidate claims with their match kinds and source
+  coordinates;
+- no candidates within the reported limits;
+- check failed or unavailable (for example, the tool is not exposed in the
+  current profile), with the error. Never report a failure as zero candidates.
+
+Do not skip this step because candidates are only suggestions. The conflict
+check is supplementary material, not part of the native review display: a
+failed check or truncation does not by itself stop or permit the decision.
+Report it and let the human decide; do not infer either outcome. Point out
+candidates whose statements may be incompatible and offer a contradiction
+review (see
 [Independent Contradiction Review](#independent-contradiction-review-and-intake-suggestions)).
 Candidates are not verdicts, and an empty result is not proof of no conflict.
 
@@ -259,8 +270,8 @@ Include:
 - comparison with a prior revision when one is available, otherwise an explicit
   statement that no comparable prior revision was available;
 - any uncertainty that affects interpretation;
-- the conflict candidates from `suggest_intake_conflicts` and their coverage
-  limits, or an explicit "no candidates within the reported limits";
+- the conflict check state for each occurrence (candidates, no candidates
+  within the reported limits, or failed/unavailable) and its coverage limits;
 - the extraction coverage notes, including known omissions, separately from
   the unmodified native display.
 
@@ -318,7 +329,10 @@ another profile to obtain write access.
    `get_references_review`. Show the **complete native display**, including
    source excerpts, code path/revision where applicable, all rules, mapping,
    coverage and limitations. Graph connectivity or a model-written card is
-   not a substitute.
+   not a substitute. Also run `suggest_intake_conflicts` on the origin
+   occurrence of each statement endpoint (for `implements`, the specification
+   and its statement parents) and report the results as in the
+   [Human Review Stop](#human-review-stop).
 3. Obtain approval of this exact directed relation with a reason. Reuse a
    complete, valid existing human decision for the unchanged native subject;
    otherwise show the review and ask. Approval of the nodes, a prior relation
@@ -352,7 +366,7 @@ ancestry remains bounded to 64 nodes and depth 8, with unchanged byte/display
 limits; do not omit parents or invent intermediate claims merely to fit a cap.
 
 Before the review, run `suggest_intake_conflicts` on the origin occurrence of the
-derived statement and of each statement parent, and report the candidates as in
+derived statement and of each statement parent, and report the results as in
 the [Human Review Stop](#human-review-stop).
 
 Show the complete native display and ancestor source context. Nested
@@ -489,7 +503,10 @@ The separately provisioned `contradiction-reviewer` exposes
 `get_contradiction_review` and `apply_reviewed_contradiction`. Discover their live
 schemas. Select both admitted endpoints, grounded rationale when available,
 explicit scope/conditions, producer identity and symmetric `contradicts` effect.
-Show the entire native display with sources and limitations. Node admission is
+Show the entire native display with sources and limitations. Run
+`suggest_intake_conflicts` on the origin occurrence of both endpoints and report
+the results as in the [Human Review Stop](#human-review-stop); other candidates
+may belong to the same disagreement. Node admission is
 not relation approval. Only after an explicit human `approved`, `reject` or
 `audit_only` decision and reason, copy unchanged `display.request` as `review`
 and `subject` as `expected_subject` with a stable request ID. Launcher binds the

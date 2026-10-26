@@ -256,9 +256,12 @@ and disabled in standard profiles. Query exposes actual edges and review receipt
 
 Before presenting any statement proposal, derived endpoint or relation for a
 decision, run `suggest_intake_conflicts` on each pending statement occurrence
-(and on the origin occurrences of statement parents). Show the candidates and
-their coverage limits in the review material, even when there are none. The
-intake tool `suggest_intake_conflicts` reads bounded candidates for a
+and on the origin occurrence of each statement endpoint or statement parent.
+The scan is bounded (at most 1000 claims, no pagination). Show the candidates,
+an explicit empty result or the failure, with coverage and truncation limits;
+never report a failure as zero candidates. Whether to proceed after a failed or
+truncated check is the human's decision. The intake tool
+`suggest_intake_conflicts` reads bounded candidates for a
 persisted statement proposal using external object identity, recorded or
 explicitly hinted slots, direct relations and lexical overlap. Inspect matching
 basis, snapshot and all coverage/truncation limits. A slot hint creates no binding;
