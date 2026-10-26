@@ -254,7 +254,14 @@ reopened. Correcting an erroneous relation requires a future explicit lifecycle;
 do not manufacture duplicate nodes. Legacy contradiction writers remain internal
 and disabled in standard profiles. Query exposes actual edges and review receipts.
 
-The intake tool `suggest_intake_conflicts` reads bounded candidates for a
+Before presenting any statement proposal, derived endpoint or relation for a
+decision, run `suggest_intake_conflicts` on each pending statement occurrence
+and on the origin occurrence of each statement endpoint or statement parent.
+The scan is bounded (at most 1000 claims, no pagination). Show the candidates,
+an explicit empty result or the failure, with coverage and truncation limits;
+never report a failure as zero candidates. Whether to proceed after a failed or
+truncated check is the human's decision. The intake tool
+`suggest_intake_conflicts` reads bounded candidates for a
 persisted statement proposal using external object identity, recorded or
 explicitly hinted slots, direct relations and lexical overlap. Inspect matching
 basis, snapshot and all coverage/truncation limits. A slot hint creates no binding;
