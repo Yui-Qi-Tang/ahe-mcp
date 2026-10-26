@@ -20,6 +20,77 @@ import (
 func contradictionTestRequest(a, b, id string) ContradictionReviewRequest {
 	return ContradictionReviewRequest{ProposalRequestID: id, NodeAID: a, NodeBID: b, Rationale: "TEST APPROVAL STUB: these synthetic claims conflict in the declared scope", Scope: "synthetic release and identical operating conditions", Conditions: []string{"same synthetic time window"}, ProducerName: "synthetic-test", ProducerVersion: "v1", Relation: "contradicts"}
 }
+
+func TestIntegrationReviewedContradictionLargeSources(t *testing.T) {
+	for _, decision := range []string{"approved", "reject", "audit_only"} {
+		t.Run(decision, func(t *testing.T) {
+			ctx, pool := integrationPoolWithMigrations(t)
+			sources := make(map[string][]byte)
+			claim := func(name string, size int) string {
+				t.Helper()
+				statement := "Synthetic retained statement " + name
+				raw := []byte(statement + "\n")
+				raw = append(raw, bytes.Repeat([]byte("x"), size-len(raw))...)
+				sources[name] = raw
+				got, err := IngestManualText(ctx, pool, ManualTextInput{SourceID: name, SourceVersion: "v1", Raw: raw, RequestID: name, AttemptNumber: 1}, FrozenExtractorOutput{Proposals: []ExtractorProposalOutput{{ProposalLocalID: "claim", StatementText: statement, EvidenceRefs: []string{"span:S1"}}}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				admitted, err := AdmitPendingProposal(ctx, pool, AdmissionInput{ProposalOccurrenceID: got.ProposalOccurrenceID, DecisionBy: "TEST APPROVAL STUB", DecisionReason: "TEST APPROVAL STUB: synthetic source claim"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return admitted.CanonicalRef
+			}
+			a, b := claim("small", 2400), claim("full-page-sized", 124103)
+			review, err := LoadContradictionReview(ctx, pool, contradictionTestRequest(a, b, "large-source-pair"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			original, err := json.Marshal(review.Display)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(original)*6+32768 <= governanceEventMaxBytes {
+				t.Fatal("fixture does not exercise the former size refusal")
+			}
+			if len(review.Display.Sources) != len(sources) {
+				t.Fatal("review omitted a retained source")
+			}
+			for _, source := range review.Display.Sources {
+				if !bytes.Equal(source.RetainedBytes, sources[source.Snapshot.SourceID]) {
+					t.Fatal("review changed retained source bytes")
+				}
+			}
+			var proposals int
+			if err = pool.QueryRow(ctx, `SELECT count(*) FROM canonical_contradiction_proposals`).Scan(&proposals); err != nil || proposals != 0 {
+				t.Fatal("getter consumed pair", err)
+			}
+			in := ReviewedContradictionInput{RequestID: "large-source-decision", Review: review.Display.Request, ExpectedSubject: review.Subject, Decision: decision, DecisionReason: "TEST APPROVAL STUB: synthetic independent relation decision", ReviewerID: "TEST APPROVAL STUB"}
+			receipt, err := ApplyReviewedContradiction(ctx, pool, in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			saved, err := json.Marshal(receipt.Display)
+			if err != nil || !bytes.Equal(saved, original) || receipt.Subject != review.Subject {
+				t.Fatal("receipt changed the exact display or subject", err)
+			}
+			var bodySize int
+			if err = pool.QueryRow(ctx, `SELECT octet_length(body) FROM canonical_contradiction_review_bindings WHERE receipt_id=$1`, receipt.ID).Scan(&bodySize); err != nil || bodySize > governanceEventMaxBytes {
+				t.Fatal("receipt exceeds database bound", err)
+			}
+			again, err := ApplyReviewedContradiction(ctx, pool, in)
+			if err != nil || !again.Replayed || again.ID != receipt.ID {
+				t.Fatal("large receipt exact replay", err)
+			}
+			historical, err := LoadContradictionReview(ctx, pool, in.Review)
+			if err != nil || historical.Mode != "exact_replay_only" || historical.Subject != review.Subject {
+				t.Fatal("large receipt historical getter", err)
+			}
+		})
+	}
+}
+
 func TestIntegrationReviewedContradictionLifecycle(t *testing.T) {
 	ctx, pool := integrationPoolWithMigrations(t)
 	if _, err := migrations.VerifyCurrent(ctx, pool); err != nil {

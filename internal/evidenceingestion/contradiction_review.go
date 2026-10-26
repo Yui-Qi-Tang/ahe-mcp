@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/jackc/pgx/v5"
@@ -199,11 +200,38 @@ func loadContradictionReview(ctx context.Context, tx sqlTx, req ContradictionRev
 	if err != nil {
 		return ContradictionReview{}, err
 	}
-	// Reserve the decision envelope and JSON-string escaping, including control bytes.
-	if len(raw)*6+32768 > governanceEventMaxBytes {
-		return ContradictionReview{}, newDomainError(ErrorInvalidInput, "contradiction review exceeds bounded receipt size")
+	if err := validateContradictionDisplaySize(raw, d.Proposal); err != nil {
+		return ContradictionReview{}, err
 	}
 	return ContradictionReview{Subject: governanceDigest("contradiction-review:sha256:", raw), Display: d, Mode: "pending_decision"}, nil
+}
+
+// Reserve the actual nested encoding without changing the reviewed bytes.
+// Approval has the largest envelope: it includes the edge and its provenance.
+// The unknown decision fields use their maximum permitted lengths and escaping.
+func validateContradictionDisplaySize(raw []byte, proposal CanonicalContradictionProposal) error {
+	decisionID, err := canonicalContradictionDecisionID(proposal.ID, admissionOutcomeAdmitted)
+	if err != nil {
+		return err
+	}
+	edge := buildCanonicalContradictionEdge(proposal, decisionID)
+	body, err := json.Marshal(contradictionReviewBody{
+		Contract: ReviewedContradictionV1, RequestID: strings.Repeat("\x01", 200),
+		Subject: governanceDigest("contradiction-review:sha256:", raw), Display: string(raw),
+		Decision: CanonicalContradictionDecision{
+			ID: decisionID, ProposalID: proposal.ID, Outcome: admissionOutcomeAdmitted,
+			CanonicalEdgeID: edge.ID, DecisionBy: strings.Repeat("\x01", 200),
+			DecisionReason: strings.Repeat("\x01", 2000),
+		},
+		Edge: edge,
+	})
+	if err != nil {
+		return err
+	}
+	if len(body) > governanceEventMaxBytes {
+		return newDomainError(ErrorInvalidInput, "contradiction review exceeds bounded receipt size")
+	}
+	return nil
 }
 
 // ApplyReviewedContradiction commits only the reviewed pair. The profile can
