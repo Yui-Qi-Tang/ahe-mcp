@@ -234,6 +234,18 @@ batch; it does not approve other members or prove coverage of the source.
 Oversized, incomplete, conflicting or unavailable review material stops the
 decision path; do not trim it or fall back to a legacy writer.
 
+Before asking for a decision, check for conflicts with existing evidence. Call
+`suggest_intake_conflicts` for every pending statement occurrence, with a
+`scan_limit` that covers the store (at most 1000), and keep each result. Do not
+skip this step because candidates are only suggestions; if the tool is
+unavailable or fails, say so in the review material. For each proposal, report
+the candidate claims with their match kinds and source coordinates, or state
+"no candidates within the reported limits", together with the coverage and
+truncation fields. Point out candidates whose statements may be incompatible
+and offer a contradiction review (see
+[Independent Contradiction Review](#independent-contradiction-review-and-intake-suggestions)).
+Candidates are not verdicts, and an empty result is not proof of no conflict.
+
 Display the complete native review material for each numbered proposal. A
 short navigation card may accompany it, but must not replace the exact display.
 Include:
@@ -247,6 +259,8 @@ Include:
 - comparison with a prior revision when one is available, otherwise an explicit
   statement that no comparable prior revision was available;
 - any uncertainty that affects interpretation;
+- the conflict candidates from `suggest_intake_conflicts` and their coverage
+  limits, or an explicit "no candidates within the reported limits";
 - the extraction coverage notes, including known omissions, separately from
   the unmodified native display.
 
@@ -336,6 +350,10 @@ bytes and qualifications; do not invent a manual source for the derivation.
 The same per-node limit applies to independent implements review. Complete AND
 ancestry remains bounded to 64 nodes and depth 8, with unchanged byte/display
 limits; do not omit parents or invent intermediate claims merely to fit a cap.
+
+Before the review, run `suggest_intake_conflicts` on the origin occurrence of the
+derived statement and of each statement parent, and report the candidates as in
+the [Human Review Stop](#human-review-stop).
 
 Show the complete native display and ancestor source context. Nested
 source-basis effects are provenance context, not source approval. Copy the
