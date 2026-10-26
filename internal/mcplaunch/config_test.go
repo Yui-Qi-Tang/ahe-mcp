@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/dbrole"
 )
 
 func validConfigFields() map[string]string {
@@ -27,19 +29,57 @@ func encodeConfig(t *testing.T, fields map[string]string) []byte {
 	return body
 }
 
-func TestParseConfigClosedContract(t *testing.T) {
-	for _, profile := range []string{"query", "intake", "source-claim-reviewer", "relation-reviewer", "contradiction-reviewer", "initial-lineage-reviewer"} {
+func TestParseConfigProfiles(t *testing.T) {
+	binaries := map[string]string{
+		"query":                      "ahe-query-mcp",
+		"intake":                     "ahe-ingest-mcp",
+		"source-claim-reviewer":      "ahe-ingest-mcp",
+		"relation-reviewer":          "ahe-ingest-mcp",
+		"endpoint-reviewer":          "ahe-ingest-mcp",
+		"contradiction-reviewer":     "ahe-ingest-mcp",
+		"initial-lineage-reviewer":   "ahe-ingest-mcp",
+		"supersession-reviewer":      "ahe-ingest-mcp",
+		"withdrawal-reviewer":        "ahe-ingest-mcp",
+		"source-assessment-reviewer": "ahe-ingest-mcp",
+		"repository-intake":          "ahe-ingest-mcp",
+		"core-records":               "ahe-ingest-mcp",
+	}
+	profiles := dbrole.ProfileNames()
+	if len(profiles) != len(binaries) {
+		t.Errorf("database profiles = %d, launcher test cases = %d", len(profiles), len(binaries))
+	}
+	for _, profile := range profiles {
 		t.Run(profile, func(t *testing.T) {
+			binary, ok := binaries[profile]
+			if !ok {
+				t.Fatal("database profile has no explicit launcher test case")
+			}
 			fields := validConfigFields()
 			fields["profile"] = profile
-			if profile != "query" {
-				fields["binary_path"] = "/trusted/ahe-ingest-mcp"
+			fields["binary_path"] = "/trusted/" + binary
+			if profile == "repository-intake" {
+				fields["repository_root"] = "/synthetic/repository"
+				fields["repository_id"] = "synthetic:repo"
 			}
 			if cfg, err := parseConfig(encodeConfig(t, fields)); err != nil || cfg.Profile != profile {
 				t.Fatalf("closed valid profile rejected: %v", err)
 			}
+			for _, wrongBinary := range []string{"ahe-query-mcp", "ahe-ingest-mcp", "other-mcp"} {
+				if wrongBinary == binary {
+					continue
+				}
+				t.Run(wrongBinary, func(t *testing.T) {
+					fields["binary_path"] = "/trusted/" + wrongBinary
+					if _, err := parseConfig(encodeConfig(t, fields)); !errors.Is(err, errConfig) {
+						t.Fatalf("wrong binary returned %v, want errConfig", err)
+					}
+				})
+			}
 		})
 	}
+}
+
+func TestParseConfigClosedContract(t *testing.T) {
 	for name, mutate := range map[string]func(map[string]string){
 		"unknown field":        func(v map[string]string) { v["decision_by"] = "secret-marker" },
 		"missing field":        func(v map[string]string) { delete(v, "role") },
@@ -159,31 +199,41 @@ func TestDatabaseURLExactTargetAndDefaults(t *testing.T) {
 }
 
 func TestChildEnvironmentIsolation(t *testing.T) {
-	cfg, err := parseConfig(encodeConfig(t, validConfigFields()))
-	if err != nil {
-		t.Fatal(err)
-	}
-	inherited := []string{"HOME=/synthetic/home", "LANG=zh_TW.UTF-8", "PATH=/hostile/bin", "PGHOST=hostile", "PGSERVICE=hostile", "PGPASSFILE=/hostile/file", "DATABASE_DSN=hostile", "AHE_DATABASE_ROLE=hostile", "AHE_RUNTIME_PRINCIPAL_ID=hostile", "AHE_SOURCE=hostile", "DYLD_INSERT_LIBRARIES=hostile", "LD_PRELOAD=hostile", "GOFLAGS=hostile", "GODEBUG=hostile", "SSL_CERT_FILE=hostile", "SECRET=hostile"}
-	before := append([]string{}, inherited...)
-	result := childEnvironment(inherited, cfg, "synthetic-credential")
-	if !reflect.DeepEqual(inherited, before) {
-		t.Fatal("launcher mutated the inherited environment")
-	}
-	got := make(map[string]string)
-	for _, entry := range result {
-		key, value, _ := strings.Cut(entry, "=")
-		if _, duplicate := got[key]; duplicate || strings.Contains(value, "hostile") {
-			t.Fatal("unsafe or duplicate inherited value reached the child")
-		}
-		got[key] = value
-	}
-	want := map[string]string{
-		"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": "/synthetic/home", "LANG": "zh_TW.UTF-8",
-		"DATABASE_DSN": "synthetic-credential", "AHE_RUNTIME_PRINCIPAL_ID": cfg.PrincipalID,
-		"AHE_RUNTIME_PROFILE": cfg.Profile, "AHE_DATABASE_ROLE": cfg.Role, "AHE_DATABASE_SCHEMA": cfg.Schema,
-	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatal("child environment differs from the closed expected allowlist")
+	for _, profile := range []string{"query", "withdrawal-reviewer", "source-assessment-reviewer"} {
+		t.Run(profile, func(t *testing.T) {
+			fields := validConfigFields()
+			fields["profile"] = profile
+			fields["principal_id"] = "launcher:test-" + profile
+			if profile != "query" {
+				fields["binary_path"] = "/trusted/ahe-ingest-mcp"
+			}
+			cfg, err := parseConfig(encodeConfig(t, fields))
+			if err != nil {
+				t.Fatal(err)
+			}
+			inherited := []string{"HOME=/synthetic/home", "LANG=zh_TW.UTF-8", "PATH=/hostile/bin", "PGHOST=hostile", "PGSERVICE=hostile", "PGPASSFILE=/hostile/file", "DATABASE_DSN=hostile", "AHE_DATABASE_ROLE=hostile", "AHE_DATABASE_SCHEMA=hostile", "AHE_RUNTIME_PRINCIPAL_ID=hostile", "AHE_RUNTIME_PROFILE=hostile", "AHE_SOURCE=hostile", "DYLD_INSERT_LIBRARIES=hostile", "LD_PRELOAD=hostile", "GOFLAGS=hostile", "GODEBUG=hostile", "SSL_CERT_FILE=hostile", "SECRET=hostile"}
+			before := append([]string{}, inherited...)
+			result := childEnvironment(inherited, cfg, "synthetic-credential")
+			if !reflect.DeepEqual(inherited, before) {
+				t.Fatal("launcher mutated the inherited environment")
+			}
+			got := make(map[string]string)
+			for _, entry := range result {
+				key, value, _ := strings.Cut(entry, "=")
+				if _, duplicate := got[key]; duplicate || strings.Contains(value, "hostile") {
+					t.Fatal("unsafe or duplicate inherited value reached the child")
+				}
+				got[key] = value
+			}
+			want := map[string]string{
+				"PATH": "/usr/bin:/bin:/usr/sbin:/sbin", "HOME": "/synthetic/home", "LANG": "zh_TW.UTF-8",
+				"DATABASE_DSN": "synthetic-credential", "AHE_RUNTIME_PRINCIPAL_ID": cfg.PrincipalID,
+				"AHE_RUNTIME_PROFILE": cfg.Profile, "AHE_DATABASE_ROLE": cfg.Role, "AHE_DATABASE_SCHEMA": cfg.Schema,
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatal("child environment differs from the closed expected allowlist")
+			}
+		})
 	}
 }
 
