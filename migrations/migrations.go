@@ -20,6 +20,8 @@ import (
 var upFiles embed.FS
 
 var requiredTablesByMigration = map[string][]string{
+	manualReviewProfileMigration:                 {"source_manual_review_profiles"},
+	historicalDerivationMigration:                {"canonical_historical_derivation_reviews"},
 	"000060_initial_lineage_registration.up.sql": {"canonical_initial_lineage_registrations"},
 	contradictionReviewMigration:                 {"canonical_contradiction_review_bindings"},
 	governanceMigration:                          {"evidence_governance_head", "canonical_withdrawal_events", "source_assessment_events"},
@@ -200,6 +202,8 @@ var requiredTablesByMigration = map[string][]string{
 }
 
 var requiredTables = []string{
+	"source_manual_review_profiles",
+	"canonical_historical_derivation_reviews",
 	"canonical_contradiction_review_bindings",
 	"evidence_governance_head", "canonical_withdrawal_events", "source_assessment_events",
 	"endpoint_disposition_review_bindings", "endpoint_review_requests", "supersession_review_bindings",
@@ -309,7 +313,7 @@ var requiredAdmissionFunctions = []requiredAdmissionFunction{
 	{Name: "canonical_supersession_member_authority_trigger", Result: "trigger", SourceSHA256: "sha256:827898d1c32868b0189dd52c6a2419d2fe03a4a74de7ff7edad8f0bf5ce18572", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "canonical_supersession_members"},
 	{Name: "canonical_supersession_target_authority_trigger", Result: "trigger", SourceSHA256: "sha256:db6bf2e4da9fe32bc0f282a49cab34193af2ae22096935379346630efd4a5c07", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "canonical_supersession_replacement_targets"},
 	{Name: "canonical_supersession_proposal_authority_trigger", Result: "trigger", SourceSHA256: "sha256:6a003b71a26405ad5e1623b0f1d4bfa86ee3ac54cb427b7778ae38308fa9d047", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "proposal_occurrences"},
-	{Name: "source_claim_disposition_review_assert_v1", Arguments: "text", Result: "void", SourceSHA256: "sha256:6f707e370f3de9847b3f0baee2486acc06dfdb657ce711070b8dd72170b42187", OwnerTable: "source_claim_disposition_review_bindings"},
+	{Name: "source_claim_disposition_review_assert_v1", Arguments: "text", Result: "void", SourceSHA256: "sha256:fc71f5afbc52fee128f69d5f879c955fe9a0c5d50785d477b269843c455a5701", OwnerTable: "source_claim_disposition_review_bindings"},
 	{Name: "reviewed_lifecycle_authority_trigger_v1", Arguments: "", Result: "trigger", SourceSHA256: "sha256:22ffe4b790aa4a7ccc239afcdf1abb59528f4dfd451ee1cd4836ea262961af9d", SecurityDefiner: true, SearchPath: "search_path=pg_catalog", OwnerTable: "supersession_review_bindings"},
 	{Name: "canonical_supersession_lock_targets_v1", Arguments: "text[]", Result: "SETOF text", SourceSHA256: "sha256:444d7797e11f0befa95293d460c7961c0c5ad6ffc637a1ae74c4ad8353836a56", SecurityDefiner: true, SearchPath: "schema-pinned", OwnerTable: "canonical_graph_nodes"},
 	{Name: "endpoint_disposition_review_assert_v1", Arguments: "text", Result: "void", SourceSHA256: "sha256:0d75a791b37232719df90e39bca0daf1a3045926d20b529adc3cb61720719bb0", SecurityDefiner: false, SearchPath: "", OwnerTable: "endpoint_disposition_review_bindings"},
@@ -429,7 +433,7 @@ var requiredAdmissionFunctions = []requiredAdmissionFunction{
 		Name:         "canonical_source_claim_review_binding_assert_v1",
 		Arguments:    "text",
 		Result:       "void",
-		SourceSHA256: "sha256:d174d287f2330914be38bfb49d1e7977efb94a610c41fef5a3ca1a483bf857d8",
+		SourceSHA256: "sha256:0bff2f768ca48c4c24f7f07e8f97842c03c22c05f60d24685a27b849770b9716",
 		OwnerTable:   "canonical_source_claim_review_bindings",
 	},
 	{
@@ -890,7 +894,7 @@ var requiredCanonicalSupersessionConstraints = []requiredCanonicalSupersessionCo
 
 var requiredAdmissionConstraints = []requiredCanonicalSupersessionConstraint{
 	{Table: "admission_decisions", Name: "admission_decisions_supersession_review_contract_ck", Type: "c", Definition: "CHECK (((supersession_review_binding_contract_version IS NULL) OR ((supersession_review_binding_contract_version = 'reviewed-supersession-admission/v1'::text) AND (outcome = 'admitted'::text) AND (review_binding_contract_version IS NULL) AND (disposition_review_binding_contract_version IS NULL))))"},
-	{Table: "admission_decisions", Name: "admission_decisions_disposition_review_contract_ck", Type: "c", Definition: "CHECK (((disposition_review_binding_contract_version IS NULL) OR ((disposition_review_binding_contract_version = ANY (ARRAY['reviewed-source-claim-disposition/v1'::text, 'reviewed-endpoint-disposition/v1'::text])) AND (review_binding_contract_version IS NULL) AND (outcome = ANY (ARRAY['rejected'::text, 'audit_only'::text])) AND (canonical_ref IS NULL) AND (raw_evidence_node_ids = '[]'::jsonb) AND (canonical_edge_ids = '[]'::jsonb))))"},
+	{Table: "admission_decisions", Name: "admission_decisions_disposition_review_contract_ck", Type: "c", Definition: "CHECK (((disposition_review_binding_contract_version IS NULL) OR ((disposition_review_binding_contract_version = ANY (ARRAY['reviewed-source-claim-disposition/v1'::text, 'reviewed-endpoint-disposition/v1'::text, 'historical-derivation-admission/v1'::text])) AND (review_binding_contract_version IS NULL) AND (outcome = ANY (ARRAY['rejected'::text, 'audit_only'::text])) AND (canonical_ref IS NULL) AND (raw_evidence_node_ids = '[]'::jsonb) AND (canonical_edge_ids = '[]'::jsonb))))"},
 	{Table: "supersession_review_bindings", Name: "supersession_review_bindings_reviewed_lifecycle", Type: "t", Definition: "TRIGGER DEFERRABLE INITIALLY DEFERRED", Deferrable: true, InitiallyDeferred: true},
 	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_review_subject_not_null", Type: "n", Definition: "NOT NULL review_subject", Deferrable: false, InitiallyDeferred: false},
 	{Table: "endpoint_disposition_review_bindings", Name: "endpoint_disposition_review_bindings_display_payload_not_null", Type: "n", Definition: "NOT NULL display_payload", Deferrable: false, InitiallyDeferred: false},
@@ -1090,7 +1094,7 @@ var requiredAdmissionConstraints = []requiredCanonicalSupersessionConstraint{
 		Name:       "admission_decisions_review_binding_contract_ck",
 		Table:      "admission_decisions",
 		Type:       "c",
-		Definition: "CHECK (((review_binding_contract_version IS NULL) OR (review_binding_contract_version = ANY (ARRAY['reviewed-source-claim-admission/v1'::text, 'reviewed-endpoint-admission/v1'::text]))))",
+		Definition: "CHECK (((review_binding_contract_version IS NULL) OR (review_binding_contract_version = ANY (ARRAY['reviewed-source-claim-admission/v1'::text, 'reviewed-endpoint-admission/v1'::text, 'historical-derivation-admission/v1'::text]))))",
 	},
 	{
 		Name:       "canonical_source_claim_review_bindings_pkey",

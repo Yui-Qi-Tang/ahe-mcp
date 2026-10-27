@@ -34,6 +34,19 @@ func (b *Backend) Tools() []mcpstdio.Tool {
 			{Name: ToolExtract, Title: "Extract Go Code Proposals", Description: "Run the deterministic Go parser against a persisted snapshot of the launcher repository. At most 256 files and 8 MiB. Create pending proposals and an inactive generation only; never execute source code, fetch dependencies, retry failed extraction automatically or admit evidence. Read exact proposal IDs with Query (lifecycle_scope=all); generation is not activated.", InputSchema: object(map[string]any{"request_id": text(200), "repository_snapshot_id": text(200)}), Annotations: annotation(false)},
 		}
 	}
+	if b.profile == ProfileHistoricalReviewer {
+		review := object(map[string]any{
+			"proposal_occurrence_id": text(200),
+			"derivation": object(map[string]any{
+				"parent_node_ids": map[string]any{"type": "array", "items": text(200), "minItems": 1, "maxItems": evidenceingestion.ReviewedDerivationMaxParents, "uniqueItems": true},
+				"method":          text(4000), "producer": text(200), "trace_ref": text(500),
+			}),
+		})
+		return []mcpstdio.Tool{
+			{Name: ToolHistoricalReview, Title: "Review Historical Derivation", Description: "Read complete native sources, all required AND ancestors and recorded governance states for a new historical derivation. The conclusion need not appear in any source text. One to 32 sorted parents; existing node, depth and byte limits apply. Display current assessments as context only. This node will permanently be ineligible for current use. No writes, truth or entailment judgment.", InputSchema: review, Annotations: annotation(true)},
+			{Name: ToolHistoricalDecision, Title: "Record Historical Derivation Decision", Description: "After explicit human approved, reject or audit_only of the complete unchanged historical review, submit the exact request, subject and reason. Approval atomically creates an immutable historical-only derived claim and its full AND basis; decline preserves a terminal receipt without a node. Reviewer is launcher-bound. Exact retries return the original receipt. This approval cannot authorize current use or other relations.", InputSchema: object(map[string]any{"request_id": text(200), "review": review, "expected_subject": text(200), "decision": map[string]any{"type": "string", "enum": []string{"approved", "reject", "audit_only"}}, "decision_reason": text(2000)}), Annotations: annotation(false)},
+		}
+	}
 	review := object(map[string]any{
 		"kind":                   map[string]any{"type": "string", "enum": []string{"repository_code", "derived_spec"}},
 		"proposal_occurrence_id": text(200),

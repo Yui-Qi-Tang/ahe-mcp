@@ -182,13 +182,14 @@ const (
 
 // ManualTextInput is the legacy source input shared by manual text, code-file, and connector-text intake.
 type ManualTextInput struct {
-	SourceSystem   string
-	SourceID       string
-	SourceVersion  string
-	Raw            []byte
-	OriginMetadata map[string]string
-	RequestID      string
-	AttemptNumber  int
+	ManualReviewProfile *ManualReviewProfileInput `json:"ManualReviewProfile,omitempty"`
+	SourceSystem        string
+	SourceID            string
+	SourceVersion       string
+	Raw                 []byte
+	OriginMetadata      map[string]string
+	RequestID           string
+	AttemptNumber       int
 }
 
 // SourceIntakeResult is returned after raw manual text has been fixed as source authority.
@@ -777,6 +778,7 @@ type ProposalOccurrence struct {
 
 // MaterializedBatch is a formal EvidenceProposalBatch for Slice 1.
 type MaterializedBatch struct {
+	ManualReviewProfile     *ManualReviewProfileBinding `json:"ManualReviewProfile,omitempty"`
 	SourceSnapshot          SourceSnapshot
 	ExtractionView          ExtractionView
 	Spans                   []SpanEntry
@@ -803,6 +805,7 @@ type IngestResult struct {
 
 // ProposalQueryResult is the internal query result for a proposal occurrence.
 type ProposalQueryResult struct {
+	ManualReviewProfile        *ManualReviewProfileBinding `json:"ManualReviewProfile,omitempty"`
 	UseState                   *EvidenceUseProjection      `json:"use_state,omitempty"`
 	EndpointDisposition        *EndpointDispositionReceipt `json:"endpoint_disposition,omitempty"`
 	ProposalOccurrenceID       string
@@ -937,6 +940,8 @@ type RepositoryRelationNeighborResult struct {
 // DerivationAdmissionInput turns one pending statement proposal into a derived
 // canonical claim whose complete parent set is required.
 type DerivationAdmissionInput struct {
+	// Server-selected only; never decoded from generic caller JSON.
+	useClass      string
 	ParentNodeIDs []string
 	Method        string
 	Producer      string

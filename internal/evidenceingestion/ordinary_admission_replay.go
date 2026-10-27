@@ -78,7 +78,7 @@ func admissionDerivationReplayMatches(
 	}
 	got := metadata.Derivation
 	want := expected.derivation
-	if got.ID != want.ID ||
+	if got.UseClass != want.UseClass || got.ID != want.ID ||
 		got.NodeID != want.NodeID ||
 		got.Method != want.Method ||
 		got.Producer != want.Producer ||

@@ -92,7 +92,7 @@ func TestIntegrationRoleUpgradePreservesIdentityAndEvidence(t *testing.T) {
 					t.Fatalf("upgrade through ApplyUp: changed=%t err=%v", changed, err)
 				}
 				status, err := migrations.VerifyCurrent(ctx, pool)
-				if err != nil || status.AppliedMigrations != 60 {
+				if err != nil || status.AppliedMigrations != 62 {
 					t.Fatalf("upgraded schema: %+v %v", status, err)
 				}
 			}
@@ -459,6 +459,19 @@ func roleUpgradeRows(t *testing.T, ctx context.Context, pool *pgxpool.Pool, base
 	for _, rule := range baseline.Manifests[ProfileQuery].Tables {
 		var body []byte
 		row := "to_jsonb(r)"
+		// Compare every original column, separately checking that upgrade did
+		// not retrofit source qualification or reclassify an ordinary node.
+		if rule.Table == "source_snapshots" || rule.Table == "canonical_derivations" {
+			column, expected := "manual_profile_capture_xid", "null"
+			if rule.Table == "canonical_derivations" {
+				column, expected = "use_class", `"ordinary"`
+			}
+			var changed int
+			if err := pool.QueryRow(ctx, "SELECT count(*) FROM "+pgx.Identifier{"evidence", rule.Table}.Sanitize()+" r WHERE to_jsonb(r) ? $1 AND to_jsonb(r)->$1 IS DISTINCT FROM $2::jsonb", column, expected).Scan(&changed); err != nil || changed != 0 {
+				t.Fatal("upgrade changed added authority classification", rule.Table, changed, err)
+			}
+			row = "(to_jsonb(r)-'" + column + "')"
+		}
 		query := "SELECT COALESCE(jsonb_agg(" + row + " ORDER BY " + row + "::text),'[]'::jsonb) FROM " + pgx.Identifier{"evidence", rule.Table}.Sanitize() + " r"
 		if rule.Table == "schema_migrations" {
 			query += " WHERE migration_name < '000050_'"

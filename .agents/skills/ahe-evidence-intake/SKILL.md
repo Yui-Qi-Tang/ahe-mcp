@@ -114,3 +114,13 @@ Return a compact, directly inspectable package containing:
 
 Never place credentials, tokens, DSNs, private conversation text, or raw
 company data beyond what the authorized review requires in the handoff.
+
+## Historical derivation boundary
+
+Follow the [historical contract](../../../docs/HISTORICAL_DERIVATION.md). A derived
+judgment may be new rather than quoted; trace all declared parents and induction
+context without calling premise excerpts the conclusion's original text.
+`historical_only` and its required descendants cannot obtain current clearance.
+Query history uses `kind=historical_derivation` and the original occurrence;
+readback never authorizes a write or promotion. The separate historical profile
+requires its own exact human decision, not a current approval or failed current gate.

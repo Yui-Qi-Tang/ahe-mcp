@@ -22,7 +22,7 @@ func TestRuntimeProfileRequiresExplicitExactName(t *testing.T) {
 			t.Fatalf("invalid profile did not fail closed with a safe error: %v", err)
 		}
 	}
-	if got := RuntimeProfileNames(); !reflect.DeepEqual(got, []string{"initial-lineage-reviewer", "contradiction-reviewer", "withdrawal-reviewer", "source-assessment-reviewer", "supersession-reviewer", "core-records", "intake", "source-claim-reviewer", "legacy-reviewer", "legacy-operator", "relation-reviewer", "endpoint-reviewer", "repository-intake"}) {
+	if got := RuntimeProfileNames(); !reflect.DeepEqual(got, []string{"initial-lineage-reviewer", "contradiction-reviewer", "withdrawal-reviewer", "source-assessment-reviewer", "supersession-reviewer", "core-records", "intake", "source-claim-reviewer", "legacy-reviewer", "legacy-operator", "relation-reviewer", "endpoint-reviewer", "historical-derivation-reviewer", "repository-intake"}) {
 		t.Fatalf("unexpected accepted profile inventory: %v", got)
 	}
 }

@@ -16,13 +16,14 @@ type attemptContext struct {
 }
 
 type manualSourceContext struct {
-	RequestID          string
-	RequestPayloadHash string
-	Raw                []byte
-	SourceSnapshot     SourceSnapshot
-	ExtractionView     ExtractionView
-	SpanCatalogVersion string
-	Spans              []SpanEntry
+	ManualReviewProfile *ManualReviewProfileBinding
+	RequestID           string
+	RequestPayloadHash  string
+	Raw                 []byte
+	SourceSnapshot      SourceSnapshot
+	ExtractionView      ExtractionView
+	SpanCatalogVersion  string
+	Spans               []SpanEntry
 }
 
 func buildManualSourceContext(input ManualTextInput) (manualSourceContext, error) {
@@ -34,18 +35,23 @@ func buildManualSourceContext(input ManualTextInput) (manualSourceContext, error
 	if err != nil {
 		return manualSourceContext{}, err
 	}
+	profile, err := buildManualReviewProfile(input, snapshot)
+	if err != nil {
+		return manualSourceContext{}, err
+	}
 	payloadHash, err := sourceIntakePayloadHash(input, snapshot, view)
 	if err != nil {
 		return manualSourceContext{}, err
 	}
 	return manualSourceContext{
-		RequestID:          input.RequestID,
-		RequestPayloadHash: payloadHash,
-		Raw:                append([]byte(nil), input.Raw...),
-		SourceSnapshot:     snapshot,
-		ExtractionView:     view,
-		SpanCatalogVersion: contract.SpanCatalogVersion,
-		Spans:              spans,
+		RequestID:           input.RequestID,
+		RequestPayloadHash:  payloadHash,
+		Raw:                 append([]byte(nil), input.Raw...),
+		SourceSnapshot:      snapshot,
+		ManualReviewProfile: profile,
+		ExtractionView:      view,
+		SpanCatalogVersion:  contract.SpanCatalogVersion,
+		Spans:               spans,
 	}, nil
 }
 
@@ -73,15 +79,16 @@ func sourceIntakePayloadHash(input ManualTextInput, snapshot SourceSnapshot, vie
 		return "", err
 	}
 	data, err := deterministicJSON(struct {
-		SourceSystem        string            `json:"source_system"`
-		SourceID            string            `json:"source_id"`
-		SourceVersion       string            `json:"source_version"`
-		RawContentHash      string            `json:"raw_content_hash"`
-		OriginMetadata      map[string]string `json:"origin_metadata"`
-		RendererName        string            `json:"renderer_name"`
-		RendererVersion     string            `json:"renderer_version"`
-		RenderedContentHash string            `json:"rendered_content_hash"`
-		SpanCatalogVersion  string            `json:"span_catalog_version"`
+		SourceSystem        string                    `json:"source_system"`
+		SourceID            string                    `json:"source_id"`
+		SourceVersion       string                    `json:"source_version"`
+		RawContentHash      string                    `json:"raw_content_hash"`
+		OriginMetadata      map[string]string         `json:"origin_metadata"`
+		RendererName        string                    `json:"renderer_name"`
+		RendererVersion     string                    `json:"renderer_version"`
+		RenderedContentHash string                    `json:"rendered_content_hash"`
+		SpanCatalogVersion  string                    `json:"span_catalog_version"`
+		ManualReviewProfile *ManualReviewProfileInput `json:"manual_review_profile,omitempty"`
 	}{
 		SourceSystem:        snapshot.SourceSystem,
 		SourceID:            input.SourceID,
@@ -92,6 +99,7 @@ func sourceIntakePayloadHash(input ManualTextInput, snapshot SourceSnapshot, vie
 		RendererVersion:     view.RendererVersion,
 		RenderedContentHash: view.RenderedContentHash,
 		SpanCatalogVersion:  contract.SpanCatalogVersion,
+		ManualReviewProfile: input.ManualReviewProfile,
 	})
 	if err != nil {
 		return "", fmt.Errorf("serializing source intake payload identity: %w", err)
@@ -386,6 +394,7 @@ func materializeBatch(ctx attemptContext, fixture FrozenExtractorOutput) (Materi
 	}
 	return MaterializedBatch{
 		SourceSnapshot:      ctx.SourceSnapshot,
+		ManualReviewProfile: cloneManualReviewProfile(ctx.ManualReviewProfile),
 		ExtractionView:      ctx.ExtractionView,
 		Spans:               ctx.Spans,
 		ExtractorDefinition: ctx.ExtractorDefinition,

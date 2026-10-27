@@ -290,11 +290,11 @@ func endpointSourcePreflight(ctx context.Context, tx sqlTx, attempt string) erro
 func loadEndpointAncestors(ctx context.Context, tx sqlTx, parents []string, display *EndpointReviewDisplay) error {
 	// A virtual new root applies the same complete AND/depth/size limits as implements.
 	const proposedRoot = "endpoint:proposed-root"
-	headers, err := recursiveImplementsClosure(ctx, proposedRoot, func(ctx context.Context, id string) (recursiveImplementsHeader, error) {
+	headers, err := derivationClosure(ctx, proposedRoot, ReviewedDerivationMaxParents, func(ctx context.Context, id string) (recursiveImplementsHeader, error) {
 		if id == proposedRoot {
 			return recursiveImplementsHeader{kind: evidencegraph.CanonicalDerivedClaim, parents: parents}, nil
 		}
-		return loadRecursiveImplementsHeader(ctx, tx, id)
+		return loadDerivationHeader(ctx, tx, id, ReviewedDerivationMaxParents)
 	})
 	if err != nil {
 		return err
@@ -307,7 +307,7 @@ func loadEndpointAncestors(ctx context.Context, tx sqlTx, parents []string, disp
 	slices.Sort(ids)
 	total := 0
 	for _, id := range ids {
-		node, _, err := loadDerivedImplementsAdmittedNode(ctx, tx, id, headers[id].kind)
+		node, _, err := loadAdmittedNodeForDerivation(ctx, tx, id, headers[id].kind, ReviewedDerivationMaxParents)
 		if err != nil {
 			return err
 		}
@@ -363,6 +363,11 @@ func AdmitReviewedEndpoint(ctx context.Context, pool *pgxpool.Pool, input Review
 				return err
 			}
 			if input.Review.Kind == "derived_spec" && p.AdmissionOutcome == admissionOutcomePending {
+				// Current and historical derivations take the same lock order:
+				// never hold the head while waiting for the derivation lock.
+				if _, err := tx.exec(ctx, `SELECT pg_advisory_xact_lock($1)`, derivationAdmissionLockKey); err != nil {
+					return err
+				}
 				if err := lockGovernance(ctx, tx); err != nil {
 					return err
 				}

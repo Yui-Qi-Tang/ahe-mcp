@@ -31,18 +31,19 @@ func encodeConfig(t *testing.T, fields map[string]string) []byte {
 
 func TestParseConfigProfiles(t *testing.T) {
 	binaries := map[string]string{
-		"query":                      "ahe-query-mcp",
-		"intake":                     "ahe-ingest-mcp",
-		"source-claim-reviewer":      "ahe-ingest-mcp",
-		"relation-reviewer":          "ahe-ingest-mcp",
-		"endpoint-reviewer":          "ahe-ingest-mcp",
-		"contradiction-reviewer":     "ahe-ingest-mcp",
-		"initial-lineage-reviewer":   "ahe-ingest-mcp",
-		"supersession-reviewer":      "ahe-ingest-mcp",
-		"withdrawal-reviewer":        "ahe-ingest-mcp",
-		"source-assessment-reviewer": "ahe-ingest-mcp",
-		"repository-intake":          "ahe-ingest-mcp",
-		"core-records":               "ahe-ingest-mcp",
+		"query":                          "ahe-query-mcp",
+		"intake":                         "ahe-ingest-mcp",
+		"source-claim-reviewer":          "ahe-ingest-mcp",
+		"relation-reviewer":              "ahe-ingest-mcp",
+		"endpoint-reviewer":              "ahe-ingest-mcp",
+		"historical-derivation-reviewer": "ahe-ingest-mcp",
+		"contradiction-reviewer":         "ahe-ingest-mcp",
+		"initial-lineage-reviewer":       "ahe-ingest-mcp",
+		"supersession-reviewer":          "ahe-ingest-mcp",
+		"withdrawal-reviewer":            "ahe-ingest-mcp",
+		"source-assessment-reviewer":     "ahe-ingest-mcp",
+		"repository-intake":              "ahe-ingest-mcp",
+		"core-records":                   "ahe-ingest-mcp",
 	}
 	profiles := dbrole.ProfileNames()
 	if len(profiles) != len(binaries) {

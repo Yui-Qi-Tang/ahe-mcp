@@ -141,6 +141,10 @@ func verifyFixedCoreSchemaObjects(ctx context.Context, db tableQueryer, migratio
 		)
 		ownerTable := "canonical_propositions"
 		switch required.Migration {
+		case manualReviewProfileMigration:
+			ownerTable = "source_manual_review_profiles"
+		case historicalDerivationMigration:
+			ownerTable = "canonical_historical_derivation_reviews"
 		case contradictionReviewMigration:
 			ownerTable = "canonical_contradiction_review_bindings"
 		case governanceMigration:

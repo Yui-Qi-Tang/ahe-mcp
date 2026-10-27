@@ -356,6 +356,11 @@ func assembleCanonicalReadArtifact(
 		return evidencegraph.CanonicalArtifact{}, err
 	}
 	artifact.Derivations = derivations
+	for _, d := range artifact.Derivations {
+		if d.UseClass != "" {
+			artifact.SchemaVersion = evidencegraph.CanonicalHistoricalSchemaVersion
+		}
+	}
 	sortCanonicalReadArtifact(&artifact)
 	snapshotID, err := canonicalReadSnapshotID(artifact)
 	if err != nil {
@@ -386,6 +391,7 @@ func loadCanonicalReadDerivations(
 			d.producer,
 			d.trace_ref,
 			d.provenance_ref,
+			coalesce(nullif(d.use_class,'ordinary'),''),
 			p.parent_node_id,
 			p.canonical_edge_id
 		FROM canonical_derivations d
@@ -400,7 +406,7 @@ func loadCanonicalReadDerivations(
 
 	byNode := make(map[string]*evidencegraph.DerivationRecord, len(derivedNodeIDs))
 	for rows.Next() {
-		var derivationID, nodeID, method, producer, traceRef, provenanceRef, parentID, edgeID string
+		var derivationID, nodeID, method, producer, traceRef, provenanceRef, useClass, parentID, edgeID string
 		if err := rows.Scan(
 			&derivationID,
 			&nodeID,
@@ -408,6 +414,7 @@ func loadCanonicalReadDerivations(
 			&producer,
 			&traceRef,
 			&provenanceRef,
+			&useClass,
 			&parentID,
 			&edgeID,
 		); err != nil {
@@ -431,6 +438,7 @@ func loadCanonicalReadDerivations(
 		derivation, exists := byNode[nodeID]
 		if !exists {
 			derivation = &evidencegraph.DerivationRecord{
+				UseClass:      useClass,
 				ID:            derivationID,
 				NodeID:        nodeID,
 				Method:        method,
@@ -439,7 +447,7 @@ func loadCanonicalReadDerivations(
 				ProvenanceRef: provenanceRef,
 			}
 			byNode[nodeID] = derivation
-		} else if derivation.ID != derivationID || derivation.Method != method || derivation.Producer != producer || derivation.TraceRef != traceRef || derivation.ProvenanceRef != provenanceRef {
+		} else if derivation.UseClass != useClass || derivation.ID != derivationID || derivation.Method != method || derivation.Producer != producer || derivation.TraceRef != traceRef || derivation.ProvenanceRef != provenanceRef {
 			return nil, fmt.Errorf("canonical node %q has conflicting persisted derivation data", nodeID)
 		}
 		derivation.Parents = append(derivation.Parents, parentID)

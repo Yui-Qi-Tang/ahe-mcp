@@ -389,6 +389,34 @@ node or edge. Preserve the complete request for uncertain-outcome retry. Show
 original decision, never a new review. Query its occurrence to read
 `endpoint_disposition`. Source disposition is not a workaround for endpoints.
 
+## Exact Historical Derivation Review
+
+Use only a separately provisioned `historical-derivation-reviewer` for an
+explicitly requested historical judgment. A new conclusion need not appear in
+source text. Retain the actual proposal carrier and complete declared AND parents,
+source excerpts, method, producer, trace, scope and limitations; quotes belong to
+premises. Never invent a document containing the conclusion.
+
+Run the same bounded conflict suggestions on the pending occurrence and statement
+parents. Call `get_historical_derivation_review` with 1–32 unique sorted parent IDs
+and the derivation metadata. Show the entire native display, including governance
+states and each derived ancestor's own carrier. Withdrawal, supersession,
+contradiction or incomplete extra assessments are disclosed; broken source or
+ancestry bindings still reject a fresh write. The system does not judge entailment.
+
+After an exact explicit human `approved`, `reject` or `audit_only` decision and
+reason, call `apply_historical_derivation_decision` with the unchanged review,
+subject and stable request ID. Reviewer comes from the launcher. Do not send
+`use_policy`, `use_class` or `reviewer_id`, even empty. History is permanently
+ineligible for current use, including required descendants; no promotion exists.
+Current gate failure alone does not authorize this different purpose.
+
+Query `get_evidence_governance_history` with `kind=historical_derivation` and the
+original proposal occurrence. Preserve exact retry inputs and distinguish terminal
+receipt replay from new approval. Qualified manual parents need native optional
+`manual_review_profile` at their first source-only capture, not retrofitted metadata.
+See [the historical and manual qualification contract](../../../docs/HISTORICAL_DERIVATION.md).
+
 ## Reviewed Fresh-v2 Supersession
 
 Use only a separately provisioned `supersession-reviewer`. Keep the new external

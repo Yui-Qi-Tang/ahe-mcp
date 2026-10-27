@@ -86,6 +86,7 @@ work remain separate under the contracts below.
   its dedicated atomic admission and read-only currentness tools.
 - Standard ingestion profiles are separately authorized `core-records`, `intake`,
   `source-claim-reviewer`, `repository-intake`, `endpoint-reviewer`,
+  `historical-derivation-reviewer`,
   `supersession-reviewer`, `initial-lineage-reviewer`, `relation-reviewer`,
   `withdrawal-reviewer`, `source-assessment-reviewer` and `contradiction-reviewer`.
   Bounded exact-reviewed derived/code endpoints use the
@@ -202,6 +203,22 @@ occurrence and creates no canonical evidence. Show lifecycle alongside the
 historical display; Query reads `endpoint_disposition` using the occurrence ID.
 Admission and disposition share request-ID authority. Changed decisions are not
 retries, and source disposition tools cannot substitute for endpoint review.
+
+## Historical Derivation Review
+
+Use only the separate `historical-derivation-reviewer` and the [native historical
+contract](docs/HISTORICAL_DERIVATION.md). `get_historical_derivation_review` returns
+complete sources, required AND ancestry, derivation context and recorded governance
+states. New conclusions need not occur in the original source text; quotations
+belong to premises. After an exact explicit human decision and reason, use
+`apply_historical_derivation_decision` with the unchanged review and subject.
+Approved history is permanently ineligible for current use, including required
+descendants; reject/audit_only creates no canonical node. Caller policy, class and
+reviewer fields are forbidden. Current approval cannot substitute for historical
+approval, or vice versa. Query history uses the original proposal occurrence.
+Preserve exact retry inputs. Existing conflict-suggestion and human review rules
+apply. Qualified manual parents require native first-capture metadata; never retrofit
+missing authority or treat historical admission as a current-gate workaround.
 
 ## Reviewed Withdrawal and Source Assessments
 

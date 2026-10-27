@@ -63,7 +63,7 @@ func legacyIngestionTools() []mcpstdio.Tool {
 		{
 			Name:        evidenceingestionmcp.ToolSubmitTextSource,
 			Title:       "Submit Text Source",
-			Description: "Persist raw UTF-8 natural-language or code-file bytes as source authority for a later proposal producer.",
+			Description: evidenceingestionmcp.SubmitTextSourceDescription,
 			InputSchema: submitTextSourceSchema(),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &write,
@@ -681,6 +681,14 @@ func submitManualEvidenceSchema() map[string]any {
 func submitTextSourceSchema() map[string]any {
 	properties := manualSourceProperties()
 	properties["source_system"] = stringSchema("Optional source system: manual_text (default) or code_file.")
+	properties["manual_review_profile"] = objectSchema(map[string]any{
+		"contract_version": map[string]any{"type": "string", "enum": []string{evidenceingestion.ManualSourceReviewProfileV1}},
+		"title":            boundedStringSchema("Declared manual source title.", evidenceingestion.ManualReviewTitleMaxBytes),
+		"location":         boundedStringSchema("Declared manual source locator; not provider authentication.", evidenceingestion.ManualReviewLocationMaxBytes),
+		"coverage":         map[string]any{"type": "string", "enum": []string{evidenceingestion.ManualReviewCoverageSubmittedText, evidenceingestion.ManualReviewCoverageExactExcerpt}},
+		"limitations": map[string]any{"type": "array", "maxItems": evidenceingestion.ManualReviewLimitationsMaxCount,
+			"items": boundedStringSchema("Manual source limitation; exact_excerpt requires at least one.", evidenceingestion.ManualReviewLimitationMaxBytes)},
+	}, []string{"contract_version", "title", "location", "coverage", "limitations"})
 	return objectSchema(properties, []string{
 		"source_id",
 		"source_version",

@@ -88,7 +88,7 @@ func TestIntegrationReviewedLifecycleUpgradeAndGuards(t *testing.T) {
 // Compare all original fields and refuse any invented review classification.
 func upgradeHistoricalRows(t *testing.T, table, raw string) string {
 	t.Helper()
-	if table != "admission_decisions" {
+	if table != "admission_decisions" && table != "source_snapshots" && table != "canonical_derivations" {
 		return raw
 	}
 	var rows []map[string]json.RawMessage
@@ -96,6 +96,22 @@ func upgradeHistoricalRows(t *testing.T, table, raw string) string {
 		t.Fatal(err)
 	}
 	for _, row := range rows {
+		if table == "source_snapshots" {
+			if value, exists := row["manual_profile_capture_xid"]; exists {
+				if string(value) != "null" {
+					t.Fatal("upgrade retroactively qualified source capture")
+				}
+				delete(row, "manual_profile_capture_xid")
+			}
+		}
+		if table == "canonical_derivations" {
+			if value, exists := row["use_class"]; exists {
+				if string(value) != `"ordinary"` {
+					t.Fatal("upgrade reclassified ordinary derivation")
+				}
+				delete(row, "use_class")
+			}
+		}
 		if value, exists := row["supersession_review_binding_contract_version"]; exists {
 			if string(value) != "null" {
 				t.Fatal("upgrade relabeled a historical decision as reviewed supersession")

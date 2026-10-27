@@ -183,7 +183,20 @@ func TestIntegrationGovernanceConcurrentNativeWritersAndDerivedCommit(t *testing
 				}
 				var workers sync.WaitGroup
 				defer func() { _ = blocker.Rollback(context.Background()); cancel(); workers.Wait() }()
-				key := derivationAdmissionLockKey
+				key := int64(180059)
+				if !writerFirst {
+					// Pause after the derived writer owns governance; its earlier
+					// derivation-lock wait no longer owns that fence.
+					_, err := pool.Exec(ctx, fmt.Sprintf(`CREATE FUNCTION issue18_pause_derived() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF current_setting('application_name')='issue18-derived-writer' THEN PERFORM pg_advisory_xact_lock(%d); END IF;
+ RETURN NULL;
+END $$;
+CREATE TRIGGER issue18_pause_derived AFTER INSERT ON canonical_derivations FOR EACH STATEMENT EXECUTE FUNCTION issue18_pause_derived()`, key))
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
 				if writerFirst {
 					key = 180058
 					_, err := pool.Exec(ctx, fmt.Sprintf(`CREATE FUNCTION issue18_pause_writer() RETURNS trigger LANGUAGE plpgsql AS $$

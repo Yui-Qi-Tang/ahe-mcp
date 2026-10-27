@@ -123,12 +123,13 @@ type SubmitManualEvidenceRequest struct {
 
 // SubmitTextSourceRequest is the bounded Slice 4 source-only intake input.
 type SubmitTextSourceRequest struct {
-	RequestID      string            `json:"request_id,omitempty"`
-	SourceSystem   string            `json:"source_system,omitempty"`
-	SourceID       string            `json:"source_id"`
-	SourceVersion  string            `json:"source_version"`
-	RawText        string            `json:"raw_text"`
-	OriginMetadata map[string]string `json:"origin_metadata,omitempty"`
+	ManualReviewProfile *evidenceingestion.ManualReviewProfileInput `json:"manual_review_profile,omitempty"`
+	RequestID           string                                      `json:"request_id,omitempty"`
+	SourceSystem        string                                      `json:"source_system,omitempty"`
+	SourceID            string                                      `json:"source_id"`
+	SourceVersion       string                                      `json:"source_version"`
+	RawText             string                                      `json:"raw_text"`
+	OriginMetadata      map[string]string                           `json:"origin_metadata,omitempty"`
 }
 
 // SubmitExternalSourceRequest is the provider-neutral external source envelope.
@@ -697,7 +698,7 @@ func (s *Server) Tools() []ToolDefinition {
 		},
 		{
 			Name:        ToolSubmitTextSource,
-			Description: "Submit raw UTF-8 natural-language or code-file source authority without creating proposals.",
+			Description: SubmitTextSourceDescription,
 			Write:       true,
 		},
 		{
@@ -910,6 +911,9 @@ func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]b
 		return data, nil
 	case ToolSubmitTextSource:
 		var req SubmitTextSourceRequest
+		if err := validateManualProfileRequest(payload); err != nil {
+			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
+		}
 		if err := decodeStrict(payload, &req); err != nil {
 			return nil, &ToolError{Code: toolErrorInvalidRequest, Message: err.Error(), cause: err}
 		}
@@ -2089,13 +2093,22 @@ func (s *Server) SubmitExtractorOutput(ctx context.Context, req SubmitExtractorO
 
 // SubmitTextSource persists raw UTF-8 source authority for later extractor use.
 func (s *Server) SubmitTextSource(ctx context.Context, req SubmitTextSourceRequest) (SubmitTextSourceResponse, error) {
+	if req.ManualReviewProfile != nil {
+		if req.SourceSystem != "" && req.SourceSystem != evidenceingestion.SourceSystemManualText {
+			return SubmitTextSourceResponse{}, &ToolError{Code: toolErrorInvalidRequest, Message: "manual_review_profile requires manual_text"}
+		}
+		if err := evidenceingestion.ValidateManualReviewProfileInput(*req.ManualReviewProfile); err != nil {
+			return SubmitTextSourceResponse{}, mapToolError(err)
+		}
+	}
 	result, err := s.core.CaptureManualSource(ctx, evidenceingestion.ManualTextInput{
-		SourceSystem:   req.SourceSystem,
-		SourceID:       req.SourceID,
-		SourceVersion:  req.SourceVersion,
-		Raw:            []byte(req.RawText),
-		OriginMetadata: cloneStringMap(req.OriginMetadata),
-		RequestID:      req.RequestID,
+		ManualReviewProfile: req.ManualReviewProfile,
+		SourceSystem:        req.SourceSystem,
+		SourceID:            req.SourceID,
+		SourceVersion:       req.SourceVersion,
+		Raw:                 []byte(req.RawText),
+		OriginMetadata:      cloneStringMap(req.OriginMetadata),
+		RequestID:           req.RequestID,
 	})
 	if err != nil {
 		return SubmitTextSourceResponse{}, mapToolError(err)

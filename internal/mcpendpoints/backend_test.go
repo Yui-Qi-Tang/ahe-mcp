@@ -12,9 +12,57 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+func TestHistoricalRequestsRejectCallerPurposeAndAuthorityBeforeDatabase(t *testing.T) {
+	b, err := NewBackend(&pgxpool.Pool{}, runtimeauth.Principal{ID: "TEST APPROVAL STUB"}, ProfileHistoricalReviewer, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := func() map[string]any {
+		return map[string]any{"proposal_occurrence_id": "occ:synthetic", "derivation": map[string]any{"parent_node_ids": []string{"canon-node:a"}, "method": "synthetic", "producer": "TEST APPROVAL STUB", "trace_ref": "synthetic:trace"}}
+	}
+	for _, mutate := range []func(map[string]any){
+		func(r map[string]any) { r["reviewer_id"] = "caller" },
+		func(r map[string]any) { r["use_class"] = "ordinary" },
+		func(r map[string]any) { r["derivation"].(map[string]any)["use_policy"] = "current-action/v1" },
+		func(r map[string]any) { r["derivation"].(map[string]any)["use_policy"] = "" },
+		func(r map[string]any) { r["derivation"].(map[string]any)["use_class"] = "ordinary" },
+		func(r map[string]any) { r["derivation"] = nil },
+		func(r map[string]any) { r["derivation"].(map[string]any)["parent_node_ids"] = []string{} },
+		func(r map[string]any) {
+			r["derivation"].(map[string]any)["parent_node_ids"] = []string{"canon-node:a", "canon-node:a"}
+		},
+		func(r map[string]any) { r["derivation"].(map[string]any)["parent_node_ids"] = make([]string, 33) },
+	} {
+		r := request()
+		mutate(r)
+		raw, err := json.Marshal(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := b.CallTool(t.Context(), ToolHistoricalReview, raw); err == nil {
+			t.Fatal("invalid historical request accepted", err)
+		}
+	}
+	for _, mutate := range []func(map[string]any){
+		func(r map[string]any) { r["reviewer_id"] = "caller" },
+		func(r map[string]any) { r["decision"] = "approve" },
+		func(r map[string]any) { r["review"].(map[string]any)["use_policy"] = "historical-derivation/v1" },
+	} {
+		r := map[string]any{"request_id": "synthetic", "review": request(), "expected_subject": "synthetic", "decision": "approved", "decision_reason": "TEST APPROVAL STUB"}
+		mutate(r)
+		raw, err := json.Marshal(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := b.CallTool(t.Context(), ToolHistoricalDecision, raw); err == nil {
+			t.Fatal("invalid historical decision accepted", err)
+		}
+	}
+}
+
 func TestEndpointProfilesClosed(t *testing.T) {
 	principal := runtimeauth.Principal{ID: "synthetic:reviewer"}
-	for _, profile := range []string{ProfileRepositoryIntake, ProfileEndpointReviewer} {
+	for _, profile := range []string{ProfileRepositoryIntake, ProfileEndpointReviewer, ProfileHistoricalReviewer} {
 		root, id := "", ""
 		if profile == ProfileRepositoryIntake {
 			root, id = "/synthetic/repository", "synthetic:repo"

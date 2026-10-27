@@ -128,6 +128,14 @@ func validateDerivedImplementsCoordinates(specificationID, implementationID stri
 }
 
 func loadDerivedImplementsAdmittedNode(ctx context.Context, tx sqlTx, nodeID string, kind evidencegraph.CanonicalNodeKind) (CanonicalQueryResult, admissionDecisionMetadata, error) {
+	node, metadata, err := loadAdmittedNodeForDerivation(ctx, tx, nodeID, kind, derivedImplementsMaxParents)
+	if err == nil && metadata.Derivation != nil && metadata.Derivation.UseClass == evidencegraph.DerivationHistoricalOnly {
+		return CanonicalQueryResult{}, admissionDecisionMetadata{}, newDomainError(ErrorUnsupportedAdmission, "historical derivation is not an implements endpoint")
+	}
+	return node, metadata, err
+}
+
+func loadAdmittedNodeForDerivation(ctx context.Context, tx sqlTx, nodeID string, kind evidencegraph.CanonicalNodeKind, maxParents int) (CanonicalQueryResult, admissionDecisionMetadata, error) {
 	fail := func(err error) (CanonicalQueryResult, admissionDecisionMetadata, error) {
 		return CanonicalQueryResult{}, admissionDecisionMetadata{}, err
 	}
@@ -141,7 +149,7 @@ func loadDerivedImplementsAdmittedNode(ctx context.Context, tx sqlTx, nodeID str
 	if err != nil {
 		return fail(fmt.Errorf("preflighting implements canonical node: %w", err))
 	}
-	if size > derivedImplementsRecordBytes || refs > derivedImplementsMaxSourceRefs || parentCount > derivedImplementsMaxParents || incomingParents != parentCount {
+	if size > derivedImplementsRecordBytes || refs > derivedImplementsMaxSourceRefs || parentCount > maxParents || incomingParents != parentCount {
 		return fail(newDomainError(ErrorInvalidInput, "implements native node exceeds bounded review limits"))
 	}
 	node, err := loadCanonicalNode(ctx, tx, nodeID)
@@ -182,7 +190,7 @@ func loadDerivedImplementsAdmittedNode(ctx context.Context, tx sqlTx, nodeID str
 	input := AdmissionInput{ProposalOccurrenceID: proposal.ProposalOccurrenceID, DecisionBy: metadata.DecisionBy, DecisionReason: metadata.DecisionReason}
 	if metadata.Derivation != nil {
 		d := metadata.Derivation
-		input.Derivation = &DerivationAdmissionInput{ParentNodeIDs: d.Parents, Method: d.Method, Producer: d.Producer, TraceRef: d.TraceRef}
+		input.Derivation = &DerivationAdmissionInput{useClass: d.UseClass, ParentNodeIDs: d.Parents, Method: d.Method, Producer: d.Producer, TraceRef: d.TraceRef}
 	}
 	if err := validateAdmissionReplay(proposal, input, replay, metadata); err != nil {
 		return fail(err)

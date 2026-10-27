@@ -21,6 +21,7 @@ import (
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestion"
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceingestionmcp"
+	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidenceuse"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -164,6 +165,15 @@ func TestIntegrationExternalAgentSourceProposalReviewAndAdmission(t *testing.T) 
 		*admitted.CanonicalRef != admission.CanonicalRef ||
 		admitted.Extractor.ProducerSessionRef != "claude-code-session:integration-test" {
 		t.Fatalf("external agent admission = %+v", admitted)
+	}
+	canonical, err := queryServer.GetEvidenceRecord(ctx, GetEvidenceRecordRequest{CanonicalID: admission.CanonicalRef})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, record := range []GetEvidenceRecordResponse{admitted, canonical} {
+		if record.UseState == nil || record.UseState.Snapshot.Version != evidenceuse.ProjectionV2 || record.Source.ExternalSource == nil || record.Source.ExternalSource.AssessmentProjection != record.UseState.Snapshot.Version {
+			t.Fatalf("%s readback lost the actual live projection version", record.RecordRef.Kind)
+		}
 	}
 }
 

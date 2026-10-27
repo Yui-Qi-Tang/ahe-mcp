@@ -176,6 +176,7 @@ type authorityProcessFixture struct {
 	sourceAssessment authorityProcessLogin
 	supersession     authorityProcessLogin
 	endpoints        authorityProcessLogin
+	historical       authorityProcessLogin
 	repository       authorityProcessLogin
 	relations        authorityProcessLogin
 	schema           string
@@ -286,6 +287,8 @@ func newAuthorityProcessFixture(t *testing.T, ctx context.Context, databaseURL s
 			fixture.supersession = binding
 		} else if profile == dbrole.ProfileEndpointReviewer {
 			fixture.endpoints = binding
+		} else if profile == dbrole.ProfileHistoricalDerivationReviewer {
+			fixture.historical = binding
 		} else if profile == dbrole.ProfileRepositoryIntake {
 			fixture.repository = binding
 		} else if profile == dbrole.ProfileSourceClaimReviewer {

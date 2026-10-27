@@ -494,6 +494,7 @@ func reviewableProposalQueryFromBatch(batch ReviewableSourceClaimBatch, occurren
 		SourceVersion:              batch.SourceSnapshot.SourceVersion,
 		RawContentHash:             batch.SourceSnapshot.RawContentHash,
 		OriginMetadata:             cloneStringMap(batch.SourceSnapshot.OriginMetadata),
+		ManualReviewProfile:        cloneManualReviewProfile(batch.ManualReviewProfile),
 	}
 }
 

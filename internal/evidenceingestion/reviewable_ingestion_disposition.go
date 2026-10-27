@@ -129,9 +129,12 @@ func replayReviewedSourceClaimDisposition(ctx context.Context, tx sqlTx, proposa
 		AdmissionOutcome: outcome, DecisionBy: metadata.DecisionBy, DecisionReason: metadata.DecisionReason, Replayed: true}, nil
 }
 
-func proposalHasSourceClaimDispositionReviewBinding(ctx context.Context, tx sqlTx, occurrenceID string) (bool, error) {
+func proposalHasReviewedDispositionBinding(ctx context.Context, tx sqlTx, occurrenceID string) (bool, error) {
 	var exists bool
-	if err := tx.queryRow(ctx, `SELECT EXISTS (SELECT 1 FROM source_claim_disposition_review_bindings WHERE proposal_occurrence_id=$1)`, occurrenceID).Scan(&exists); err != nil {
+	// Every exact-reviewed terminal decision must replay through its owning
+	// writer, including historical decisions whose receipt lives elsewhere.
+	if err := tx.queryRow(ctx, `SELECT EXISTS (SELECT 1 FROM source_claim_disposition_review_bindings WHERE proposal_occurrence_id=$1)
+ OR EXISTS (SELECT 1 FROM admission_decisions WHERE proposal_occurrence_id=$1 AND disposition_review_binding_contract_version IS NOT NULL)`, occurrenceID).Scan(&exists); err != nil {
 		return false, fmt.Errorf("checking exact reviewed disposition authority: %w", err)
 	}
 	return exists, nil

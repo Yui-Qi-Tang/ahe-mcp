@@ -165,3 +165,13 @@ The reviewed-v2 writer's historical replay retains its proposal lock and complet
 exact/native-authority checks, but not the pending fresh governance fence. Query
 access does not authorize invoking that writer; see the
 [shared replay boundary](../../../CLAUDE.md#reviewed-supersession-and-endpoint-disposition).
+
+## Historical derivation boundary
+
+Follow the [historical contract](../../../docs/HISTORICAL_DERIVATION.md). A derived
+judgment may be new rather than quoted; trace all declared parents and induction
+context without calling premise excerpts the conclusion's original text.
+`historical_only` and its required descendants cannot obtain current clearance.
+Query history uses `kind=historical_derivation` and the original occurrence;
+readback never authorizes a write or promotion. The separate historical profile
+requires its own exact human decision, not a current approval or failed current gate.

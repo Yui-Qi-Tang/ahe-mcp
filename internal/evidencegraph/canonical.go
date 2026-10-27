@@ -17,6 +17,15 @@ import (
 // CanonicalSchemaVersion identifies the canonical evidence artifact schema.
 const CanonicalSchemaVersion = "canonical-evidence-graph/v1"
 
+// CanonicalHistoricalSchemaVersion retains immutable derivation use restrictions.
+const CanonicalHistoricalSchemaVersion = "canonical-evidence-graph/v2"
+
+// DerivationHistoricalOnly is an immutable use restriction, not a truth label.
+const DerivationHistoricalOnly = "historical_only"
+
+// DerivationOrdinary preserves the existing policy-dependent use of a derivation.
+const DerivationOrdinary = "ordinary"
+
 // CanonicalNodeKind separates directly observed evidence from transformed or
 // task-candidate claims.
 type CanonicalNodeKind string
@@ -147,6 +156,7 @@ type IntegrityRecord struct {
 // DerivationRecord records AND-dependencies. Every listed parent is required;
 // this is deliberately stronger than a loose collection of binary edges.
 type DerivationRecord struct {
+	UseClass      string   `json:"use_class,omitempty"`
 	ID            string   `json:"id"`
 	NodeID        string   `json:"node_id"`
 	Parents       []string `json:"parents"`
@@ -206,7 +216,7 @@ func PayloadDigest(payload EvidencePayload) (string, error) {
 }
 
 func (a CanonicalArtifact) Validate() error {
-	if a.SchemaVersion != CanonicalSchemaVersion {
+	if a.SchemaVersion != CanonicalSchemaVersion && a.SchemaVersion != CanonicalHistoricalSchemaVersion {
 		return fmt.Errorf("schema_version must be %q", CanonicalSchemaVersion)
 	}
 	if strings.TrimSpace(a.SnapshotID) == "" {
@@ -260,6 +270,9 @@ func (a CanonicalArtifact) Validate() error {
 	derivedNodes := make(map[string]bool)
 	derivationByNode := make(map[string]DerivationRecord, len(a.Derivations))
 	for i, derivation := range a.Derivations {
+		if derivation.UseClass != "" && a.SchemaVersion != CanonicalHistoricalSchemaVersion {
+			return fmt.Errorf("use classification requires canonical graph v2")
+		}
 		if err := derivation.validate(nodes, provenance, derivedEdges); err != nil {
 			return fmt.Errorf("derivation %d: %w", i, err)
 		}
@@ -352,6 +365,9 @@ func (d DerivationRecord) validate(
 	provenance map[string]ProvenanceRecord,
 	derivedEdges map[string]bool,
 ) error {
+	if d.UseClass != "" && d.UseClass != DerivationHistoricalOnly {
+		return fmt.Errorf("unknown derivation use class")
+	}
 	if strings.TrimSpace(d.ID) == "" || strings.TrimSpace(d.NodeID) == "" {
 		return fmt.Errorf("id and node_id are required")
 	}

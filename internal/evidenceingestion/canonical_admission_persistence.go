@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 
 	"github.com/Yui-Qi-Tang/ahe-mcp/internal/evidencegraph"
@@ -529,6 +530,15 @@ func validatePersistedOrdinaryAdmissionMutation(
 	expected, err := buildCanonicalAdmissionMutation(proposal, input)
 	if err != nil {
 		return admissionReplayMutationBuildError(proposal.ProposalOccurrenceID, err)
+	}
+	if expected.derivation != nil && expected.derivation.UseClass == evidencegraph.DerivationHistoricalOnly {
+		r, err := loadHistoricalDerivationReceipt(ctx, tx, proposal.ProposalOccurrenceID)
+		if err != nil {
+			return err
+		}
+		if r.Receipt.Admission == nil || r.Receipt.Admission.CanonicalRef != expected.result.CanonicalRef || !reflect.DeepEqual(historicalAdmissionInput(r.Display.Request, r.Receipt.ReviewerID, r.Receipt.DecisionReason), input) {
+			return ordinaryAdmissionReplayConflict(proposal.ProposalOccurrenceID, "historical purpose authority differs")
+		}
 	}
 	authority, err := loadOrdinaryAdmissionAuthority(ctx, tx, expected.decision.ID)
 	if err != nil {

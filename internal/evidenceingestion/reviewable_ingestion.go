@@ -106,7 +106,7 @@ type ProposalBasis struct {
 	ExtractorVersion           string              `json:"extractor_version"`
 	ExtractorConfigHash        string              `json:"extractor_config_hash"`
 	SourceBindingKind          string              `json:"source_binding_kind"`
-	// Reserved for exact relation-review compatibility; current intake never sets it.
+	// Optional native first-capture qualification; absent on legacy plain sources.
 	ManualReviewProfile *ManualReviewProfileBinding `json:"manual_review_profile,omitempty"`
 }
 
@@ -558,6 +558,7 @@ func buildProposalBasis(receipt SubmissionReceipt, manifest ProposalBatchManifes
 		ExtractorVersion:           proposal.ExtractorVersion,
 		ExtractorConfigHash:        proposal.ExtractorConfigHash,
 		SourceBindingKind:          proposal.SourceBindingKind,
+		ManualReviewProfile:        cloneManualReviewProfile(proposal.ManualReviewProfile),
 	}
 	id, err := proposalBasisID(basis)
 	if err != nil {
@@ -972,6 +973,9 @@ func reviewOriginMetadataHash(values map[string]string) (string, error) {
 }
 
 func reviewSourceDisplayMetadata(proposal ProposalQueryResult) (string, string) {
+	if proposal.ManualReviewProfile != nil {
+		return proposal.ManualReviewProfile.Profile.Title, proposal.ManualReviewProfile.Profile.Location
+	}
 	if proposal.SourceSystem != SourceSystemExternalDocument {
 		return "", ""
 	}
@@ -979,6 +983,12 @@ func reviewSourceDisplayMetadata(proposal ProposalQueryResult) (string, string) 
 }
 
 func reviewSourceCompleteness(proposal ProposalQueryResult) (string, []string, error) {
+	if profile := proposal.ManualReviewProfile; profile != nil {
+		if err := validateReviewManualProfile(proposal.SourceSystem, proposal.SourceSnapshotID, profile); err != nil {
+			return "", nil, err
+		}
+		return profile.Profile.Coverage, slices.Clone(profile.Profile.Limitations), nil
+	}
 	if proposal.SourceSystem != SourceSystemExternalDocument {
 		return "", []string{}, nil
 	}
@@ -1010,7 +1020,25 @@ func reviewSourceCompleteness(proposal ProposalQueryResult) (string, []string, e
 	return coverage, append([]string{}, limitations...), nil
 }
 
+func validateReviewManualProfile(sourceSystem, snapshotID string, binding *ManualReviewProfileBinding) error {
+	if sourceSystem != SourceSystemManualText || binding.SourceSnapshotID != snapshotID {
+		return newDomainError(ErrorReviewContractConflict, "manual review profile differs from review source")
+	}
+	return ValidateManualReviewProfileBinding(*binding)
+}
+
 func validateReviewSourceBasisMetadata(basis ProposalBasis) error {
+	if binding := basis.ManualReviewProfile; binding != nil {
+		if err := validateReviewManualProfile(basis.SourceSystem, basis.SourceSnapshotID, binding); err != nil {
+			return err
+		}
+		profile := binding.Profile
+		if basis.SourceTitle != profile.Title || basis.SourceLocation != profile.Location || basis.SourceCoverage != profile.Coverage ||
+			basis.SourceLimitations == nil || !slices.Equal(basis.SourceLimitations, profile.Limitations) {
+			return newDomainError(ErrorReviewContractConflict, "manual review display differs from its bound profile")
+		}
+		return nil
+	}
 	return validateReviewSourceCompletenessValues(basis.SourceSystem, basis.SourceCoverage, basis.SourceLimitations)
 }
 

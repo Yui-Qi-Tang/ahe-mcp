@@ -8,7 +8,7 @@
 
 [Results](#evaluation) · [Quick start](#quick-start) · [First workflow](docs/FIRST_WORKFLOW.md) · [MCP setup](INSTALL.md)
 
-Development version: **unreleased** · schema **60** · role policy **v11** ·
+Development version: **unreleased** · schema **62** · role policy **v12** ·
 consistency watch **v1**. Go **1.27.0** module.
 
 Issue #18 Batch 1–4 contracts: [evidence governance, native review and current-use gates](internal/evidenceingestion/GOVERNANCE.md).
@@ -126,6 +126,9 @@ For a database-free contract example, run `make evidence-boundary`.
 - PostgreSQL is authoritative. Ordinary agents receive read-only Query access.
 
 Canonical admission, current-use eligibility and action approval are distinct.
+The separate [historical derivation profile](docs/HISTORICAL_DERIVATION.md) records
+new textual judgments with complete sources and AND ancestry, permanently
+ineligible for current use. See [evidence and relation examples](docs/EVIDENCE_RELATION_EXAMPLES.md).
 Public `derived_spec` admission also enforces a current-use gate in its committing
 transaction. Consumers still validate action support, current bases and execution
 conditions. See [responsibility boundaries](docs/SYSTEM_DESIGN.md#evidence-and-use-responsibilities).
@@ -166,6 +169,7 @@ See [test prerequisites](INSTALL.md#optional-database-and-process-tests).
 
 ## Documentation
 
+- [Evidence, relations and derivation — a text-only example（中文）](docs/EVIDENCE_RELATION_EXAMPLES.md)
 - [First evidence workflow](docs/FIRST_WORKFLOW.md)
 - [Evaluation details](docs/EVALUATION.md)
 - [System design and graph contracts](docs/SYSTEM_DESIGN.md)

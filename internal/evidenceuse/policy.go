@@ -110,6 +110,15 @@ func Assess(s Snapshot, policy Policy, roots []string, now time.Time) (Assessmen
 		if n.Kind != evidencegraph.CanonicalSourceClaim && n.Kind != evidencegraph.CanonicalDerivedClaim {
 			a.add(Blocked, "unsupported_node_kind", id)
 		}
+		if n.Kind == evidencegraph.CanonicalDerivedClaim {
+			switch n.UseClass {
+			case evidencegraph.DerivationHistoricalOnly:
+				a.add(Excluded, "historical_derivation", id)
+			case evidencegraph.DerivationOrdinary:
+			default:
+				a.add(Blocked, "unknown_derivation_use_class", id)
+			}
+		}
 		state, reasons := explicitState(n, now)
 		for _, reason := range reasons {
 			a.add(state, reason, id)
@@ -194,7 +203,7 @@ func Assess(s Snapshot, policy Policy, roots []string, now time.Time) (Assessmen
 			return Assessment{}, err
 		}
 	}
-	out := Assessment{ProjectionVersion: ProjectionV1, StateDigest: digest, Policy: policy, EvaluatedAt: now.UTC(), Roots: roots, Nodes: []NodeAssessment{}}
+	out := Assessment{ProjectionVersion: ProjectionV2, StateDigest: digest, Policy: policy, EvaluatedAt: now.UTC(), Roots: roots, Nodes: []NodeAssessment{}}
 	for _, a := range done {
 		out.Nodes = append(out.Nodes, a)
 	}

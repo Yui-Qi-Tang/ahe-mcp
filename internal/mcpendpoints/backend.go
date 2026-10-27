@@ -15,13 +15,16 @@ import (
 )
 
 const (
-	ProfileRepositoryIntake = "repository-intake"
-	ProfileEndpointReviewer = "endpoint-reviewer"
-	ToolCapture             = "capture_repository_snapshot"
-	ToolExtract             = "extract_repository_go"
-	ToolReview              = "get_endpoint_review"
-	ToolAdmit               = "admit_reviewed_endpoint"
-	ToolDisposition         = "record_reviewed_endpoint_disposition"
+	ProfileRepositoryIntake   = "repository-intake"
+	ProfileEndpointReviewer   = "endpoint-reviewer"
+	ProfileHistoricalReviewer = "historical-derivation-reviewer"
+	ToolHistoricalReview      = "get_historical_derivation_review"
+	ToolHistoricalDecision    = "apply_historical_derivation_decision"
+	ToolCapture               = "capture_repository_snapshot"
+	ToolExtract               = "extract_repository_go"
+	ToolReview                = "get_endpoint_review"
+	ToolAdmit                 = "admit_reviewed_endpoint"
+	ToolDisposition           = "record_reviewed_endpoint_disposition"
 )
 
 type Backend struct {
@@ -40,7 +43,7 @@ func NewBackend(pool *pgxpool.Pool, principal runtimeauth.Principal, profile, ro
 	if err != nil {
 		return nil, err
 	}
-	if profile != ProfileRepositoryIntake && profile != ProfileEndpointReviewer {
+	if profile != ProfileRepositoryIntake && profile != ProfileEndpointReviewer && profile != ProfileHistoricalReviewer {
 		return nil, errors.New("unsupported endpoint profile")
 	}
 	if profile == ProfileRepositoryIntake {
@@ -77,6 +80,18 @@ func (b *Backend) CallTool(ctx context.Context, name string, args json.RawMessag
 	var value any
 	var err error
 	switch {
+	case b.profile == ProfileHistoricalReviewer && name == ToolHistoricalReview:
+		var req evidenceingestion.HistoricalDerivationRequest
+		if err = decodeRequest(args, &req); err == nil {
+			value, err = evidenceingestion.LoadHistoricalDerivationReview(ctx, b.pool, req)
+		}
+	case b.profile == ProfileHistoricalReviewer && name == ToolHistoricalDecision:
+		var req evidenceingestion.HistoricalDerivationDecision
+		if err = decodeRequest(args, &req); err != nil {
+			break
+		}
+		req.ReviewerID = b.principal.ID
+		value, err = evidenceingestion.ApplyHistoricalDerivationDecision(ctx, b.pool, req)
 	case b.profile == ProfileRepositoryIntake && name == ToolCapture:
 		var req CaptureRequest
 		if err = decodeRequest(args, &req); err != nil {

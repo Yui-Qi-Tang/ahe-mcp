@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func TestLoadReviewableSourceClaimReviewSnapshotRebuildsAuthorityInReadOnlySnapshot(t *testing.T) {
@@ -355,6 +357,9 @@ func (tx *reviewSnapshotTestTx) query(_ context.Context, query string, args ...a
 func (tx *reviewSnapshotTestTx) queryRow(_ context.Context, query string, _ ...any) sqlRow {
 	batch := tx.db.batch
 	switch {
+	case strings.Contains(query, "FROM source_manual_review_profiles p"):
+		// These retained fixtures are plain, unqualified manual sources.
+		return mockRow{err: pgx.ErrNoRows}
 	case strings.Contains(query, "FROM extraction_attempts ea"):
 		fixtureData := tx.db.fixtureData
 		if fixtureData == nil {

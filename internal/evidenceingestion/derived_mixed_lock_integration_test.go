@@ -39,8 +39,8 @@ func TestIntegrationDerivedNativeReviewedLockOrder(t *testing.T) {
 			if err := blocker.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&blockerPID); err != nil {
 				t.Fatal(err)
 			}
-			// This real advisory lock is the only barrier. The first writer must
-			// already hold governance when it waits here, in either ordering.
+			// Both writers wait for derivation before acquiring governance.
+			// The second is queued behind the first on the same advisory lock.
 			if _, err := blocker.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, derivationAdmissionLockKey); err != nil {
 				t.Fatal(err)
 			}
@@ -76,8 +76,19 @@ func TestIntegrationDerivedNativeReviewedLockOrder(t *testing.T) {
 			if err := pool.QueryRow(ctx, `SELECT query FROM pg_stat_activity WHERE pid=$1`, secondPID).Scan(&query); err != nil {
 				t.Fatal(err)
 			}
-			if query != `SELECT evidence_governance_lock_v1('evidence_governance_head'::regclass)` {
-				t.Fatalf("second writer waited outside governance: %s", query)
+			if query != `SELECT pg_advisory_xact_lock($1)` {
+				t.Fatalf("second writer did not wait on derivation first: %s", query)
+			}
+			probe, err := pool.Begin(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, probeErr := probe.Exec(ctx, `SET LOCAL lock_timeout='1s'; SELECT evidence_governance_lock_v1('evidence_governance_head'::regclass)`)
+			if err := probe.Rollback(ctx); err != nil {
+				t.Fatal(err)
+			}
+			if probeErr != nil {
+				t.Fatal("waiting derivation writer held governance", probeErr)
 			}
 			if err := blocker.Commit(ctx); err != nil {
 				t.Fatal(err)

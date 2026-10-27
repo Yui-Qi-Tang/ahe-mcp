@@ -75,13 +75,13 @@ func TestIntegrationOrdinaryAdmissionFreshSourceCaptureIsAllowed(t *testing.T) {
 	if err != nil || !changed {
 		t.Fatalf("source-only ApplyUpInSchema() = (%v, %v), want changed success", changed, err)
 	}
-	assertMigrationCount(t, ctx, pool, 60)
+	assertMigrationCount(t, ctx, pool, 62)
 	if _, err := VerifyCurrentInSchema(ctx, pool, schema); err != nil {
 		t.Fatalf("verify source-only upgrade: %v", err)
 	}
 	after := ordinaryFenceRows(t, ctx, pool)
 	for table, rows := range before {
-		if table != "schema_migrations" && after[table] != rows {
+		if table != "schema_migrations" && upgradeHistoricalRows(t, table, after[table]) != upgradeHistoricalRows(t, table, rows) {
 			t.Fatalf("source-only migration changed pre-existing table %s", table)
 		}
 	}

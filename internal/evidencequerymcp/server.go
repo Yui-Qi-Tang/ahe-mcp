@@ -1499,7 +1499,7 @@ func mapProposalResult(result evidenceingestion.ProposalQueryResult) GetEvidence
 	}
 	source := mapSourceInfo(result)
 	if result.UseState != nil && source.ExternalSource != nil {
-		source.ExternalSource.AssessmentProjection = "evidence-use-projection/v1"
+		source.ExternalSource.AssessmentProjection = result.UseState.Snapshot.Version
 	}
 	return GetEvidenceRecordResponse{
 		UseState:            result.UseState,
@@ -1543,7 +1543,7 @@ func mapCanonicalResult(result evidenceingestion.CanonicalQueryResult) GetEviden
 	canonicalRef := result.CanonicalID
 	source := mapSourceInfo(origin)
 	if result.UseState != nil && source.ExternalSource != nil {
-		source.ExternalSource.AssessmentProjection = "evidence-use-projection/v1"
+		source.ExternalSource.AssessmentProjection = result.UseState.Snapshot.Version
 	}
 	return GetEvidenceRecordResponse{
 		UseState:              result.UseState,

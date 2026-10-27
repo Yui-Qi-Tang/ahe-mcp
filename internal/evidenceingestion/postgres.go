@@ -210,6 +210,9 @@ func submitExtractorOutput(ctx context.Context, db sqlDB, input ExtractorOutputI
 }
 
 func ingestManualText(ctx context.Context, db sqlDB, input ManualTextInput, fixture FrozenExtractorOutput) (IngestResult, error) {
+	if input.ManualReviewProfile != nil {
+		return IngestResult{}, newDomainError(ErrorInvalidInput, "manual review profile requires source-only capture followed by extractor submission")
+	}
 	attemptCtx, err := buildAttemptContext(input)
 	if err != nil {
 		return IngestResult{}, err
@@ -312,7 +315,11 @@ func persistManualSource(ctx context.Context, db sqlDB, sourceCtx manualSourceCo
 		if err != nil {
 			return err
 		}
-		changed = sourceChanged || viewChanged || requestChanged
+		profileChanged, err := persistManualReviewProfileTx(ctx, tx, sourceCtx.ManualReviewProfile)
+		if err != nil {
+			return err
+		}
+		changed = sourceChanged || viewChanged || requestChanged || profileChanged
 		return nil
 	})
 	return changed, err
@@ -391,6 +398,11 @@ func persistSourceAuthorityTx(ctx context.Context, tx sqlTx, sourceCtx manualSou
 		// fresh statement after any wait; a skipped insert alone is not a replay.
 		if err := verifySourceSnapshotReplay(ctx, tx, sourceCtx.SourceSnapshot); err != nil {
 			return false, err
+		}
+		if sourceCtx.SourceSnapshot.SourceSystem == SourceSystemManualText {
+			if err := verifyManualReviewProfileReplay(ctx, tx, sourceCtx.SourceSnapshot.ID, sourceCtx.ManualReviewProfile); err != nil {
+				return false, err
+			}
 		}
 	}
 	changed = changed || snapshotChanged
@@ -774,9 +786,17 @@ func loadManualSourceContext(ctx context.Context, db sqlQueryer, sourceSnapshotI
 			ev.rendered_content,
 			ev.rendered_content_hash
 	`, sourceSnapshotID, extractionViewID)
-	return scanManualSourceContext(row, func() error {
+	source, err := scanManualSourceContext(row, func() error {
 		return newDomainError(ErrorMissingSourceViewAttempt, "source snapshot %s and extraction view %s were not found", sourceSnapshotID, extractionViewID)
 	})
+	if err != nil || source.SourceSnapshot.SourceSystem != SourceSystemManualText {
+		return source, err
+	}
+	source.ManualReviewProfile, err = loadManualReviewProfile(ctx, db, source.SourceSnapshot.ID)
+	if err != nil {
+		return manualSourceContext{}, err
+	}
+	return source, nil
 }
 
 func loadManualSourceContextByViewID(ctx context.Context, db sqlQueryer, extractionViewID string) (manualSourceContext, error) {
@@ -830,9 +850,17 @@ func loadManualSourceContextByViewID(ctx context.Context, db sqlQueryer, extract
 			ev.rendered_content,
 			ev.rendered_content_hash
 	`, extractionViewID)
-	return scanManualSourceContext(row, func() error {
+	source, err := scanManualSourceContext(row, func() error {
 		return newDomainError(ErrorMissingSourceViewAttempt, "extraction view %s was not found", extractionViewID)
 	})
+	if err != nil || source.SourceSnapshot.SourceSystem != SourceSystemManualText {
+		return source, err
+	}
+	source.ManualReviewProfile, err = loadManualReviewProfile(ctx, db, source.SourceSnapshot.ID)
+	if err != nil {
+		return manualSourceContext{}, err
+	}
+	return source, nil
 }
 
 func scanManualSourceContext(row sqlRow, missing func() error) (manualSourceContext, error) {

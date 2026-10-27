@@ -107,6 +107,15 @@ and AND-ancestry gates still apply. A subsequent genuine v2 replacement excludes
 C without retargeting existing derived claims. See [the exact native contract,
 review fields and limits](INITIAL_LINEAGE_REGISTRATION.md).
 
+## Permanently historical derivations
+
+`historical_only` records remain ineligible under both current policies, even if
+all parents later qualify. A required descendant inherits that exclusion. There
+is no promotion or wrapper workaround. Historical admission requires a separate
+explicit decision and preserves the full sources and induction context; it does
+not require the new conclusion to occur verbatim in a source. See the
+[historical contract](HISTORICAL_DERIVATION.md).
+
 ## Reason code reference
 
 "Diagnose" below means inspect exact native records and authoritative coverage;
@@ -116,6 +125,8 @@ Do not set completeness flags yourself or assume another retry will repair data.
 
 | Reason code | Meaning and disposition | Governed next step, prerequisites and stop condition |
 | --- | --- | --- |
+| `historical_derivation` | Permanently restricted to historical use; excluded. | Inspect the original historical review and required ancestry. No current promotion API exists; restore, registration or new source checks do not remove this class. |
+| `unknown_derivation_use_class` | Derivation classification is unknown; blocked. | Diagnose native authority; do not default it to ordinary. |
 | `unclassified_currentness` | No recognized currentness for this record; blocked. | For an external source claim, use only a route whose prerequisites hold: [fresh-v2](#fresh-v2-prerequisites-and-limits) creates a replacement C2; reassess C2, while the old target remains superseded. [Initial registration](#unchanged-singleton-initial-registration) retains the singleton unchanged C; reassess that same C, with no replacement node. Neither route guarantees eligibility without the complete policy checks. Without an eligible reviewed route, stop current use. For other kinds, diagnose the record; do not relabel it to fit these flows. |
 | `incomplete_currentness` | Currentness coverage is incomplete; blocked. | Read the observed lineage with `get_canonical_supersession_currentness`. If its limitation identifies unclassified source-object claims, inspect each and use fresh-v2 only for justified replacements in their own reviewed scopes. Stop if any required assignment cannot be established. Never assert closure from a partial view. |
 | `unresolved_lineage_currentness` | A lineage exists but lacks a current status or usable witness; blocked. | Inspect closure, frontier and witness. An ambiguous frontier may be resolved by a genuine reviewed fresh replacement of its complete semantic target set, subject to fresh-v2. Missing/inconsistent authority needs diagnosis. Closure alone is insufficient when multiple frontier nodes remain. |

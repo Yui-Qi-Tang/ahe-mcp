@@ -51,6 +51,17 @@ func TestIntegrationInitialRegistrationReadiness(t *testing.T) {
 
 func rollbackInitialRegistrationForTest(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	t.Helper()
+	rollbackManualReviewProfileMigrationForTest(t, ctx, pool)
+	historicalDown, err := os.ReadFile("000061_historical_derivation.down.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, string(historicalDown)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `DELETE FROM schema_migrations WHERE migration_name=$1`, historicalDerivationMigration); err != nil {
+		t.Fatal(err)
+	}
 	down, err := os.ReadFile("000060_initial_lineage_registration.down.sql")
 	if err != nil {
 		t.Fatal(err)

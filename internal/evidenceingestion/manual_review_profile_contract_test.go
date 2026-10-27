@@ -69,6 +69,6 @@ func TestPlainReviewWireDoesNotAcquireManualProfile(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, exists := basis["manual_review_profile"]; exists {
-		t.Fatal("ordinary intake emitted an unimplemented profile")
+		t.Fatal("plain intake acquired an unsolicited manual profile")
 	}
 }

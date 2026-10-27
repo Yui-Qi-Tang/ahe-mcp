@@ -56,7 +56,7 @@ func TestQueryManifestMatchesShippingMigrationInventory(t *testing.T) {
 			t.Fatalf("query privileges on %s = %v", rule.Table, rule.Privileges)
 		}
 	}
-	if len(got) != 100 || !slices.Equal(got, want) {
+	if len(got) != 102 || !slices.Equal(got, want) {
 		t.Fatalf("shipping migration manifest = %v, want %v", got, want)
 	}
 	if len(slices.Compact(slices.Clone(got))) != len(got) {
@@ -96,6 +96,7 @@ func TestIntakeManifestHasOnlySourceAndPendingWrites(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string][]Privilege{
+		"source_manual_review_profiles":   {PrivilegeInsert},
 		"source_blobs":                    {PrivilegeInsert},
 		"source_snapshots":                {PrivilegeInsert},
 		"extraction_views":                {PrivilegeInsert},
@@ -108,7 +109,7 @@ func TestIntakeManifestHasOnlySourceAndPendingWrites(t *testing.T) {
 		"proposal_batches":                {PrivilegeInsert, PrivilegeUpdate},
 		"proposal_occurrences":            {PrivilegeInsert},
 	}
-	if !manifest.TrustedRawDML || len(manifest.Tables) != 100 {
+	if !manifest.TrustedRawDML || len(manifest.Tables) != 102 {
 		t.Fatalf("unexpected intake manifest: %+v", manifest)
 	}
 	for _, rule := range manifest.Tables {
@@ -145,7 +146,7 @@ func TestSourceClaimReviewerManifestHasOnlyExactReviewedWrites(t *testing.T) {
 		"proposal_occurrences":                       {PrivilegeUpdate},
 	}
 	// The profile narrows tables, not human authentication or all possible raw DML.
-	if !manifest.TrustedRawDML || len(manifest.Tables) != 100 {
+	if !manifest.TrustedRawDML || len(manifest.Tables) != 102 {
 		t.Fatal("reviewer trust boundary or table inventory changed")
 	}
 	for _, rule := range manifest.Tables {

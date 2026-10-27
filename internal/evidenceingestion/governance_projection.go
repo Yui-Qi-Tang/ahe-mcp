@@ -25,7 +25,7 @@ type EvidenceUseProjection struct {
 // It deliberately fails closed instead of confusing display depth/RLS/limits
 // with absence. Every caller supplies one RR cut or the common write guard.
 func loadEvidenceUseSnapshot(ctx context.Context, tx sqlTx) (evidenceuse.Snapshot, error) {
-	s := evidenceuse.Snapshot{Version: evidenceuse.ProjectionV1, Nodes: map[string]evidenceuse.Node{}, Sources: map[string]evidenceuse.Source{}, Contradictions: []evidenceuse.Contradiction{}}
+	s := evidenceuse.Snapshot{Version: evidenceuse.ProjectionV2, Nodes: map[string]evidenceuse.Node{}, Sources: map[string]evidenceuse.Source{}, Contradictions: []evidenceuse.Contradiction{}}
 	if _, err := tx.exec(ctx, `SET LOCAL row_security=off`); err != nil {
 		return s, err
 	}
@@ -78,14 +78,14 @@ func loadEvidenceUseSnapshot(ctx context.Context, tx sqlTx) (evidenceuse.Snapsho
 	if len(s.Nodes) > 10000 {
 		return s, fmt.Errorf("governance node limit exceeded")
 	}
-	rows, err = tx.query(ctx, `SELECT d.node_id,p.parent_node_id,p.canonical_edge_id,e.from_node_id,e.to_node_id,e.relation FROM canonical_derivations d LEFT JOIN canonical_derivation_parents p USING(derivation_id) LEFT JOIN canonical_graph_edges e USING(canonical_edge_id) ORDER BY d.node_id,p.parent_node_id LIMIT 100001`)
+	rows, err = tx.query(ctx, `SELECT d.node_id,p.parent_node_id,p.canonical_edge_id,e.from_node_id,e.to_node_id,e.relation,d.use_class,coalesce(a.review_binding_contract_version,''),coalesce(h.proposal_occurrence_id,'') FROM canonical_derivations d LEFT JOIN admission_decisions a ON a.proposal_occurrence_id=d.origin_proposal_occurrence_id LEFT JOIN canonical_historical_derivation_reviews h ON h.admission_decision_id=a.admission_decision_id LEFT JOIN canonical_derivation_parents p USING(derivation_id) LEFT JOIN canonical_graph_edges e USING(canonical_edge_id) ORDER BY d.node_id,p.parent_node_id LIMIT 100001`)
 	if err != nil {
 		return s, err
 	}
 	count := 0
 	for rows.Next() {
-		var id, parent, edge, from, to, relation string
-		if err := rows.Scan(&id, &parent, &edge, &from, &to, &relation); err != nil {
+		var id, parent, edge, from, to, relation, useClass, reviewContract, historicalOccurrence string
+		if err := rows.Scan(&id, &parent, &edge, &from, &to, &relation, &useClass, &reviewContract, &historicalOccurrence); err != nil {
 			rows.Close()
 			return s, err
 		}
@@ -95,6 +95,13 @@ func loadEvidenceUseSnapshot(ctx context.Context, tx sqlTx) (evidenceuse.Snapsho
 			rows.Close()
 			return s, fmt.Errorf("incomplete derivation authority")
 		}
+		if (useClass != evidencegraph.DerivationOrdinary && useClass != evidencegraph.DerivationHistoricalOnly) ||
+			(useClass == evidencegraph.DerivationHistoricalOnly) != (reviewContract == HistoricalDerivationAdmissionV1 && historicalOccurrence != "") ||
+			(useClass == evidencegraph.DerivationOrdinary && (historicalOccurrence != "" || reviewContract == HistoricalDerivationAdmissionV1)) {
+			rows.Close()
+			return s, fmt.Errorf("derivation use classification authority differs")
+		}
+		n.UseClass = useClass
 		n.Parents = append(n.Parents, parent)
 		n.ParentsComplete = true
 		s.Nodes[id] = n
@@ -301,7 +308,11 @@ func guardDerivedCurrentUse(ctx context.Context, cut *endpointUseCut, mutation c
 		return err
 	}
 	s.Sources[sid] = source
-	s.Nodes[node.ID] = evidenceuse.Node{Kind: node.Kind, Admission: "admitted", Withdrawal: evidenceuse.Withdrawal{Status: evidenceuse.WithdrawalNone, Complete: true}, Currentness: evidenceuse.Currentness{Complete: true}, Temporal: node.Temporal, Parents: mutation.derivation.Parents, ParentsComplete: true, SourceIDs: []string{sid}, SourcesComplete: true, ContradictionsComplete: true}
+	useClass := evidencegraph.DerivationOrdinary
+	if mutation.derivation.UseClass != "" {
+		useClass = mutation.derivation.UseClass
+	}
+	s.Nodes[node.ID] = evidenceuse.Node{UseClass: useClass, Kind: node.Kind, Admission: "admitted", Withdrawal: evidenceuse.Withdrawal{Status: evidenceuse.WithdrawalNone, Complete: true}, Currentness: evidenceuse.Currentness{Complete: true}, Temporal: node.Temporal, Parents: mutation.derivation.Parents, ParentsComplete: true, SourceIDs: []string{sid}, SourcesComplete: true, ContradictionsComplete: true}
 	a, err := evidenceuse.Assess(s, policy, []string{node.ID}, time.Now().UTC())
 	if err != nil {
 		return err
@@ -404,6 +415,11 @@ func loadEndpointUseReview(ctx context.Context, cut *endpointUseCut, policy evid
 			continue
 		}
 		n.Currentness.WitnessID = ""
+		// Preserve the v1 ordinary review wire shape. The live v2 snapshot still
+		// binds the explicit class; historical restrictions remain visible here.
+		if n.UseClass == evidencegraph.DerivationOrdinary {
+			n.UseClass = ""
+		}
 		r.States[id] = n
 		for _, sid := range n.SourceIDs {
 			r.Sources[sid] = p.Snapshot.Sources[sid]

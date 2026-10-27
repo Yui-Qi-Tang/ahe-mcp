@@ -443,7 +443,7 @@ func runProvisioningAdmin(t *testing.T, ctx context.Context, command, operation,
 		return provisioningAdminResult{}
 	}
 	var result provisioningAdminResult
-	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.UpdatedExistingPair != (operation == "upgrade") || result.RuntimeLoginVerified != (operation == "verify") || result.SessionUser != identity.login || result.AppliedMigrations != 60 || result.LatestMigration != "000060_initial_lineage_registration.up.sql" {
+	if err != nil || json.Unmarshal(stdout.Bytes(), &result) != nil || result.SchemaVersion != "ahe-runtime-admin-result/v1" || result.Operation != operation || result.CreatedRolePair != (operation == "provision") || result.UpdatedExistingPair != (operation == "upgrade") || result.RuntimeLoginVerified != (operation == "verify") || result.SessionUser != identity.login || result.AppliedMigrations != 62 || result.LatestMigration != "000062_manual_review_profile.up.sql" {
 		t.Fatalf("compiled runtime admin %s did not return its exact credential-free receipt (output suppressed)", operation)
 	}
 	if strings.Contains(stdout.String(), dsn) {

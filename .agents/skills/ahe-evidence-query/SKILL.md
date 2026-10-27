@@ -22,3 +22,13 @@ or data, or delegate further. The primary agent verifies any adopted challenge
 and returns the evidence with its limitations within the user's source scope.
 If the shared workflow is unavailable, report that mismatch rather than
 substituting the intake skill or claiming unperformed AHE operations.
+
+## Historical derivation boundary
+
+Follow the [historical contract](../../../docs/HISTORICAL_DERIVATION.md). A derived
+judgment may be new rather than quoted; trace all declared parents and induction
+context without calling premise excerpts the conclusion's original text.
+`historical_only` and its required descendants cannot obtain current clearance.
+Query history uses `kind=historical_derivation` and the original occurrence;
+readback never authorizes a write or promotion. The separate historical profile
+requires its own exact human decision, not a current approval or failed current gate.

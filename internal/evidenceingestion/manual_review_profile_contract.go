@@ -1,7 +1,7 @@
 package evidenceingestion
 
-// These compatibility types support pure relation reviews only. Current intake
-// does not create manual review profiles; their native persistence is unported.
+// These bounded types bind optional manual-source qualifications at first
+// capture. Native persistence is implemented in manual_review_profile.go.
 
 import (
 	"slices"

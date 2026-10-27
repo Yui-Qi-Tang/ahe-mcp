@@ -20,6 +20,9 @@ import (
 
 const ProjectionV1 = "evidence-use-projection/v1"
 
+// ProjectionV2 binds derivation use classification for live policy evaluation.
+const ProjectionV2 = "evidence-use-projection/v2"
+
 var ErrInvalidProjection = errors.New("invalid evidence use projection")
 
 // Snapshot is an internal adapter contract, not a caller-authorized MCP input.
@@ -38,6 +41,7 @@ type Snapshot struct {
 // Node keeps admission, withdrawal, currentness and AND dependencies separate.
 // SourceIDs are actual native bindings, never matches on object_id or text.
 type Node struct {
+	UseClass               string                          `json:"use_class,omitempty"`
 	Kind                   evidencegraph.CanonicalNodeKind `json:"kind"`
 	Admission              string                          `json:"admission"`
 	Withdrawal             Withdrawal                      `json:"withdrawal"`
@@ -145,7 +149,7 @@ func validText(s string) bool { return s != "" && s == strings.TrimSpace(s) }
 // Digest binds graph-independent governance changes as well as claim bindings.
 // Historical digests remain valid descriptions, never current-use clearances.
 func (s Snapshot) Digest() (string, error) {
-	if s.Version != ProjectionV1 || !validText(s.StoreID) || !validText(s.CutID) {
+	if s.Version != ProjectionV2 || !validText(s.StoreID) || !validText(s.CutID) {
 		return "", fmt.Errorf("%w: version, store and cut are required", ErrInvalidProjection)
 	}
 	// JSON map keys are sorted by encoding/json. Clone before sorting sets so

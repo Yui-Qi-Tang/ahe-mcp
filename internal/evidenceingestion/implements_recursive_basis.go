@@ -170,6 +170,10 @@ type recursiveImplementsHeader struct {
 }
 
 func loadRecursiveImplementsHeader(ctx context.Context, tx sqlTx, nodeID string) (recursiveImplementsHeader, error) {
+	return loadDerivationHeader(ctx, tx, nodeID, derivedImplementsMaxParents)
+}
+
+func loadDerivationHeader(ctx context.Context, tx sqlTx, nodeID string, maxParents int) (recursiveImplementsHeader, error) {
 	var header recursiveImplementsHeader
 	var kind string
 	var size, refs, parents, incoming, derivations int
@@ -185,7 +189,7 @@ func loadRecursiveImplementsHeader(ctx context.Context, tx sqlTx, nodeID string)
 		return header, fmt.Errorf("preflighting recursive implements node: %w", err)
 	}
 	header.kind = evidencegraph.CanonicalNodeKind(kind)
-	if size > derivedImplementsRecordBytes || refs > derivedImplementsMaxSourceRefs || parents > derivedImplementsMaxParents || parents != incoming {
+	if size > derivedImplementsRecordBytes || refs > derivedImplementsMaxSourceRefs || parents > maxParents || parents != incoming {
 		return header, newDomainError(ErrorInvalidInput, "recursive implements native node exceeds bounded review limits or has unregistered parent edges")
 	}
 	if header.kind == evidencegraph.CanonicalSourceClaim {
@@ -201,7 +205,7 @@ func loadRecursiveImplementsHeader(ctx context.Context, tx sqlTx, nodeID string)
 		return header, newDomainError(ErrorDerivationInvariant, "recursive implements derived node requires exactly one nonempty AND derivation")
 	}
 	rows, err := tx.query(ctx, `SELECT dp.parent_node_id FROM canonical_derivation_parents dp JOIN canonical_derivations d USING(derivation_id)
-		WHERE d.node_id=$1 ORDER BY dp.parent_node_id LIMIT $2`, nodeID, derivedImplementsMaxParents+1)
+		WHERE d.node_id=$1 ORDER BY dp.parent_node_id LIMIT $2`, nodeID, maxParents+1)
 	if err != nil {
 		return header, fmt.Errorf("reading recursive implements AND parents: %w", err)
 	}
@@ -226,6 +230,10 @@ func loadRecursiveImplementsHeader(ctx context.Context, tx sqlTx, nodeID string)
 // The loader callback is kept at the I/O boundary so cycle and shared-ancestor
 // path limits can be tested independently of otherwise immutable database rows.
 func recursiveImplementsClosure(ctx context.Context, root string, load func(context.Context, string) (recursiveImplementsHeader, error)) (map[string]recursiveImplementsHeader, error) {
+	return derivationClosure(ctx, root, derivedImplementsMaxParents, load)
+}
+
+func derivationClosure(ctx context.Context, root string, maxParents int, load func(context.Context, string) (recursiveImplementsHeader, error)) (map[string]recursiveImplementsHeader, error) {
 	headers := make(map[string]recursiveImplementsHeader)
 	active := make(map[string]bool)
 	heights := make(map[string]int)
@@ -256,7 +264,7 @@ func recursiveImplementsClosure(ctx context.Context, root string, load func(cont
 		}
 		if (id == root && header.kind != evidencegraph.CanonicalDerivedClaim) ||
 			(header.kind == evidencegraph.CanonicalSourceClaim && len(header.parents) != 0) ||
-			(header.kind == evidencegraph.CanonicalDerivedClaim && (len(header.parents) < 1 || len(header.parents) > derivedImplementsMaxParents)) {
+			(header.kind == evidencegraph.CanonicalDerivedClaim && (len(header.parents) < 1 || len(header.parents) > maxParents)) {
 			return 0, newDomainError(ErrorDerivationInvariant, "recursive implements ancestor has invalid AND parents")
 		}
 		header.parents = slices.Clone(header.parents)

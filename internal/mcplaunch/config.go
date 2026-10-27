@@ -100,7 +100,7 @@ func parseConfig(body []byte) (config, error) {
 	switch cfg.Profile {
 	case "query":
 		binaryName = "ahe-query-mcp"
-	case "initial-lineage-reviewer", "contradiction-reviewer", "supersession-reviewer", "withdrawal-reviewer", "source-assessment-reviewer", "core-records", "intake", "source-claim-reviewer", "relation-reviewer", "endpoint-reviewer", "repository-intake":
+	case "initial-lineage-reviewer", "contradiction-reviewer", "supersession-reviewer", "withdrawal-reviewer", "source-assessment-reviewer", "core-records", "intake", "source-claim-reviewer", "relation-reviewer", "endpoint-reviewer", "historical-derivation-reviewer", "repository-intake":
 		binaryName = "ahe-ingest-mcp"
 	default:
 		return config{}, errConfig

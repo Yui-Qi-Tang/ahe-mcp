@@ -39,7 +39,7 @@ func run(ctx context.Context, args []string) error {
 			fmt.Fprintln(os.Stdout, "Environment:")
 			fmt.Fprintln(os.Stdout, "  DATABASE_DSN  PostgreSQL DSN for the authoritative AHE store")
 			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PRINCIPAL_ID  Launcher-fixed identity (not proof of human review)")
-			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PROFILE       contradiction-reviewer, withdrawal-reviewer, source-assessment-reviewer, core-records, intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer, repository-intake or supersession-reviewer, initial-lineage-reviewer (legacy writers remain disabled)")
+			fmt.Fprintln(os.Stdout, "  AHE_RUNTIME_PROFILE       contradiction-reviewer, withdrawal-reviewer, source-assessment-reviewer, core-records, intake, source-claim-reviewer, relation-reviewer, endpoint-reviewer, historical-derivation-reviewer, repository-intake or supersession-reviewer, initial-lineage-reviewer (legacy writers remain disabled)")
 			fmt.Fprintln(os.Stdout, "  AHE_DATABASE_ROLE         Installed matching NOLOGIN role")
 			fmt.Fprintln(os.Stdout, "  AHE_DATABASE_SCHEMA       Explicit authoritative schema")
 			fmt.Fprintln(os.Stdout, "")
@@ -74,6 +74,8 @@ func run(ctx context.Context, args []string) error {
 		databaseProfile = dbrole.ProfileIntake
 	case mcpadmin.RuntimeProfileEndpointReviewer:
 		databaseProfile = dbrole.ProfileEndpointReviewer
+	case mcpadmin.RuntimeProfileHistoricalReviewer:
+		databaseProfile = dbrole.ProfileHistoricalDerivationReviewer
 	case mcpadmin.RuntimeProfileRepositoryIntake:
 		databaseProfile = dbrole.ProfileRepositoryIntake
 	case mcpadmin.RuntimeProfileRelationReviewer:
@@ -161,7 +163,7 @@ func run(ctx context.Context, args []string) error {
 		return server.Serve(ctx, os.Stdin, os.Stdout)
 	}
 
-	if profile == mcpadmin.RuntimeProfileEndpointReviewer || profile == mcpadmin.RuntimeProfileRepositoryIntake {
+	if profile == mcpadmin.RuntimeProfileEndpointReviewer || profile == mcpadmin.RuntimeProfileHistoricalReviewer || profile == mcpadmin.RuntimeProfileRepositoryIntake {
 		backend, err := mcpendpoints.NewBackend(pool, principal, string(profile), os.Getenv("AHE_REPOSITORY_ROOT"), os.Getenv("AHE_REPOSITORY_ID"))
 		if err != nil {
 			return err

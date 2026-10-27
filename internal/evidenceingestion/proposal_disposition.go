@@ -40,7 +40,7 @@ func recordPendingProposalDisposition(
 		switch proposal.AdmissionOutcome {
 		case admissionOutcomePending:
 		case input.Outcome:
-			reviewed, err := proposalHasSourceClaimDispositionReviewBinding(ctx, tx, input.ProposalOccurrenceID)
+			reviewed, err := proposalHasReviewedDispositionBinding(ctx, tx, input.ProposalOccurrenceID)
 			if err != nil {
 				return err
 			}

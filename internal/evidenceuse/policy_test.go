@@ -15,7 +15,7 @@ import (
 var testTime = time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)
 
 func fixture() Snapshot {
-	s := Snapshot{Version: ProjectionV1, StoreID: "synthetic-store", CutID: "cut:1", Nodes: map[string]Node{}, Sources: map[string]Source{}}
+	s := Snapshot{Version: ProjectionV2, StoreID: "synthetic-store", CutID: "cut:1", Nodes: map[string]Node{}, Sources: map[string]Source{}}
 	for _, id := range []string{"a", "b", "c"} {
 		sourceID := "source:" + id
 		s.Nodes[id] = Node{
@@ -46,6 +46,7 @@ func fixture() Snapshot {
 
 func derive(s *Snapshot, id string, parents ...string) {
 	n := s.Nodes["a"]
+	n.UseClass = evidencegraph.DerivationOrdinary
 	n.Kind, n.SourceIDs, n.Parents = evidencegraph.CanonicalDerivedClaim, nil, parents
 	s.Nodes[id] = n
 }

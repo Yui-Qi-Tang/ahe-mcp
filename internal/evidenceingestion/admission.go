@@ -105,8 +105,11 @@ func admitPendingProposal(ctx context.Context, db sqlDB, input AdmissionInput) (
 			return err
 		}
 		if mutation.derivation != nil {
-			// Both native and reviewed derived writes take proposal, governance,
-			// then derivation locks. Historical replay returns above this fence.
+			// Match reviewed writers: proposal, derivation, then governance.
+			// Historical replay returns above this fresh-write fence.
+			if _, err := tx.exec(ctx, `SELECT pg_advisory_xact_lock($1)`, derivationAdmissionLockKey); err != nil {
+				return err
+			}
 			if err := lockGovernance(ctx, tx); err != nil {
 				return err
 			}
@@ -350,6 +353,9 @@ func buildDerivationBackedAdmissionMutation(proposal ProposalQueryResult, input 
 		)
 	}
 
+	if input.useClass != "" && input.useClass != evidencegraph.DerivationHistoricalOnly {
+		return canonicalAdmissionMutation{}, newDomainError(ErrorInvalidInput, "unknown derivation use class")
+	}
 	parentIdentity := strings.Join(parents, "\x00")
 	nodeID := evidencegraph.StableCanonicalID(
 		"canon-node",
@@ -361,6 +367,9 @@ func buildDerivationBackedAdmissionMutation(proposal ProposalQueryResult, input 
 		input.Producer,
 		input.TraceRef,
 	)
+	if input.useClass != "" {
+		nodeID = evidencegraph.StableCanonicalID("canon-node", nodeID, input.useClass)
+	}
 	payload := evidencegraph.EvidencePayload{
 		ID:         evidencegraph.StableCanonicalID("payload", nodeID),
 		SourceType: sourceType,
@@ -398,6 +407,7 @@ func buildDerivationBackedAdmissionMutation(proposal ProposalQueryResult, input 
 		OriginProposalOccurrenceID: proposal.ProposalOccurrenceID,
 	}
 	derivation := evidencegraph.DerivationRecord{
+		UseClass:      input.useClass,
 		ID:            evidencegraph.StableCanonicalID("derivation", nodeID, parentIdentity, input.Method, input.Producer, input.TraceRef),
 		NodeID:        nodeID,
 		Parents:       append([]string(nil), parents...),
@@ -922,7 +932,8 @@ func loadAdmissionDerivationResult(
 			producer,
 			trace_ref,
 			provenance_ref,
-			origin_proposal_occurrence_id
+			origin_proposal_occurrence_id,
+			coalesce(NULLIF(to_jsonb(canonical_derivations)->>'use_class', 'ordinary'),'')
 		FROM canonical_derivations
 		WHERE node_id = $1
 	`, result.CanonicalRef).Scan(
@@ -933,12 +944,21 @@ func loadAdmissionDerivationResult(
 		&derivation.TraceRef,
 		&derivation.ProvenanceRef,
 		&originProposalOccurrenceID,
+		&derivation.UseClass,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		return fmt.Errorf("loading admission derivation: %w", err)
+	}
+	// Only known ordinary authority may omit the pre-classification field.
+	// Historical authority must always retain its independently bound class.
+	if originProposalOccurrenceID != result.ProposalOccurrenceID ||
+		(metadata.ReviewBindingContractVersion != "" && metadata.ReviewBindingContractVersion != ReviewedEndpointAdmissionV1 && metadata.ReviewBindingContractVersion != HistoricalDerivationAdmissionV1) ||
+		(derivation.UseClass != "" && derivation.UseClass != evidencegraph.DerivationHistoricalOnly) ||
+		(metadata.ReviewBindingContractVersion == HistoricalDerivationAdmissionV1) != (derivation.UseClass == evidencegraph.DerivationHistoricalOnly) {
+		return newDomainError(ErrorDerivationInvariant, "derivation use class differs from its admission authority")
 	}
 	rows, err := tx.query(ctx, `
 		SELECT parent_node_id, canonical_edge_id
@@ -1232,26 +1252,18 @@ func insertCanonicalDerivation(
 	parentEdges map[string]string,
 	originProposalOccurrenceID string,
 ) error {
-	if _, err := tx.exec(ctx, `
-		INSERT INTO canonical_derivations (
-			derivation_id,
-			node_id,
-			method,
-			producer,
-			trace_ref,
-			provenance_ref,
-			origin_proposal_occurrence_id
-		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`,
-		derivation.ID,
-		derivation.NodeID,
-		derivation.Method,
-		derivation.Producer,
-		derivation.TraceRef,
-		derivation.ProvenanceRef,
-		originProposalOccurrenceID,
-	); err != nil {
+	// Retain the ordinary SQL shape for known legacy materialization. Live
+	// projection requires the current schema and an explicit stored class.
+	query := `INSERT INTO canonical_derivations (derivation_id,node_id,method,producer,trace_ref,provenance_ref,origin_proposal_occurrence_id) VALUES ($1,$2,$3,$4,$5,$6,$7)`
+	args := []any{derivation.ID, derivation.NodeID, derivation.Method, derivation.Producer, derivation.TraceRef, derivation.ProvenanceRef, originProposalOccurrenceID}
+	if derivation.UseClass != "" {
+		if derivation.UseClass != evidencegraph.DerivationHistoricalOnly {
+			return newDomainError(ErrorDerivationInvariant, "unsupported derivation use class")
+		}
+		query = `INSERT INTO canonical_derivations (derivation_id,node_id,method,producer,trace_ref,provenance_ref,origin_proposal_occurrence_id,use_class) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`
+		args = append(args, derivation.UseClass)
+	}
+	if _, err := tx.exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("inserting canonical derivation %s: %w", derivation.ID, err)
 	}
 	for _, parent := range derivation.Parents {

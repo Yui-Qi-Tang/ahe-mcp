@@ -530,6 +530,7 @@ type mockSQLDB struct {
 	extractionViews      map[string]mockExtractionView
 	spanEntries          map[string]SpanEntry
 	sourceIntakeRequests map[string]mockSourceIntakeRequest
+	manualReviewProfiles map[string]mockManualReviewProfile
 
 	externalSourceReceipts map[string]mockExternalSourceReceipt
 
@@ -573,6 +574,13 @@ type mockSourceIntakeRequest struct {
 	extractionViewID   string
 	requestPayloadHash string
 	createdAt          time.Time
+}
+
+type mockManualReviewProfile struct {
+	intakeRequestID string
+	contractVersion string
+	payload         string
+	hash            string
 }
 
 type mockExternalSourceReceipt struct {
@@ -641,6 +649,7 @@ func newMockSQLDB() *mockSQLDB {
 		extractionViews:      map[string]mockExtractionView{},
 		spanEntries:          map[string]SpanEntry{},
 		sourceIntakeRequests: map[string]mockSourceIntakeRequest{},
+		manualReviewProfiles: map[string]mockManualReviewProfile{},
 
 		externalSourceReceipts: map[string]mockExternalSourceReceipt{},
 
@@ -809,6 +818,14 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 			requestPayloadHash: args[3].(string),
 			createdAt:          time.Date(2026, 8, 23, 2, 4, 5, 0, time.UTC),
 		}
+		return mockExecResult(1), nil
+	case strings.Contains(query, "INSERT INTO source_manual_review_profiles"):
+		id := args[0].(string)
+		if _, ok := db.manualReviewProfiles[id]; ok {
+			return mockExecResult(0), nil
+		}
+		db.manualReviewProfiles[id] = mockManualReviewProfile{intakeRequestID: args[1].(string),
+			contractVersion: args[2].(string), payload: args[3].(string), hash: args[4].(string)}
 		return mockExecResult(1), nil
 	case strings.Contains(query, "INSERT INTO external_source_intake_receipts"):
 		id := args[0].(string)
@@ -1015,6 +1032,11 @@ func mockExec(db *mockSQLDB, query string, args ...any) (execResult, error) {
 			ProvenanceRef: args[5].(string),
 		}
 		db.derivationOrigins[derivationID] = args[6].(string)
+		if len(args) == 8 {
+			derivation := db.canonicalDerivations[derivationID]
+			derivation.UseClass = args[7].(string)
+			db.canonicalDerivations[derivationID] = derivation
+		}
 		return mockExecResult(1), nil
 	case strings.Contains(query, "INSERT INTO admission_decisions"):
 		id := args[0].(string)
@@ -1090,10 +1112,16 @@ func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sql
 	case strings.Contains(query, "SELECT d.node_id,p.parent_node_id,p.canonical_edge_id"):
 		rows := []mockRow{}
 		for _, d := range db.canonicalDerivations {
+			useClass := d.UseClass
+			if useClass == "" {
+				useClass = evidencegraph.DerivationOrdinary
+			}
 			for _, parent := range d.Parents {
 				eid := db.derivationParentEdges[d.ID][parent]
 				e := db.canonicalGraphEdges[eid]
-				rows = append(rows, mockRow{values: []any{d.NodeID, parent, eid, e.From, e.To, string(e.Relation)}})
+				// This mock has ordinary authority only. A historical class
+				// without a real receipt must fail the live projection check.
+				rows = append(rows, mockRow{values: []any{d.NodeID, parent, eid, e.From, e.To, string(e.Relation), useClass, "", ""}})
 			}
 		}
 		return &mockRows{rows: rows, index: -1}, nil
@@ -1222,6 +1250,7 @@ func mockQuery(_ context.Context, db *mockSQLDB, query string, args ...any) (sql
 					derivation.Producer,
 					derivation.TraceRef,
 					derivation.ProvenanceRef,
+					derivation.UseClass,
 					parentID,
 					db.derivationParentEdges[derivation.ID][parentID],
 				}})
@@ -1532,7 +1561,7 @@ func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) s
 		nodeID := args[0].(string)
 		for _, derivation := range db.canonicalDerivations {
 			if derivation.NodeID == nodeID {
-				return mockRow{values: []any{derivation.ID, derivation.NodeID, derivation.Method, derivation.Producer, derivation.TraceRef, derivation.ProvenanceRef, db.derivationOrigins[derivation.ID]}}
+				return mockRow{values: []any{derivation.ID, derivation.NodeID, derivation.Method, derivation.Producer, derivation.TraceRef, derivation.ProvenanceRef, db.derivationOrigins[derivation.ID], derivation.UseClass}}
 			}
 		}
 		return mockRow{err: pgx.ErrNoRows}
@@ -1625,6 +1654,18 @@ func mockQueryRow(_ context.Context, db *mockSQLDB, query string, args ...any) s
 			receipt.observedAt,
 			receipt.receiptPayloadHash,
 		}}
+	case strings.Contains(query, "FROM source_manual_review_profiles p"):
+		id := args[0].(string)
+		profile, ok := db.manualReviewProfiles[id]
+		if !ok {
+			return mockRow{err: pgx.ErrNoRows}
+		}
+		payload := profile.payload
+		if len(payload) > args[1].(int) {
+			payload = ""
+		}
+		return mockRow{values: []any{id, profile.intakeRequestID, profile.contractVersion,
+			payload, profile.hash, db.sourceSnapshots[id].sourceSystem, db.sourceIntakeRequests[profile.intakeRequestID].sourceSnapshotID}}
 	case strings.Contains(query, "SELECT created_at") && strings.Contains(query, "FROM source_intake_requests"):
 		request, ok := db.sourceIntakeRequests[args[0].(string)]
 		if !ok {
