@@ -52,7 +52,7 @@ the external-agent intake path or Query MCP. CI verifies the MCP module on Linux
 
 ## Requirements
 
-- Go 1.27.0 or a newer Go 1.27 patch release, matching the root `go.mod`;
+- Go 1.27.3, matching the root `go.mod`;
 - Make and standard POSIX command-line tools;
 - a reachable PostgreSQL 16+ database; qualify the selected major version with
   the migration and integration gates below;

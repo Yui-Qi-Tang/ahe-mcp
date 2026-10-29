@@ -312,7 +312,7 @@ actually run. Research authorization does not approve real evidence admission.
   archives, feature adoption, verification, merge, push and deployment are
   separate states. Never transfer a passing result between environments.
 
-- Use Go 1.27.0 semantics. Run `make verify` for ordinary code changes; add
+- Use Go 1.27.3 semantics. Run `make verify` for ordinary code changes; add
   `go test -race ./...` when concurrency behavior or CI is in scope.
   For documentation or skill-only edits, validate links, skill structure and
   agreement with the actual contracts; do not run models or broad code tests
