@@ -26,11 +26,12 @@ const (
 // OpenCanonicalReadViewRequest selects one bounded PostgreSQL canonical graph
 // view. Every budget is explicit; no process-global freshness cache is used.
 type OpenCanonicalReadViewRequest struct {
-	RootNodeIDs []string                              `json:"root_node_ids"`
-	Relations   []evidencegraph.CanonicalEdgeRelation `json:"relations"`
-	MaxDepth    int                                   `json:"max_depth"`
-	MaxNodes    int                                   `json:"max_nodes"`
-	MaxEdges    int                                   `json:"max_edges"`
+	UseStateMode UseStateMode                          `json:"use_state_mode,omitempty"`
+	RootNodeIDs  []string                              `json:"root_node_ids"`
+	Relations    []evidencegraph.CanonicalEdgeRelation `json:"relations"`
+	MaxDepth     int                                   `json:"max_depth"`
+	MaxNodes     int                                   `json:"max_nodes"`
+	MaxEdges     int                                   `json:"max_edges"`
 }
 
 // CanonicalReadViewDescriptor preserves the exact bounded scope associated
@@ -54,10 +55,11 @@ type CanonicalReadViewDescriptor struct {
 // handle for repeated path and diagnostics reads against the same materialized
 // view.
 type OpenCanonicalReadViewResponse struct {
-	UseState      *evidenceingestion.EvidenceUseProjection `json:"use_state,omitempty"`
-	SchemaVersion string                                   `json:"schema_version"`
-	View          CanonicalReadViewDescriptor              `json:"view"`
-	Artifact      evidencegraph.CanonicalArtifact          `json:"artifact"`
+	UseStateSummary *UseStateSummary                         `json:"use_state_summary,omitempty"`
+	UseState        *evidenceingestion.EvidenceUseProjection `json:"use_state,omitempty"`
+	SchemaVersion   string                                   `json:"schema_version"`
+	View            CanonicalReadViewDescriptor              `json:"view"`
+	Artifact        evidencegraph.CanonicalArtifact          `json:"artifact"`
 }
 
 // FindCanonicalPathRequest asks for a relation-scoped path inside one opened
@@ -189,6 +191,9 @@ func (s *Server) OpenCanonicalReadView(
 	ctx context.Context,
 	req OpenCanonicalReadViewRequest,
 ) (OpenCanonicalReadViewResponse, error) {
+	if err := req.UseStateMode.validate(); err != nil {
+		return OpenCanonicalReadViewResponse{}, err
+	}
 	owner, err := canonicalReadViewOwner(ctx)
 	if err != nil {
 		return OpenCanonicalReadViewResponse{}, &ToolError{Code: toolErrorInternal, Message: err.Error(), cause: err}
@@ -226,12 +231,17 @@ func (s *Server) OpenCanonicalReadView(
 		topology: topology,
 	}
 	s.readViews.put(cached)
-	return OpenCanonicalReadViewResponse{
+	response := OpenCanonicalReadViewResponse{
 		SchemaVersion: CanonicalReadViewQuerySchemaV1,
 		UseState:      view.UseState,
 		View:          canonicalReadViewDescriptor(cached),
 		Artifact:      view.Artifact,
-	}, nil
+	}
+	if req.UseStateMode == UseStateAssessmentOnly {
+		response.UseStateSummary = summarizeUseState(view.UseState)
+		response.UseState = nil
+	}
+	return response, nil
 }
 
 // FindCanonicalPath reads an already-materialized immutable view without

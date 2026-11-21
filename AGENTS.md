@@ -76,7 +76,8 @@ test selection; follow the reporting rules in `CLAUDE.md` before comparing runs.
 For intake/review work, return source-object identity and the externally assigned
 revision (without implying provider issuance); source and
 extraction IDs; exact native review material with source excerpts, coverage,
-limitations and available version differences; readback states; any missing
+limitations and available version differences; the conflict check state with
+its limits, separate from that exact material; readback states; any missing
 decision or capability; and whether canonical mutation occurred. Preserve
 extraction omissions separately from source coverage.
 

@@ -70,6 +70,7 @@ func sourceReviewGolden(t *testing.T) (evidenceingestion.ReviewableSourceClaimRe
 	if err := evidenceingestion.ValidateExactSourceClaimReviewDisplay(snapshot, wire.Display, wire.Subject); err != nil {
 		t.Fatalf("historical golden must remain valid: %v", err)
 	}
+	snapshot.ConflictCandidates = &evidenceingestion.ReviewConflictCandidates{Contract: evidenceingestion.ReviewConflictCandidatesV1, Status: "observed", Observation: "current_read_snapshot", Binding: "advisory_not_bound_to_review_subject_or_receipt", TargetsComplete: true, Targets: []evidenceingestion.ReviewConflictTarget{}}
 	return snapshot, wire.Display, wire.Subject
 }
 

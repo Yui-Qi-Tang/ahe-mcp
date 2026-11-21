@@ -2,9 +2,17 @@
 
 ## Unreleased — current baseline
 
-The current development build requires schema **60** and role policy **v11**.
+The current development build requires schema **62** and role policy **v12**.
 This summary covers implemented changes since the dated entries below; it is
 not a release announcement.
+
+- Added optional `assessment_only` Query responses for use-state, exact records
+  and open graph views. Full mode remains the default; evaluation and full-state
+  digests are unchanged.
+- Source-review transport v2 and derived/historical review getters now bundle
+  bounded live conflict candidates from the same read transaction, outside the
+  exact approval subject and receipt. Existing receipt/replay authority is
+  unchanged. See [response and advisory contracts](docs/QUERY_DELIVERY.md).
 
 - Added migrations 50–52 for external proposition identity, traceable binding
   corrections/withdrawals/restorations, and immutable external checks and

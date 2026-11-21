@@ -18,13 +18,13 @@ const (
 	// ToolAdmitReviewedSourceClaim admits an explicitly approved exact display subject.
 	ToolAdmitReviewedSourceClaim = "admit_reviewed_source_claim"
 	// SourceClaimReviewMCPContract versions this bounded transport only.
-	SourceClaimReviewMCPContract = "source-claim-review-mcp/v1"
+	SourceClaimReviewMCPContract = "source-claim-review-mcp/v2"
 	// SourceClaimReviewMaxManifestEntries bounds a complete response, not a page.
 	SourceClaimReviewMaxManifestEntries = 205
 	// SourceClaimReviewMaxResponseBytes bounds the complete encoded tool response.
 	SourceClaimReviewMaxResponseBytes = 1 << 20
 	// GetSourceClaimReviewDescription is shared by typed and stdio registries.
-	GetSourceClaimReviewDescription = "Read one pending source-backed statement review from one PostgreSQL snapshot. Returns its submission receipt, complete batch manifest (at most 205 entries; no pagination or truncation), exact display bytes, and subject. Show the complete proposal sentence, exact source quotations, source title/location/revision, coverage and limitations; preserve the subject unchanged. Other manifest entries are discovery coordinates, not an approval of the batch. No write or approval occurs. Responses exceeding 1 MiB fail closed. Display is cooperating-agent behavior, not proof that a human read it."
+	GetSourceClaimReviewDescription = "Read one pending source-backed statement review from one PostgreSQL snapshot. Returns its submission receipt, complete batch manifest (at most 205 entries; no pagination or truncation), exact display bytes, and subject. Show the complete proposal sentence, exact source quotations, source title/location/revision, coverage and limitations; preserve the subject unchanged. Live conflict_candidates are automatically read in the same snapshot and must be shown with their coverage/byte limits. They are advisory outside the exact subject and are not saved in the decision receipt. Other manifest entries are discovery coordinates, not an approval of the batch. No write or approval occurs. Responses exceeding 1 MiB fail closed. Display is cooperating-agent behavior, not proof that a human read it."
 	// AdmitReviewedSourceClaimDescription is shared by typed and stdio registries.
 	AdmitReviewedSourceClaimDescription = "After explicit approval of the complete get_source_claim_review display, admit exactly its source-backed statement using decision=approved and the unchanged expected_subject. Reviewer identity comes only from the authorized launcher. The native writer reconstructs and compares display identity atomically with canonical writes; exact subject, reviewer and reason replay only. Do not send a caller receipt, reviewer, request/session ID, graph, derivation, or complete flag. Reject and audit-only use the separate exact-reviewed disposition writer. Legacy admission and independent relation writers remain disabled in this profile. This is not authenticated human review or universal database cutover."
 )
@@ -37,11 +37,12 @@ type GetSourceClaimReviewRequest struct {
 
 // GetSourceClaimReviewResponse carries the full manifest and exact display bytes.
 type GetSourceClaimReviewResponse struct {
-	ContractVersion   string                                             `json:"contract_version"`
-	SubmissionReceipt evidenceingestion.SubmissionReceipt                `json:"submission_receipt"`
-	ProposalManifest  evidenceingestion.ProposalBatchManifest            `json:"proposal_manifest"`
-	Display           evidenceingestion.SourceClaimReviewDisplayArtifact `json:"display"`
-	Subject           evidenceingestion.ExactDisplayedReviewSubject      `json:"subject"`
+	ConflictCandidates *evidenceingestion.ReviewConflictCandidates        `json:"conflict_candidates,omitempty"`
+	ContractVersion    string                                             `json:"contract_version"`
+	SubmissionReceipt  evidenceingestion.SubmissionReceipt                `json:"submission_receipt"`
+	ProposalManifest   evidenceingestion.ProposalBatchManifest            `json:"proposal_manifest"`
+	Display            evidenceingestion.SourceClaimReviewDisplayArtifact `json:"display"`
+	Subject            evidenceingestion.ExactDisplayedReviewSubject      `json:"subject"`
 }
 
 // AdmitReviewedSourceClaimRequest binds approval to the displayed subject only.
@@ -92,6 +93,21 @@ func (s *Server) GetSourceClaimReview(ctx context.Context, req GetSourceClaimRev
 		return GetSourceClaimReviewResponse{}, mapToolError(err)
 	}
 	response := GetSourceClaimReviewResponse{ContractVersion: SourceClaimReviewMCPContract, SubmissionReceipt: snapshot.SubmissionReceipt, ProposalManifest: snapshot.ProposalManifest, Display: display, Subject: subject}
+	return boundSourceClaimReviewConflicts(response, snapshot.ConflictCandidates)
+}
+
+func boundSourceClaimReviewConflicts(response GetSourceClaimReviewResponse, candidates *evidenceingestion.ReviewConflictCandidates) (GetSourceClaimReviewResponse, error) {
+	// Bound against the actual complete envelope, not just an independent advisory
+	// allowance. Metadata alone may still fail closed at the 1 MiB boundary.
+	base, err := json.Marshal(response)
+	if err != nil {
+		return GetSourceClaimReviewResponse{}, mapToolError(err)
+	}
+	budget := min(evidenceingestion.ReviewConflictMaxBytes, SourceClaimReviewMaxResponseBytes-len(base)-len(`,"conflict_candidates":`))
+	response.ConflictCandidates, err = evidenceingestion.BoundReviewConflictCandidates(candidates, budget)
+	if err != nil {
+		return GetSourceClaimReviewResponse{}, mapToolError(err)
+	}
 	if _, err := marshalSourceClaimReviewResponse(response); err != nil {
 		return GetSourceClaimReviewResponse{}, err
 	}
@@ -168,7 +184,7 @@ func validateSourceReviewID(name, value, prefix string) error {
 }
 
 func (c postgresCore) LoadReviewableSourceClaimReviewSnapshot(ctx context.Context, attemptID, occurrenceID string) (evidenceingestion.ReviewableSourceClaimReviewSnapshot, error) {
-	return evidenceingestion.LoadReviewableSourceClaimReviewSnapshot(ctx, c.pool, attemptID, occurrenceID)
+	return evidenceingestion.LoadSourceClaimReviewWithConflicts(ctx, c.pool, attemptID, occurrenceID)
 }
 
 func (c postgresCore) AdmitReviewedSourceClaim(ctx context.Context, input evidenceingestion.ReviewedSourceClaimAdmissionInput) (evidenceingestion.AdmissionResult, error) {

@@ -272,8 +272,15 @@ do not manufacture duplicate nodes. Legacy contradiction writers remain internal
 and disabled in standard profiles. Query exposes actual edges and review receipts.
 
 Before presenting any statement proposal, derived endpoint or relation for a
-decision, run `suggest_intake_conflicts` on each pending statement occurrence
-and on the origin occurrence of each statement endpoint or statement parent.
+decision, inspect and retain its conflict candidates. Source-review v2 and
+derived/historical endpoint getters automatically return live `conflict_candidates`
+for the reviewed statement and statement ancestry in the same read snapshot.
+Show this advisory separately from the unchanged exact display/subject; it is
+not bound to the decision receipt and does not prove human reading. Its byte
+omissions are not an empty search. A bundled getter failure yields no complete
+new review. See [delivery contracts](docs/QUERY_DELIVERY.md).
+For review types without this field, use the separately authorized
+`suggest_intake_conflicts` on each statement endpoint/parent origin occurrence.
 The scan is bounded (at most 1000 claims, no pagination). Show the candidates,
 an explicit empty result or the failure, with coverage and truncation limits;
 never report a failure as zero candidates. Whether to proceed after a failed or

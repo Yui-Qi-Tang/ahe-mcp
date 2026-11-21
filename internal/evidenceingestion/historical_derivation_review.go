@@ -50,10 +50,11 @@ type HistoricalDerivationDisplay struct {
 
 // HistoricalDerivationReview separates saved approval from the current lifecycle.
 type HistoricalDerivationReview struct {
-	Mode    string                       `json:"mode"`
-	Subject string                       `json:"subject"`
-	Display HistoricalDerivationDisplay  `json:"display"`
-	Receipt *HistoricalDerivationReceipt `json:"receipt,omitempty"`
+	ConflictCandidates *ReviewConflictCandidates    `json:"conflict_candidates,omitempty"`
+	Mode               string                       `json:"mode"`
+	Subject            string                       `json:"subject"`
+	Display            HistoricalDerivationDisplay  `json:"display"`
+	Receipt            *HistoricalDerivationReceipt `json:"receipt,omitempty"`
 }
 
 // HistoricalDerivationDecision is accepted only at the historical writer.
@@ -106,6 +107,9 @@ func LoadHistoricalDerivationReview(ctx context.Context, pool *pgxpool.Pool, req
 	err := withReadOnlyTx(ctx, pgxDB{pool: pool}, func(tx sqlTx) error {
 		var err error
 		out, err = loadHistoricalDerivationReview(ctx, tx, req)
+		if err == nil {
+			out.ConflictCandidates, err = loadReviewConflictCandidates(ctx, tx, endpointConflictTargets(out.Display.Basis))
+		}
 		return err
 	})
 	return out, err

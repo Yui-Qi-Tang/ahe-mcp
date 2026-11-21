@@ -106,6 +106,8 @@ Return a compact, directly inspectable package containing:
 - source snapshot, extraction view, attempt, and proposal IDs;
 - numbered review cards with exact excerpts and source locations;
 - version differences and uncertainty;
+- conflict check state per statement with its coverage and byte limits, kept
+  separate from the exact review display;
 - extraction coverage notes and known omissions, distinct from source coverage;
 - readback results and missing capabilities;
 - the exact human decision still required;

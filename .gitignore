@@ -1,5 +1,6 @@
 /bin/
 .DS_Store
+/.claude/launch.json
 
 # Private maintainer state and lab records (not product documentation).
 /[Ss][Tt][Aa][Tt][Uu][Ss].md
@@ -33,6 +34,7 @@
 !/docs/PRODUCT_REPLAY_20261006_SUPPLEMENT.md
 !/docs/CONSISTENCY.md
 !/docs/CURRENT_USE_GUIDANCE.md
+!/docs/QUERY_DELIVERY.md
 !/docs/INITIAL_LINEAGE_REGISTRATION.md
 !/docs/HISTORICAL_DERIVATION.md
 

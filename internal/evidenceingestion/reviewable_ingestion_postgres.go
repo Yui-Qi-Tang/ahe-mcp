@@ -17,10 +17,11 @@ import (
 // ReviewableSourceClaimReviewSnapshot is an ephemeral, one-snapshot review
 // handoff. None of its fields are persisted by this loader.
 type ReviewableSourceClaimReviewSnapshot struct {
-	SubmissionReceipt  SubmissionReceipt     `json:"submission_receipt"`
-	ProposalManifest   ProposalBatchManifest `json:"proposal_manifest"`
-	ReviewPackage      ReviewPackage         `json:"review_package"`
-	ExactReviewSubject ExactReviewSubject    `json:"exact_review_subject"`
+	ConflictCandidates *ReviewConflictCandidates `json:"conflict_candidates,omitempty"`
+	SubmissionReceipt  SubmissionReceipt         `json:"submission_receipt"`
+	ProposalManifest   ProposalBatchManifest     `json:"proposal_manifest"`
+	ReviewPackage      ReviewPackage             `json:"review_package"`
+	ExactReviewSubject ExactReviewSubject        `json:"exact_review_subject"`
 }
 
 // LoadReviewableSourceClaimReviewSnapshot rebuilds one review package from

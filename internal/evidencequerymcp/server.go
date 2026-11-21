@@ -100,8 +100,9 @@ type ToolDefinition struct {
 
 // GetEvidenceRecordRequest is the bounded exact-get query input.
 type GetEvidenceRecordRequest struct {
-	ProposalOccurrenceID string `json:"proposal_occurrence_id,omitempty"`
-	CanonicalID          string `json:"canonical_id,omitempty"`
+	ProposalOccurrenceID string       `json:"proposal_occurrence_id,omitempty"`
+	CanonicalID          string       `json:"canonical_id,omitempty"`
+	UseStateMode         UseStateMode `json:"use_state_mode,omitempty"`
 }
 
 // GetMCPReadSourceStatesRequest selects a bounded MCP source-state projection.
@@ -450,6 +451,7 @@ type ListEvidenceNeighborsResponse struct {
 
 // GetEvidenceRecordResponse preserves proposal lifecycle and provenance metadata.
 type GetEvidenceRecordResponse struct {
+	UseStateSummary            *UseStateSummary                               `json:"use_state_summary,omitempty"`
 	UseState                   *evidenceingestion.EvidenceUseProjection       `json:"use_state,omitempty"`
 	SupersessionAdmission      *evidenceingestion.SupersessionReviewReceipt   `json:"supersession_admission,omitempty"`
 	EndpointDisposition        *evidenceingestion.EndpointDispositionReceipt  `json:"endpoint_disposition,omitempty"`
@@ -643,7 +645,7 @@ func (s *Server) Tools() []ToolDefinition {
 	result := []ToolDefinition{
 		{
 			Name:        ToolGetEvidenceRecord,
-			Description: "Read one proposal or admitted canonical evidence record by exact ID.",
+			Description: "Read one proposal or admitted canonical evidence record by exact ID. Explicit use_state_mode=assessment_only omits the whole-store governance snapshot while retaining its assessment and this record; full is the default.",
 			ReadOnly:    true,
 		},
 		{
@@ -678,7 +680,7 @@ func (s *Server) Tools() []ToolDefinition {
 		},
 		{
 			Name:        ToolOpenCanonicalReadView,
-			Description: "Materialize one bounded immutable canonical graph view from PostgreSQL and retain it under an instance-local cached handle; the handle can be evicted and is lost on process restart.",
+			Description: "Materialize one bounded immutable canonical graph view from PostgreSQL and retain it under an instance-local cached handle; the handle can be evicted and is lost on process restart. Explicit use_state_mode=assessment_only omits the returned governance snapshot, not the cached full state or bounded artifact; full is the default.",
 			ReadOnly:    true,
 		},
 		{
@@ -1017,6 +1019,9 @@ func (s *Server) GetGroundedEvidenceBrief(ctx context.Context, req GetGroundedEv
 
 // GetEvidenceRecord returns one proposal evidence record with lifecycle metadata.
 func (s *Server) GetEvidenceRecord(ctx context.Context, req GetEvidenceRecordRequest) (GetEvidenceRecordResponse, error) {
+	if err := req.UseStateMode.validate(); err != nil {
+		return GetEvidenceRecordResponse{}, err
+	}
 	proposalID := strings.TrimSpace(req.ProposalOccurrenceID)
 	canonicalID := strings.TrimSpace(req.CanonicalID)
 	if proposalID != "" && canonicalID != "" {
@@ -1030,7 +1035,7 @@ func (s *Server) GetEvidenceRecord(ctx context.Context, req GetEvidenceRecordReq
 		if err != nil {
 			return GetEvidenceRecordResponse{}, mapToolError(err)
 		}
-		return mapCanonicalResult(result), nil
+		return formatRecordUseState(mapCanonicalResult(result), req.UseStateMode), nil
 	}
 	if err := validateOccurrenceID(proposalID); err != nil {
 		return GetEvidenceRecordResponse{}, err
@@ -1039,7 +1044,7 @@ func (s *Server) GetEvidenceRecord(ctx context.Context, req GetEvidenceRecordReq
 	if err != nil {
 		return GetEvidenceRecordResponse{}, mapToolError(err)
 	}
-	return mapProposalResult(result), nil
+	return formatRecordUseState(mapProposalResult(result), req.UseStateMode), nil
 }
 
 // ListEvidenceRecords returns bounded proposal records under the requested lifecycle scope.

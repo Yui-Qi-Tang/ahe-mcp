@@ -28,6 +28,13 @@ server; an older binary lacking this contract must not be treated as equivalent
 or silently replaced with another search mode. The research v6 route remains
 separate. See [search contracts and limits](docs/SYSTEM_DESIGN.md#search).
 
+For model-facing use-state, exact-record and open-view calls, explicitly select
+`use_state_mode=assessment_only` to omit the whole-store snapshot while keeping
+the complete assessment. Source/derived/historical review getters automatically
+include bounded live conflict advisory; source review uses transport v2, with
+unchanged approval display/subject. No schema/role migration is added for these
+delivery changes. See [response contracts](docs/QUERY_DELIVERY.md).
+
 The current MCP implementation uses explicit launcher and database authority.
 Query is read-only. Each ingestion profile above has its own bounded capability;
 intake includes read-only conflict suggestions but cannot admit evidence.

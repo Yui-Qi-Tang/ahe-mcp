@@ -99,6 +99,14 @@ When current use is requested, select `current-action/v1` or
 action's complete declared basis with `check_current_evidence_plan` under the
 same policy. Admission history or an old pass is not current-use clearance.
 
+For model-facing reads, explicitly select `use_state_mode: assessment_only` on
+`get_evidence_use_state`, `get_evidence_record` and `open_canonical_read_view`
+when the assessment and requested record/artifact suffice. The summary retains
+the full-state digest but omits its snapshot; do not recompute or verify that
+digest from the summary. Use `full` when complete snapshot verification is
+needed. Separate reads can have different cuts. See
+[response contracts](../../../docs/QUERY_DELIVERY.md).
+
 For a blocked/excluded result or a currentness limitation, read the
 [reason code reference](../../../docs/CURRENT_USE_GUIDANCE.md). Follow each
 `related_id` to the actual parent, source or conflict edge. Outcomes are not

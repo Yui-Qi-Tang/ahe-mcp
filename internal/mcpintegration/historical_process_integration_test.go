@@ -169,6 +169,9 @@ func TestIntegrationHistoricalDerivationStandardMCP(t *testing.T) {
 		t.Run(decision, func(t *testing.T) {
 			req := historicalProcessProposal(t, f, source, parents, "historical-process-"+decision)
 			review := relationTool[evidenceingestion.HistoricalDerivationReview](t, history, mcpendpoints.ToolHistoricalReview, req)
+			if review.ConflictCandidates == nil || review.ConflictCandidates.Status != "observed" || len(review.ConflictCandidates.Targets) != 4 {
+				t.Fatal("historical process omitted statement/ancestor conflict context")
+			}
 			if review.Mode != "pending_decision" || review.Display.UseClass != evidencegraph.DerivationHistoricalOnly || len(review.Display.Basis.SourceLeaves) != 3 || review.Display.Basis.CodeFile != nil {
 				t.Fatal("historical native display omitted its purpose or complete textual basis")
 			}

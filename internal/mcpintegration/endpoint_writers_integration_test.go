@@ -175,6 +175,9 @@ func testEndpointWritersStandardMCP(t *testing.T, parentCount int) {
 	before := relationCounts(t, ctx, f.pool)
 	review := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, req)
 	assertPendingEndpointReview(t, review)
+	if review.ConflictCandidates == nil || review.ConflictCandidates.Status != "observed" || len(review.ConflictCandidates.Targets) != parentCount+1 {
+		t.Fatal("endpoint process omitted statement/parent conflict targets")
+	}
 	if relationCounts(t, ctx, f.pool) != before || len(review.Display.SourceLeaves) != parentCount || len(review.Display.Ancestors) != parentCount || review.Display.CodeFile != nil {
 		t.Fatal("derived review context/effect differs")
 	}
@@ -278,6 +281,9 @@ func testEndpointWritersStandardMCP(t *testing.T, parentCount int) {
 	codeReq := evidenceingestion.EndpointReviewRequest{Kind: "repository_code", ProposalOccurrenceID: codeProposal}
 	codeReview := relationTool[evidenceingestion.EndpointReview](t, endpoints, mcpendpoints.ToolReview, codeReq)
 	assertPendingEndpointReview(t, codeReview)
+	if codeReview.ConflictCandidates == nil || codeReview.ConflictCandidates.Status != "not_applicable" || len(codeReview.ConflictCandidates.Targets) != 0 {
+		t.Fatal("code conflict context is not explicitly inapplicable")
+	}
 	if codeReview.Display.CodeFile == nil || codeReview.Display.CodeFile.Text != codeText || codeReview.Display.CodeFile.FileSnapshot.GitBlobOID == "" {
 		t.Fatal("exact code/revision missing")
 	}

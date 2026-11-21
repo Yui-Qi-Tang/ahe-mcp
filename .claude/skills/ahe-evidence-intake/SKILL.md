@@ -234,9 +234,19 @@ batch; it does not approve other members or prove coverage of the source.
 Oversized, incomplete, conflicting or unavailable review material stops the
 decision path; do not trim it or fall back to a legacy writer.
 
-Before asking for a decision, check for conflicts with existing evidence. Call
-`suggest_intake_conflicts` for every pending statement occurrence and keep each
-result. The scan is bounded: it reads at most `scan_limit` claims (maximum 1000)
+Before asking for a decision, inspect and retain the getter's outer
+`conflict_candidates`. Source-review v2 and derived/historical endpoint getters
+automatically include each reviewed statement and relevant statement ancestor.
+Show each target's candidates and all scan/return/byte limits. This is live,
+nonbinding advisory from the review's read snapshot, separate from the exact
+display/subject and absent from decision receipts. A replay display is historical;
+its outer advisory is a new observation. See
+[response contracts](../../../docs/QUERY_DELIVERY.md).
+
+For older getters or review types without that field, call the separately
+authorized `suggest_intake_conflicts` for each statement occurrence and retain
+each result, or report that the check is unavailable. The scan is bounded:
+it reads at most `scan_limit` claims (maximum 1000)
 in canonical-ID order, with no pagination, so it cannot cover a larger store.
 Use the largest supported `scan_limit`, and say that claims beyond it were not
 searched. Report one of three states for each occurrence, together with the
@@ -249,13 +259,17 @@ scan/return limits, truncation and other coverage fields:
   current profile), with the error. Never report a failure as zero candidates.
 
 Do not skip this step because candidates are only suggestions. The conflict
-check is supplementary material, not part of the native review display: a
-failed check or truncation does not by itself stop or permit the decision.
+check is supplementary material, not part of the exact approval display: a
+separate failed check or truncation does not by itself stop or permit the decision.
 Report it and let the human decide; do not infer either outcome. Point out
 candidates whose statements may be incompatible and offer a contradiction
 review (see
 [Independent Contradiction Review](#independent-contradiction-review-and-intake-suggestions)).
 Candidates are not verdicts, and an empty result is not proof of no conflict.
+A bundled getter failure means no complete new review was returned; follow the
+existing stop rule for unavailable review material. A zero returned count after
+byte omission is not a successful empty search. Retain the entire response if
+the observed candidates must be audited; the decision receipt does not bind them.
 
 Display the complete native review material for each numbered proposal. A
 short navigation card may accompany it, but must not replace the exact display.
@@ -271,7 +285,9 @@ Include:
   statement that no comparable prior revision was available;
 - any uncertainty that affects interpretation;
 - the conflict check state for each occurrence (candidates, no candidates
-  within the reported limits, or failed/unavailable) and its coverage limits;
+  within the reported limits, candidates omitted by the byte budget,
+  `not_applicable` for repository code, or failed/unavailable) and its
+  coverage limits;
 - the extraction coverage notes, including known omissions, separately from
   the unmodified native display.
 
@@ -365,9 +381,10 @@ The same per-node limit applies to independent implements review. Complete AND
 ancestry remains bounded to 64 nodes and depth 8, with unchanged byte/display
 limits; do not omit parents or invent intermediate claims merely to fit a cap.
 
-Before the review, run `suggest_intake_conflicts` on the origin occurrence of the
-derived statement and of each statement parent, and report the results as in
-the [Human Review Stop](#human-review-stop).
+Inspect the getter's automatic `conflict_candidates` for the derived statement
+and its statement ancestry, and report the results as in the
+[Human Review Stop](#human-review-stop). Do not replace it with a hand-selected
+subset or call its candidates approved relations.
 
 Show the complete native display and ancestor source context. Nested
 source-basis effects are provenance context, not source approval. Copy the
@@ -397,12 +414,13 @@ source text. Retain the actual proposal carrier and complete declared AND parent
 source excerpts, method, producer, trace, scope and limitations; quotes belong to
 premises. Never invent a document containing the conclusion.
 
-Run the same bounded conflict suggestions on the pending occurrence and statement
-parents. Call `get_historical_derivation_review` with 1–32 unique sorted parent IDs
+Call `get_historical_derivation_review` with 1–32 unique sorted parent IDs
 and the derivation metadata. Show the entire native display, including governance
 states and each derived ancestor's own carrier. Withdrawal, supersession,
 contradiction or incomplete extra assessments are disclosed; broken source or
 ancestry bindings still reject a fresh write. The system does not judge entailment.
+Show and retain its automatic live `conflict_candidates` separately from the
+historical approval display/subject, following the same coverage rules above.
 
 After an exact explicit human `approved`, `reject` or `audit_only` decision and
 reason, call `apply_historical_derivation_decision` with the unchanged review,
@@ -519,6 +537,9 @@ Report results per provider object and proposal:
 - coverage, limitations, and any missing readback capability;
 - extraction coverage notes and known omissions, separate from source coverage;
 - the exact reviewed subject and resulting decision ID when a decision was made;
+- the conflict check state shown for each statement and its limits; the decision
+  receipt does not record it, so retain the complete getter response separately
+  when that observation needs an audit record;
 - any requested relation or repository workflow that was unavailable.
 
 Do not claim that AHE cryptographically or independently verified the human

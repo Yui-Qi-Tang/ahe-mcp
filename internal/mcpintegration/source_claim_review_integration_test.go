@@ -51,6 +51,10 @@ func TestIntegrationSourceClaimReviewSubprocessExactAdmission(t *testing.T) {
 	}
 	getArgs := evidenceingestionmcp.GetSourceClaimReviewRequest{ExtractionAttemptID: proposal.ExtractionAttemptID, ProposalOccurrenceID: proposal.ProposalOccurrenceID}
 	review := authorityProcessTool[evidenceingestionmcp.GetSourceClaimReviewResponse](t, reviewer, "get_source_claim_review", getArgs)
+	if review.ContractVersion != evidenceingestionmcp.SourceClaimReviewMCPContract || review.ConflictCandidates == nil || review.ConflictCandidates.Status != "observed" ||
+		len(review.ConflictCandidates.Targets) != 1 || review.ConflictCandidates.Targets[0].ProposalOccurrenceID != proposal.ProposalOccurrenceID {
+		t.Fatal("source process omitted automatic conflict context")
+	}
 	if review.ProposalManifest.ProposalCount != 1 || len(review.ProposalManifest.Entries) != 1 || review.Subject.ReviewSubject.ProposalOccurrenceID != proposal.ProposalOccurrenceID || review.Subject.ReviewDisplayArtifactID != review.Display.ID || !strings.Contains(review.Display.PayloadUTF8, statement) {
 		t.Fatal("review must retain complete exact subject and display")
 	}

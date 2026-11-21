@@ -48,13 +48,14 @@ func queryTools() []mcpstdio.Tool {
 		{
 			Name:        evidencequerymcp.ToolGetEvidenceRecord,
 			Title:       "Get Evidence Record",
-			Description: "Read one proposal or admitted canonical evidence record by exact ID.",
+			Description: "Read one proposal or admitted canonical evidence record by exact ID. Explicit use_state_mode=assessment_only omits the whole-store governance snapshot while retaining its assessment and this record; full is the default.",
 			InputSchema: map[string]any{
 				"type":                 "object",
 				"additionalProperties": false,
 				"properties": map[string]any{
 					"proposal_occurrence_id": stringSchema("Proposal occurrence ID with occ: prefix."),
 					"canonical_id":           stringSchema("Canonical evidence node ID with canon-node: prefix."),
+					"use_state_mode":         evidencequerymcp.UseStateModeSchema(),
 				},
 				"oneOf": []map[string]any{
 					{"required": []string{"proposal_occurrence_id"}},
@@ -136,7 +137,7 @@ func queryTools() []mcpstdio.Tool {
 		{
 			Name:        evidencequerymcp.ToolOpenCanonicalReadView,
 			Title:       "Open Canonical Read View",
-			Description: "Materialize one bounded immutable canonical graph view from PostgreSQL and retain it under an instance-local cached handle; the handle can be evicted and is lost on process restart.",
+			Description: "Materialize one bounded immutable canonical graph view from PostgreSQL and retain it under an instance-local cached handle; the handle can be evicted and is lost on process restart. Explicit use_state_mode=assessment_only omits the returned governance snapshot, not the cached full state or bounded artifact; full is the default.",
 			InputSchema: openCanonicalReadViewSchema(),
 			Annotations: mcpstdio.Annotations{
 				ReadOnlyHint:    &readOnly,
@@ -208,6 +209,7 @@ func queryTools() []mcpstdio.Tool {
 
 func openCanonicalReadViewSchema() map[string]any {
 	return objectSchema(map[string]any{
+		"use_state_mode": evidencequerymcp.UseStateModeSchema(),
 		"root_node_ids": stringArraySchema(
 			"Canonical evidence node IDs with canon-node: prefixes used as traversal roots.",
 			1,

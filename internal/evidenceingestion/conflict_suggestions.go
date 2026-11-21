@@ -72,8 +72,25 @@ type ConflictSuggestionResult struct {
 // SuggestIntakeConflicts searches one bounded, read-only repeatable-read cut.
 // Matching is deterministic retrieval, never a contradiction or use decision.
 func SuggestIntakeConflicts(ctx context.Context, pool *pgxpool.Pool, req ConflictSuggestionRequest) (ConflictSuggestionResult, error) {
-	if pool == nil || !validateEndpointText(req.ProposalOccurrenceID, 512) {
-		return ConflictSuggestionResult{}, newDomainError(ErrorInvalidInput, "persisted proposal occurrence and postgres pool required")
+	if pool == nil {
+		return ConflictSuggestionResult{}, newDomainError(ErrorInvalidInput, "postgres pool required")
+	}
+	req, err := normalizeConflictSuggestionRequest(req)
+	if err != nil {
+		return ConflictSuggestionResult{}, err
+	}
+	var out ConflictSuggestionResult
+	err = withReadOnlyTx(ctx, pgxDB{pool: pool}, func(tx sqlTx) error {
+		var err error
+		out, err = loadConflictSuggestionsInTx(ctx, tx, req)
+		return err
+	})
+	return out, err
+}
+
+func normalizeConflictSuggestionRequest(req ConflictSuggestionRequest) (ConflictSuggestionRequest, error) {
+	if !validateEndpointText(req.ProposalOccurrenceID, 512) {
+		return ConflictSuggestionRequest{}, newDomainError(ErrorInvalidInput, "persisted proposal occurrence required")
 	}
 	if req.Limit == 0 {
 		req.Limit = 20
@@ -82,10 +99,19 @@ func SuggestIntakeConflicts(ctx context.Context, pool *pgxpool.Pool, req Conflic
 		req.ScanLimit = 250
 	}
 	if req.Limit < 1 || req.Limit > 100 || req.ScanLimit < 1 || req.ScanLimit > conflictScanMax {
-		return ConflictSuggestionResult{}, newDomainError(ErrorInvalidInput, "limit must be 1..100 and scan_limit 1..1000")
+		return ConflictSuggestionRequest{}, newDomainError(ErrorInvalidInput, "limit must be 1..100 and scan_limit 1..1000")
+	}
+	return req, nil
+}
+
+// loadConflictSuggestionsInTx preserves the caller's review snapshot.
+func loadConflictSuggestionsInTx(ctx context.Context, tx sqlTx, req ConflictSuggestionRequest) (ConflictSuggestionResult, error) {
+	req, err := normalizeConflictSuggestionRequest(req)
+	if err != nil {
+		return ConflictSuggestionResult{}, err
 	}
 	var out ConflictSuggestionResult
-	err := withReadOnlyTx(ctx, pgxDB{pool: pool}, func(tx sqlTx) error {
+	err = func() error {
 		if _, err := tx.exec(ctx, `SET LOCAL row_security=off`); err != nil {
 			return err
 		}
@@ -274,7 +300,7 @@ func SuggestIntakeConflicts(ctx context.Context, pool *pgxpool.Pool, req Conflic
 		}
 		out.Coverage.ReturnedClaims = len(out.Suggestions)
 		return nil
-	})
+	}()
 	return out, err
 }
 

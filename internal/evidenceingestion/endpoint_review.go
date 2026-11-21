@@ -45,9 +45,10 @@ type EndpointCodeFile struct {
 // Lifecycle reports current DB state separately; it is not part of that subject.
 // Neither field proves a human saw the display.
 type EndpointReview struct {
-	Lifecycle EndpointReviewLifecycle `json:"lifecycle"`
-	Subject   string                  `json:"subject"`
-	Display   EndpointReviewDisplay   `json:"display"`
+	ConflictCandidates *ReviewConflictCandidates `json:"conflict_candidates,omitempty"`
+	Lifecycle          EndpointReviewLifecycle   `json:"lifecycle"`
+	Subject            string                    `json:"subject"`
+	Display            EndpointReviewDisplay     `json:"display"`
 }
 
 // EndpointReviewLifecycle distinguishes a new admission from receipt-bound replay.
@@ -138,6 +139,9 @@ func LoadEndpointReview(ctx context.Context, pool *pgxpool.Pool, req EndpointRev
 	err := withReadOnlyTx(ctx, pgxDB{pool: pool}, func(tx sqlTx) error {
 		var err error
 		out, err = loadEndpointReview(ctx, tx, req)
+		if err == nil {
+			out.ConflictCandidates, err = loadReviewConflictCandidates(ctx, tx, endpointConflictTargets(out.Display))
+		}
 		return err
 	})
 	return out, err
