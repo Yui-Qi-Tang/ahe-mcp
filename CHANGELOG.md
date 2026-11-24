@@ -6,6 +6,44 @@ The current development build requires schema **62** and role policy **v12**.
 This summary covers implemented changes since the dated entries below; it is
 not a release announcement.
 
+### Downstream impact
+
+Every entry that changes a field, enum value, default or precondition a
+consumer parses or relies on must be listed here, with the old and new value
+and what a consumer has to do.
+
+- `d542450` (schema 62): governance assessments report
+  `projection_version: evidence-use-projection/v2` instead of `v1`. v2 adds the
+  `historical_derivation` and `unknown_derivation_use_class` reasons on excluded
+  or blocked derived claims. v1 is no longer returned, because it lacks that
+  exclusion. Consumers that pinned `v1` must accept `v2`. This entry was
+  missing when the change landed.
+- An admitted external source claim with no recognized currentness is blocked
+  with `unclassified_currentness`. An unchanged singleton claim can pass only
+  after reviewed initial lineage registration (migration 60) or a fresh-v2
+  replacement. No input schema shows this precondition; follow
+  [current-use guidance](docs/CURRENT_USE_GUIDANCE.md).
+- `9766081`: the optional `use_state_mode` field changed the input schemas of
+  `get_evidence_record`, `open_canonical_read_view` and `get_evidence_use_state`.
+  `44aa980`: the `revision` description changed the input schema of
+  `submit_external_source`. Consumers that pin exact schema bytes must review
+  and re-pin these four tools; no new field is required. These entries were
+  missing when the changes landed.
+
+### Changes
+
+- Added the read-only `get_query_contract` tool (Query now has 30 tools). It
+  publishes projection versions, use policies, expected migration and role
+  policy as stable, pinnable bytes. Existing tool input schemas are unchanged,
+  so existing pins stay valid. Golden response samples and consumer-owned
+  fixtures under `internal/evidencequerymcp/testdata/` run in ordinary tests.
+  See [downstream contract](docs/QUERY_DELIVERY.md#downstream-contract-and-version-agreement).
+- `ahe-query-mcp` now returns short usage `instructions` in its MCP initialize
+  result, so a model connected from any repository sees the read-only boundary,
+  the contract check, the use-state check and recheck, and where reason codes are
+  explained. Ingest and adapter servers send none. Tool schemas and contract bytes
+  are unchanged.
+
 - Added optional `assessment_only` Query responses for use-state, exact records
   and open graph views. Full mode remains the default; evaluation and full-state
   digests are unchanged.

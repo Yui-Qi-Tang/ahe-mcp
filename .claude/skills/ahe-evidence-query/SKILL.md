@@ -36,6 +36,7 @@ Choose the smallest useful entry point for the question:
 | A path or topology within a bounded snapshot | `open_canonical_read_view`, then `find_canonical_path` or `get_canonical_topology_diagnostics` |
 | Source revision or governed lineage state | `get_mcp_read_source_states`, or `get_canonical_supersession_currentness` with an observed `lineage_key` |
 | Current-action eligibility and final basis check | `get_evidence_use_state`, then `check_current_evidence_plan` under the same explicit policy |
+| Which projection versions and policies this Query returns | `get_query_contract`; see [downstream contract](../../../docs/QUERY_DELIVERY.md#downstream-contract-and-version-agreement) |
 
 `get_grounded_evidence_brief` is a deterministic read-only evidence package,
 not a model-generated news summary. Inspect its source context, record state,

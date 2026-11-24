@@ -83,5 +83,6 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	server.SetInstructions(evidencequerymcp.ServerInstructions)
 	return server.Serve(ctx, os.Stdin, os.Stdout)
 }

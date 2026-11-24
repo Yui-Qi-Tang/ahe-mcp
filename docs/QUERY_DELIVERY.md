@@ -98,3 +98,83 @@ No tools, write privileges, migrations or role-policy grants are added. Relation
 supersession and contradiction getters do not yet bundle this context; use the
 existing separately authorized intake suggestion flow for their statement
 endpoints. Never enable a legacy profile to obtain missing capabilities.
+
+## Downstream contract and version agreement
+
+These rules fix how a consumer such as Pouch learns what Query returns. They do
+not change evidence governance, policies or eligibility.
+
+### Published versions
+
+`get_query_contract` takes `{}` and reads no database. It returns
+`ahe-query-contract/v1`:
+
+| Field | Meaning |
+|---|---|
+| `projection_versions` | Assessment `projection_version` values this binary returns. Currently `evidence-use-projection/v2` only. |
+| `use_policies` | Accepted `policy` values for the governance tools. |
+| `expected_migration` | Newest migration embedded in this binary. The attached database may differ. |
+| `role_policy` | Database role policy version this binary expects. |
+| `limitations` | What the contract does not cover. |
+
+The response has no time or store field, so one binary always returns the same
+bytes. An operator can pin their SHA-256 the same way input schemas are pinned.
+Because the bytes include `expected_migration` and `role_policy`, every new
+migration or role policy changes them, and the operator reviews and re-pins the
+contract on each such upgrade.
+
+The consumer keeps its accepted versions in operator-owned configuration. At
+startup it compares them with this response. If they disagree, it reports a
+contract mismatch with both sides' versions, not unavailability. Each governance
+response still carries `projection_version`; a consumer should check it on every
+call, because the server can change between startup and a later call.
+
+`evidence-use-projection/v1` is not served again. It lacks the
+`historical_derivation` exclusion added in v2, so returning it would weaken the
+current-use gate. A consumer pinned to v1 receives v2 and must stop with a
+mismatch.
+
+### Model instructions
+
+`ahe-query-mcp` also returns short usage `instructions` in its MCP initialize
+result for a connected model: the read-only boundary, the contract check, the
+use-state check and recheck, and where reason codes are explained. They are
+guidance, not part of the contract, the golden samples or any pin. A test keeps
+every tool and policy they name present in Query.
+
+### Change rules
+
+- Consumers pin the exact bytes of tool input schemas. Any change to an
+  existing tool's input schema, including a new optional field, therefore
+  breaks pinned consumers until they re-pin. List it under `Downstream impact`.
+- Adding a new tool does not change existing pins. A consumer that calls it
+  must pin it.
+- Changing or removing a response field, an enum value, a default or a
+  precondition is breaking. It needs a new version label where one exists, and
+  a `Downstream impact` entry with the old and new values and what the consumer
+  must do.
+- Adding a response field is compatible for consumers that ignore unknown
+  fields. It still changes the golden samples below and needs an entry.
+- A breaking change to a governance rule does not keep the old version alive
+  when that would relax the rule. The consumer then receives an explicit
+  mismatch instead.
+
+### Golden samples and consumer fixtures
+
+`internal/evidencequerymcp/testdata/golden/` holds exact response bytes for
+`get_evidence_use_state`, `check_current_evidence_plan` and
+`get_query_contract`, built without a database from a synthetic blocked root.
+`TestGoldenResponseSamples` fails when those bytes change. Add the
+`Downstream impact` entry, then rewrite the files with
+`go test ./internal/evidencequerymcp -run TestGoldenResponseSamples -update-golden`.
+Consumers may copy these files into their own default tests.
+
+`internal/evidencequerymcp/testdata/consumer_contracts/` holds files that
+each consumer owns. A file records the request fields it sends and the response
+paths, projection versions, outcome values and digest prefix it parses.
+`TestConsumerContracts` fails when an AHE change would break that parser. Update
+a file only together with the matching consumer change.
+
+Both check transport shape only. Semantic preconditions, such as
+`unclassified_currentness` needing initial lineage registration, appear as
+reason codes; see [current-use guidance](CURRENT_USE_GUIDANCE.md).

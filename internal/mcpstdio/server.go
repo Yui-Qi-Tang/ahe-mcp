@@ -51,9 +51,10 @@ type Annotations struct {
 
 // Server serves one MCP stdio endpoint over newline-delimited JSON-RPC.
 type Server struct {
-	name    string
-	version string
-	backend Backend
+	name         string
+	version      string
+	backend      Backend
+	instructions string
 }
 
 // NewServer constructs a stdio server over an already-wired Backend.
@@ -69,6 +70,10 @@ func NewServer(name, version string, backend Backend) (*Server, error) {
 	}
 	return &Server{name: name, version: version, backend: backend}, nil
 }
+
+// SetInstructions sets the optional initialize instructions that MCP clients
+// may show to the connected model. Empty text omits the field.
+func (s *Server) SetInstructions(text string) { s.instructions = text }
 
 // Serve reads newline-delimited JSON-RPC messages from in and writes responses to out.
 func (s *Server) Serve(ctx context.Context, in io.Reader, out io.Writer) error {
@@ -128,7 +133,8 @@ func (s *Server) handleMessage(ctx context.Context, data []byte) (rpcResponse, b
 			Capabilities: serverCapabilities{
 				Tools: toolsCapability{ListChanged: false},
 			},
-			ServerInfo: implementation{Name: s.name, Version: s.version},
+			ServerInfo:   implementation{Name: s.name, Version: s.version},
+			Instructions: s.instructions,
 		}), true
 	case "tools/list":
 		return resultResponse(id, listToolsResult{Tools: s.backend.Tools()}), true
@@ -229,6 +235,7 @@ type initializeResult struct {
 	ProtocolVersion string             `json:"protocolVersion"`
 	Capabilities    serverCapabilities `json:"capabilities"`
 	ServerInfo      implementation     `json:"serverInfo"`
+	Instructions    string             `json:"instructions,omitempty"`
 }
 
 type serverCapabilities struct {

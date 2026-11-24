@@ -187,3 +187,23 @@ func objectSchema(properties map[string]any, required []string) map[string]any {
 func boolPtr(value bool) *bool {
 	return &value
 }
+
+func TestServeInitializeInstructionsAreOptional(t *testing.T) {
+	init := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"v1"}}}` + "\n"
+	for _, text := range []string{"", "Read-only evidence layer."} {
+		server := newTestServer(t, &fakeBackend{})
+		server.SetInstructions(text)
+		var out bytes.Buffer
+		if err := server.Serve(context.Background(), strings.NewReader(init), &out); err != nil {
+			t.Fatal(err)
+		}
+		result := decodeResponses(t, out.String())[0]["result"].(map[string]any)
+		got, present := result["instructions"]
+		if text == "" && present {
+			t.Fatalf("empty instructions were sent: %v", got)
+		}
+		if text != "" && got != text {
+			t.Fatalf("instructions = %v, want %q", got, text)
+		}
+	}
+}

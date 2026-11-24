@@ -153,9 +153,11 @@ See [profiles and setup](INSTALL.md#bounded-external-intake-mcp-installation).
 ## MCP Client
 
 Register the protected Query launcher as a stdio MCP server and use `tools/list`
-to discover its schemas. Query has 29 read-only tools; the separate core-records
+to discover its schemas. Query has 30 read-only tools; the separate core-records
 profile has six record/configuration tools. Results are evidence packages, not
-final answers. [Client configuration](INSTALL.md).
+final answers. Its initialize result carries short usage instructions for the
+connected model; the [query skill](.claude/skills/ahe-evidence-query/SKILL.md)
+has the full workflow. [Client configuration](INSTALL.md).
 
 ## Tests
 

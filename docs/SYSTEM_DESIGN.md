@@ -711,7 +711,7 @@ implement BM25, PathSim or a paper's scoring model.
 
 | Program/profile | Current public scope |
 | --- | --- |
-| Query | 29 read-only tools, including Core records, consistency and governance/use-state readback; no model calls or evidence writes |
+| Query | 30 read-only tools, including Core records, consistency, governance/use-state readback and the published query contract; no model calls or evidence writes |
 | Intake | 6 source/extractor/suggestion tools; source/extraction/pending only, no admission |
 | `source-claim-reviewer` | 3 exact source-review tools; admit/reject/audit_only |
 | `relation-reviewer` | 4 exact implementation/reference review/admission tools; no node writes |

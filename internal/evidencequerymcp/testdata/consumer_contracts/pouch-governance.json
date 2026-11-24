@@ -1,0 +1,18 @@
+{
+  "consumer": "pouch",
+  "owner": "Pouch maintainers; change only together with the matching Pouch parser",
+  "derived_from": "pouch internal/ahe/governance.go useAssessment.eligible, CheckSources and CheckActions at local commit e3c8a7a (branch feature/ahe-projection-v2-2dfa1e, not pushed)",
+  "accepted_projection_versions": ["evidence-use-projection/v1", "evidence-use-projection/v2"],
+  "outcomes": ["eligible", "blocked", "excluded"],
+  "state_digest_prefix": "evidence-use:sha256:",
+  "tools": {
+    "get_evidence_use_state": {
+      "request_fields": ["canonical_ids", "policy"],
+      "response_paths": ["assessment.projection_version", "assessment.state_digest", "assessment.policy", "assessment.evaluated_at", "assessment.roots", "assessment.nodes[].node_id", "assessment.nodes[].outcome"]
+    },
+    "check_current_evidence_plan": {
+      "request_fields": ["policy", "actions"],
+      "response_paths": ["assessment.projection_version", "assessment.state_digest", "assessment.policy", "assessment.evaluated_at", "assessment.roots", "assessment.nodes[].node_id", "assessment.nodes[].outcome", "accepted", "actions[].action_id", "actions[].basis_ids"]
+    }
+  }
+}

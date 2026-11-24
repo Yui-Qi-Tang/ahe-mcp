@@ -49,7 +49,7 @@ func TestIntegrationRuntimeAuthoritySubprocessPendingRoundTrip(t *testing.T) {
 		"submit_extractor_output", "get_extractor_input",
 	})
 	query.assertTools(t, []string{
-		"get_evidence_use_state", "get_evidence_governance_history", "check_current_evidence_plan",
+		"get_evidence_use_state", "get_evidence_governance_history", "get_query_contract", "check_current_evidence_plan",
 		"get_evidence_record", "list_evidence_records", "search_evidence_records",
 		"get_grounded_evidence_brief", "list_evidence_neighbors", "get_relation_provenance",
 		"get_mcp_read_source_states", "open_canonical_read_view", "find_canonical_path",

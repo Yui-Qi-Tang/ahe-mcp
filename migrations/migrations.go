@@ -1375,6 +1375,19 @@ func VerifyCurrent(ctx context.Context, pool *pgxpool.Pool) (SchemaStatus, error
 	return verifyCurrent(ctx, pool, "")
 }
 
+// LatestMigration names the newest migration embedded in this binary. It is
+// the schema this binary expects, not proof of what a database has applied.
+func LatestMigration() (string, error) {
+	set, err := loadMigrations()
+	if err != nil {
+		return "", err
+	}
+	if len(set) == 0 {
+		return "", errors.New("no embedded migrations")
+	}
+	return set[len(set)-1].name, nil
+}
+
 // VerifyCurrentInSchema verifies only one explicit pre-existing private
 // schema. It rejects fallback search paths before reading the migration ledger
 // or required relations.

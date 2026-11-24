@@ -717,7 +717,7 @@ func (s *Server) Tools() []ToolDefinition {
 
 // CallTool decodes one read-only query JSON request and encodes its response.
 func (s *Server) CallTool(ctx context.Context, name string, payload []byte) ([]byte, error) {
-	if name == ToolGetEvidenceUseState || name == ToolGetGovernanceHistory || name == ToolCheckCurrentPlan {
+	if name == ToolGetEvidenceUseState || name == ToolGetGovernanceHistory || name == ToolCheckCurrentPlan || name == ToolGetQueryContract {
 		return s.callGovernance(ctx, name, payload)
 	}
 	if mcpcorerecords.IsReadTool(name) {
