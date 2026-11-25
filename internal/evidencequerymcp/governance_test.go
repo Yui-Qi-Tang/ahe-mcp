@@ -3,6 +3,7 @@ package evidencequerymcp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -61,6 +62,51 @@ func TestSourceAssessmentLabelMatchesProjectedVersion(t *testing.T) {
 	for _, out := range []GetEvidenceRecordResponse{mapProposalResult(origin), mapCanonicalResult(evidenceingestion.CanonicalQueryResult{OriginProposal: origin})} {
 		if out.Source.ExternalSource.AssessmentProjection != "not_projected" {
 			t.Fatal("absent assessment was advertised as projected")
+		}
+	}
+}
+
+func TestGovernanceToolsAcceptAtMost64EvidenceIDs(t *testing.T) {
+	ids := func(n int) []string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = fmt.Sprintf("canon-node:synthetic-%03d", i)
+		}
+		return out
+	}
+	for _, tool := range GovernanceTools() {
+		props, _ := tool.InputSchema["properties"].(map[string]any)
+		var schema map[string]any
+		switch tool.Name {
+		case ToolGetEvidenceUseState:
+			schema, _ = props["canonical_ids"].(map[string]any)
+		case ToolCheckCurrentPlan:
+			actions, _ := props["actions"].(map[string]any)
+			item, _ := actions["items"].(map[string]any)
+			itemProps, _ := item["properties"].(map[string]any)
+			schema, _ = itemProps["basis_ids"].(map[string]any)
+		default:
+			continue
+		}
+		if schema["maxItems"] != 64 {
+			t.Fatalf("%s ID schema maxItems = %#v, want 64", tool.Name, schema["maxItems"])
+		}
+	}
+	// The server has no records pool: an accepted count fails later on the pool,
+	// a rejected count fails on the limit first.
+	s := newServer(&fakeQueryCore{})
+	for _, n := range []int{64, 65} {
+		requests := map[string]map[string]any{
+			ToolGetEvidenceUseState: {"policy": string(evidenceuse.CurrentActionV1), "canonical_ids": ids(n)},
+			ToolCheckCurrentPlan:    {"policy": string(evidenceuse.CurrentActionV1), "actions": []any{map[string]any{"action_id": "act", "basis_ids": ids(n)}}},
+		}
+		for name, req := range requests {
+			payload, _ := json.Marshal(req)
+			_, err := s.CallTool(context.Background(), name, payload)
+			limited := err != nil && strings.Contains(err.Error(), "1..64")
+			if (n == 64) == limited {
+				t.Fatalf("%s with %d IDs: err = %v", name, n, err)
+			}
 		}
 	}
 }

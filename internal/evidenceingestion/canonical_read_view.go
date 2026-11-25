@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	canonicalReadMaxRoots = 32
+	canonicalReadMaxRoots = 64
 	canonicalReadMaxDepth = 8
 	canonicalReadMaxNodes = 1024
 	canonicalReadMaxEdges = 4096

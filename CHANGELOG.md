@@ -29,6 +29,16 @@ and what a consumer has to do.
   `submit_external_source`. Consumers that pin exact schema bytes must review
   and re-pin these four tools; no new field is required. These entries were
   missing when the changes landed.
+- Evidence ID limits rose from 32 to 64: `root_node_ids` in
+  `open_canonical_read_view`, `canonical_ids` in `get_evidence_use_state` and
+  each action's `basis_ids` in `check_current_evidence_plan` now accept 1–64
+  IDs. `check_current_evidence_plan` now also rejects an action with more than
+  64 basis IDs at runtime; before, only the schema stated the limit. The
+  `maxItems` change alters these three input schemas, so consumers that pin
+  exact schema bytes must review and re-pin them. The canonical read still
+  enforces its node and edge limits (1,024 and 4,096), so a read with many
+  roots can still be refused. The proposition member inventory limit stays
+  at 32.
 
 ### Changes
 

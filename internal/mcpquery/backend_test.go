@@ -195,6 +195,10 @@ func TestCanonicalTopologyToolSchemasExposeBoundedContracts(t *testing.T) {
 	assertIntegerBounds(t, openProperties, "max_depth", 0, 8)
 	assertIntegerBounds(t, openProperties, "max_nodes", 1, 1024)
 	assertIntegerBounds(t, openProperties, "max_edges", 0, 4096)
+	roots, _ := openProperties["root_node_ids"].(map[string]any)
+	if roots["minItems"] != int64(1) || roots["maxItems"] != int64(64) {
+		t.Fatalf("root_node_ids bounds = %#v..%#v, want 1..64", roots["minItems"], roots["maxItems"])
+	}
 
 	wantRelations := make([]string, 0, len(evidencegraph.CanonicalRelations()))
 	for _, relation := range evidencegraph.CanonicalRelations() {

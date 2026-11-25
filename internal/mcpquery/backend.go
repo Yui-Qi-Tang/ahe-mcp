@@ -213,7 +213,7 @@ func openCanonicalReadViewSchema() map[string]any {
 		"root_node_ids": stringArraySchema(
 			"Canonical evidence node IDs with canon-node: prefixes used as traversal roots.",
 			1,
-			32,
+			64,
 		),
 		"relations": canonicalRelationsSchema(
 			"Optional canonical relation scope. Empty selects all canonical relations.",

@@ -410,9 +410,13 @@ func ReadPropositionBindingHistory(ctx context.Context, pool *pgxpool.Pool, node
 	return result, tx.Commit(ctx)
 }
 
+// propositionMembersMaxLimit bounds one proposition inventory read. It is
+// separate from the canonical read root limit.
+const propositionMembersMaxLimit = 32
+
 func readPropositionMembersTx(ctx context.Context, tx pgx.Tx, key PropositionKey, limit int) (PropositionMembers, error) {
 	view := PropositionMembers{PropositionID: key.ID(), Nodes: []string{}, GraphMaxDepth: canonicalReadMaxDepth, GraphMaxNodes: canonicalReadMaxNodes, GraphMaxEdges: canonicalReadMaxEdges}
-	if limit < 1 || limit > canonicalReadMaxRoots {
+	if limit < 1 || limit > propositionMembersMaxLimit {
 		return view, errors.New("invalid proposition inventory limit")
 	}
 	var stored PropositionKey
