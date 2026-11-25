@@ -645,7 +645,7 @@ func (s *Server) Tools() []ToolDefinition {
 	result := []ToolDefinition{
 		{
 			Name:        ToolGetEvidenceRecord,
-			Description: "Read one proposal or admitted canonical evidence record by exact ID. Explicit use_state_mode=assessment_only omits the whole-store governance snapshot while retaining its assessment and this record; full is the default.",
+			Description: "Read one proposal or admitted canonical evidence record by exact ID. Explicit use_state_mode=assessment_only omits the governance snapshot while retaining its assessment and this record; full is the default.",
 			ReadOnly:    true,
 		},
 		{

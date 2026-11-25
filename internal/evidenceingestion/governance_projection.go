@@ -21,10 +21,21 @@ type EvidenceUseProjection struct {
 	Assessment evidenceuse.Assessment `json:"assessment"`
 }
 
-// loadEvidenceUseSnapshot reads the complete store within a hard resource bound.
-// It deliberately fails closed instead of confusing display depth/RLS/limits
-// with absence. Every caller supplies one RR cut or the common write guard.
-func loadEvidenceUseSnapshot(ctx context.Context, tx sqlTx) (evidenceuse.Snapshot, error) {
+// Governance scope bounds limit one evaluation scope, not the store.
+const (
+	governanceScopeMaxNodes          = 10000
+	governanceScopeMaxParents        = 100000
+	governanceScopeMaxContradictions = 100000
+)
+
+// loadEvidenceUseSnapshot reads the governance state needed to assess roots:
+// the roots, their complete AND ancestry, every contradiction incident to that
+// closure, each conflict peer's own state, and the sources, lineages and
+// withdrawals of those nodes. Nodes outside that scope are not read, so store
+// size does not bound the read. It fails closed instead of confusing display
+// depth/RLS/limits with absence. Every caller supplies one RR cut or the common
+// write guard.
+func loadEvidenceUseSnapshot(ctx context.Context, tx sqlTx, roots []string) (evidenceuse.Snapshot, error) {
 	s := evidenceuse.Snapshot{Version: evidenceuse.ProjectionV2, Nodes: map[string]evidenceuse.Node{}, Sources: map[string]evidenceuse.Source{}, Contradictions: []evidenceuse.Contradiction{}}
 	if _, err := tx.exec(ctx, `SET LOCAL row_security=off`); err != nil {
 		return s, err
@@ -34,111 +45,26 @@ func loadEvidenceUseSnapshot(ctx context.Context, tx sqlTx) (evidenceuse.Snapsho
 		return s, err
 	}
 	s.CutID = fmt.Sprintf("governance:%d", revision)
-	rows, err := tx.query(ctx, `SELECT n.canonical_node_id,n.node_kind,n.temporal,p.admission_outcome,coalesce(r.source_snapshot_id,''),coalesce(m.lineage_key,'')
- FROM canonical_graph_nodes n
- LEFT JOIN proposal_occurrences p ON p.proposal_occurrence_id=n.origin_proposal_occurrence_id
- LEFT JOIN extraction_attempts a USING(extraction_attempt_id)
- LEFT JOIN extraction_runs r USING(extraction_run_id)
- LEFT JOIN canonical_supersession_members m ON m.canonical_node_id=n.canonical_node_id
- ORDER BY n.canonical_node_id LIMIT 10001`)
+	parents := 0
+	fetchNodes := func(ctx context.Context, ids []string) (map[string]evidenceuse.Node, error) {
+		return loadGovernanceScopeNodes(ctx, tx, ids, &parents)
+	}
+	fetchContradictions := func(ctx context.Context, ids []string) ([]evidenceuse.Contradiction, error) {
+		return loadGovernanceScopeContradictions(ctx, tx, ids)
+	}
+	nodes, contradictions, err := collectEvidenceUseScope(ctx, roots, fetchNodes, fetchContradictions)
 	if err != nil {
 		return s, err
 	}
+	s.Nodes, s.Contradictions = nodes, contradictions
 	lineages := map[string]bool{}
-	for rows.Next() {
-		var id, kind, admission, source, lineage string
-		var temporal []byte
-		if err := rows.Scan(&id, &kind, &temporal, &admission, &source, &lineage); err != nil {
-			rows.Close()
-			return s, err
-		}
-		if _, ok := s.Nodes[id]; ok {
-			rows.Close()
-			return s, fmt.Errorf("ambiguous canonical lineage or source binding")
-		}
-		n := evidenceuse.Node{Kind: evidencegraph.CanonicalNodeKind(kind), Admission: admission, Withdrawal: evidenceuse.Withdrawal{Status: evidenceuse.WithdrawalNone, Complete: true}, Currentness: evidenceuse.Currentness{LineageKey: lineage, Complete: lineage == ""}, Parents: []string{}, SourceIDs: []string{}, SourcesComplete: source != "", ContradictionsComplete: true}
-		n.ParentsComplete = n.Kind != evidencegraph.CanonicalDerivedClaim
-		if err := json.Unmarshal(temporal, &n.Temporal); err != nil {
-			rows.Close()
-			return s, err
-		}
-		if source != "" {
-			n.SourceIDs = []string{source}
+	for _, n := range s.Nodes {
+		for _, source := range n.SourceIDs {
 			s.Sources[source] = evidenceuse.Source{SnapshotID: source}
 		}
-		if lineage != "" {
-			lineages[lineage] = true
+		if n.Currentness.LineageKey != "" {
+			lineages[n.Currentness.LineageKey] = true
 		}
-		s.Nodes[id] = n
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return s, err
-	}
-	if len(s.Nodes) > 10000 {
-		return s, fmt.Errorf("governance node limit exceeded")
-	}
-	rows, err = tx.query(ctx, `SELECT d.node_id,p.parent_node_id,p.canonical_edge_id,e.from_node_id,e.to_node_id,e.relation,d.use_class,coalesce(a.review_binding_contract_version,''),coalesce(h.proposal_occurrence_id,'') FROM canonical_derivations d LEFT JOIN admission_decisions a ON a.proposal_occurrence_id=d.origin_proposal_occurrence_id LEFT JOIN canonical_historical_derivation_reviews h ON h.admission_decision_id=a.admission_decision_id LEFT JOIN canonical_derivation_parents p USING(derivation_id) LEFT JOIN canonical_graph_edges e USING(canonical_edge_id) ORDER BY d.node_id,p.parent_node_id LIMIT 100001`)
-	if err != nil {
-		return s, err
-	}
-	count := 0
-	for rows.Next() {
-		var id, parent, edge, from, to, relation, useClass, reviewContract, historicalOccurrence string
-		if err := rows.Scan(&id, &parent, &edge, &from, &to, &relation, &useClass, &reviewContract, &historicalOccurrence); err != nil {
-			rows.Close()
-			return s, err
-		}
-		count++
-		n, ok := s.Nodes[id]
-		if !ok || from != parent || to != id || relation != string(evidencegraph.CanonicalDerivedFrom) {
-			rows.Close()
-			return s, fmt.Errorf("incomplete derivation authority")
-		}
-		if (useClass != evidencegraph.DerivationOrdinary && useClass != evidencegraph.DerivationHistoricalOnly) ||
-			(useClass == evidencegraph.DerivationHistoricalOnly) != (reviewContract == HistoricalDerivationAdmissionV1 && historicalOccurrence != "") ||
-			(useClass == evidencegraph.DerivationOrdinary && (historicalOccurrence != "" || reviewContract == HistoricalDerivationAdmissionV1)) {
-			rows.Close()
-			return s, fmt.Errorf("derivation use classification authority differs")
-		}
-		n.UseClass = useClass
-		n.Parents = append(n.Parents, parent)
-		n.ParentsComplete = true
-		s.Nodes[id] = n
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return s, err
-	}
-	if count > 100000 {
-		return s, fmt.Errorf("governance parent limit exceeded")
-	}
-	rows, err = tx.query(ctx, `SELECT canonical_edge_id,from_node_id,to_node_id,provenance FROM canonical_graph_edges WHERE relation='contradicts' ORDER BY canonical_edge_id LIMIT 100001`)
-	if err != nil {
-		return s, err
-	}
-	for rows.Next() {
-		var e evidenceuse.Contradiction
-		var raw []byte
-		if err := rows.Scan(&e.ID, &e.Left, &e.Right, &raw); err != nil {
-			rows.Close()
-			return s, err
-		}
-		var p evidencegraph.ProvenanceRecord
-		if err := json.Unmarshal(raw, &p); err != nil {
-			rows.Close()
-			return s, err
-		}
-		e.ReviewRef = p.ID
-		e.Scope = "recorded_explicit_pair"
-		s.Contradictions = append(s.Contradictions, e)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return s, err
-	}
-	if len(s.Contradictions) > 100000 {
-		return s, fmt.Errorf("governance contradiction limit exceeded")
 	}
 	var jointAuthority *evidencesupersession.JointProjector
 	if len(lineages) > 0 {
@@ -193,7 +119,9 @@ func loadEvidenceUseSnapshot(ctx context.Context, tx sqlTx) (evidenceuse.Snapsho
 		for _, state := range nodes {
 			n, ok := s.Nodes[state.NodeID]
 			if !ok {
-				return s, fmt.Errorf("missing lineage member")
+				// The lineage projection covers all members; only scoped
+				// members are part of this snapshot.
+				continue
 			}
 			n.Currentness.Status = state.Status
 			n.Currentness.Complete = complete
@@ -236,7 +164,7 @@ func loadEvidenceUseProjectionForPolicy(ctx context.Context, tx sqlTx, policy ev
 	if err := evidenceuse.ValidatePolicy(policy); err != nil {
 		return EvidenceUseProjection{}, err
 	}
-	s, err := loadEvidenceUseSnapshot(ctx, tx)
+	s, err := loadEvidenceUseSnapshot(ctx, tx, ids)
 	if err != nil {
 		return EvidenceUseProjection{}, err
 	}
@@ -277,7 +205,11 @@ func CheckCurrentEvidencePlan(ctx context.Context, pool *pgxpool.Pool, policy ev
 	}
 	var p evidenceuse.PlanAssessment
 	err := withReadOnlyTx(ctx, pgxDB{pool: pool}, func(tx sqlTx) error {
-		s, err := loadEvidenceUseSnapshot(ctx, tx)
+		var roots []string
+		for _, action := range actions {
+			roots = append(roots, action.BasisIDs...)
+		}
+		s, err := loadEvidenceUseSnapshot(ctx, tx, roots)
 		if err != nil {
 			return err
 		}
@@ -291,7 +223,7 @@ func guardDerivedCurrentUse(ctx context.Context, cut *endpointUseCut, mutation c
 	if err := lockGovernance(ctx, tx); err != nil {
 		return err
 	}
-	s, err := cut.snapshot(ctx)
+	s, err := cut.snapshot(ctx, mutation.derivation.Parents)
 	if err != nil {
 		return err
 	}
@@ -387,7 +319,7 @@ type EndpointUseReview struct {
 }
 
 func loadEndpointUseReview(ctx context.Context, cut *endpointUseCut, policy evidenceuse.Policy, roots []string) (*EndpointUseReview, error) {
-	snapshot, err := cut.snapshot(ctx)
+	snapshot, err := cut.snapshot(ctx, roots)
 	if err != nil {
 		return nil, err
 	}

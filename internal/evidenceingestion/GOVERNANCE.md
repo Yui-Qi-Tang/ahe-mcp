@@ -83,12 +83,18 @@ external declarations are labeled as declarations. All claims actually bound to
 an assessed source inherit the assessment, including statements that happen to
 be correct. No object-ID-wide heuristic is used.
 
-The first adapter loads a complete store with a 10,000-node, 100,000-edge/parent
-bound and 10,000-event per-target bound. This is deliberately conservative:
+The adapter loads the scope that assessing the requested IDs reads: those IDs,
+their complete AND ancestry, every contradiction incident to that closure, each
+conflict peer's own state (not its ancestry), and the sources, lineages and
+withdrawals of those nodes. Store size outside that scope does not bound a read.
+Each scope is bounded to 10,000 nodes, 100,000 parent rows and 100,000 incident
+contradictions, plus 10,000 events per target. This is deliberately conservative:
 RLS, missing authority, cycles or exceeded limits yield an error/unknown, never
 an empty complete result. Display depth does not bound governance ancestry or
-incident conflict peers. Large stores need a future equally complete scoped
-loader; do not raise a completeness flag on a truncated query.
+incident conflict peers. Do not raise a completeness flag on a truncated query.
+The snapshot and its `state_digest` describe that scope, so the same cut yields
+different digests for different requested IDs. Rows outside the scope are not
+validated by that read.
 
 New read-view handles include the governance digest, so event-only changes
 produce new handles while existing cached views remain immutable historical

@@ -11,7 +11,7 @@ accept optional `use_state_mode`:
 | Value | Response |
 |---|---|
 | Omitted or `full` | Existing response, including the complete use-state snapshot when present. |
-| `assessment_only` | Unchanged complete assessment, plus `evidence-use-summary/v1` context; the whole-store snapshot is omitted. |
+| `assessment_only` | Unchanged complete assessment, plus `evidence-use-summary/v1` context; the governance snapshot is omitted. |
 
 For example:
 
@@ -40,10 +40,10 @@ complete graph. The open-view cache/handle still retains the full native state;
 changing transport mode does not redefine the handle's authority or graph scope.
 Separate calls may observe different cuts.
 
-Native evaluation still loads its complete bounded store and applies the same
-policies. The 10,000-node loading limit remains; this option does not solve that
-capacity limit or promise a fixed response size for arbitrarily large relevant
-ancestry. Exact source/record content can itself be large. Before current use,
+Native evaluation loads only the scope the requested IDs need (their AND
+ancestry, incident contradictions and conflict peers) and applies the same
+policies. That scope is bounded to 10,000 nodes; this option does not promise a
+fixed response size for arbitrarily large relevant ancestry. Exact source/record content can itself be large. Before current use,
 recheck all declared bases with `check_current_evidence_plan` under the same policy.
 
 ## Automatically delivered review candidates

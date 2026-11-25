@@ -29,7 +29,7 @@ or silently replaced with another search mode. The research v6 route remains
 separate. See [search contracts and limits](docs/SYSTEM_DESIGN.md#search).
 
 For model-facing use-state, exact-record and open-view calls, explicitly select
-`use_state_mode=assessment_only` to omit the whole-store snapshot while keeping
+`use_state_mode=assessment_only` to omit the governance snapshot while keeping
 the complete assessment. Source/derived/historical review getters automatically
 include bounded live conflict advisory; source review uses transport v2, with
 unchanged approval display/subject. No schema/role migration is added for these

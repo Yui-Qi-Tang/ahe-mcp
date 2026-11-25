@@ -39,6 +39,20 @@ and what a consumer has to do.
   enforces its node and edge limits (1,024 and 4,096), so a read with many
   roots can still be refused. The proposition member inventory limit stays
   at 32.
+- Governance reads are now scoped to the requested IDs (#34). Before, every
+  `get_evidence_use_state`, `open_canonical_read_view`, exact-record use state,
+  `check_current_evidence_plan` and derived admission guard loaded the whole
+  store and failed with `governance node limit exceeded` once it held more than
+  10,000 canonical nodes. They now load the requested IDs, their AND ancestry,
+  incident contradictions and each conflict peer's own state; the 10,000-node
+  bound applies to that scope and its error names the limit. Assessment
+  outcomes and reasons are unchanged. Three things a consumer may rely on
+  changed: the full-mode `snapshot` now holds only that scope;
+  `state_digest` is computed from it, so one cut yields different digests for
+  different IDs and a digest is not a store-wide change detector; and
+  malformed rows outside the scope no longer fail the read. The response
+  schema is unchanged. Tool descriptions now say "governance snapshot" instead
+  of "whole-store snapshot".
 
 ### Changes
 

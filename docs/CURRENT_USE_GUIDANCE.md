@@ -10,7 +10,7 @@ it adds no writer, policy exception or permission to change evidence.
 
 Model consumers can explicitly set `use_state_mode: assessment_only` on
 `get_evidence_use_state`, `get_evidence_record` or `open_canonical_read_view`.
-This keeps the complete assessment while omitting the whole-store snapshot;
+This keeps the complete assessment while omitting the governance snapshot;
 the original full-state digest cannot be recomputed from that response.
 Use `full` for complete snapshot verification. See [response contracts](QUERY_DELIVERY.md).
 
